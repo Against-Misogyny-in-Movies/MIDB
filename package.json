@@ -51,6 +51,7 @@
   },
   "type": "module",
   "dependencies": {
+    "nanoid": "^5.0.3",
     "remixicon": "^3.5.0"
   }
 }

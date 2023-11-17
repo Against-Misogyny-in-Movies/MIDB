@@ -5,6 +5,7 @@
 	import Tile from "./tile.svelte";
   import TileGridet from "./tileGrid.svelte";
   import {faker} from '@faker-js/faker';
+	import { nanoid } from "nanoid";
 
   export const meta = {
     title: 'Components/Form/Tiles',
@@ -43,21 +44,6 @@
     return listOfIcons[ran];
   }
 
-  let selected = new Set()
-
-  function prepareSelctHandler (ref: string) {
-    return () => {
-      console.log('clicked', ref);
-      if(selected.has(ref)) {
-        selected.delete(ref);
-      } else {
-        selected.add(ref);
-      }
-      selected = new Set(selected);
-      console.log(selected);
-    }
-  }
-
 </script>
 
 <Template let:args>
@@ -71,6 +57,7 @@
         title={faker.word.noun()}
         short={faker.lorem.sentence()}
         description={faker.lorem.paragraphs()}
+        ref={nanoid()}
       ></Tile>
     {/each}
   </TileGridet>
@@ -101,9 +88,7 @@
         title={faker.word.noun()}
         short={faker.lorem.sentence()}
         description={faker.lorem.paragraphs()}
-        on:click
-        on:click={prepareSelctHandler(i)}
-        selected={selected.has(i)}
+        ref={nanoid()}
       ></Tile>
     {/each} 
   </TileGridet>
