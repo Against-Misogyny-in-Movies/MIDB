@@ -25,7 +25,7 @@
 {#if !link}
     <input type="checkbox" id={formId} name="ref" on:change hidden>
 {/if}
-<svelte:element this={link ? 'a' : 'label'} {...getArgsByType()} class="tile">
+<svelte:element this={link ? 'a' : 'label'} {...getArgsByType()} class="bg-component tile">
     <h2>
         <slot name="icon"><i class="{icon}"></i></slot>
         {title}
@@ -40,7 +40,7 @@
 <style lang="postcss">
     .tile {
         @apply relative block cursor-pointer;
-        @apply border-2 border-neutral-light rounded-lg p-4;
+        @apply border-2 border-neutral-light rounded-lg p-md;
     }
 
     input:checked + label.tile {

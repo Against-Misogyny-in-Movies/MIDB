@@ -10,7 +10,7 @@
 
 <style lang="postcss">
     .processbar{
-        @apply w-full h-2 bg-neutral-light;
+        @apply w-full h-sm bg-neutral-light;
         @apply border-neutral-light rounded-lg overflow-hidden;
     }
 
@@ -21,7 +21,7 @@
     }
 
     .processbar.horizontal {
-        @apply h-full w-2;
+        @apply h-full w-sm;
     }
 
     .processbar.horizontal > .processbar__bar {

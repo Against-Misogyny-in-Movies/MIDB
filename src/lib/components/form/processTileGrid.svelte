@@ -37,14 +37,19 @@
         const target = event.target as HTMLInputElement;
         if(target.type === 'checkbox') {
             const currentElementNumber = Number(target.getAttribute('data-tile-number'));
-            current = currentElementNumber;
             if(target.checked) {
-                
                 selectPreviousSiblings(target);
+                current = currentElementNumber;
             } else {
-                target.checked = true;
+                if(currentElementNumber !== current){
+                    target.checked = true;
+                    current = currentElementNumber;
+                } else {
+                    current = currentElementNumber - 1;
+                }
                 deseletFollowingSiblings(target);
             }
+            
         }
     }
 
@@ -62,8 +67,7 @@
 
 <style lang="postcss">
     div.tile-grid {
-        /* @apply flex flex-wrap items-stretch justify-center gap-4; */
-        @apply grid grid-cols-2 gap-4 items-center;
+        @apply grid grid-cols-2 gap-md items-center;
         grid-template-columns: auto 1fr;
     }
 
@@ -72,7 +76,7 @@
     }
 
     div.tiles {
-        @apply grid grid-cols-1 gap-4;
+        @apply grid grid-cols-1 gap-md;
     }
 
     div:not(.detailed) > :global(.tile) {

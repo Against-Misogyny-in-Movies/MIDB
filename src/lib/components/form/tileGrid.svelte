@@ -10,7 +10,7 @@
 
 <style lang="postcss">
     div {
-        @apply grid gap-4 place-content-center;
+        @apply grid gap-md place-content-center;
         grid-template-columns: repeat(var(--grid-cols), minmax(0, var(--max-width, 1fr))); 
     }
 
