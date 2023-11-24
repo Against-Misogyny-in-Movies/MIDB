@@ -85,6 +85,7 @@
   >
     {#each Array(args["amount of tiles"]) as _, i}
       <CheckTile
+        name={faker.lorem.word()}
         icon={getRandomIcon()}
         title={faker.word.noun()}
         short={faker.lorem.sentence()}
