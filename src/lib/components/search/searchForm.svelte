@@ -4,6 +4,9 @@
     import type { ChangeEventHandler, FormEventHandler } from "svelte/elements";
 	import Button from "$lib/components/form/button.svelte";
 
+    export let method: "post" | "get" = "post";
+    export let action: string;
+
 
     const actionEmmiter = createEventDispatcher();
 
@@ -27,9 +30,9 @@
 
 </script>
 
-<form method="post" on:submit on:submit={handleSubmit}>
+<form {method} {action} on:submit on:submit={handleSubmit}>
     <input type="text" name="query" placeholder="Search..." on:change on:input={handleChange} />
-    <Button type="submit">Search</Button>
+    <Button type="submit">Search <i class="ri-search-line" /></Button>
 </form>
 
 <style lang="postcss">

@@ -17,12 +17,12 @@
 <script lang="ts">
 	import { createDebouncedSearchStore } from "$lib/stores/debounced";
 
-    const ref = { quries: []}
-    let apiFunction = (query: string) => Promise.resolve([query, ...ref.quries]);
+    const ref: { queries: string[] } = { queries: []}
+    let apiFunction = (query: string) => Promise.resolve([query, ...ref.queries]);
 
     const search = createDebouncedSearchStore(apiFunction, 750);
     search.subscribe((value) => {
-        ref.quries = value;
+        ref.queries = value;
     });
     function handleAction (customEvent: CustomEvent<string>) {
         search.search(customEvent.detail);
@@ -31,7 +31,7 @@
 </script>
 
 <Template let:args>
-    <SearchForm on:action={handleAction}></SearchForm>
+    <SearchForm action="#" on:action={handleAction}></SearchForm>
     {#each $search as res, i (i)}
         <p>{res}</p>
     {/each}
