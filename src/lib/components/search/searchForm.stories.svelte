@@ -20,7 +20,7 @@
     const ref = { quries: []}
     let apiFunction = (query: string) => Promise.resolve([query, ...ref.quries]);
 
-    const search = createDebouncedSearchStore(apiFunction, 100);
+    const search = createDebouncedSearchStore(apiFunction, 750);
     search.subscribe((value) => {
         ref.quries = value;
     });
