@@ -1,14 +1,14 @@
 <script lang="ts" context="module">
-
   import { Story, Template } from "@storybook/addon-svelte-csf";
   import { writable } from "svelte/store";
 	import Tile from "./tile.svelte";
+  import CheckTile from "$lib/components/form/checkboxTile.svelte";
   import TileGridet from "./tileGrid.svelte";
   import {faker} from '@faker-js/faker';
 	import { nanoid } from "nanoid";
 
   export const meta = {
-    title: 'Components/Form/Tiles',
+    title: 'Components/Tiles',
     component: TileGridet,
     argTypes: {
       "grid-cols": { control: 'number', default: 4, min:1 , steps: 1, },
@@ -53,11 +53,12 @@
   >
     {#each Array(args["amount of tiles"]) as _, i}
       <Tile
+        el="a"
+        href="#"
         icon={getRandomIcon()}
         title={faker.word.noun()}
         short={faker.lorem.sentence()}
         description={faker.lorem.paragraphs()}
-        ref={nanoid()}
       ></Tile>
     {/each}
   </TileGridet>
@@ -83,13 +84,12 @@
     --max-width={args['max-width']}
   >
     {#each Array(args["amount of tiles"]) as _, i}
-      <Tile
+      <CheckTile
         icon={getRandomIcon()}
         title={faker.word.noun()}
         short={faker.lorem.sentence()}
         description={faker.lorem.paragraphs()}
-        ref={nanoid()}
-      ></Tile>
+      ></CheckTile>
     {/each} 
   </TileGridet>
 </Story>

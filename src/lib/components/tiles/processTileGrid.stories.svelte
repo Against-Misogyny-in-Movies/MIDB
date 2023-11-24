@@ -7,10 +7,11 @@
     import Tile from './tile.svelte';
     
     export const meta = {
-        title: 'Components/Form/Tiles',
+        title: 'Components/Tiles',
         component: ProcessTileGridet,
         argTypes: {
             "amount of tiles": { control: 'number', default: 13, min: 1, steps: 1, },
+            "detailed": false
         },
         parameters: {
             layout: 'centered',
@@ -45,7 +46,7 @@
 
 
 <Template let:args>
-    <ProcessTileGridet>
+    <ProcessTileGridet {...args}>
       {#each Array(args["amount of tiles"]) as _, i}
         <Tile
           icon={getRandomIcon()}

@@ -8,10 +8,11 @@
     let total: number = 0;
 
 
-    function deseletFollowingSiblings(element: HTMLElement | ChildNode) {
-        const previous= element.nextSibling;
+    function deseletFollowingSiblings(element: HTMLElement) {
+        const previous= element.nextSibling as HTMLElement;
+    ;
         if(previous) {
-            if(previous.type === 'checkbox') {
+            if(previous.getAttribute('type') === 'checkbox') {
                 const input = previous as HTMLInputElement;
                 input.checked = false;
             }
@@ -20,10 +21,10 @@
         }
     }
 
-    function selectPreviousSiblings(element: HTMLElement | ChildNode) {
-        const previous= element.previousSibling;
+    function selectPreviousSiblings(element: HTMLElement) {
+        const previous= element.previousSibling as HTMLElement;
         if(previous) {
-            if(previous.type === 'checkbox') {
+            if(previous.getAttribute('type') === 'checkbox') {
                 const input = previous as HTMLInputElement;
                 input.checked = true;
             }
@@ -67,7 +68,7 @@
 
 <style lang="postcss">
     div.tile-grid {
-        @apply grid grid-cols-2 gap-md items-center;
+        @apply grid grid-cols-2 gap-md items-center w-full;
         grid-template-columns: auto 1fr;
     }
 

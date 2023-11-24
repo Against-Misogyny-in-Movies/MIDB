@@ -1,31 +1,18 @@
 <script lang="ts">
 
     import Tooltip from "../help/tooltip.svelte";
-    import {nanoid} from "nanoid";
+
 
     export let title: string;
     export let short: string | undefined = undefined;
     export let description: string | undefined = undefined;
     export let icon: string | undefined = undefined;
-    export let link: boolean = false;
-    export let ref: string;
-
-    const formId = nanoid();
-
-    function getArgsByType() {
-        if (link) {
-            return {href: ref};
-        } else {
-            return {for: formId};
-        }
-    }
+    export let el: string = 'div'
 
 </script>
 
-{#if !link}
-    <input type="checkbox" id={formId} name="ref" on:change hidden>
-{/if}
-<svelte:element this={link ? 'a' : 'label'} {...getArgsByType()} class="bg-component tile">
+
+<svelte:element this={el} {...$$restProps} class="bg-component tile">
     <h2>
         <slot name="icon"><i class="{icon}"></i></slot>
         {title}
@@ -41,10 +28,6 @@
     .tile {
         @apply relative block cursor-pointer;
         @apply border-2 border-neutral-light rounded-lg p-md;
-    }
-
-    input:checked + label.tile {
-        @apply border-primary;
     }
 
     .tile:hover,
