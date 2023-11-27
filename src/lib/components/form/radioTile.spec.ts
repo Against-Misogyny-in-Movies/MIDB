@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { faker } from '@faker-js/faker';
 import RadioTile from './radioTile.svelte'
-import { describe, expect, test, vitest } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import type { ComponentProps } from 'svelte';
 
 import '@testing-library/jest-dom';
@@ -28,7 +28,7 @@ describe("Component/RadioTile", () => {
 
     test("should render title", () => {
         const props = createRadioTileProps({})
-        render( RadioTile, props )
+        render(RadioTile, props )
         expect(screen.getByText(props.title)).toBeInTheDocument()
     });
 })

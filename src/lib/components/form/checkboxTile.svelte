@@ -16,7 +16,7 @@
 
 <input type="checkbox" id={formId} {name} on:change hidden>
 <Tile el="label" {title} {icon} {description} {short} for={formId}>
-    <slot name="icon"></slot>
+    <slot slot="icon" name="icon"></slot>
 </Tile>
 
 <style lang="postcss">

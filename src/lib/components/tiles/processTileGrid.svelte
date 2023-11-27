@@ -7,12 +7,15 @@
     let current = 0;
     let total: number = 0;
 
+    function isCheckbox(element: HTMLElement | ChildNode): element is HTMLInputElement {
+        console.log(element.nodeName);
+        return element.nodeName === 'INPUT' && (element as HTMLInputElement).type === 'checkbox';
+    }
 
-    function deseletFollowingSiblings(element: HTMLElement) {
+    function deseletFollowingSiblings(element: HTMLElement | ChildNode) {
         const previous= element.nextSibling as HTMLElement;
-    ;
         if(previous) {
-            if(previous.getAttribute('type') === 'checkbox') {
+            if(isCheckbox(previous)) {
                 const input = previous as HTMLInputElement;
                 input.checked = false;
             }
@@ -22,9 +25,9 @@
     }
 
     function selectPreviousSiblings(element: HTMLElement) {
-        const previous= element.previousSibling as HTMLElement;
+        const previous= element.previousSibling as HTMLInputElement;
         if(previous) {
-            if(previous.getAttribute('type') === 'checkbox') {
+            if(isCheckbox(previous)) {
                 const input = previous as HTMLInputElement;
                 input.checked = true;
             }
@@ -67,6 +70,7 @@
 
 
 <style lang="postcss">
+
     div.tile-grid {
         @apply grid grid-cols-2 gap-md items-center w-full;
         grid-template-columns: auto 1fr;
