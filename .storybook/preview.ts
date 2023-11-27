@@ -1,6 +1,6 @@
 import type { Preview } from '@storybook/svelte';
-
-import "../src/app.css";
+import '../src/app.css';
+import 'remixicon/fonts/remixicon.css'
 
 const preview: Preview = {
 	parameters: {
