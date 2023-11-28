@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { faker } from '@faker-js/faker';
 import RadioTile from './radioTile.svelte'
 import { describe, expect, test } from 'vitest';
@@ -8,7 +8,7 @@ import '@testing-library/jest-dom';
 
 type RadioTileProps = ComponentProps<RadioTile>
 
-function createRadioTileProps(specific: Partial<RadioTileProps>): RadioTileProps {
+function createRadioTileProps(specific: Partial<RadioTileProps> = {}): RadioTileProps {
     return {
         name: faker.lorem.word(),
         value: faker.lorem.word(),
@@ -31,4 +31,15 @@ describe("Component/RadioTile", () => {
         render(RadioTile, props )
         expect(screen.getByText(props.title)).toBeInTheDocument()
     });
+
+    test("should select radio by clicking the label", () => {
+        const props = createRadioTileProps()
+        render(RadioTile, props)
+        const labelElement = document.querySelector("label");
+        expect(labelElement).toBeInTheDocument()
+        const radioElement = document.querySelector("input");
+        labelElement!.click();
+        expect(radioElement).toBeChecked()
+    })
+
 })

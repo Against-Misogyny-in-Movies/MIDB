@@ -34,7 +34,27 @@ export default {
         light: colors.slate[100],
         DEFAULT: colors.slate[500],
         dark: colors.slate[900]
-      }
+      },
+      danger: {
+        light: colors.red[300],
+        DEFAULT: colors.red[500],
+        dark: colors.red[700]
+      },
+      success: {
+        light: colors.green[300],
+        DEFAULT: colors.green[500],
+        dark: colors.green[700]
+      },
+      warn: {
+        light: colors.amber[300],
+        DEFAULT: colors.amber[500],
+        dark: colors.amber[700]
+      },
+      info: {
+        light: colors.blue[300],
+        DEFAULT: colors.blue[500],
+        dark: colors.blue[700]
+      },
     },
     'spacing': {
       0: '0',
@@ -43,6 +63,12 @@ export default {
       md: '1rem',
       lg: '2rem',
       xl: '3rem',
+      '-xs': '-0.25rem',
+      '-sm': '-0.5rem',
+      '-md': '-1rem',
+      '-lg': '-2rem',
+      '-xl': '-3rem',
+      auto: 'auto',
     },
     extend: {
      

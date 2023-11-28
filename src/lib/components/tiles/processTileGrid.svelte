@@ -3,12 +3,17 @@
 	import Processbar from "../visualitation/processbar.svelte";
 
 
-    export let detailed: boolean = true;
+    export let detailed: boolean = true
+    
     let current = 0;
     let total: number = 0;
 
+    export function reset() {
+        current = 0;
+    }
+
+
     function isCheckbox(element: HTMLElement | ChildNode): element is HTMLInputElement {
-        console.log(element.nodeName);
         return element.nodeName === 'INPUT' && (element as HTMLInputElement).type === 'checkbox';
     }
 
@@ -57,14 +62,16 @@
         }
     }
 
+   
+
 </script>
 
-<div class="tile-grid" class:detailed on:change={handleChange} use:setAttributesToChilds={{
+<div class="tile-grid" on:reset={() => console.log("rest")} class:detailed on:change={handleChange} use:setAttributesToChilds={{
     selector: 'input[type="checkbox"]',
     attribute: 'data-tile-number',
     value: () => ++total
 }}>
-    <Processbar {current} {total} horizontal></Processbar>
+    <Processbar {current} {total} vertical></Processbar>
     <div class="tiles"><slot></slot></div>
 </div>
 

@@ -26,7 +26,6 @@
   let selected = true;
 
   function handleClick() {
-    console.log('clicked');
     selected = !selected;
   }
 </script>

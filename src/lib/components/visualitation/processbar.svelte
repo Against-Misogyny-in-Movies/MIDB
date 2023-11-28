@@ -1,10 +1,10 @@
 <script lang="ts">
     export let current: number = 0;
     export let total: number = 0;
-    export let horizontal: boolean = false;
+    export let vertical: boolean = false;
 </script>
 
-<div class="processbar" class:horizontal>
+<div class="processbar" class:vertical>
     <div class="processbar__bar" style="--current-state: {Math.round(current / total * 100)}%"></div>
 </div>
 
@@ -20,11 +20,11 @@
         transition: width 0.5s ease-in-out;
     }
 
-    .processbar.horizontal {
+    .processbar.vertical {
         @apply h-full w-sm;
     }
 
-    .processbar.horizontal > .processbar__bar {
+    .processbar.vertical > .processbar__bar {
         height: var(--current-state, 0%);
         @apply w-full;
         transition: height 0.5s ease-in-out;
