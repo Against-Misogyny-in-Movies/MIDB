@@ -5,7 +5,7 @@
     export let status: "primary" | "secondary" | "success" | "warn" | "danger" | "info"  = "primary";
 </script>
 
-<button class="{status}" {type} {name} {disabled}><slot /></button>
+<button class="{status}" {type} {name} {disabled} {...$$restProps}><slot /></button>
 
 <style lang="postcss">
     button {

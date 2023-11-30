@@ -28,8 +28,8 @@ import ProcessTileGrid from "$lib/components/tiles/processTileGrid.svelte";
             />
         </ProcessTileGrid>
         <div class="button-group">
-            <Button status="danger" type="reset">Failed Everything!</Button>
-            <Button type="submit">Finish!</Button>
+            <Button status="danger" type="submit" formaction="?/failed">Failed Everything!</Button>
+            <Button type="submit" formaction="?/finish">Finish!</Button>
         </div>
     </form>
 </MetricsFrame>
