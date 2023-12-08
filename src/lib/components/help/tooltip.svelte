@@ -1,5 +1,4 @@
 <script lang="ts">
-    export let content: string;
     export let pos: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'top-right';
 </script>
 

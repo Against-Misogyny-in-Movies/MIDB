@@ -19,7 +19,7 @@
     </h2>
     {#if short}<small>{short}</small>{/if}
     {#if description}
-        <Tooltip pos="top-right" content={description}></Tooltip>
+        <Tooltip pos="top-right">{description}</Tooltip>
     {/if}
 </svelte:element>
 
