@@ -6,7 +6,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "npm run test:integration && npm run test:unit",
+    "test": "bun run test:integration && npm run test:unit",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",
@@ -15,10 +15,12 @@
     "test:unit": "vitest",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "db:generate": "drizzle-kit generate:pg"
+    "db:generate": "drizzle-kit generate:pg",
+    "db:migrate": "./scripts/db/migrate.ts"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.3.1",
+    "@loom-io/fs": "^0.4.1",
     "@playwright/test": "^1.28.1",
     "@storybook/addon-actions": "^7.5.3",
     "@storybook/addon-essentials": "^7.5.3",
@@ -33,6 +35,7 @@
     "@sveltejs/kit": "^1.27.4",
     "@testing-library/jest-dom": "^6.1.4",
     "@testing-library/svelte": "^4.0.5",
+    "@types/bun": "^1.0.0",
     "@types/jsdom": "^21.1.6",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS "evaluation_results" (
 CREATE TABLE IF NOT EXISTS "evaluations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"movie_id" uuid NOT NULL,
-	"metric_id" integer NOT NULL,
+	"metric_id" text NOT NULL,
 	"user_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"comment" text
@@ -15,22 +15,20 @@ CREATE TABLE IF NOT EXISTS "evaluations" (
 
 CREATE TABLE IF NOT EXISTS "metric_options" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"metric_id" integer NOT NULL,
-	"name" varchar(100),
-	"short_description" varchar(500),
-	"description" varchar(1000),
+	"metric_id" text NOT NULL,
+	"name" text,
+	"short_description" text,
+	"description" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "metrics" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" varchar(100),
-	"slug" varchar(100),
-	"short_description" varchar(500),
-	"description" varchar(1000),
-	"related_optoins" boolean,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "metrics_slug_unique" UNIQUE("slug")
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text,
+	"short_description" text,
+	"description" text,
+	"related_options" boolean,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "every_user_once_idx" ON "evaluations" ("movie_id","metric_id","user_id");

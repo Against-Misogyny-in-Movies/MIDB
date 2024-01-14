@@ -1,32 +1,31 @@
 import { users } from './auth';
 import { movies } from './movie';
-import { pgTable, uuid, varchar, integer, boolean, timestamp, serial, text, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, integer, boolean, timestamp, serial, text, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core';
 
 
 export const metrics = pgTable('metrics', {
-    id: serial('id').primaryKey(),
-    name: varchar('name', { length: 100 }),
-    slug: varchar('slug', { length: 100 }).unique(),
-    shortDescription: varchar('short_description', { length: 500 }),
-    description: varchar('description', { length: 1000 }),
-    realtedOptions: boolean('related_optoins'),
+    id: text('id').primaryKey(),
+    name: text('name'),
+    shortDescription: text('short_description'),
+    description: text('description'),
+    realtedOptions: boolean('related_options'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 
 export const metricOptions = pgTable('metric_options', {
     id: serial('id').primaryKey(),
-    metricId: integer('metric_id').notNull().references(() => metrics.id, { onDelete: "cascade" }),
-    name: varchar('name', { length: 100 }),
-    shortDescription: varchar('short_description', { length: 500 }),
-    description: varchar('description', { length: 1000 }),
+    metricId: text('metric_id').notNull().references(() => metrics.id, { onDelete: "cascade" }),
+    name: text('name'),
+    shortDescription: text('short_description'),
+    description: text('description'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const evaluations = pgTable('evaluations', {
     id: serial('id').primaryKey(),
     movieId: uuid('movie_id').notNull().references(() => movies.id, { onDelete: "cascade" }),
-    metricId: integer('metric_id').notNull().references(() => metrics.id),
+    metricId: text('metric_id').notNull().references(() => metrics.id),
     userId: text('user_id').notNull().references(() => users.id),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     comment: text('comment')
