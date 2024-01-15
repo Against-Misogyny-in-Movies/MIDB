@@ -16,7 +16,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "db:generate": "drizzle-kit generate:pg",
-    "db:migrate": "./scripts/db/migrate.ts"
+    "db:migrate": "bun ./db/scripts/migrate.ts",
+    "db:seed": "bun ./db/scripts/seed.ts"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.3.1",
