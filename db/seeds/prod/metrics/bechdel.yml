@@ -1,8 +1,7 @@
 id: bechdel
 name: Bechdel Test
 shortDescription: The Bechdel test assesses gender representation in media. It passes if two named female characters have a conversation not centered on men.
-description: >
-  '**Detailed Description:**
+description: |
   The Bechdel test, created by American cartoonist Alison Bechdel in 1985, is a widely recognized method for evaluating gender representation in movies and other media. It consists of three simple criteria that a work of fiction must meet to pass the test:
   
   1. The work must have at least two named female characters: To fulfill this criterion, a story should feature two or more female characters who are distinct individuals with names. These characters can be major protagonists or minor supporting roles.
@@ -13,7 +12,7 @@ description: >
   
   The Bechdel test has sparked discussions about gender representation in the media and the need for more diverse and nuanced portrayals of women. While it's a useful tool for raising awareness, it's just one aspect of a broader conversation about equality and inclusivity in storytelling.
   
-  In your movie rating website, you can use the Bechdel test as a valuable metric to assess the gender diversity and representation in the films you review. It can help users identify works that meet these criteria and promote discussions about gender equality in cinema.'
+  In your movie rating website, you can use the Bechdel test as a valuable metric to assess the gender diversity and representation in the films you review. It can help users identify works that meet these criteria and promote discussions about gender equality in cinema.
 relatedOptions: true
 options:
   - name: At least two woman with a name
@@ -22,4 +21,4 @@ options:
     shortDescription: 'These female characters must have a conversation with each other: The test requires that the named female characters engage in a meaningful conversation. It can be a brief exchange or a more extended dialogue, but the key is that they interact directly with each other'
   - name: Not about a male character
     shortDescription: >
-      'The conversation between the female characters should focus on a topic other than male characters or romantic interests. It can be about their careers, hobbies, friendships, family, or any other subject that doesn't center on men.'
+      The conversation between the female characters should focus on a topic other than male characters or romantic interests. It can be about their careers, hobbies, friendships, family, or any other subject that doesn't center on men.

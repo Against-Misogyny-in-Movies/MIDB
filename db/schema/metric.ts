@@ -1,3 +1,4 @@
+import { relations } from 'drizzle-orm';
 import { users } from './auth';
 import { movies } from './movie';
 import { pgTable, uuid, integer, boolean, timestamp, serial, text, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core';
@@ -5,22 +6,29 @@ import { pgTable, uuid, integer, boolean, timestamp, serial, text, uniqueIndex, 
 
 export const metrics = pgTable('metrics', {
     id: text('id').primaryKey(),
-    name: text('name'),
-    shortDescription: text('short_description'),
+    name: text('name').notNull(),
+    shortDescription: text('short_description').notNull(),
     description: text('description'),
-    relatedOptions: boolean('related_options'),
+    relatedOptions: boolean('related_options').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const metricRelations = relations(metrics, ({ many }) => ({
+    options: many(metricOptions)
+}));
 
 export const metricOptions = pgTable('metric_options', {
     id: serial('id').primaryKey(),
     metricId: text('metric_id').notNull().references(() => metrics.id, { onDelete: "cascade" }),
-    name: text('name'),
-    shortDescription: text('short_description'),
+    name: text('name').notNull(),
+    shortDescription: text('short_description').notNull(),
     description: text('description'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+export const metricOptionRelations = relations(metricOptions, ({ one }) => ({
+    metric: one(metrics, { fields: [metricOptions.metricId], references: [metrics.id]})
+}));
 
 export const evaluations = pgTable('evaluations', {
     id: serial('id').primaryKey(),

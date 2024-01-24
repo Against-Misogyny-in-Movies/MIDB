@@ -23,7 +23,7 @@
 
 <style lang="postcss"> 
     main {
-        @apply flex flex-col justify-center min-h-screen w-full max-w-5xl m-auto px-md;
+        @apply flex flex-col min-h-screen w-full max-w-5xl m-auto p-md;
     }
     nav {
         @apply flex justify-between items-center;

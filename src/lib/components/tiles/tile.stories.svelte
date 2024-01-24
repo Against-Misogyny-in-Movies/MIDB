@@ -10,7 +10,6 @@
     argTypes: {
       icon: { control: 'text' },
       title: { control: 'text' },
-      short: { control: 'text' },
       description: { control: 'text' },
       selected: { control: 'boolean' },
     },
@@ -40,7 +39,6 @@
   el: 'div',
   icon: 'ri-women-line',
   title: 'Bechdle Test',
-  short: 'A test to mesure woman representation in movies',
   description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae qua'
 }} />
 
@@ -49,7 +47,6 @@
   href: "https://bechdeltest.com/",
   icon: 'ri-women-line',
   title: 'Bechdle Test',
-  short: 'A test to mesure woman representation in movies',
   description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae qua',
 }} />
 

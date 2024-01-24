@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { setAttributesToChilds } from "$lib/actions/setAttributesToChilds";
-	import Processbar from "../visualitation/processbar.svelte";
+	import Progressbar from "../visualization/progressbar.svelte";
 
 
     export let detailed: boolean = true
@@ -17,7 +17,7 @@
         return element.nodeName === 'INPUT' && (element as HTMLInputElement).type === 'checkbox';
     }
 
-    function deseletFollowingSiblings(element: HTMLElement | ChildNode) {
+    function deselectFollowingSiblings(element: HTMLElement | ChildNode) {
         const previous= element.nextSibling as HTMLElement;
         if(previous) {
             if(isCheckbox(previous)) {
@@ -25,7 +25,7 @@
                 input.checked = false;
             }
 
-            deseletFollowingSiblings(previous);
+            deselectFollowingSiblings(previous);
         }
     }
 
@@ -56,7 +56,7 @@
                 } else {
                     current = currentElementNumber - 1;
                 }
-                deseletFollowingSiblings(target);
+                deselectFollowingSiblings(target);
             }
             
         }
@@ -66,13 +66,13 @@
 
 </script>
 
-<div class="tile-grid" on:reset={() => console.log("rest")} class:detailed on:change={handleChange} use:setAttributesToChilds={{
+<div class="tile-grid" on:reset={() => console.log("rest")}  on:change={handleChange} use:setAttributesToChilds={{
     selector: 'input[type="checkbox"]',
     attribute: 'data-tile-number',
     value: () => ++total
 }}>
-    <Processbar {current} {total} vertical></Processbar>
-    <div class="tiles"><slot></slot></div>
+    <Progressbar {current} {total} vertical></Progressbar>
+    <div class="tiles" class:detailed><slot></slot></div>
 </div>
 
 
@@ -83,7 +83,7 @@
         grid-template-columns: auto 1fr;
     }
 
-    div.tile-grid > :global(.processbar) {
+    div.tile-grid > :global(.progressbar) {
         @apply justify-self-end;
     }
 
@@ -91,7 +91,7 @@
         @apply grid grid-cols-1 gap-md;
     }
 
-    div:not(.detailed) > :global(.tile) {
+    div.tiles:not(.detailed) > :global(.tile) {
         @apply truncate;
     }
 </style>

@@ -4,6 +4,7 @@ import type { PgInsertValue } from 'drizzle-orm/pg-core/query-builders/insert.d'
 import db from '../connections';
 import { metricOptions, metrics } from '../schema/metric';
 import { SQL, eq } from 'drizzle-orm';
+import { marked } from 'marked';
 
 
 const production = process.env.NODE_ENV === 'production';
@@ -21,11 +22,13 @@ async function handleMetricSeed (data: Record<string, unknown>) {
     throw new Error('Missing required fields');
   }
   const { options, ...metricData } = data;
+  //convert markdown to html
+  metricData.description = metricData.description ? marked.parse(metricData.description as string) : null;
   const metricCondition = () => eq(metrics.id,(metricData as NewMetric).id);
   const insertOrUpdateResult = await insertOrUpdate(metrics, (metricData as NewMetric), metricCondition);
   const metricOptionData = (options as Array<Omit<NewMetricOption, 'metricId'>>).map<NewMetricOption>((option: Record<string, unknown>) => {
     return {
-      ...option,
+      ...option as NewMetricOption,
       metricId: (metricData as NewMetric).id
     }
   });
