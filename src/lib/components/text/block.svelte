@@ -1,5 +1,7 @@
 <script lang="ts">
 
+
+
   export let collapsed: boolean = true;
 </script>
 
@@ -47,13 +49,14 @@
   span.content {
     @apply block;
     @apply overflow-hidden;
-    @apply transition-all;
+    transition: max-height 0.3s ease-in-out;
+    max-height: 2000px;
     @apply duration-300;
 
   }
 
   .content.collapsed {
-    @apply h-xl
+    @apply max-h-xl;
   }
 
   button {
