@@ -11,6 +11,10 @@ const production = process.env.NODE_ENV === 'production';
 type NewMetric = typeof metrics.$inferInsert;
 type NewMetricOption = typeof metricOptions.$inferInsert;
 
+enum InsertOrUpdate {
+  Insert,
+  Update
+}
 
 async function handleMetricSeed (data: Record<string, unknown>) {
   if(!(data.id || data.name || data.shortDescription || data.description || data.options)) {
@@ -32,13 +36,8 @@ async function handleMetricSeed (data: Record<string, unknown>) {
     const condition = () => eq(metricOptions.metricId, (metricData as NewMetric).id);
     await deleteAndInsert(metricOptions, metricOptionData, condition);
   }
-  
 }
 
-enum InsertOrUpdate {
-  Insert,
-  Update
-}
 async function insertOrUpdate<T extends PgTable, U extends PgInsertValue<T>> (schema: T, data: U, condition: () => SQL) {
   try {
     await db.insert(schema).values(data).execute();
