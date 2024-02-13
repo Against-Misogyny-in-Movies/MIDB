@@ -14,7 +14,8 @@
     "test:integration": "playwright test",
     "test:unit": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "db:generate": "drizzle-kit generate:pg"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.3.1",
@@ -35,6 +36,7 @@
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "autoprefixer": "^10.4.16",
+    "drizzle-kit": "^0.20.6",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-storybook": "^0.6.15",
@@ -57,7 +59,13 @@
   },
   "type": "module",
   "dependencies": {
+    "@auth/core": "^0.18.4",
+    "@auth/drizzle-adapter": "^0.3.9",
+    "@auth/sveltekit": "^0.3.15",
+    "drizzle-orm": "^0.29.1",
     "nanoid": "^5.0.3",
+    "nodemailer": "^6.9.7",
+    "postgres": "^3.4.3",
     "remixicon": "^3.5.0",
     "rxjs": "^7.8.1"
   }
