@@ -9,7 +9,7 @@ export const metrics = pgTable('metrics', {
     name: text('name').notNull(),
     shortDescription: text('short_description').notNull(),
     description: text('description'),
-    relatedOptions: boolean('related_options').notNull().default(false),
+    hasRelatedOptions: boolean('has_related_options').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

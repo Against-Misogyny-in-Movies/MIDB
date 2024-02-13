@@ -13,7 +13,7 @@ description: |
   The Bechdel test has sparked discussions about gender representation in the media and the need for more diverse and nuanced portrayals of women. While it's a useful tool for raising awareness, it's just one aspect of a broader conversation about equality and inclusivity in storytelling.
   
   In your movie rating website, you can use the Bechdel test as a valuable metric to assess the gender diversity and representation in the films you review. It can help users identify works that meet these criteria and promote discussions about gender equality in cinema.
-relatedOptions: true
+hasRelatedOptions: true
 options:
   - name: At least two woman with a name
     shortDescription: 'The work must have at least two named female characters: To fulfill this criterion, a story should feature two or more female characters who are distinct individuals with names. These characters can be major protagonists or minor supporting roles.'
