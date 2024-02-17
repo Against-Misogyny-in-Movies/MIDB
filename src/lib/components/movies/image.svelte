@@ -1,7 +1,11 @@
-<script lang="ts">
-	import { PUBLIC_TMDB_IMAGE_URL } from '$env/static/public';
-
+<script lang="ts" context="module">
+  import { PUBLIC_TMDB_IMAGE_URL } from '$env/static/public';
   const sizes = [200, 300, 400, 500];
+
+</script>
+
+<script lang="ts">
+
   export let src: string;
   export let alt: string;
 
@@ -12,6 +16,7 @@
       size === 'original' ? 'original' : `w${size}`,
       src
     ];
+
 
     return parts.map((part) => {
       let newPath = part;
@@ -26,7 +31,6 @@
 
   }
 
-
   function getSrcSet() {
     const sets =  sizes.map((size) => {
       return `${getLink(size)} ${size}w`;
@@ -35,13 +39,13 @@
     sets.push(`${getLink('original')} ${sizeForOriginal}w`);
     return sets.join(', ');
   }
-
-
   
 </script>
 
 <img src={getLink('original')} srcset={getSrcSet()} {alt}/>
 
 <style lang="postcss">
-  
+  img {
+    @apply h-full;
+  }
 </style>
