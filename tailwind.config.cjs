@@ -12,6 +12,19 @@ export default {
       lg: '976px',
       xl: '1440px',
     },
+    'spacing': {
+      0: '0',
+      xs: '0.25rem',
+      sm: '0.5rem',
+      md: '1rem',
+      lg: '2rem',
+      xl: '3rem',
+      'element-xs': '8rem',
+      'element-sm': '12rem',
+      'element-md': '20rem',
+      'element-lg': '48rem',
+      'element-xl': '96rem',
+    },
     colors: {
       'primary': {
         light: colors.purple[300],
@@ -36,14 +49,7 @@ export default {
         dark: colors.slate[900]
       }
     },
-    'spacing': {
-      0: '0',
-      xs: '0.25rem',
-      sm: '0.5rem',
-      md: '1rem',
-      lg: '2rem',
-      xl: '3rem',
-    },
+    
     extend: {
      
     },

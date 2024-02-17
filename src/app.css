@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 
+
 @layer components {
 
   body {
@@ -20,6 +21,5 @@
   h2 {
     @apply text-2xl;
   }
-
 
 }
