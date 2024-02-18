@@ -2,24 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer components {
+	body {
+		@apply dark:bg-gray bg-white;
+		@apply dark:text-white text-gray;
+	}
 
-  body {
-    @apply bg-gray-light;
-  }
+	a {
+		@apply bg-gradient-to-r dark:from-sky-light dark:to-pink  from-pink to-violet-dark bg-clip-text hover:text-transparent;
+	}
 
-  .bg-component {
-    @apply bg-white;
-  }
+	.bg-component {
+		@apply bg-white;
+	}
 
-  h1 {
-    @apply text-3xl;
-  }
-  
-  h2 {
-    @apply text-2xl;
-  }
+	h1 {
+		@apply text-3xl;
+	}
 
-
+	h2 {
+		@apply text-2xl;
+	}
 }
