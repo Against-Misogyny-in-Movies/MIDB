@@ -1,64 +1,72 @@
 <script lang="ts">
-	import ThemeToggle from '$lib/components/navigation/themeToggle.svelte';
 	import { navRoutes } from '../../../routes/utils';
+	import ThemeToggle from '../../components/navigation/themeToggle.svelte';
+	import { writable } from 'svelte/store';
 
-	let open = true;
+	const open = writable(false);
 
 	const handleClick = () => {
-		open = !open;
+		open.update(value => !value);
 	};
 </script>
 
-<nav class="px-2 sm:px-6 lg:px-8 text-md">
-	<div class="container">
-		<div>
-			<a href="#">
-				<span class="logo dark:from-gradient3 dark:to-gradient1 from-gradient1 to-gradient2"
-					>MI_DB</span
-				>
-			</a>
-		</div>
-
-		<div class="items">
-			{#each navRoutes as item}
-				<a href={item.href}>{item.name}</a>
-			{/each}
-		</div>
-	</div>
-	<div class="flex items-center">
-		<button class="md:hidden" on:click={handleClick}>
-			<i class:ri-menu-line={!open} class:ri-close-line={open}></i>
+<nav class="nav-container">
+	<div class="nav-logo">
+		<button type="button">
+			<span class="logo">MI_DB</span>
 		</button>
-
-		<ThemeToggle />
-		<a class="hidden md:flex w-xl mr-md" href="#">Log in</a>
 	</div>
+
+	<div class="nav-items">
+		{#each navRoutes as item}
+			<a href={item.href}>{item.name}</a>
+		{/each}
+	</div>
+
+	<div class="nav-toggle">
+		<button class="nav-toggle-button" on:click={handleClick}>
+			<i class:ri-menu-line={!$open} class:ri-close-line={$open}></i>
+		</button>
+	</div>
+
+	<ThemeToggle />
+
+	<button class="nav-login hidden md:flex w-xl mr-md" type="button">Log in</button>
 </nav>
 
-{#if open}
-	<div class="menu text-md absolute z-50">
+{#if $open}
+	<div class="nav-menu">
 		{#each navRoutes as item}
-			<a class="hover:cursor-pointer" href={item.href}>{item.name}</a>
+			<a class="nav-menu-item hover:cursor-pointer" href={item.href}>{item.name}</a>
 		{/each}
 	</div>
 {/if}
 
 <style lang="postcss">
-	nav {
+	.nav-container {
 		@apply flex justify-between max-w-7xl;
 		@apply mx-auto font-semibold;
 	}
-	.container {
-		@apply flex items-center justify-start py-lg h-xl p-md lg:px-xl;
-	}
-	.logo {
+	.nav-logo {
 		@apply text-xl font-extrabold select-none;
 		@apply bg-gradient-to-r bg-clip-text text-transparent cursor-pointer;
 	}
-	.items {
+	.nav-items {
 		@apply hidden px-md ml-sm md:flex gap-x-xl;
 	}
-	.menu {
+	.nav-toggle {
+		@apply flex items-center;
+	}
+	.nav-toggle-button {
+		@apply md:hidden;
+	}
+	.nav-login {
+		@apply hidden md:flex w-xl mr-md;
+	}
+	.nav-menu {
 		@apply md:hidden font-semibold gap-y-sm w-screen pb-md  px-md flex flex-col dark:bg-gray bg-white;
+	}
+	.nav-menu-item {
+		@apply hover:cursor-pointer;
 	}
 </style>
