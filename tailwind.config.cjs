@@ -62,6 +62,11 @@ export default {
 			'3xl': '6rem',
 			'4xl': '8rem',
 			'5xl': '10rem',
+			'element-xs': '8rem',
+			'element-sm': '12rem',
+			'element-md': '20rem',
+			'element-lg': '48rem',
+			'element-xl': '96rem',
 			hero: '30rem'
 		},
 		extend: {}
