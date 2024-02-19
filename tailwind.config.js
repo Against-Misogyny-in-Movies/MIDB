@@ -22,8 +22,11 @@ export default {
       'element-xs': '8rem',
       'element-sm': '12rem',
       'element-md': '20rem',
-      'element-lg': '48rem',
-      'element-xl': '96rem',
+      'element-lg': '42rem',
+      'element-xl': '64rem',
+      'element-max-width': '92rem',
+      'element-full': '100%',
+      'element-screen': '100vh'
     },
     colors: {
       'primary': {
