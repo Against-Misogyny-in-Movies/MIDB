@@ -1,23 +1,30 @@
-import { SvelteKitAuth } from "@auth/sveltekit"
-import { DrizzleAdapter } from "@auth/drizzle-adapter"
-import EmailProvider from "@auth/core/providers/email"
-import dbConnection from "$db/connections.js";
+import { type RequestEvent, redirect, type Handle } from "@sveltejs/kit";
 
-import { EMAIL_SERVER_HOST, EMAIL_SERVER_PORT, EMAIL_SERVER_USER, EMAIL_SERVER_PASSWORD, EMAIL_FROM } from "$env/static/private"
+import { jwtVerify, createRemoteJWKSet } from "jose";
+import { PUBLIC_HANKO_API_URL } from "$env/static/public";
 
-export const handle = SvelteKitAuth({
-  providers: [
-    EmailProvider({
-      server: {
-        host: EMAIL_SERVER_HOST,
-        port: EMAIL_SERVER_PORT,
-        auth: {
-          user: EMAIL_SERVER_USER,
-          pass: EMAIL_SERVER_PASSWORD
-        }
-      },
-      from: EMAIL_FROM
-    }),
-  ],
-  adapter: DrizzleAdapter(dbConnection)
-})
+const authenticatedUser = async (event: RequestEvent) => {
+  const { cookies } = event;
+  const hanko = cookies.get("hanko");
+  const JWKS = createRemoteJWKSet(
+    new URL(`${PUBLIC_HANKO_API_URL}/.well-known/jwks.json`)
+  );
+
+  try {
+    await jwtVerify(hanko ?? "", JWKS);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const handle: Handle = async ({ event, resolve }) => {
+  const verified = await authenticatedUser(event);
+  
+  if (event.url.pathname.startsWith("/user") && !verified) {
+    redirect(303, "/auth");
+  }
+
+  const response = await resolve(event);
+  return response;
+};
