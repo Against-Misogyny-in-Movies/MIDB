@@ -1,9 +1,14 @@
 <script lang="ts">
     export let title: string;
-    export let date: Date;
+    export let date: string;
     export let description: string;
     
-    const formattedDate = date.toDateString().split(' ').slice(1).join(' ');
+    function formatDate(releaseDate) {
+        const date = new Date(releaseDate);
+        return date.toDateString().split(' ').slice(1).join(' ');
+    }
+
+ 
 </script>
 
 <div>
@@ -11,7 +16,7 @@
         {title}
     </h2>
 
-    <small>{formattedDate}</small>
+    <small>{formatDate(date)}</small>
 
     <p class="description">
         {description}
@@ -24,7 +29,7 @@
     }
 
     h2 {
-        @apply leading-4;
+        @apply leading-4 pt-sm;
     }
 
     small {
@@ -32,6 +37,6 @@
     }
 
     p {
-        @apply mt-sm;
+        @apply mt-md;
     }
 </style>

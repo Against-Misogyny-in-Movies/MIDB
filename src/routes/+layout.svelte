@@ -6,3 +6,10 @@
 <main>
     <slot />
 </main>
+
+
+<style lang="postcss">
+    main {
+        @apply p-md;
+    }
+</style>
