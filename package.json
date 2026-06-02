@@ -63,7 +63,7 @@
     "@teamhanko/hanko-elements": "^2.6.0",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.3",
-    "marked": "^11.1.1",
+    "marked": "^18.0.4",
     "nanoid": "^5.0.3",
     "nodemailer": "^6.9.7",
     "postgres": "^3.4.3",

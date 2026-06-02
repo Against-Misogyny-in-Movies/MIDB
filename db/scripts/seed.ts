@@ -23,7 +23,7 @@ async function handleMetricSeed (data: Record<string, unknown>) {
   }
   const { options, ...metricData } = data;
   //convert markdown to html
-  metricData.description = metricData.description ? marked.parse(metricData.description as string) : null;
+  metricData.description = metricData.description ? await marked.parse(metricData.description as string) : null;
   const metricCondition = () => eq(metrics.id,(metricData as NewMetric).id);
   const insertOrUpdateResult = await insertOrUpdate(metrics, (metricData as NewMetric), metricCondition);
   const metricOptionData = (options as Array<Omit<NewMetricOption, 'metricId'>>).map<NewMetricOption>((option: Record<string, unknown>) => {
