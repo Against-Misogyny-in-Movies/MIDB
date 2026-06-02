@@ -3,9 +3,10 @@
   "version": "0.0.1",
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "vite dev",
-    "dev:debug": "export NODE_OPTIONS='--inspect' && vite dev",
-    "build": "vite build",
+    "dedup-svelte": "rm -rf node_modules/@sveltejs/vite-plugin-svelte/node_modules/svelte",
+    "dev": "bun run dedup-svelte && vite dev",
+    "dev:debug": "bun run dedup-svelte && export NODE_OPTIONS='--inspect' && vite dev",
+    "build": "bun run dedup-svelte && vite build",
     "preview": "vite preview",
     "test": "bun run test:integration && npm run test:unit",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
