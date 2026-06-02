@@ -1,6 +1,6 @@
 import LoomFs, {type File} from '@loom-io/fs';
-import type { PgTable } from 'drizzle-orm/pg-core/table.d';
-import type { PgInsertValue } from 'drizzle-orm/pg-core/query-builders/insert.d';
+import type { PgTable } from 'drizzle-orm/pg-core';
+import type { PgInsertValue } from 'drizzle-orm/pg-core';
 import db from '../connections';
 import { metricOptions, metrics } from '../schema/metric';
 import { SQL, eq } from 'drizzle-orm';

@@ -17,7 +17,7 @@
     "test:unit": "vitest",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "db:generate": "drizzle-kit generate:pg",
+    "db:generate": "drizzle-kit generate",
     "db:migrate": "bun ./db/scripts/migrate.ts",
     "db:seed": "bun ./db/scripts/seed.ts"
   },
@@ -39,7 +39,7 @@
     "@types/jsdom": "latest",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "drizzle-kit": "^0.20.13",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-storybook": "^0.11.0",
@@ -61,7 +61,7 @@
   "type": "module",
   "dependencies": {
     "@teamhanko/hanko-elements": "^0.10.0",
-    "drizzle-orm": "^0.29.3",
+    "drizzle-orm": "^0.45.2",
     "jose": "^6.2.3",
     "marked": "^11.1.1",
     "nanoid": "^5.0.3",

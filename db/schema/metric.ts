@@ -37,13 +37,13 @@ export const evaluations = pgTable('evaluations', {
     userId: text('user_id').notNull().references(() => users.id),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     comment: text('comment')
-}, (evaluation) => ({
-    everyUserOnceIdx: uniqueIndex('every_user_once_idx').on(evaluation.movieId, evaluation.metricId, evaluation.userId)
-}));
+}, (evaluation) => [
+    uniqueIndex('every_user_once_idx').on(evaluation.movieId, evaluation.metricId, evaluation.userId)
+]);
 
 export const evaluationResults = pgTable('evaluation_results', {
     evaluationId: integer('evaluation_id').notNull().references(() => evaluations.id, { onDelete: "cascade" }),
     metricOptionsId: integer('metric_option_id').notNull().references(() => metricOptions.id, { onDelete: "cascade" })
-}, (evaluationResult) => ({
-    compoundKey: primaryKey({ columns: [evaluationResult.evaluationId, evaluationResult.metricOptionsId]})
-}));
+}, (evaluationResult) => [
+    primaryKey({ columns: [evaluationResult.evaluationId, evaluationResult.metricOptionsId]})
+]);

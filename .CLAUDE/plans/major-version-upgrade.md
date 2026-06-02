@@ -28,7 +28,7 @@ The decision driver: do the upgrade as **ordered, independently-verifiable phase
 | 1+2 — Vite 8 + Svelte 5 | ✅ done | `d542697`, `4be2e8b` | Merged because vite-plugin-svelte ≥4 requires Svelte 5; full rune/snippet rewrite |
 | Storybook 7→9 | ✅ done | `276623b` | Pulled forward from Phase 7; eliminates svelte-preprocess as the source of the nested svelte@4 conflict |
 | 3 — Tailwind CSS 4 | ✅ done | — | CSS-first @theme; @tailwindcss/vite plugin; @reference in all 20 component style blocks; TW4 `!` important syntax |
-| 4 — Drizzle ORM 0.45 | ⬜ todo | — | |
+| 4 — Drizzle ORM 0.45 | ✅ done | — | New drizzle.config defineConfig API; fix deep .d imports in seed.ts; array-form index callbacks; drizzle-kit up snapshot upgrade; migration 0005 drops stale Auth.js tables |
 | 5 — Hanko 2.x | ⬜ todo | — | |
 | 6 — marked latest + re-seed | ⬜ todo | — | |
 | 7 — ESLint 9 + remaining deps | ⬜ todo | — | Storybook part already done |

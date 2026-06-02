@@ -1,10 +1,8 @@
 {
-  "id": "378ab601-9366-4e26-acee-bef8f93e99f5",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "movies": {
+    "public.movies": {
       "name": "movies",
       "schema": "",
       "columns": {
@@ -48,12 +46,15 @@
       "uniqueConstraints": {
         "movies_tmdb_id_unique": {
           "name": "movies_tmdb_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "tmdb_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
@@ -62,5 +63,11 @@
     "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "378ab601-9366-4e26-acee-bef8f93e99f5",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

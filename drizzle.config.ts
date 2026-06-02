@@ -1,11 +1,10 @@
-import { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 
-export default {
-    "out": "./db/migrations",
-    "schema": "./db/schema/**/*.ts",
-    "breakpoints": false,
-    driver: "pg",
+export default defineConfig({
+    out: "./db/migrations",
+    schema: "./db/schema/**/*.ts",
+    dialect: "postgresql",
     dbCredentials: {
-        connectionString: process.env.DB_CONNECTION
+        url: process.env.DB_CONNECTION!
     }
-} satisfies Config;
+});
