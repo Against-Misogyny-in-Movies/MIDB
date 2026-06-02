@@ -1,45 +1,32 @@
-<script lang="ts" context="module">
-    import { Template, Story } from '@storybook/addon-svelte-csf';
-    import Tile from "./tile.svelte"
-    import { faker } from '@faker-js/faker'
+<script module>
+  import { defineMeta } from '@storybook/addon-svelte-csf';
+  import { faker } from '@faker-js/faker';
+  import Tile from './tile.svelte';
 
-    export const meta = {
-        title: 'Components/Movies/Tile',
-        component: Tile,
-        argTypes: {
-          image: { control: 'text', default: '/3MGQD4yXokufNlW1AyRXdiy7ytP.jpg' },
-          description: { control: 'text', default: 'Some lorem balaf aklsdj asid ndflksjd ieaoadf description' },
-          title: { control: 'text', default: 'A Movie' },
-          date: { control: 'date', default: new Date() },
-          small: { control: 'boolean', default: false }
-        }
-    }
+  const { Story } = defineMeta({
+    title: 'Components/Movies/Tile',
+    component: Tile,
+    argTypes: {
+      image: { control: 'text' },
+      description: { control: 'text' },
+      title: { control: 'text' },
+      date: { control: 'text' },
+      small: { control: 'boolean' },
+    },
+  });
 </script>
 
-
-
-<Template let:args>
-    <Tile
-      {...args}  
-    />
-</Template>
-
 <Story name="movie-tile-small" args={{
-    image: '/3MGQD4yXokufNlW1AyRXdiy7ytP.jpg',
-    description: faker.lorem.paragraph(),
-    title: 'A Movie',
-    date: new Date(),
-    small: true
+  image: '/3MGQD4yXokufNlW1AyRXdiy7ytP.jpg',
+  description: faker.lorem.paragraph(),
+  title: 'A Movie',
+  date: '2024-01-15',
+  small: true,
 }} />
 
-
-<Story name="movie-tile-large">
-  <Tile
-    image='/3MGQD4yXokufNlW1AyRXdiy7ytP.jpg',
-    description={faker.lorem.paragraph(13)},
-    title= 'A Movie'
-    date={new Date()}
-    --height=500px
-  />
-
-</Story>
+<Story name="movie-tile-large" args={{
+  image: '/3MGQD4yXokufNlW1AyRXdiy7ytP.jpg',
+  description: faker.lorem.paragraph(13),
+  title: 'A Movie',
+  date: '2024-01-15',
+}} />
