@@ -1,14 +1,21 @@
 <script lang="ts">
-    export let href: string;
-    export let selected: boolean = false;
+    import type { Snippet } from 'svelte';
+
+    interface Props {
+        href: string;
+        selected?: boolean;
+        children: Snippet;
+    }
+
+    let { href, selected = false, children }: Props = $props();
 </script>
 
 <li class:selected>
     {#if selected}
-        <span>• <slot /></span>
+        <span>• {@render children()}</span>
     {:else}
         <a {href}>
-            <slot />
+            {@render children()}
         </a>
     {/if}
 </li>

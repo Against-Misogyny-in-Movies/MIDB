@@ -1,14 +1,14 @@
 <script lang="ts">
-
-    import { createEventDispatcher } from "svelte";
     import type { ChangeEventHandler, FormEventHandler } from "svelte/elements";
-	import Button from "$lib/components/form/button.svelte";
+    import Button from "$lib/components/form/button.svelte";
 
-    export let method: "post" | "get" = "post";
-    export let action: string;
+    interface Props {
+        method?: "post" | "get";
+        action: string;
+        onaction?: (query: string) => void;
+    }
 
-
-    const actionEmmiter = createEventDispatcher();
+    let { method = "post", action, onaction }: Props = $props();
 
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
@@ -25,14 +25,14 @@
     }
 
     function handleAction (query: string) {
-        actionEmmiter("action", query );
+        onaction?.(query);
     }
 
 </script>
 
-<form {method} {action} on:submit on:submit={handleSubmit}>
-    <input type="text" name="query" placeholder="Search..." on:change on:input={handleChange} />
-    <Button type="submit">Search <i class="ri-search-line" /></Button>
+<form {method} {action} onsubmit={handleSubmit}>
+    <input type="text" name="query" placeholder="Search..." onchange={handleChange} oninput={handleChange} />
+    <Button type="submit">Search <i class="ri-search-line"></i></Button>
 </form>
 
 <style lang="postcss">

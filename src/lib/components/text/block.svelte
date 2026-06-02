@@ -1,13 +1,17 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
 
+    interface Props {
+        collapsed?: boolean;
+        children: Snippet;
+    }
 
-
-  export let collapsed: boolean = true;
+    let { collapsed = $bindable(true), children }: Props = $props();
 </script>
 
 <section>
-  <span class="content" class:collapsed><slot /></span>
-  <button on:click={() => collapsed = !collapsed}>
+  <span class="content" class:collapsed>{@render children()}</span>
+  <button onclick={() => collapsed = !collapsed}>
     {#if collapsed}
       more <i class="ri-arrow-down-s-line"></i>
     {:else}
@@ -18,11 +22,11 @@
 
 <style lang="postcss">
   section {
-    
+
     @apply m-md;
     @apply leading-normal;
-  
-    
+
+
   }
 
   section :global(ol) {

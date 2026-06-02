@@ -1,12 +1,17 @@
 <script lang="ts">
-	import LinkButton from "../form/linkButton.svelte";
+    import type { Snippet } from 'svelte';
+    import LinkButton from "../form/linkButton.svelte";
 
-    export let previous: string;
-    export let previousHref: string;
+    interface Props {
+        previous: string;
+        previousHref: string;
+        detailed?: boolean;
+        children: Snippet<[boolean]>;
+    }
 
-    export let detailed: boolean = true;
+    let { previous, previousHref, detailed = $bindable(true), children }: Props = $props();
 
-    function toggleDetailed(event: Event) {
+    function toggleDetailed(event: MouseEvent) {
         event.preventDefault();
         detailed = !detailed;
     }
@@ -15,13 +20,13 @@
 
 <main>
     <nav>
-        <LinkButton href="{previousHref}"><i class="ri-arrow-left-line"></i>{previous}</LinkButton>
-        <LinkButton href="?detailed=true" on:click={toggleDetailed}>show: {detailed ? "less" : "more"}</LinkButton>
+        <LinkButton href={previousHref}><i class="ri-arrow-left-line"></i>{previous}</LinkButton>
+        <LinkButton href="?detailed=true" onclick={toggleDetailed}>show: {detailed ? "less" : "more"}</LinkButton>
     </nav>
-    <slot detailed={detailed}></slot>
+    {@render children(detailed)}
 </main>
 
-<style lang="postcss"> 
+<style lang="postcss">
     main {
         @apply flex flex-col min-h-screen w-full max-w-5xl m-auto p-md;
     }
@@ -30,5 +35,5 @@
         @apply mb-sm -mx-md;
     }
 
-    
+
 </style>

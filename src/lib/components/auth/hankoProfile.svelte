@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { register } from "@teamhanko/hanko-elements";
   import { onMount } from "svelte";
   import { PUBLIC_HANKO_API_URL } from "$env/static/public";
@@ -10,4 +10,4 @@
   });
 </script>
 
-<hanko-profile />
+<hanko-profile></hanko-profile>

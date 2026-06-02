@@ -1,11 +1,19 @@
 <script lang="ts">
-    export let type: "button" | "submit" | "reset" = "button";
-    export let name: string | undefined = undefined;
-    export let disabled: boolean = false;
-    export let status: "primary" | "secondary" | "success" | "warn" | "danger" | "info"  = "primary";
+    import type { Snippet } from 'svelte';
+
+    interface Props {
+        type?: "button" | "submit" | "reset";
+        name?: string;
+        disabled?: boolean;
+        status?: "primary" | "secondary" | "success" | "warn" | "danger" | "info";
+        children: Snippet;
+        [key: string]: unknown;
+    }
+
+    let { type = "button", name, disabled = false, status = "primary", children, ...rest }: Props = $props();
 </script>
 
-<button class="{status}" {type} {name} {disabled} {...$$restProps}><slot /></button>
+<button class="{status}" {type} {name} {disabled} {...rest}>{@render children()}</button>
 
 <style lang="postcss">
     button {

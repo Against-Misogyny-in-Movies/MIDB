@@ -1,10 +1,17 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
     import 'remixicon/fonts/remixicon.css'
     import "../app.css";
+
+    interface Props {
+        children: Snippet;
+    }
+
+    let { children }: Props = $props();
 </script>
 
 <main>
-    <slot />
+    {@render children()}
 </main>
 
 

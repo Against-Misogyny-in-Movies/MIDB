@@ -2,12 +2,23 @@
   import Description from "./description.svelte";
   import Image from "./image.svelte";
 
-  export let title: string;
-  export let date: string;
-  export let description: string;
-  export let image: string;
-  export let logo: string | false | undefined = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg'
-  export let small: boolean = false;
+  interface Props {
+      title: string;
+      date: string;
+      description: string;
+      image: string;
+      logo?: string | false;
+      small?: boolean;
+  }
+
+  let {
+      title,
+      date,
+      description,
+      image,
+      logo = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg',
+      small = false
+  }: Props = $props();
 </script>
 
 <section class:small>
@@ -30,7 +41,7 @@
   }
 
   section.small {
-    @apply h-element-sm;
+    height: 5rem;
   }
 
   section.small :global(.description) {
@@ -43,6 +54,3 @@
   }
 
 </style>
-
-
-

@@ -1,14 +1,16 @@
 <script lang="ts">
-    export let title: string;
-    export let date: string;
-    export let description: string;
-    
-    function formatDate(releaseDate) {
-        const date = new Date(releaseDate);
-        return date.toDateString().split(' ').slice(1).join(' ');
+    interface Props {
+        title: string;
+        date: string;
+        description: string;
     }
 
- 
+    let { title, date, description }: Props = $props();
+
+    function formatDate(releaseDate: string) {
+        const d = new Date(releaseDate);
+        return d.toDateString().split(' ').slice(1).join(' ');
+    }
 </script>
 
 <div>

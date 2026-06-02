@@ -1,24 +1,26 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
     import {nanoid} from "nanoid";
     import Tile from "$lib/components/tiles/tile.svelte"
 
-    export let title: string;
-    export let short: string;
-    export let description: string | undefined = undefined;
-    export let icon: string | undefined = undefined
-    export let name: string;
-    export let value: string;
+    interface Props {
+        title: string;
+        short: string;
+        description?: string;
+        icon?: string;
+        name: string;
+        value: string;
+        icon_snippet?: Snippet;
+        onchange?: (e: Event) => void;
+    }
 
+    let { title, short, description, icon, name, value, icon_snippet, onchange }: Props = $props();
 
     const formId = nanoid();
-
-
 </script>
 
-<input type="radio" id={formId} {name} {value} on:change hidden>
-<Tile el="label" {title} {icon} {description} {short} for={formId}>
-    <slot name="icon"></slot>
-</Tile>
+<input type="radio" id={formId} {name} {value} {onchange} hidden>
+<Tile el="label" {title} {icon} {description} short={short} for={formId} {icon_snippet} />
 
 <style lang="postcss">
     input:checked + :global(label.tile) {

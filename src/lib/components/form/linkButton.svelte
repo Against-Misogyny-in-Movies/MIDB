@@ -1,9 +1,17 @@
 <script lang="ts">
-    export let href: string;
+    import type { Snippet } from 'svelte';
+
+    interface Props {
+        href: string;
+        children: Snippet;
+        onclick?: (e: MouseEvent) => void;
+    }
+
+    let { href, children, onclick }: Props = $props();
 </script>
 
 
-<a {href} on:click><slot /></a>
+<a {href} {onclick}>{@render children()}</a>
 
 <style lang="postcss">
     a {

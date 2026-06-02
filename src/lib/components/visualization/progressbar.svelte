@@ -1,7 +1,11 @@
 <script lang="ts">
-    export let current: number = 0;
-    export let total: number = 0;
-    export let vertical: boolean = false;
+    interface Props {
+        current?: number;
+        total?: number;
+        vertical?: boolean;
+    }
+
+    let { current = 0, total = 0, vertical = false }: Props = $props();
 </script>
 
 <div class="progressbar" class:vertical>

@@ -1,17 +1,26 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
 
-    export let title: string;
-    export let description: string | undefined = undefined;
+    interface Props {
+        title: string;
+        description?: string;
+        icon?: string;
+        el?: string;
+        icon_snippet?: Snippet;
+        [key: string]: unknown;
+    }
 
-    export let icon: string | undefined = undefined;
-    export let el: string = 'div'
-
+    let { title, description, icon, el = 'div', icon_snippet, ...rest }: Props = $props();
 </script>
 
 
-<svelte:element this={el} {...$$restProps} class="bg-component tile">
+<svelte:element this={el} {...rest} class="bg-component tile">
     <h2>
-        <slot name="icon"><i class="{icon}"></i></slot>
+        {#if icon_snippet}
+            {@render icon_snippet()}
+        {:else}
+            <i class="{icon}"></i>
+        {/if}
         {title}
     </h2>
     {#if description}<small>{description}</small>{/if}

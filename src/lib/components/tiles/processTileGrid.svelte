@@ -1,12 +1,17 @@
 <script lang="ts">
-	import { setAttributesToChilds } from "$lib/actions/setAttributesToChilds";
-	import Progressbar from "../visualization/progressbar.svelte";
+    import type { Snippet } from 'svelte';
+    import { setAttributesToChilds } from "$lib/actions/setAttributesToChilds";
+    import Progressbar from "../visualization/progressbar.svelte";
 
+    interface Props {
+        detailed?: boolean;
+        children: Snippet;
+    }
 
-    export let detailed: boolean = true
-    
-    let current = 0;
-    let total: number = 0;
+    let { detailed = true, children }: Props = $props();
+
+    let current = $state(0);
+    let total: number = $state(0);
 
     export function reset() {
         current = 0;
@@ -58,21 +63,20 @@
                 }
                 deselectFollowingSiblings(target);
             }
-            
+
         }
     }
 
-   
 
 </script>
 
-<div class="tile-grid" on:reset={() => console.log("rest")}  on:change={handleChange} use:setAttributesToChilds={{
+<div class="tile-grid" onreset={() => console.log("rest")} onchange={handleChange} use:setAttributesToChilds={{
     selector: 'input[type="checkbox"]',
     attribute: 'data-tile-number',
     value: () => ++total
 }}>
     <Progressbar {current} {total} vertical></Progressbar>
-    <div class="tiles" class:detailed><slot></slot></div>
+    <div class="tiles" class:detailed>{@render children()}</div>
 </div>
 
 

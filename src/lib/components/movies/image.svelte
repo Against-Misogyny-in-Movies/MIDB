@@ -1,22 +1,22 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
   import { PUBLIC_TMDB_IMAGE_URL } from '$env/static/public';
   const sizes = [200, 300, 400, 500];
-
 </script>
 
 <script lang="ts">
+  interface Props {
+      src: string;
+      alt: string;
+  }
 
-  export let src: string;
-  export let alt: string;
+  let { src, alt }: Props = $props();
 
   function getLink(size: number | 'original' = 500) {
-
     const parts: string[] = [
-      PUBLIC_TMDB_IMAGE_URL,
+      PUBLIC_TMDB_IMAGE_URL ?? '',
       size === 'original' ? 'original' : `w${size}`,
-      src
+      src ?? ''
     ];
-
 
     return parts.map((part) => {
       let newPath = part;
@@ -28,18 +28,16 @@
       }
       return newPath;
     }).join('/');
-
   }
 
   function getSrcSet() {
-    const sets =  sizes.map((size) => {
+    const sets = sizes.map((size) => {
       return `${getLink(size)} ${size}w`;
     });
     const sizeForOriginal = sizes[sizes.length-1] + 200;
     sets.push(`${getLink('original')} ${sizeForOriginal}w`);
     return sets.join(', ');
   }
-  
 </script>
 
 <img src={getLink('original')} srcset={getSrcSet()} {alt}/>

@@ -1,17 +1,23 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
 
-    export let detailed: boolean = true;
+    interface Props {
+        detailed?: boolean;
+        children: Snippet;
+    }
+
+    let { detailed = true, children }: Props = $props();
 </script>
 
 <div class:detailed>
-    <slot></slot>  
+    {@render children()}
 </div>
 
 
 <style lang="postcss">
     div {
         @apply grid gap-md place-content-center;
-        grid-template-columns: repeat(var(--grid-cols), minmax(0, var(--max-width, 1fr))); 
+        grid-template-columns: repeat(var(--grid-cols), minmax(0, var(--max-width, 1fr)));
     }
 
     div:not(.detailed) > :global(.tile) {
