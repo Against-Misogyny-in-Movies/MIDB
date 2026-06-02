@@ -5,13 +5,12 @@
     import type { PageData } from "./$types";
 
     let { data }: { data: PageData } = $props();
-    const { movie, metrics } = data;
 </script>
 
-<MetricsFrame previous="Movie: {movie.name}" previousHref={movie.link}>
+<MetricsFrame previous="Movie: {data.movie.name}" previousHref={data.movie.link}>
     {#snippet children(detailed)}
         <TileGrid --grid-cols={3} --max-width="300px" {detailed}>
-            {#each metrics as {url, name, short} (url)}
+            {#each data.metrics as {url, name, short} (url)}
                 <Tile
                     el="a"
                     title={name}

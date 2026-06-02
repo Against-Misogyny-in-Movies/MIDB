@@ -5,11 +5,9 @@
   import NavItem from '$lib/components/navigation/item.svelte';
 
   let { data }: { data: PageData } = $props();
-
-  const { movie } = data;
 </script>
 
-<MovieTile --height="400px" title={movie.title} date={movie.releaseDate} description={movie.overview} image={movie.posterPath} />
+<MovieTile --height="400px" title={data.movie.title} date={data.movie.releaseDate} description={data.movie.overview} image={data.movie.posterPath} />
 <SimpleNav>
   <NavItem href="?metrics">
     Metrics

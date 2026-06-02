@@ -9,21 +9,19 @@
 
     let { data }: { data: PageData } = $props();
     let processBarGrid: ProcessTileGrid = $state()!;
-
-    const { name, hasRelatedOptions: relatedOptions, description, options } = data;
 </script>
 
 <MetricsFrame previous="Metrics" previousHref="./">
     {#snippet children(detailed)}
-        <h1 class="text-center">{name}</h1>
+        <h1 class="text-center">{data.name}</h1>
         <TextBlock>
             <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-            {@html description}
+            {@html data.description}
         </TextBlock>
         <form method="post" onreset={() => processBarGrid.reset()}>
-            {#if relatedOptions}
+            {#if data.hasRelatedOptions}
                 <ProcessTileGrid bind:this={processBarGrid} {detailed}>
-                    {#each options as {id, name, shortDescription} (id)}
+                    {#each data.options as {id, name, shortDescription} (id)}
                         <CheckboxTile
                             title={name}
                             name={id.toString()}
@@ -33,7 +31,7 @@
                 </ProcessTileGrid>
             {:else}
                 <TileGrid --grid-cols={3} --max-width="300px" {detailed}>
-                    {#each options as {id, name, shortDescription} (id)}
+                    {#each data.options as {id, name, shortDescription} (id)}
                         <CheckboxTile
                             title={name}
                             name={id.toString()}
