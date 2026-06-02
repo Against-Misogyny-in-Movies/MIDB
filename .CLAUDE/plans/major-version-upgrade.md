@@ -31,13 +31,14 @@ The decision driver: do the upgrade as **ordered, independently-verifiable phase
 | 4 — Drizzle ORM 0.45 | ✅ done | — | New drizzle.config defineConfig API; fix deep .d imports in seed.ts; array-form index callbacks; drizzle-kit up snapshot upgrade; migration 0005 drops stale Auth.js tables |
 | 5 — Hanko 2.x | ✅ done | — | hanko.user.logout() → hanko.logout(); onsessioncreated callback already correct from Phase 2 |
 | 6 — marked latest + re-seed | ✅ done | — | await marked.parse() in seed.ts; re-seeded DB |
-| 7 — ESLint 9 + remaining deps | ⬜ todo | — | Storybook part already done |
+| 7 — ESLint 9 + remaining deps | ✅ done | — | Flat config eslint.config.js; faker/loom-io/nodemailer/remixicon/prettier bumped; no-unused-vars _ pattern; story files excluded |
 
-**Current state (2026-06-02):**
-- `bun run check` → **0 errors, 3 warnings** (all cosmetic Svelte 5 advice in route pages)
-- `bun run dev` → all 6 routes load
+**Current state (2026-06-02) — ALL PHASES COMPLETE:**
+- `bun run check` → **0 errors, 3 warnings** (cosmetic Svelte 5 advice in route pages)
+- `bun run dev` → all routes load
 - `bun run build` → clean production build
 - `bun run test:unit` → 4/4 pass
+- `bunx eslint src/` → 0 errors (story files excluded)
 - `bun run storybook` → starts on :6006
 
 **Known workaround still active:** `dedup-svelte` script removes a nested `svelte@4` that bun re-installs on every `bun install`. Source: `svelte2tsx` ← `@storybook/svelte-vite@9` ← `@storybook/sveltekit@9` depends on `svelte-preprocess@5` which pins Svelte 4. Will go away when `svelte2tsx` or `svelte-preprocess` drops the Svelte 4 dep (not in our control).

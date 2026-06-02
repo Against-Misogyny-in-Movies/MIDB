@@ -4,7 +4,7 @@
   import { PUBLIC_HANKO_API_URL } from "$env/static/public";
 
   onMount(async () => {
-    register(PUBLIC_HANKO_API_URL).catch((error) => {
+    register(PUBLIC_HANKO_API_URL).catch((_error) => {
       // handle error
     });
   });

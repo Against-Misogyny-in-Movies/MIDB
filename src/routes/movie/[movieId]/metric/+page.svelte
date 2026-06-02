@@ -11,7 +11,7 @@
 <MetricsFrame previous="Movie: {movie.name}" previousHref={movie.link}>
     {#snippet children(detailed)}
         <TileGrid --grid-cols={3} --max-width="300px" {detailed}>
-            {#each metrics as {url, name, short}}
+            {#each metrics as {url, name, short} (url)}
                 <Tile
                     el="a"
                     title={name}

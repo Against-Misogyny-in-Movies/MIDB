@@ -17,12 +17,13 @@
     {#snippet children(detailed)}
         <h1 class="text-center">{name}</h1>
         <TextBlock>
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
             {@html description}
         </TextBlock>
         <form method="post" onreset={() => processBarGrid.reset()}>
             {#if relatedOptions}
                 <ProcessTileGrid bind:this={processBarGrid} {detailed}>
-                    {#each options as {id, name, shortDescription}}
+                    {#each options as {id, name, shortDescription} (id)}
                         <CheckboxTile
                             title={name}
                             name={id.toString()}
@@ -32,7 +33,7 @@
                 </ProcessTileGrid>
             {:else}
                 <TileGrid --grid-cols={3} --max-width="300px" {detailed}>
-                    {#each options as {id, name, shortDescription}}
+                    {#each options as {id, name, shortDescription} (id)}
                         <CheckboxTile
                             title={name}
                             name={id.toString()}
