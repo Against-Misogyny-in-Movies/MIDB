@@ -1,12 +1,22 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
-import { DB_CONNECTION } from '$env/static/private';
+import * as authSchema from './schema/auth'
+import * as metricSchema from './schema/metric';
+import * as movieSchema from './schema/movie';
 
-// for migrations
-const migrationClient = postgres(DB_CONNECTION, { max: 1 });
-migrate(drizzle(migrationClient), { migrationsFolder: './db/migrations'});
+const DB_CONNECTION = process.env.DB_CONNECTION || 'postgres://postgres:postgres@localhost:5432/postgres';
+
+export async function migrateDatabase () {
+    console.info(`Migrating database at ${DB_CONNECTION}`)
+    const migrationClient = postgres(DB_CONNECTION, { max: 1 });
+    await migrate(drizzle(migrationClient), { migrationsFolder: './db/migrations'});
+}
 
 // for query purposes
 const queryClient = postgres(DB_CONNECTION);
-export default drizzle(queryClient);
+export default drizzle(queryClient, { schema: {
+    ...metricSchema,
+    ...movieSchema,
+    ...authSchema
+}});

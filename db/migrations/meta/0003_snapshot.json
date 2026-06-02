@@ -1,6 +1,6 @@
 {
-  "id": "fe6c4946-156e-407f-ad47-678ebe4af02e",
-  "prevId": "4ed8fd43-67f3-42f6-aa9b-4c35b4caae47",
+  "id": "acc32a27-df77-472f-b854-36e93fa8bde1",
+  "prevId": "fe6c4946-156e-407f-ad47-678ebe4af02e",
   "version": "5",
   "dialect": "pg",
   "tables": {
@@ -80,15 +80,15 @@
         "account_userId_user_id_fk": {
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
-          "tableTo": "user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -130,15 +130,15 @@
         "session_userId_user_id_fk": {
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
-          "tableTo": "user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -242,28 +242,28 @@
         "evaluation_results_evaluation_id_evaluations_id_fk": {
           "name": "evaluation_results_evaluation_id_evaluations_id_fk",
           "tableFrom": "evaluation_results",
-          "tableTo": "evaluations",
           "columnsFrom": [
             "evaluation_id"
           ],
+          "tableTo": "evaluations",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "evaluation_results_metric_option_id_metric_options_id_fk": {
           "name": "evaluation_results_metric_option_id_metric_options_id_fk",
           "tableFrom": "evaluation_results",
-          "tableTo": "metric_options",
           "columnsFrom": [
             "metric_option_id"
           ],
+          "tableTo": "metric_options",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -334,41 +334,41 @@
         "evaluations_movie_id_movies_id_fk": {
           "name": "evaluations_movie_id_movies_id_fk",
           "tableFrom": "evaluations",
-          "tableTo": "movies",
           "columnsFrom": [
             "movie_id"
           ],
+          "tableTo": "movies",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "evaluations_metric_id_metrics_id_fk": {
           "name": "evaluations_metric_id_metrics_id_fk",
           "tableFrom": "evaluations",
-          "tableTo": "metrics",
           "columnsFrom": [
             "metric_id"
           ],
+          "tableTo": "metrics",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "evaluations_user_id_user_id_fk": {
           "name": "evaluations_user_id_user_id_fk",
           "tableFrom": "evaluations",
-          "tableTo": "user",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -421,15 +421,15 @@
         "metric_options_metric_id_metrics_id_fk": {
           "name": "metric_options_metric_id_metrics_id_fk",
           "tableFrom": "metric_options",
-          "tableTo": "metrics",
           "columnsFrom": [
             "metric_id"
           ],
+          "tableTo": "metrics",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -526,10 +526,10 @@
       "uniqueConstraints": {
         "movies_tmdb_id_unique": {
           "name": "movies_tmdb_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "tmdb_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       }
     }
@@ -537,8 +537,8 @@
   "enums": {},
   "schemas": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
+    "tables": {}
   }
 }

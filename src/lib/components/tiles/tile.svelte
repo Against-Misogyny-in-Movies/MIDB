@@ -1,11 +1,8 @@
 <script lang="ts">
 
-    import Tooltip from "../help/tooltip.svelte";
-
-
     export let title: string;
-    export let short: string | undefined = undefined;
     export let description: string | undefined = undefined;
+
     export let icon: string | undefined = undefined;
     export let el: string = 'div'
 
@@ -17,10 +14,7 @@
         <slot name="icon"><i class="{icon}"></i></slot>
         {title}
     </h2>
-    {#if short}<small>{short}</small>{/if}
-    {#if description}
-        <Tooltip pos="top-right">{description}</Tooltip>
-    {/if}
+    {#if description}<small>{description}</small>{/if}
 </svelte:element>
 
 

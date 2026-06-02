@@ -12,22 +12,6 @@ export default {
       lg: '976px',
       xl: '1440px',
     },
-    'spacing': {
-      0: '0',
-      xs: '0.25rem',
-      sm: '0.5rem',
-      md: '1rem',
-      lg: '2rem',
-      xl: '3rem',
-      'element-xs': '8rem',
-      'element-sm': '12rem',
-      'element-md': '20rem',
-      'element-lg': '42rem',
-      'element-xl': '64rem',
-      'element-max-width': '92rem',
-      'element-full': '100%',
-      'element-screen': '100vh'
-    },
     colors: {
       'primary': {
         light: colors.purple[300],
@@ -50,9 +34,42 @@ export default {
         light: colors.slate[100],
         DEFAULT: colors.slate[500],
         dark: colors.slate[900]
-      }
+      },
+      danger: {
+        light: colors.red[300],
+        DEFAULT: colors.red[500],
+        dark: colors.red[700]
+      },
+      success: {
+        light: colors.green[300],
+        DEFAULT: colors.green[500],
+        dark: colors.green[700]
+      },
+      warn: {
+        light: colors.amber[300],
+        DEFAULT: colors.amber[500],
+        dark: colors.amber[700]
+      },
+      info: {
+        light: colors.blue[300],
+        DEFAULT: colors.blue[500],
+        dark: colors.blue[700]
+      },
     },
-    
+    'spacing': {
+      0: '0',
+      xs: '0.25rem',
+      sm: '0.5rem',
+      md: '1rem',
+      lg: '2rem',
+      xl: '3rem',
+      '-xs': '-0.25rem',
+      '-sm': '-0.5rem',
+      '-md': '-1rem',
+      '-lg': '-2rem',
+      '-xl': '-3rem',
+      auto: 'auto',
+    },
     extend: {
      
     },

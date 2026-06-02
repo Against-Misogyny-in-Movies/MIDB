@@ -3,7 +3,6 @@
     import Tile from "$lib/components/tiles/tile.svelte"
 
     export let title: string;
-    export let short: string;
     export let description: string | undefined = undefined;
     export let icon: string | undefined = undefined
     export let name: string;
@@ -15,8 +14,8 @@
 </script>
 
 <input type="checkbox" id={formId} {name} on:change hidden>
-<Tile el="label" {title} {icon} {description} {short} for={formId}>
-    <slot name="icon"></slot>
+<Tile el="label" {title} {icon} {description} for={formId}>
+    <slot slot="icon" name="icon"></slot>
 </Tile>
 
 <style lang="postcss">

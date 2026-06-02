@@ -1,6 +1,6 @@
 {
-  "id": "fe6c4946-156e-407f-ad47-678ebe4af02e",
-  "prevId": "4ed8fd43-67f3-42f6-aa9b-4c35b4caae47",
+  "id": "44c0e989-d266-4c6d-8059-b29d33df06b6",
+  "prevId": "acc32a27-df77-472f-b854-36e93fa8bde1",
   "version": "5",
   "dialect": "pg",
   "tables": {
@@ -394,13 +394,13 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "short_description": {
           "name": "short_description",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "description": {
           "name": "description",
@@ -449,13 +449,13 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "short_description": {
           "name": "short_description",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "description": {
           "name": "description",
@@ -463,11 +463,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "related_options": {
-          "name": "related_options",
+        "has_related_options": {
+          "name": "has_related_options",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -537,8 +538,8 @@
   "enums": {},
   "schemas": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
+    "tables": {}
   }
 }

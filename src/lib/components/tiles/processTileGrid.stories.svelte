@@ -4,7 +4,7 @@
     import ProcessTileGridet from './processTileGrid.svelte';
     import { nanoid } from 'nanoid';
     import {faker} from '@faker-js/faker';
-    import Tile from './tile.svelte';
+    import CheckboxTile from '$lib/components/form/checkboxTile.svelte';
     
     export const meta = {
         title: 'Components/Tiles',
@@ -48,13 +48,13 @@
 <Template let:args>
     <ProcessTileGridet {...args}>
       {#each Array(args["amount of tiles"]) as _, i}
-        <Tile
+        <CheckboxTile
           icon={getRandomIcon()}
           title={faker.word.noun()}
           short={faker.lorem.sentence()}
           description={faker.lorem.paragraphs()}
-          ref={nanoid()}
-        ></Tile>
+          name={`checkbox-${i}`}
+        ></CheckboxTile>
       {/each}
     </ProcessTileGridet>
   </Template>

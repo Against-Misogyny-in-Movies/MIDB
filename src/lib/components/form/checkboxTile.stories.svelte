@@ -22,17 +22,6 @@
 </script>
 
 
-<script lang="ts">
-  
-  let selected = true;
-
-  function handleClick() {
-    console.log('clicked');
-    selected = !selected;
-  }
-</script>
-
-
 
 <Template let:args>
   <CheckboxTile {...args} />
