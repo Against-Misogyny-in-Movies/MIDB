@@ -1,5 +1,4 @@
 import { type RequestEvent, redirect, type Handle } from "@sveltejs/kit";
-
 import { jwtVerify, createRemoteJWKSet } from "jose";
 import { PUBLIC_HANKO_API_URL } from "$env/static/public";
 
@@ -20,7 +19,7 @@ const authenticatedUser = async (event: RequestEvent) => {
 
 export const handle: Handle = async ({ event, resolve }) => {
   const verified = await authenticatedUser(event);
-  
+
   if (event.url.pathname.startsWith("/user") && !verified) {
     redirect(303, "/auth");
   }
