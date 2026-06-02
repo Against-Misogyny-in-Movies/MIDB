@@ -15,6 +15,7 @@
 
 
 <style lang="postcss">
+	@reference "../../../app.css";
     div {
         @apply grid gap-md place-content-center;
         grid-template-columns: repeat(var(--grid-cols), minmax(0, var(--max-width, 1fr)));

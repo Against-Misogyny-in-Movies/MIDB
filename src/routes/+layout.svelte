@@ -16,6 +16,7 @@
 
 
 <style lang="postcss">
+	@reference "../app.css";
     main {
         @apply p-md;
     }

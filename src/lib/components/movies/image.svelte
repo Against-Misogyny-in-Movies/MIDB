@@ -43,6 +43,7 @@
 <img src={getLink('original')} srcset={getSrcSet()} {alt}/>
 
 <style lang="postcss">
+	@reference "../../../app.css";
   img {
     @apply h-full;
   }

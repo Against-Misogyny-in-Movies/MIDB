@@ -81,6 +81,7 @@
 
 
 <style lang="postcss">
+	@reference "../../../app.css";
 
     div.tile-grid {
         @apply grid grid-cols-2 gap-md items-center w-full;

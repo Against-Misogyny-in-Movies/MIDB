@@ -14,6 +14,7 @@
 {@render children()}
 
 <style lang="postcss">
+	@reference "../../../app.css";
     i {
         @apply text-neutral-light p-xs;
         cursor: pointer;

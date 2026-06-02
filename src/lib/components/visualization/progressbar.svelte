@@ -13,6 +13,7 @@
 </div>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     .progressbar{
         @apply w-full h-sm bg-neutral-light;
         @apply border-neutral-light rounded-lg overflow-hidden;

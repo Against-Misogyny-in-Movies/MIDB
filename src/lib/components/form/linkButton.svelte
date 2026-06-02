@@ -14,6 +14,7 @@
 <a {href} {onclick}>{@render children()}</a>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     a {
         @apply text-primary py-sm px-md;
         @apply font-bold;

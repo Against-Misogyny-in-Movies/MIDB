@@ -30,6 +30,7 @@
 </section>
 
 <style lang="postcss">
+	@reference "../../../app.css";
   section {
     @apply relative flex flex-row overflow-hidden ;
     @apply p-sm rounded-md bg-white shadow-md;

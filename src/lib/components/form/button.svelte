@@ -16,6 +16,7 @@
 <button class="{status}" {type} {name} {disabled} {...rest}>{@render children()}</button>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     button {
         @apply bg-primary text-white font-bold rounded-md p-sm;
         @apply border-2 border-primary hover:bg-primary-light;

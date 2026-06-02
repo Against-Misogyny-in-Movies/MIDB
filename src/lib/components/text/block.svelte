@@ -21,6 +21,7 @@
 </section>
 
 <style lang="postcss">
+	@reference "../../../app.css";
   section {
 
     @apply m-md;

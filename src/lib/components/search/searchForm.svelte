@@ -36,6 +36,7 @@
 </form>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     form {
         @apply flex flex-row bg-white rounded-md p-xs border-2 border-neutral-light;
     }

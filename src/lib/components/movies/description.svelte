@@ -26,6 +26,7 @@
 </div>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     div {
         @apply p-md;
     }

@@ -21,6 +21,7 @@
 </li>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     li {
         @apply font-bold p-sm;
     }

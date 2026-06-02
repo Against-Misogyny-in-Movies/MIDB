@@ -1,8 +1,59 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+@theme {
+  /* Screens */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 976px;
+  --breakpoint-xl: 1440px;
 
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+
+  /* Colors — primary (purple) */
+  --color-primary-light: #d8b4fe;
+  --color-primary: #a855f7;
+  --color-primary-dark: #7e22ce;
+
+  /* Colors — secondary */
+  --color-secondary-light: #E2E2D5;
+  --color-secondary: #888883;
+  --color-secondary-dark: #55554E;
+
+  /* Colors — neutral (zinc) */
+  --color-neutral-light: #d4d4d8;
+  --color-neutral: #71717a;
+  --color-neutral-dark: #3f3f46;
+
+  /* Colors — gray (slate) */
+  --color-gray-light: #f1f5f9;
+  --color-gray: #64748b;
+  --color-gray-dark: #0f172a;
+
+  /* Colors — danger (red) */
+  --color-danger-light: #fca5a5;
+  --color-danger: #ef4444;
+  --color-danger-dark: #b91c1c;
+
+  /* Colors — success (green) */
+  --color-success-light: #86efac;
+  --color-success: #22c55e;
+  --color-success-dark: #15803d;
+
+  /* Colors — warn (amber) */
+  --color-warn-light: #fcd34d;
+  --color-warn: #f59e0b;
+  --color-warn-dark: #b45309;
+
+  /* Colors — info (blue) */
+  --color-info-light: #93c5fd;
+  --color-info: #3b82f6;
+  --color-info-dark: #1d4ed8;
+}
 
 @layer components {
 
@@ -17,7 +68,7 @@
   h1 {
     @apply text-3xl;
   }
-  
+
   h2 {
     @apply text-2xl;
   }

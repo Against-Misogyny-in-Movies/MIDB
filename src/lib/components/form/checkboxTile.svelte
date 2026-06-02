@@ -21,6 +21,7 @@
 <Tile el="label" {title} {icon} {description} for={formId} {icon_snippet} />
 
 <style lang="postcss">
+	@reference "../../../app.css";
     input:checked + :global(label.tile) {
         @apply border-primary;
     }

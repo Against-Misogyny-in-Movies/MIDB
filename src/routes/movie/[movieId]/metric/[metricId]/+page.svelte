@@ -50,6 +50,7 @@
 </MetricsFrame>
 
 <style lang="postcss">
+	@reference "../../../../../app.css";
     form > .button-group {
         @apply flex gap-sm justify-end;
         @apply mt-md;

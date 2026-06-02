@@ -16,6 +16,7 @@
 </nav>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     nav {
         @apply my-sm mx-md;
     }

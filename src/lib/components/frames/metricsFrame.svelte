@@ -27,6 +27,7 @@
 </main>
 
 <style lang="postcss">
+	@reference "../../../app.css";
     main {
         @apply flex flex-col min-h-screen w-full max-w-5xl m-auto p-md;
     }

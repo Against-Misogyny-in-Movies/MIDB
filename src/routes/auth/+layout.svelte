@@ -13,6 +13,7 @@
 </main>
 
 <style lang="postcss">
+	@reference "../../app.css";
     main {
         @apply flex flex-col items-center justify-center h-screen;
     }

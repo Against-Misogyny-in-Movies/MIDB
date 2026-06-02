@@ -28,6 +28,7 @@
 
 
 <style lang="postcss">
+	@reference "../../../app.css";
     .tile {
         @apply relative block cursor-pointer;
         @apply border-2 border-neutral-light rounded-lg p-md;
@@ -35,6 +36,6 @@
 
     .tile:hover,
     .tile:focus {
-        @apply border-neutral !important;
+        @apply border-neutral!;
     }
 </style>
