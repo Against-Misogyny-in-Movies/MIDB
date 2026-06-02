@@ -20,18 +20,41 @@ The decision driver: do the upgrade as **ordered, independently-verifiable phase
 
 ---
 
+## Progress log
+
+| Phase | Status | Commit | Notes |
+|---|---|---|---|
+| 0 — Baseline | ✅ done | pre-existing | `bun run check` baseline: 29 errors (all story/drizzle), dev server loads all routes |
+| 1+2 — Vite 8 + Svelte 5 | ✅ done | `d542697`, `4be2e8b` | Merged because vite-plugin-svelte ≥4 requires Svelte 5; full rune/snippet rewrite |
+| Storybook 7→9 | ✅ done | `276623b` | Pulled forward from Phase 7; eliminates svelte-preprocess as the source of the nested svelte@4 conflict |
+| 3 — Tailwind CSS 4 | ⬜ todo | — | |
+| 4 — Drizzle ORM 0.45 | ⬜ todo | — | |
+| 5 — Hanko 2.x | ⬜ todo | — | |
+| 6 — marked latest + re-seed | ⬜ todo | — | |
+| 7 — ESLint 9 + remaining deps | ⬜ todo | — | Storybook part already done |
+
+**Current state (2026-06-02):**
+- `bun run check` → **0 errors, 4 warnings** (all cosmetic Svelte 5 advice in route pages)
+- `bun run dev` → all 6 routes load
+- `bun run test:unit` → 4/4 pass
+- `bun run storybook` → starts on :6006
+
+**Known workaround still active:** `dedup-svelte` script removes a nested `svelte@4` that bun re-installs on every `bun install`. Source: `svelte2tsx` ← `@storybook/svelte-vite@9` ← `@storybook/sveltekit@9` depends on `svelte-preprocess@5` which pins Svelte 4. Will go away when `svelte2tsx` or `svelte-preprocess` drops the Svelte 4 dep (not in our control).
+
+---
+
 ## Phase 0 — Baseline & safety
 - Confirm clean working tree; do all work on current branch `feature/movie_page` (or a new `chore/major-upgrades` branch).
 - Record current good state: `bun run check` (known 9 story-file errors — that's the baseline), `bun run dev` loads `/`, `/movie/550`, `/movie/550/metric`, `/movie/550/metric/bechdel`, `/auth`.
 - Ensure Postgres container `midb-pg` (port 5435) is running.
 
-## Phase 1 — Build toolchain: Vite 8 + plugin-svelte 7 + Vitest + SvelteKit
+## ✅ Phase 1+2 — Vite 8 + Svelte 5 (merged, done)
 Lowest-coupling infra first, still on Svelte 4.
 - `package.json`: bump `vite ^8`, `@sveltejs/vite-plugin-svelte ^7`, `vitest` latest, `@sveltejs/kit` latest 2.x, `@sveltejs/adapter-auto ^7`, `@playwright/test` latest, `@types/jsdom` latest, `jsdom` latest.
 - `vite.config.ts`: currently imports `defineConfig` from `vitest/config` and merges SvelteKit plugin + test block. Verify this still type-checks under Vite 8 / Vitest latest; Vitest may now want a separate `vitest.config.ts` or the `test` field typed via `vitest/config` (keep as-is if it compiles).
 - `bun install`, then `bun run check` + `bun run dev`. Expect Svelte 4 to still compile under plugin-svelte 7 (it supports both). Fix any Vite-8 config API breaks here.
 
-## Phase 2 — Svelte 5 + full rune/snippet rewrite
+## ✅ Phase 2 — Svelte 5 + full rune/snippet rewrite (done, merged into Phase 1)
 Bump `svelte ^5`, `svelte-check ^4`, `@testing-library/svelte ^5`, `prettier-plugin-svelte ^4`, `eslint-plugin-svelte ^3`.
 
 Run `bunx sv migrate svelte-5` first as an automated pass, then hand-fix. Per-pattern conversions (verified against the Svelte 5 migration guide):
@@ -57,7 +80,7 @@ Run `bunx sv migrate svelte-5` first as an automated pass, then hand-fix. Per-pa
 
 Verify: `bun run check` (component type errors should now be ≤ baseline; story errors may shift), `bun run dev`, click through all routes, exercise the metric checkbox/progress-bar interaction and the "show more/less" toggle.
 
-## Phase 3 — Tailwind CSS 4
+## Phase 3 — Tailwind CSS 4 ⬜
 Bump `tailwindcss ^4`, add `@tailwindcss/postcss`, keep `autoprefixer` only if still needed (TW4 bundles autoprefixing — likely remove).
 - `postcss.config.js`: replace `tailwindcss: {}` with `'@tailwindcss/postcss': {}`; drop `autoprefixer`.
 - `src/app.css`: replace the three `@tailwind base/components/utilities` directives with a single `@import "tailwindcss";`. Keep the `@layer components` block (`body`, `.bg-component`, `h1`, `h2`) — `@apply` still works in TW4.
@@ -70,7 +93,7 @@ Bump `tailwindcss ^4`, add `@tailwindcss/postcss`, keep `autoprefixer` only if s
 
 Verify: `bun run dev`, visually compare every route against Phase 0 screenshots — colors, spacing, the movie tile, tile grids, progress bar, buttons (all 6 status variants), collapsible text block. This phase is the highest visual-risk.
 
-## Phase 4 — Drizzle ORM 0.45 + drizzle-kit 0.31
+## Phase 4 — Drizzle ORM 0.45 + drizzle-kit 0.31 ⬜
 Bump `drizzle-orm ^0.45`, `drizzle-kit ^0.31`.
 - **`drizzle.config.ts`**: rewrite to new API — `dialect: "postgresql"` (replaces `driver: "pg"`), `dbCredentials: { url: process.env.DB_CONNECTION }` (replaces `connectionString`), keep `out`/`schema`/`breakpoints`. Use `defineConfig` from `drizzle-kit`.
 - **`package.json` script**: `db:generate` `drizzle-kit generate:pg` → `drizzle-kit generate` (the `:pg` form is removed).
@@ -82,7 +105,7 @@ Bump `drizzle-orm ^0.45`, `drizzle-kit ^0.31`.
 
 Verify: `bun run check`; `bun run db:generate` produces **no** new migration (schema unchanged) — if it tries to, inspect the diff (likely just the index-callback cosmetic change → acceptable, or adjust to avoid churn); re-run `bun run db:migrate` (idempotent); load `/movie/550/metric` and `/movie/550/metric/bechdel` to confirm relational queries return data.
 
-## Phase 5 — Hanko 2.x
+## Phase 5 — Hanko 2.x ⬜
 Bump `@teamhanko/hanko-elements ^2`.
 - **`src/lib/components/auth/hankoAuth.svelte`**: `register()` + `<hanko-auth>` still valid. Event renamed: `on:onAuthFlowCompleted` → **`on:onSessionCreated`** (web-component DOM event; stays as `on:` even in Svelte 5 since it's a custom element, not a Svelte component event).
 - **`src/routes/auth/+page.svelte`**: update the listener on `<HankoAuth>` to forward `onSessionCreated`. Since `HankoAuth` is now a Svelte 5 component (Phase 2), expose the redirect as a **callback prop** (e.g. `onsessioncreated`) rather than `on:` — wire `hankoAuth.svelte`'s inner `<hanko-auth on:onSessionCreated={...}>` to call the prop.
@@ -92,15 +115,16 @@ Bump `@teamhanko/hanko-elements ^2`.
 
 Verify (needs the real Hanko tenant in `.env`): `/auth` renders the widget, completing login redirects to `/user/dashboard`, the gate in `hooks.server.ts` redirects `/user/*` when logged out, `/user/dashboard` shows the profile, logout returns to `/auth`.
 
-## Phase 6 — marked latest + re-seed
+## Phase 6 — marked latest + re-seed ⬜
 Bump `marked` to latest.
 - **`db/scripts/seed.ts` line 26**: `marked.parse(...)` — in marked 16+ `parse()` can return `string | Promise<string>`. The seed already runs in an `async` context; wrap with `await marked.parse(...)` (or `marked.parse(md, { async: false })` to force sync) so stored HTML is a string, not `[object Promise]`.
 - Re-run `bun run db:seed` to re-render the Bechdel description+options HTML with the new marked, overwriting the old stored HTML.
 
 Verify: load `/movie/550/metric/bechdel`; the `{@html description}` in `TextBlock` renders formatted markdown (headings, lists, bold) — visually confirm it matches the prior render and there's no literal `[object Promise]`.
 
-## Phase 7 — Tooling: ESLint 9 flat config + remaining deps
-- Bump `eslint ^9`, `@typescript-eslint/eslint-plugin ^8`, `@typescript-eslint/parser ^8`, `eslint-config-prettier ^10`, `eslint-plugin-svelte ^3`, `prettier` latest, `@faker-js/faker ^10`, `@loom-io/fs ^0.6`, `nodemailer ^8` (unused at runtime — leftover from dropped Auth.js; consider removing entirely), `remixicon ^4` (icon-class renames possible — audit `ri-*` classes used: `ri-arrow-left-line`, `ri-search-line`, `ri-arrow-down-s-line`, `ri-arrow-up-s-line`).
+## Phase 7 — Tooling: ESLint 9 flat config + remaining deps ⬜
+- **Already done:** Storybook 7→9, `@storybook/addon-svelte-csf` 4→5, `eslint-plugin-storybook` 0.6→0.11, `react`/`react-dom` removed.
+- Remaining: Bump `eslint ^9`, `@typescript-eslint/eslint-plugin ^8`, `@typescript-eslint/parser ^8`, `eslint-config-prettier ^10`, `eslint-plugin-svelte ^3`, `prettier` latest, `@faker-js/faker ^10`, `@loom-io/fs ^0.6`, `nodemailer ^8` (unused at runtime — leftover from dropped Auth.js; consider removing entirely), `remixicon ^4` (icon-class renames possible — audit `ri-*` classes used: `ri-arrow-left-line`, `ri-search-line`, `ri-arrow-down-s-line`, `ri-arrow-up-s-line`).
 - **ESLint 9 requires flat config**: migrate `.eslintrc.cjs` → `eslint.config.js` (flat). `eslint-plugin-svelte ^3` and `typescript-eslint ^8` both ship flat presets. This is a config rewrite, not source changes. `eslint-plugin-storybook` lags — pin/guard so it doesn't block lint; if incompatible with ESLint 9, scope it out (stories are dev-only).
 - Keep `@loom-io/fs` only if seed still needs it; it's the only consumer.
 
