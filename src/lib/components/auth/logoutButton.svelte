@@ -5,7 +5,7 @@
 
   const hanko = new Hanko(PUBLIC_HANKO_API_URL);
   const logout = () => {
-    hanko.user.logout().catch((_error) => {
+    hanko.logout().catch((_error) => {
       // handle error
     });
     goto("/auth")
