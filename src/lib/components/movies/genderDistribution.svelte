@@ -102,7 +102,7 @@
 
   /* Neutral palette — no value judgments */
   .seg-female   { background-color: var(--brand); }
-  .seg-male     { background-color: var(--accent); }
+  .seg-male     { background-color: var(--seg-male); }
   .seg-nonbinary { background-color: var(--accent-bg); }
   .seg-unknown  { background-color: var(--border); }
 

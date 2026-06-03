@@ -34,6 +34,7 @@
   --accent-bg:      #64dfdf;
   --accent-ink:     #170025;
   --border:         #e3dceb;
+  --seg-male:       #c890ee;
 
   /* Status — base / hover (soft) / on-color text (fg) */
   --secondary:      #888883; --secondary-soft: #E2E2D5; --secondary-fg: #ffffff;
@@ -56,6 +57,7 @@
     --accent-bg:      #72efdd;
     --accent-ink:     #170025;
     --border:         #34234a;
+    --seg-male:       #fcd34d;
 
     --secondary:      #888883; --secondary-soft: #55554E; --secondary-fg: #f3ecf8;
     --success:        #22c55e; --success-soft:   #15803d; --success-fg:   #f3ecf8;
@@ -77,6 +79,7 @@
   --accent-bg:      #64dfdf;
   --accent-ink:     #170025;
   --border:         #e3dceb;
+  --seg-male:       #c890ee;
 
   --secondary:      #888883; --secondary-soft: #E2E2D5; --secondary-fg: #ffffff;
   --success:        #22c55e; --success-soft:   #86efac; --success-fg:   #ffffff;
@@ -96,6 +99,7 @@
   --accent-bg:      #72efdd;
   --accent-ink:     #170025;
   --border:         #34234a;
+  --seg-male:       #72efdd;
 
   --secondary:      #888883; --secondary-soft: #55554E; --secondary-fg: #f3ecf8;
   --success:        #22c55e; --success-soft:   #15803d; --success-fg:   #f3ecf8;
@@ -116,6 +120,7 @@
   --color-accent-bg:      var(--accent-bg);
   --color-accent-ink:     var(--accent-ink);
   --color-border:         var(--border);
+  --color-seg-male:       var(--seg-male);
 
   --color-secondary:      var(--secondary);
   --color-secondary-soft: var(--secondary-soft);

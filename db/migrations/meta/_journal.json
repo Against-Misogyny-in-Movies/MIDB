@@ -43,6 +43,13 @@
       "when": 1780433589201,
       "tag": "0005_complete_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780517178618,
+      "tag": "0006_panoramic_vivisector",
+      "breakpoints": true
     }
   ]
 }

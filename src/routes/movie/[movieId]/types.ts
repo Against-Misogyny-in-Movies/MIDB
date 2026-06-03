@@ -9,6 +9,7 @@ export interface GenderBreakdown {
 export interface Movie {
   id: string;
   title: string;
+  imdbId: string | null;
   posterPath: string | null;
   overview: string;
   releaseDate: string;

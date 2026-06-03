@@ -1,14 +1,21 @@
 import type { PageServerLoad } from './$types';
 import { getMovie } from './datasource.server';
+import { getOrCreateDbMovie, getBechdel, getUnconsenting } from './db.server';
+import { getTriggerTagsLive } from './ddd.server';
 
 export const load: PageServerLoad = async ({ params }) => {
-  const [movie] = await Promise.all([
-    getMovie(params.movieId)
-    // TODO(sections 3/4): add getMetrics(params.movieId) and getComments(params.movieId) here
-    // as un-awaited promises for streaming: { movie, metrics: getMetrics(...), comments: getComments(...) }
-  ]);
+	const movie = await getMovie(params.movieId);
+	const dbMovie = await getOrCreateDbMovie(movie);
 
-  return {
-    movie
-  };
+	const [bechdel, unconsenting] = await Promise.all([
+		getBechdel(dbMovie.id),
+		getUnconsenting(dbMovie.id),
+	]);
+
+	return {
+		movie,
+		bechdel,
+		unconsenting,
+		triggerTags: getTriggerTagsLive(movie.imdbId), // un-awaited: streamed
+	};
 };

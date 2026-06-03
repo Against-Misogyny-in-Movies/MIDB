@@ -23,7 +23,7 @@ export function aggregateGender(entries: TmdbCreditEntry[]): GenderBreakdown {
 
 export const getMovie = async (movieId: string): Promise<Movie> => {
   const url = new URL(`${PUBLIC_TMDB_API_URL}/3/movie/${movieId}`);
-  url.searchParams.set('append_to_response', 'credits');
+  url.searchParams.set('append_to_response', 'credits,external_ids');
   url.searchParams.set('language', 'en-US');
 
   const response = await fetch(url.toString(), {
@@ -45,6 +45,7 @@ export const getMovie = async (movieId: string): Promise<Movie> => {
   return {
     id: String(data.id),
     title: data.title,
+    imdbId: data.external_ids?.imdb_id ?? data.imdb_id ?? null,
     posterPath: data.poster_path ?? null,
     overview: data.overview ?? '',
     releaseDate: data.release_date ?? '',

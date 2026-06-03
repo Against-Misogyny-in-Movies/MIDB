@@ -6,6 +6,7 @@
       "name": "midb",
       "dependencies": {
         "@teamhanko/hanko-elements": "^2.6.0",
+        "csv-parse": "^6.2.1",
         "drizzle-orm": "^0.45.2",
         "jose": "^6.2.3",
         "marked": "^18.0.4",
@@ -415,6 +416,8 @@
     "css.escape": ["css.escape@1.5.1", "https://artifactory.playticorp.com/artifactory/api/npm/npm/css.escape/-/css.escape-1.5.1.tgz", {}, "sha512-YUifsXXuknHlUsmlgyY0PKzgPOr7/FjCePfHNt0jxm83wHZi44VDMQ7/fGNkjY3/jV1MC+1CmZbaHzugyeRtpg=="],
 
     "cssesc": ["cssesc@3.0.0", "https://artifactory.playticorp.com/artifactory/api/npm/npm/cssesc/-/cssesc-3.0.0.tgz", { "bin": { "cssesc": "bin/cssesc" } }, "sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg=="],
+
+    "csv-parse": ["csv-parse@6.2.1", "https://artifactory.playticorp.com/artifactory/api/npm/npm/csv-parse/-/csv-parse-6.2.1.tgz", {}, "sha512-LRLMV+UCyfMokp8Wb411duBf1gaBKJfOfBWU9eHMJ+b+cJYZsNu3AFmjJf3+yPGd59Exz1TsMjaSFyxnYB9+IQ=="],
 
     "data-urls": ["data-urls@7.0.0", "https://artifactory.playticorp.com/artifactory/api/npm/npm/data-urls/-/data-urls-7.0.0.tgz", { "dependencies": { "whatwg-mimetype": "^5.0.0", "whatwg-url": "^16.0.0" } }, "sha512-23XHcCF+coGYevirZceTVD7NdJOqVn+49IHyxgszm+JIiHLoB2TkmPtsYkNWT1pvRSGkc35L6NHs0yHkN2SumA=="],
 

@@ -1,13 +1,16 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import Image from './image.svelte';
   import { formatRuntime } from '$lib/movie/format';
   import type { Movie } from '../../../routes/movie/[movieId]/types';
 
   interface Props {
     movie: Movie;
+    /** Rendered in the info column where the plot overview used to sit. */
+    children?: Snippet;
   }
 
-  let { movie }: Props = $props();
+  let { movie, children }: Props = $props();
 
   const year = $derived(movie.releaseDate ? movie.releaseDate.slice(0, 4) : '');
   const runtime = $derived(formatRuntime(movie.runtime));
@@ -38,8 +41,8 @@
         <span class="release-date"> · {movie.releaseDate}</span>
       {/if}
     </p>
-    {#if movie.overview}
-      <p class="summary">{movie.overview}</p>
+    {#if children}
+      {@render children()}
     {/if}
   </div>
 </header>
@@ -78,7 +81,7 @@
   }
 
   .info {
-    @apply flex flex-col gap-sm;
+    @apply flex flex-col gap-md min-w-0 flex-1;
   }
 
   h1 {
@@ -91,10 +94,5 @@
 
   .release-date {
     @apply text-ink-muted;
-  }
-
-  .summary {
-    @apply text-ink leading-relaxed mt-sm;
-    max-width: 65ch;
   }
 </style>

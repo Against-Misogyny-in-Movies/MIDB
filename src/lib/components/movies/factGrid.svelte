@@ -19,13 +19,6 @@
   const originalLang = $derived(
     movie.originalLanguage ? languageName(movie.originalLanguage) : '—'
   );
-  const spokenLangs = $derived(
-    movie.spokenLanguages.length
-      ? movie.spokenLanguages
-          .map((l) => languageName(l.iso, l.englishName))
-          .join(', ')
-      : '—'
-  );
 </script>
 
 <dl class="fact-grid">
@@ -49,10 +42,6 @@
     <dt class="label">Language</dt>
     <dd>{originalLang}</dd>
   </div>
-  <div class="fact">
-    <dt class="label">Spoken languages</dt>
-    <dd>{spokenLangs}</dd>
-  </div>
 </dl>
 
 <style lang="postcss">
@@ -60,7 +49,7 @@
 
   .fact-grid {
     @apply grid gap-md;
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
   }
 
   .fact {
