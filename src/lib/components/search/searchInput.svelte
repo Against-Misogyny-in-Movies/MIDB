@@ -30,7 +30,7 @@
 		name="query"
 		placeholder="Search movies..."
 		{value}
-		oninput={(e) => oninput((e.currentTarget as HTMLInputElement).value)}
+		oninput={(e) => oninput(e.currentTarget.value)}
 		{onkeydown}
 		onfocus={() => onfocus?.()}
 		role="combobox"

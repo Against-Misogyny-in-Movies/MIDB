@@ -54,6 +54,7 @@
 		@apply list-none p-xs m-0 flex flex-col gap-0;
 		max-height: 20rem;
 		overflow-y: auto;
+		scrollbar-color: var(--color-brand) transparent;
 	}
 
 	.status {

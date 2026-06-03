@@ -1,6 +1,6 @@
 # MIDB — Architecture Reference
 
-> Snapshot as of 2026-06-03: landing page + theme toggle shipped, **live inline movie search** wired to a `/api/search` TMDB proxy, and the stack was bumped to **Svelte 5 / Vite 8 / Tailwind 4 (CSS-first) / Storybook 9**. Living document — update as the app evolves.
+> Snapshot as of 2026-06-03: landing page + theme toggle shipped, **live inline movie search** wired to a `/api/search` TMDB proxy, the **movie detail page (sections 1 & 2: general details + cast/crew gender distribution)** built out as a single scrolling page, a **global nav bar + footer** lifted into the root layout, and the stack was bumped to **Svelte 5 / Vite 8 / Tailwind 4 (CSS-first) / Storybook 9**. Living document — update as the app evolves.
 
 ## What it is
 
@@ -76,9 +76,10 @@ MIDB/
 │   ├── app.css                 # Tailwind v4 entry + design tokens + @layer components (see Styling)
 │   ├── app.html / app.d.ts     # SvelteKit shell + ambient types
 │   ├── routes/                 # File-based routing (see below)
-│   │   └── +layout.svelte      # Svelte-5 root shell: imports app.css + remixicon, {@render children()}
+│   │   └── +layout.svelte      # Svelte-5 root shell: app.css + remixicon, global Navbar + <main> + Footer
 │   └── lib/
-│       ├── components/         # Reusable UI, grouped by domain
+│       ├── components/         # Reusable UI, grouped by domain (incl. layout/, feedback/)
+│       ├── movie/             # Client-safe pure helpers — format.ts (Intl currency/region/lang/runtime) + spec
 │       ├── actions/            # Svelte `use:` actions (setAttributesToChilds.ts)
 │       └── stores/             # (debounced.ts)
 │
@@ -113,14 +114,14 @@ The styling system is **Tailwind CSS v4, CSS-first**. There is no JS theme confi
 
 ## Routes
 
-SvelteKit file-based routing under `src/routes/`. Server-only logic lives in `+page.server.ts` / `*.server.ts` (suffix = never shipped to client). The root `+layout.svelte` is the Svelte-5 shell (`{@render children()}`, imports `app.css` + remixicon, wraps content in `<main class>` with `@apply p-md`).
+SvelteKit file-based routing under `src/routes/`. Server-only logic lives in `+page.server.ts` / `*.server.ts` (suffix = never shipped to client). The root `+layout.svelte` is the Svelte-5 shell: imports `app.css` + remixicon and renders a `flex flex-col min-h-screen` page chrome — a global `<Navbar>` (header), `<main class="flex-1 max-w-5xl mx-auto px-md">{@render children()}</main>`, and a global `<Footer>` (so every route gets nav + footer; the footer always sticks to the bottom on short pages). The nav/footer live in `lib/components/layout/` (see Component library).
 
 | Route | Files | Status | Notes |
 |---|---|---|---|
 | `/` | `+page.svelte`, `+page.server.ts` | **Working (landing)** | Real landing page: `TopBar` (logo + theme toggle + "Sign in"), hero ("Know before you watch."), `HeroSearch` (now a live inline search — see below), a 3-up metrics band, footer. `+page.server.ts` returns `{}`. |
 | `/api/search` | `+server.ts`, `datasource.server.ts` | **Working (endpoint)** | `GET ?q=…` proxy to TMDB `search/movie` using the server-only `TMDB_API_TOKEN` (first authenticated TMDB call in the repo). Empty/whitespace `q` short-circuits to `{ results: [] }`; TMDB failures are caught, logged via `console.warn`, and also return `{ results: [] }` (never 500s the UI). Returns a slim `SearchResult[]` shape. No `/search` *page* exists — search is inline-only. |
 | `/auth` | `+page.svelte`, `+page.ts`, `+layout.svelte` | Working | Renders Hanko `<hanko-auth>`. On success redirects to `/user/dashboard`. `ssr=false`. Layout centers the widget. |
-| `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts` | Working | Fetches movie **live from TMDB** by id (e.g. `/movie/550`). Renders poster, title, date, overview + nav (Metrics works, **Cast goes nowhere**). |
+| `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts`, `types.ts` | Working (detail page, §1–2) | Fetches movie **live from TMDB** by id (e.g. `/movie/550`), now **authenticated** (`Bearer`) with `append_to_response=credits` in a single request, and **`throw error()`** on a non-ok response. Renders a **single scrolling page** with anchored `<section id>`s: `#details` (poster + title + year/runtime + **summary**, fact grid: budget/revenue/genres/country/languages), `#gender` (cast & crew gender distribution — stacked bar + legend, counts aggregated **server-side** so the ~225 raw credits never cross the wire), and placeholder `#metrics`/`#comments` sections rendering static skeletons (TODO sections 3/4). The old `?metrics`/`?cast` `SimpleNav` is gone — the **dead Cast link is retired** (known gap #4 closed) and the fetch is **no longer unauthenticated** (known gap #6 closed). See `.CLAUDE/plans/plan-movie-detail-sections-1-2.md`. |
 | `/movie/[movieId]/metric` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts` | Working | Lists all metrics from the DB as clickable tiles. **Back-link movie name is hardcoded to "The Matrix"** — known gap. |
 | `/movie/[movieId]/metric/[metricId]` | `+page.svelte`, `+page.server.ts`, `datastore.server.ts` | Working | Metric evaluation form. Sequential checkbox UI w/ progress bar (if `hasRelatedOptions`) or plain grid. **`finish`/`failed` submit actions only `console.log` — not persisted to DB yet.** |
 | `/user/dashboard` | `+page.svelte`, `+page.ts` | Working (minimal) | Hanko `<hanko-profile>` widget. Auth-gated by `hooks.server.ts`. `ssr=false`. |
@@ -197,9 +198,9 @@ Components: `src/lib/components/auth/{hankoAuth,hankoProfile,logoutButton}.svelt
 
 ## TMDB integration
 
-- `src/routes/movie/[movieId]/datasource.server.ts` — `getMovie(movieId)` fetches `${PUBLIC_TMDB_API_URL}/3/movie/{id}` **unauthenticated** (no Bearer header) and maps the response to a `Movie` interface. (Known gap — works only because the endpoint tolerates it; should adopt the Bearer token like the search route does.)
-- `src/routes/api/search/datasource.server.ts` — `searchMovies(query)` calls `${PUBLIC_TMDB_API_URL}/3/search/movie` (`include_adult=false`, `language=en-US`, `page=1`) **with** `Authorization: Bearer ${TMDB_API_TOKEN}` (from `$env/static/private`) — the first authenticated TMDB call in the repo. Returns `{ results: [] }` on a non-ok response. Shares the `SearchResult` type with the client via `$lib/components/search/types`.
-- Images: `src/lib/components/movies/image.svelte` builds responsive `srcset` URLs from `PUBLIC_TMDB_IMAGE_URL` (e.g. `.../t/p` + `w200/w300/.../original` + poster path) — used on the movie detail page. **Search result thumbnails do NOT use this component**: `search/resultPoster.svelte` builds a fixed `w92` URL directly, because the shared `Image` defaults its `src` to `original` (with no `sizes` attr) and would pull ~4 MB of full-res posters to render a 20-row, 40×60px result list.
+- `src/routes/movie/[movieId]/datasource.server.ts` — `getMovie(movieId)` fetches `${PUBLIC_TMDB_API_URL}/3/movie/{id}?append_to_response=credits&language=en-US` **authenticated** (`Authorization: Bearer ${TMDB_API_TOKEN}` from `$env/static/private`), `throw error(response.status, …)` on a non-ok response, and maps the response onto an **extended `Movie`** (budget, revenue, genres, origin country, original/spoken languages, runtime, tagline, `posterPath: string | null`). Cast/crew **gender counts are aggregated server-side** by the exported `aggregateGender` helper (0=unknown/1=female/2=male/3=non-binary → a `GenderBreakdown`) so the ~225 raw credits never cross the wire. `Movie`/`GenderBreakdown` types live in a sibling **non-server `types.ts`** (re-exported by the datasource) so client components import types without touching a `*.server.ts`.
+- `src/routes/api/search/datasource.server.ts` — `searchMovies(query)` calls `${PUBLIC_TMDB_API_URL}/3/search/movie` (`include_adult=false`, `language=en-US`, `page=1`) **with** `Authorization: Bearer ${TMDB_API_TOKEN}` (from `$env/static/private`). Returns `{ results: [] }` on a non-ok response. Shares the `SearchResult` type with the client via `$lib/components/search/types`.
+- Images: `src/lib/components/movies/image.svelte` builds responsive `srcset` URLs from `PUBLIC_TMDB_IMAGE_URL` (e.g. `.../t/p` + `w200/w300/.../original` + poster path) and accepts an optional **`imgSizes`** prop (named to avoid colliding with the module-scope `sizes` array) plus `decoding="async"`; its `src` defaults to **`w500`** (not `original`) so the fallback candidate stays bounded. `detailHeader.svelte` passes `imgSizes="(max-width: 768px) 40vw, 300px"`. **Search result thumbnails still do NOT use this component**: `search/resultPoster.svelte` builds a fixed `w92` URL directly to keep a 20-row, 40×60px result list cheap.
 
 ---
 
@@ -210,9 +211,11 @@ Organized by domain; most have a companion `*.stories.svelte` (Storybook) and so
 | Group | Components | Purpose |
 |---|---|---|
 | `theme/` | themeToggle | Light/dark switch (see mechanics below) — **new** |
-| `landing/` | topBar, heroSearch | Landing-page chrome: top bar (logo + theme toggle + Sign in) and the hero search. `heroSearch` is now a thin wrapper that renders `search/movieSearch` (the old `goto('/search')` behaviour is gone). |
+| `layout/` | navbar, footer | **Global app chrome**, mounted in the root `+layout.svelte` (every route). `navbar` = wordmark + `ThemeToggle` + Sign in (extracted from `landing/topBar`); `footer` = brand wordmark + Home/Sign in links. **new** |
+| `landing/` | topBar, heroSearch | Landing-page chrome: `heroSearch` is a thin wrapper that renders `search/movieSearch` (the old `goto('/search')` behaviour is gone). `topBar` predates the global `layout/navbar` and is **no longer used by the landing page** (the layout navbar replaced it) — retained for reference. |
 | `auth/` | hankoAuth, hankoProfile, logoutButton | Hanko web-component wrappers |
-| `movies/` | tile, description, image | Movie card, metadata block, responsive poster |
+| `movies/` | tile, description, image, **detailHeader, factGrid, genderDistribution, sectionSkeleton** | Movie card, metadata block, responsive poster (now takes an optional `imgSizes` prop + `decoding="async"`; `src` defaults to `w500` not `original`). The detail-page set: `detailHeader` (poster w/ null-poster `ri-film-line` guard + title + **summary**, was tagline), `factGrid` (definition grid via `lib/movie/format.ts` helpers), `genderDistribution` (stacked horizontal bar + legend from `GenderBreakdown` counts; neutral tokens, no value-laden coloring; `total===0` empty state), `sectionSkeleton` (composed placeholder for the not-yet-streamed §3/§4, `variant: metrics \| comments`). |
+| `feedback/` | skeleton | Primitive shimmer block (`width`/`height`/`rounded` props). Animation gated behind `prefers-reduced-motion`; a `static` prop forces a non-animating tint (used by `sectionSkeleton` since §3/§4 don't stream yet). **new** |
 | `frames/` | metricsFrame | Shell for metric pages: back nav + "show more/less" toggle (exposes `detailed` via slot prop) |
 | `tiles/` | tile, tileGrid, processTileGrid | Generic card; CSS-grid wrappers; **sequential checkbox grid w/ progress bar** |
 | `form/` | button, linkButton, checkboxTile, radioTile | Status-variant button, checkbox-as-tile (uses `nanoid` for ids) |
@@ -285,9 +288,13 @@ bun run dev
 1. **Evaluations not persisted** — the metric form's `finish`/`failed` actions only `console.log`; need inserts into `evaluations` + `evaluation_results`.
 2. **Metric list hardcodes "The Matrix"** as the back-link movie.
 3. **No auth gate on evaluation pages** — anyone can open metric pages; saving should require login.
-4. **Cast nav item** goes nowhere.
+4. ~~**Cast nav item** goes nowhere.~~ **Closed** — the movie-detail `?metrics`/`?cast` `SimpleNav` was removed when the detail page was rebuilt; cast/crew now have a real `#gender` section.
 5. **Dashboard** is just the Hanko profile — no evaluation history.
-6. **`getMovie` calls TMDB unauthenticated** — the movie-detail datasource omits the Bearer token (works for now, but should adopt `TMDB_API_TOKEN` like `/api/search` does).
+6. ~~**`getMovie` calls TMDB unauthenticated**.~~ **Closed** — `getMovie` now sends `Authorization: Bearer ${TMDB_API_TOKEN}` (and uses `append_to_response=credits`).
+7. **Movie detail sections 3 & 4 not built** — `#metrics` (Postgres metrics) and `#comments` render static `sectionSkeleton` placeholders; a later plan wires them as **streamed** (deferred promises + `{#await}`). The page-server `Promise.all` has a `TODO(sections 3/4)` marker.
+8. **`movie.tagline` is mapped but not displayed** — the detail header shows the `overview` summary instead; tagline is retained in the `Movie` shape for potential later use.
+9. **No Storybook stories** for the new `feedback/skeleton`, `movies/sectionSkeleton`, `movies/genderDistribution`, `movies/factGrid` components (the section plan suggested them; covered by unit tests + manual review for now).
+10. **`landing/topBar` is orphaned** — superseded by `layout/navbar`; safe to delete once confirmed unused.
 
 ---
 

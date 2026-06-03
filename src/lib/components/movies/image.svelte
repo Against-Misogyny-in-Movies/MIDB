@@ -7,9 +7,10 @@
   interface Props {
       src: string;
       alt: string;
+      imgSizes?: string;
   }
 
-  let { src, alt }: Props = $props();
+  let { src, alt, imgSizes }: Props = $props();
 
   function getLink(size: number | 'original' = 500) {
     const parts: string[] = [
@@ -40,7 +41,7 @@
   }
 </script>
 
-<img src={getLink('original')} srcset={getSrcSet()} {alt}/>
+<img src={getLink(500)} srcset={getSrcSet()} sizes={imgSizes} {alt} decoding="async" />
 
 <style lang="postcss">
 	@reference "../../../app.css";
