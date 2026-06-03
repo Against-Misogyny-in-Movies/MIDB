@@ -26,10 +26,10 @@
         @apply font-bold p-sm;
     }
     li:hover {
-        @apply text-primary;
+        @apply text-brand;
     }
 
     li.selected {
-        @apply text-primary;
+        @apply text-brand;
     }
 </style>

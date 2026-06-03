@@ -16,13 +16,13 @@
 <style lang="postcss">
 	@reference "../../../app.css";
     a {
-        @apply text-primary py-sm px-md;
+        @apply text-brand py-sm px-md;
         @apply font-bold;
         @apply text-base;
     }
 
     a:hover {
-        @apply bg-neutral-light rounded-md text-primary-dark;
+        @apply bg-surface-raised rounded-md text-brand-strong;
     }
 
 </style>

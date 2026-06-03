@@ -65,7 +65,7 @@
   }
 
   button {
-    @apply text-neutral;
+    @apply text-ink-muted;
     @apply text-sm;
     @apply font-bold;
     @apply flex items-center;

@@ -36,7 +36,7 @@
     }
 
     small {
-        @apply text-neutral;
+        @apply text-ink-muted;
     }
 
     p {

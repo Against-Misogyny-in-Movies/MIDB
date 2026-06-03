@@ -31,11 +31,11 @@
 	@reference "../../../app.css";
     .tile {
         @apply relative block cursor-pointer;
-        @apply border-2 border-neutral-light rounded-lg p-md;
+        @apply border-2 border-border rounded-lg p-md;
     }
 
     .tile:hover,
     .tile:focus {
-        @apply border-neutral!;
+        @apply border-ink-muted!;
     }
 </style>

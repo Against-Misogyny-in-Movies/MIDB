@@ -18,40 +18,40 @@
 <style lang="postcss">
 	@reference "../../../app.css";
     button {
-        @apply bg-primary text-white font-bold rounded-md p-sm;
-        @apply border-2 border-primary hover:bg-primary-light;
+        @apply bg-brand text-accent-ink font-bold rounded-md p-sm;
+        @apply border-2 border-brand hover:bg-brand-strong;
         @apply cursor-pointer;
     }
 
     button.secondary {
-        @apply bg-secondary;
-        @apply border-secondary hover:bg-secondary-light;
+        @apply bg-secondary text-secondary-fg;
+        @apply border-secondary hover:bg-secondary-soft;
     }
 
     button.success {
-        @apply bg-success;
-        @apply border-success hover:bg-success-light;
+        @apply bg-success text-success-fg;
+        @apply border-success hover:bg-success-soft;
     }
 
     button.warn {
-        @apply bg-warn hover:bg-warn-light;
+        @apply bg-warn text-warn-fg hover:bg-warn-soft;
         @apply border-warn;
     }
 
     button.danger {
-        @apply bg-danger hover:bg-danger-light;
+        @apply bg-danger text-danger-fg hover:bg-danger-soft;
         @apply border-danger;
     }
 
     button.info {
-        @apply bg-info hover:bg-info-light;
+        @apply bg-info text-info-fg hover:bg-info-soft;
         @apply border-info;
     }
 
 
     button:disabled {
-        @apply bg-neutral-light text-neutral;
-        @apply border-neutral;
+        @apply bg-surface-raised text-ink-muted;
+        @apply border-border;
         @apply cursor-not-allowed;
     }
 </style>

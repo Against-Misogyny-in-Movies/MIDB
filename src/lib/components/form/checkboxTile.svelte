@@ -23,6 +23,6 @@
 <style lang="postcss">
 	@reference "../../../app.css";
     input:checked + :global(label.tile) {
-        @apply border-primary;
+        @apply border-brand;
     }
 </style>

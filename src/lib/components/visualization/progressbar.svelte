@@ -15,13 +15,13 @@
 <style lang="postcss">
 	@reference "../../../app.css";
     .progressbar{
-        @apply w-full h-sm bg-neutral-light;
-        @apply border-neutral-light rounded-lg overflow-hidden;
+        @apply w-full h-sm bg-surface-raised;
+        @apply border-border rounded-lg overflow-hidden;
     }
 
     .progressbar__bar {
         width: var(--current-state, 0%);
-        @apply bg-primary h-full;
+        @apply bg-brand h-full;
         transition: width 0.5s ease-in-out;
     }
 

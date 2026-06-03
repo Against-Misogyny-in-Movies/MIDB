@@ -16,12 +16,12 @@
 <style lang="postcss">
 	@reference "../../../app.css";
     i {
-        @apply text-neutral-light p-xs;
+        @apply text-border p-xs;
         cursor: pointer;
     }
 
     i:hover {
-        @apply text-neutral;
+        @apply text-ink-muted;
     }
 
     i.top-right {

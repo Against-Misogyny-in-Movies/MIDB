@@ -33,7 +33,7 @@
 	@reference "../../../app.css";
   section {
     @apply relative flex flex-row overflow-hidden ;
-    @apply p-sm rounded-md bg-white shadow-md;
+    @apply p-sm rounded-md bg-surface-raised shadow-md;
     height: var(--height, 30%);
   }
 

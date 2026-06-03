@@ -38,7 +38,7 @@
 <style lang="postcss">
 	@reference "../../../app.css";
     form {
-        @apply flex flex-row bg-white rounded-md p-xs border-2 border-neutral-light;
+        @apply flex flex-row bg-surface-raised rounded-md p-xs border-2 border-border;
     }
 
     input {
@@ -46,7 +46,7 @@
     }
 
     form:focus-within {
-        @apply border-primary;
+        @apply border-brand;
     }
 
     input:focus {
