@@ -1,6 +1,6 @@
 # MIDB — Architecture Reference
 
-> Snapshot as of 2026-06-04 (branch `chore/dependencies-update`). The detail pages are built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The old user-evaluation schema was dropped in migration 0006 but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands.
+> Snapshot as of 2026-06-05 (branch `chore/dependencies-update`). The detail pages are built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The old user-evaluation schema was removed (and the migrations later squashed to a clean `0000` baseline) but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands.
 >
 > **The `src/lib` tree was reorganised by domain + file-type** (see Directory layout + File-organisation conventions): shared server logic moved out of route folders into `$lib/server/{data,integrations}`, shared types/utils into `$lib/media/{types,utils}`, and components split into `$lib/components/ui/*` (generic primitives) vs domain folders. Living document — update as the app evolves.
 
@@ -25,6 +25,7 @@ Each metric is designed to show **two scores side by side**: the original author
 | Database | PostgreSQL via **Drizzle ORM** 0.45 (`postgres-js` 3.4 driver) + drizzle-kit 0.31 |
 | Auth | **Hanko** (passwordless / passkeys) via `@teamhanko/hanko-elements` 2.6; JWT verified with `jose` 6 |
 | External movie data | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`) |
+| Server cache | Swappable backend (`$lib/server/cache`): bounded in-memory LRU by default; **Redis** (optional, lazy `redis` pkg) when `REDIS_URL` is set. Caches TMDB + DDD responses. |
 | Seed parsing | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs) |
 | Testing | Vitest 4 (unit, co-located in `__tests__/`), Playwright (integration, in `e2e-tests/`), Storybook 9 (component dev) |
 | Lint | ESLint 10 (flat config) + `@typescript-eslint/*` 8 + Prettier |
@@ -37,22 +38,26 @@ Each metric is designed to show **two scores side by side**: the original author
                   ┌────────────────────────────────────────────┐
    Browser  ──►   │  SvelteKit server (hooks + load functions)  │
                   └──────┬──────────────┬──────────────┬────────┘
-                         │              │              │
-            live fetch ┌─▼────────┐ ┌───▼──────┐ ┌─────▼───────┐
-             per req.  │  TMDB    │ │   DDD    │ │  PostgreSQL │
-                       │  API v3  │ │   API    │ │  (Drizzle)  │
-                       └──────────┘ └──────────┘ └─────────────┘
+                         │ (via $lib/server/cache: in-mem LRU │
+                         │  default, Redis if REDIS_URL set)  │
+            cached fetch┌─▼────────┐ ┌───▼──────┐ ┌─────▼───────┐
+                        │  TMDB    │ │   DDD    │ │  PostgreSQL │
+                        │  API v3  │ │   API    │ │  (Drizzle)  │
+                        └──────────┘ └──────────┘ └─────────────┘
                          ▲            ▲ (streamed,   ▲
-              poster / overview /     │  1h cache)   │  seeded source data:
+              poster / overview /     │  cached 1h)  │  seeded source data:
               credits / imdb_id    trigger tags    movies + Bechdel + UM
+              (cached 24h)
 
    Auth:  Browser ⇄ Hanko Cloud (web components + JWT cookie)
           hooks.server.ts verifies the `hanko` cookie via remote JWKS
+   Startup: hooks.server.ts runs migrateDatabase() once at server boot
 ```
 
 - **Entry point** is the landing page at `/` (hero + search UX). The hero search is a **live, inline TMDB search**: typing queries a server proxy (`/api/search`, TMDB `search/multi`) and renders a results dropdown in place — there is no `/search` page. Results carry a `mediaType` (`movie`/`tv`) and route to the matching detail page.
 - **Title identity** flows by **TMDB id** through the URL (`/movie/[movieId]`, `/tv/[seriesId]`), but the internal join key across metric sources is **`imdb_id`** (the Bechdel/DDD key). On a detail-page load the live TMDB title is resolved to a local `movies` row via **read-only** `getDbMovie`/`getDbMedia` (matching on `tmdb_id` then `imdb_id`); a GET never mutates the DB. TV rows use a synthetic `tmdb-tv:` imdb namespace + null `tmdb_id` to avoid colliding with film tmdb ids.
 - **Metric data** comes from three places: **Bechdel + UM** are seeded into Postgres and rendered server-side (SSR); **DDD** is fetched live from its API and **streamed** so a slow external call never blocks first paint. (Bechdel is movie-only; series surface UM + DDD.)
+- **Caching.** TMDB title fetches (`getMovie`/`getSeries`) and DDD lookups go through `$lib/server/cache` so repeat visits to a title skip the external round-trip — the dominant source of detail-page latency. Default backend is a bounded in-process LRU (fine on a long-lived Node server); set `REDIS_URL` for a shared backend that survives restarts / scales across instances. Detail loads also set `cache-control: public, max-age=0, s-maxage=3600` so the browser/back-forward cache and any CDN can serve repeat navigations.
 - **Auth** is entirely Hanko's; the app only verifies the JWT cookie server-side to gate `/user/*`.
 
 ---
@@ -68,18 +73,16 @@ MIDB/
 │   │   └── auth.ts             # user (matches the Hanko-era `user` table)
 │   ├── scripts/
 │   │   ├── migrate.ts          # `bun run db:migrate` → calls migrateDatabase()
-│   │   ├── seed.ts             # legacy metrics seeder — targets dropped tables, do not run
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → movies spine + movie_bechdel
 │   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + movie_unconsenting (matched)
 │   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id via TMDB /find
 │   │   └── lib/                # normalizeTitle.ts + stripTrailingYear + checkCsvColumns.ts
 │   ├── seeds/
-│   │   ├── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
-│   │   └── prod/metrics/       # legacy metric seed (bechdel.yml) for the old seed.ts
+│   │   └── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
 │   └── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots
 │
 ├── src/
-│   ├── hooks.server.ts         # Auth gate: verifies `hanko` JWT cookie, protects /user/*
+│   ├── hooks.server.ts         # Runs migrateDatabase() once at boot + auth gate (verifies `hanko` JWT cookie, protects /user/*)
 │   ├── app.css                 # Tailwind v4 entry + design tokens + @layer components
 │   ├── app.html / app.d.ts     # SvelteKit shell + ambient types
 │   ├── __tests__/              # index.test.ts (smoke)
@@ -91,10 +94,11 @@ MIDB/
 │       │   ├── data/           # Postgres / Drizzle access (+ __tests__/)
 │       │   │   ├── media-queries.ts  # identity resolution (getDbMovie/getDbMedia/getOrCreate*) + metric fetches (getBechdel/getUnconsenting)
 │       │   │   └── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates + toCandidate helper
-│       │   └── integrations/   # External API clients (hold secrets) (+ __tests__/)
-│       │       ├── tmdb.ts           # shared TMDB client + aggregateGender
-│       │       ├── ddd.ts            # DDD client + cache; re-exports TriggerTag/DddResult from ddd-types
-│       │       └── ddd-types.ts      # public domain types: TriggerTag, DddResult (no client import of secrets)
+│       │   ├── integrations/   # External API clients (hold secrets) (+ __tests__/)
+│       │   │   ├── tmdb.ts           # shared TMDB client + aggregateGender
+│       │   │   ├── ddd.ts            # DDD client; uses $lib/server/cache; re-exports TriggerTag/DddResult from ddd-types
+│       │   │   └── ddd-types.ts      # public domain types: TriggerTag, DddResult (no client import of secrets)
+│       │   └── cache/          # getCached(key, ttlMs, fetcher): in-memory LRU default, Redis if REDIS_URL set
 │       ├── media/              # Shared, client-safe media domain (movies + series)
 │       │   ├── types/          # media.ts (MediaDetail/GenderBreakdown), movie.ts, series.ts,
 │       │   │                   #   ddd.ts (type-only re-export from integrations/ddd-types)
@@ -109,7 +113,7 @@ MIDB/
 ├── playwright.config.ts        # testDir: 'e2e-tests'
 ├── svelte.config.js            # adapter-auto; alias $db/* → ./db/*; vitePreprocess({ style:false })
 ├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest block
-└── .env                        # DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY
+└── .env                        # DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY, REDIS_URL (optional)
 ```
 
 **Key structural choices:**
@@ -159,7 +163,7 @@ The styling system is **Tailwind CSS v4, CSS-first**. There is no JS theme confi
 
 The **active schema is entirely in `db/schema/movie.ts`** (+ `auth.ts` for `user`). `connections.ts` registers only `movieSchema` + `authSchema`.
 
-> The old user-evaluation model (`metrics`, `metric_options`, `evaluations`, `evaluation_results`) was **dropped in migration 0006**. `db/schema/metric.ts` has been **deleted** — it is no longer on disk.
+> The old user-evaluation model (`metrics`, `metric_options`, `evaluations`, `evaluation_results`) is gone: `db/schema/metric.ts` has been **deleted** and the migrations were **squashed** (2026-06-05), so the current `0000` baseline simply never creates those tables. (Historically they were dropped in the old migration `0006`, which no longer exists on disk.)
 
 ### Tables (active)
 
@@ -172,6 +176,7 @@ The **active schema is entirely in `db/schema/movie.ts`** (+ `auth.ts` for `user
 
 **`um_source`** — spine-independent **UM catalogue**; every movie-type UM row from the CSV.
 - `um_id` integer **PK**, `clean_name` varchar, `clean_title_key` varchar (year-stripped normalized key, the lookup index), `year` integer nullable, all **9 boolean flag columns**, `comment` text.
+- **B-tree index `um_source_clean_title_key_idx` on `clean_title_key`** — `getUnconsentingCandidates` queries this column on every media page with no seeded UM binding (the common case); without the index that's a full table scan.
 - Populated by `db:seed:um` for **all** UM movie rows regardless of whether a `movies` row exists. Enables runtime candidate lookup without re-parsing the CSV.
 
 **`movie_unconsenting`** — seeded, **1:1 with movie**; the resolved UM binding.
@@ -185,9 +190,13 @@ The **active schema is entirely in `db/schema/movie.ts`** (+ `auth.ts` for `user
 
 ### Migrations
 
-Chain: `0000` (movies) → `0001` (Auth.js tables) → `0002` (metrics/options/evaluations) → `0003` (Bechdel seed) → `0004` (rename + NOT NULL) → `0005` (breakpoints) → **`0006_panoramic_vivisector`** (creates `movie_bechdel` / `movie_unconsenting` / `movie_trigger_tags`, extends `movies`, drops evaluation tables) → **`0007_um_source_and_match_source`** (creates `um_source`, originally added `match_source` to `movie_unconsenting`) → **`0008_drop_match_source`** (drops `match_source` — user-confirmed persistence was removed in favour of client-side-only disambiguation).
+**Squashed to a single baseline (2026-06-05).** The prior chain (`0000`–`0008`) had corrupted drizzle metadata — `meta/` was missing the `0007`/`0008` snapshots (a legacy of hand-merged duplicate `0002_*` files), which made `db:generate` emit broken diffs (re-creating `um_source`, dropping already-handled tables). Since the dev DB is disposable, the entire `migrations/` folder (SQL + meta) was deleted and regenerated into one clean baseline:
 
-Migrations **do NOT auto-run** — run `bun run db:migrate` explicitly. `drizzle-kit` is run manually; `db:generate` can no longer conflict with the orphaned `metric.ts` (it has been deleted).
+- **`0000_jazzy_tag`** — the full current schema: `movies`, `movie_bechdel`, `um_source` (incl. `um_source_clean_title_key_idx`), `movie_unconsenting`, `movie_trigger_tags`, `user`.
+
+Future schema changes append `0001`, `0002`, … from here.
+
+**Migrations now auto-run at startup.** `src/hooks.server.ts` calls `migrateDatabase()` once at module load (server boot) and `handle()` awaits that promise before serving the first requests. Drizzle's `migrate()` is idempotent (skips already-applied migrations tracked in `drizzle.__drizzle_migrations`), so it's safe on every boot — expect benign Postgres `NOTICE … already exists, skipping` lines in the log. `bun run db:migrate` still works for applying migrations manually (e.g. from a script).
 
 ---
 
@@ -224,7 +233,8 @@ import { getDbMovie, getBechdel, getUnconsenting } from '$lib/server/data/media-
 import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
 import { getTriggerTagsLive } from '$lib/server/integrations/ddd';
 
-const movie = await getMovie(params.movieId);          // TMDB live (Bearer, credits+external_ids)
+setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=3600' });  // CDN/back-forward cache
+const movie = await getMovie(params.movieId);          // TMDB (Bearer, credits+external_ids); cached 24h via $lib/server/cache
 const dbMovie = await getDbMovie(movie);               // read-only resolve; null if not seeded
 const [bechdel, unconsenting] = dbMovie                // skip DB round-trips when no row exists
   ? await Promise.all([getBechdel(dbMovie.id), getUnconsenting(dbMovie.id)])
@@ -236,7 +246,7 @@ return { movie, bechdel, unconsenting, umCandidates,
 ```
 The TV `+page.server.ts` is the same shape: `getSeries(...)` → `getDbMedia(series, 'tv')` → `getUnconsenting`/`getUnconsentingCandidates` → `getTriggerTagsForSeries(series)` streamed. No Bechdel for series.
 
-**DDD live client (`$lib/server/integrations/ddd.ts`):** `getTriggerTagsLive(imdbId)` (movies, imdb lookup) and `getTriggerTagsForSeries(series)` (title text-search + tmdb/year match). Two-step fetch with `X-API-KEY`; 1h in-memory `Map` cache (keyed `imdb:…` for movies, `tmdb:…` for series). Returns `TriggerTag[]` filtered to `yesSum >= noSum && yesSum > 0`, carrying season/episode scoping for series. `_testExports()` exposes the cache for unit tests. Public types (`TriggerTag`, `DddResult`) live in `ddd-types.ts` — `ddd.ts` re-exports them; `media/types/ddd.ts` imports from `ddd-types` directly so type consumers never transitively load the client.
+**DDD live client (`$lib/server/integrations/ddd.ts`):** `getTriggerTagsLive(imdbId)` (movies, imdb lookup) and `getTriggerTagsForSeries(series)` (title text-search + tmdb/year match). Two-step fetch with `X-API-KEY`; results cached 1h via `$lib/server/cache` (keys `ddd:imdb:…` for movies, `ddd:tmdb:…` for series). Returns `TriggerTag[]` filtered to `yesSum >= noSum && yesSum > 0`, carrying season/episode scoping for series. `_testExports()` exposes a `cache.clear()` (delegating to the shared cache) for unit tests. Public types (`TriggerTag`, `DddResult`) live in `ddd-types.ts` — `ddd.ts` re-exports them; `media/types/ddd.ts` imports from `ddd-types` directly so type consumers never transitively load the client.
 
 **Page (`+page.svelte`) — rendered structure:**
 - **`#details` header** (`movies/facts/detailHeader.svelte`): poster + title + year/runtime meta + **metric summary chips** + **fact grid** (`factGrid` for movies, `seriesFactGrid` for series).
@@ -328,11 +338,24 @@ Notable mechanics:
 
 ---
 
+## Server cache (`src/lib/server/cache/`)
+
+A single swappable cache fronts every external call so repeat detail-page visits skip the round-trip that dominates latency.
+
+- **API.** `getCached<T>(key, ttlMs, fetcher)` — returns the cached value or runs `fetcher`, stores it, and returns it. Backend failures degrade to a cache miss (the fetcher still runs), so caching can never make a request fail — only slower. `clearCache()` is exposed for tests.
+- **Backend selection** is a deploy-time decision via one env var, not a code change:
+  - **No `REDIS_URL`** → bounded in-process LRU (`MAX_ENTRIES = 500`, TTL'd, insertion-order eviction with read-touch). Persists for the process lifetime — right for a single long-lived Node server.
+  - **`REDIS_URL` set** → Redis backend. The `redis` package is an **optional dependency**, imported lazily (`await import(/* @vite-ignore */ 'redis')`) so the app builds and runs without it installed; the `@vite-ignore` stops Vite from failing the build when it's absent.
+- **Keys** are namespaced: `tmdb:movie:<id>`, `tmdb:series:<id>` (24h TTL); `ddd:imdb:<id>`, `ddd:tmdb:<id>` (1h TTL).
+- **Why Redis is optional:** on a single Node process the in-memory cache already survives between requests. Redis earns its place only to share the cache across instances or survive restarts/deploys (and on ephemeral serverless). See `README.md` for the opt-in setup.
+
+---
+
 ## TMDB integration
 
 - **Shared client** `$lib/server/integrations/tmdb.ts` — `TMDB_BASE`, `tmdbHeaders()` (Bearer), and `aggregateGender(credits)` (0/1/2/3 → unknown/female/male/nonBinary). Used by all three datasources.
-- **`movie/[movieId]/datasource.server.ts`** — `getMovie(id)` fetches `append_to_response=credits,external_ids`, maps to `Movie` (incl. `imdbId` from `external_ids`), aggregates cast/crew gender server-side.
-- **`tv/[seriesId]/datasource.server.ts`** — `getSeries(id)` fetches the `/tv/{id}` equivalent, mapping seasons/networks/created-by into `Series`.
+- **`movie/[movieId]/datasource.server.ts`** — `getMovie(id)` fetches `append_to_response=credits,external_ids`, maps to `Movie` (incl. `imdbId` from `external_ids`), aggregates cast/crew gender server-side. Wrapped in `getCached('tmdb:movie:<id>', 24h, …)`.
+- **`tv/[seriesId]/datasource.server.ts`** — `getSeries(id)` fetches the `/tv/{id}` equivalent, mapping seasons/networks/created-by into `Series`. Wrapped in `getCached('tmdb:series:<id>', 24h, …)`.
 - **`api/search/datasource.server.ts`** — `search(q)` → TMDB **`search/multi`**, filtered to movie/tv. Shared `SearchResult` type with client components via `$lib/components/search/types`.
 - **`movies/media/image.svelte`** — responsive `srcset` from `PUBLIC_TMDB_IMAGE_URL`; `src` defaults to `w500`. `search/resultPoster.svelte` builds a fixed `w92` URL directly (keeps the 20-row search list cheap).
 
@@ -358,22 +381,22 @@ Notable mechanics:
 | `PUBLIC_TMDB_IMAGE_URL` | image component | `https://image.tmdb.org/t/p` |
 | `TMDB_API_TOKEN` | `$lib/server/integrations/tmdb.ts` (server only) | v4 Bearer token. `$env/static/private`. |
 | `DDD_API_KEY` | `$lib/server/integrations/ddd.ts` (server only) | Does The Dog Die API key, `X-API-KEY` header. |
+| `REDIS_URL` | `$lib/server/cache` (server only) | **Optional.** When set, the cache uses Redis instead of in-process LRU. Requires the optional `redis` package. `$env/dynamic/private`. |
 
 ### Local run sequence
 ```bash
 docker run --name midb-pg -e POSTGRES_PASSWORD=mysecretpassword \
   -e POSTGRES_DB=midb -p 5435:5432 -d postgres:16
 bun install
-bun run db:migrate
+bun run db:migrate       # optional — dev/boot also runs migrations via hooks.server.ts
 bun run db:seed:movies   # must run before db:seed:um
 bun run db:seed:um
 bun run db:backfill:tmdb # optional: resolve tmdb_id ahead of time
 bun run dev
 ```
-> Do not run `bun run db:seed` — the legacy metrics seeder targets dropped tables.
 
 ### npm scripts
-`dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed` (legacy, dead).
+`dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb`.
 
 ---
 
@@ -382,13 +405,14 @@ bun run dev
 1. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
 2. **Community ratings + comments not yet built** — the next major milestone. Each metric will show the original source score alongside a MIDB community score; titles will also have a comments section. Schema will need new tables (community metric scores keyed by `movie_id` + metric + `user_id`, and a `comments` table). The retained `user` table and `movie_trigger_tags.created_by` FK are the hooks. `/user/dashboard` is currently the Hanko profile only and will need to expand.
 3. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
-4. **UM data is sparse by design** — ~2,981 of ~9,471 spine movies have a UM binding. "No data" is the common, correct state. ~34 title collisions are left as runtime-picker cases (year unknown); ~7,481 have no UM entry at all.
+4. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
 5. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
 6. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
 7. **`db:generate` requires a TTY** — drizzle-kit's interactive conflict-resolution prompts require a real terminal. Run it from the terminal, not from a CI/non-interactive shell.
 
 > Verification baseline after the `$lib` reorg: `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the detail-page refactor (server splits + shared components): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
+> Verification baseline after the cache layer + startup-migrations + migration squash + dead-seeder removal (2026-06-05): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Removed deps: `@loom-io/fs`, `marked` (orphaned with `seed.ts`).
 
 ---
 

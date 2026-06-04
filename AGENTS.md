@@ -60,7 +60,7 @@
 - The DB layer lives in `db/` (outside `src/`), aliased as `$db/*`.
 - GET routes use **read-only** resolvers (`getDbMovie`, `getDbMedia`) — page visits must never mutate the DB.
 - Write paths (`getOrCreateDbMovie`, `getOrCreateDbMedia`) are reserved for future write endpoints (community ratings, persisted DDD tags).
-- Migration order matters: `db:seed:movies` before `db:seed:um`. Never run `db:seed` (targets dropped tables).
+- Migration order matters: `db:seed:movies` before `db:seed:um`.
 - `db:generate` requires a TTY — run it from a real terminal, not CI.
 
 ---

@@ -1,17 +1,11 @@
 import { DDD_API_KEY } from '$env/static/private';
+import { getCached, clearCache } from '$lib/server/cache';
 import type { TriggerTag, DddResult } from './ddd-types';
 
 export type { TriggerTag, DddResult } from './ddd-types';
 
 const DDD_BASE = 'https://www.doesthedogdie.com';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-interface CacheEntry {
-	data: DddResult;
-	expiresAt: number;
-}
-
-const cache = new Map<string, CacheEntry>();
 
 interface DddSearchItem {
 	id: number;
@@ -82,30 +76,24 @@ async function fetchMediaTags(itemId: number): Promise<{ tags: TriggerTag[]; isS
 export async function getTriggerTagsLive(imdbId: string | null): Promise<DddResult> {
 	if (!imdbId) return EMPTY;
 
-	const cacheKey = `imdb:${imdbId}`;
-	const cached = cache.get(cacheKey);
-	if (cached && Date.now() < cached.expiresAt) {
-		return cached.data;
-	}
+	return getCached(`ddd:imdb:${imdbId}`, CACHE_TTL_MS, async () => {
+		// Step 1: look up by imdb id
+		const searchRes = await fetch(`${DDD_BASE}/dddsearch?imdb=${encodeURIComponent(imdbId)}`, {
+			headers
+		});
+		if (!searchRes.ok) return EMPTY;
 
-	// Step 1: look up by imdb id
-	const searchRes = await fetch(`${DDD_BASE}/dddsearch?imdb=${encodeURIComponent(imdbId)}`, {
-		headers
+		const searchData = await searchRes.json();
+		const items: DddSearchItem[] = searchData?.items ?? [];
+		if (!Array.isArray(items) || items.length === 0) return EMPTY;
+
+		const itemId = items[0]?.id;
+		if (!itemId) return EMPTY;
+
+		// Step 2: fetch media item details
+		const { tags, isSeries } = await fetchMediaTags(itemId);
+		return { itemId, tags, isSeries };
 	});
-	if (!searchRes.ok) return EMPTY;
-
-	const searchData = await searchRes.json();
-	const items: DddSearchItem[] = searchData?.items ?? [];
-	if (!Array.isArray(items) || items.length === 0) return EMPTY;
-
-	const itemId = items[0]?.id;
-	if (!itemId) return EMPTY;
-
-	// Step 2: fetch media item details
-	const { tags, isSeries } = await fetchMediaTags(itemId);
-	const result: DddResult = { itemId, tags, isSeries };
-	cache.set(cacheKey, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
-	return result;
 }
 
 /**
@@ -121,47 +109,41 @@ export async function getTriggerTagsForSeries(series: {
 	tmdbId: string;
 	firstAirDate: string;
 }): Promise<DddResult> {
-	const cacheKey = `tmdb:${series.tmdbId}`;
-	const cached = cache.get(cacheKey);
-	if (cached && Date.now() < cached.expiresAt) {
-		return cached.data;
-	}
+	return getCached(`ddd:tmdb:${series.tmdbId}`, CACHE_TTL_MS, async () => {
+		// Text-search by title (imdb= lookup fails for TV series)
+		const searchRes = await fetch(`${DDD_BASE}/dddsearch?q=${encodeURIComponent(series.title)}`, {
+			headers
+		});
+		if (!searchRes.ok) return { ...EMPTY, isSeries: true };
 
-	// Text-search by title (imdb= lookup fails for TV series)
-	const searchRes = await fetch(`${DDD_BASE}/dddsearch?q=${encodeURIComponent(series.title)}`, {
-		headers
+		const searchData = await searchRes.json();
+		const items: DddSearchItem[] = searchData?.items ?? [];
+		if (!Array.isArray(items) || items.length === 0) return { ...EMPTY, isSeries: true };
+
+		// Filter to TV shows (itemType.id === 16), then match by tmdbid, fall back to releaseYear
+		const tvItems = items.filter((it) => it.itemType?.id === 16);
+		const tmdbIdNum = Number(series.tmdbId);
+		const firstAirYear = series.firstAirDate ? parseInt(series.firstAirDate.slice(0, 4), 10) : NaN;
+
+		const match =
+			tvItems.find((it) => it.tmdbid === tmdbIdNum) ??
+			(!Number.isNaN(firstAirYear)
+				? tvItems.find((it) => it.releaseYear === firstAirYear)
+				: undefined);
+
+		if (!match) return { ...EMPTY, isSeries: true };
+
+		const { tags, isSeries } = await fetchMediaTags(match.id);
+		return { itemId: match.id, tags, isSeries: isSeries || true };
 	});
-	if (!searchRes.ok) return { ...EMPTY, isSeries: true };
-
-	const searchData = await searchRes.json();
-	const items: DddSearchItem[] = searchData?.items ?? [];
-	if (!Array.isArray(items) || items.length === 0) return { ...EMPTY, isSeries: true };
-
-	// Filter to TV shows (itemType.id === 16), then match by tmdbid, fall back to releaseYear
-	const tvItems = items.filter((it) => it.itemType?.id === 16);
-	const tmdbIdNum = Number(series.tmdbId);
-	const firstAirYear = series.firstAirDate ? parseInt(series.firstAirDate.slice(0, 4), 10) : NaN;
-
-	const match =
-		tvItems.find((it) => it.tmdbid === tmdbIdNum) ??
-		(!Number.isNaN(firstAirYear)
-			? tvItems.find((it) => it.releaseYear === firstAirYear)
-			: undefined);
-
-	if (!match) return { ...EMPTY, isSeries: true };
-
-	const { tags, isSeries } = await fetchMediaTags(match.id);
-	const result: DddResult = { itemId: match.id, tags, isSeries: isSeries || true };
-	cache.set(cacheKey, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
-	return result;
 }
 
 /**
  * Exposes internal module state for unit tests only.
- * Allows tests to clear the in-process cache between test cases.
+ * Allows tests to clear the shared cache between test cases.
  *
- * @returns The shared cache map and the TTL constant.
+ * @returns A `cache` handle with a synchronous `clear()` and the TTL constant.
  */
 export function _testExports() {
-	return { cache, CACHE_TTL_MS };
+	return { cache: { clear: () => void clearCache() }, CACHE_TTL_MS };
 }

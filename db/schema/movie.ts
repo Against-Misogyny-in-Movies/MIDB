@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, smallint, boolean, text, timestamp, serial, check, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, integer, smallint, boolean, text, timestamp, serial, check, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './auth';
 
@@ -38,7 +38,10 @@ export const umSource = pgTable('um_source', {
 	rapeOffScrn: boolean('rape_off_scrn').notNull(),
 	rapeOnScreen: boolean('rape_on_screen').notNull(),
 	comment: text('comment'),
-});
+}, (t) => [
+	// getUnconsentingCandidates() looks up by cleanTitleKey
+	index('um_source_clean_title_key_idx').on(t.cleanTitleKey),
+]);
 
 export const movieUnconsenting = pgTable('movie_unconsenting', {
 	movieId: uuid('movie_id').primaryKey().references(() => movies.id, { onDelete: 'cascade' }),

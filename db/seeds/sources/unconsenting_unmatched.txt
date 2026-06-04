@@ -415,6 +415,7 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 10307	Area 407	area 407	2012	no_match	
 9570	Area 51	area 51		no_match	
 10689	Argentina, 1985	argentina 1985	2022	no_match	
+12350	Ariel	ariel	1988	no_match	
 2958	The Aristocats	aristocats	1970	no_match	
 628	Arjun Reddy	arjun reddy	0	no_match	
 7840	Arlington Road	arlington road	1999	no_match	
@@ -526,6 +527,7 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 13122	Back to Black	back to black	2024	no_match	
 15617	Back Fork	back fork	2019	no_match	
 16536	Backlash	backlash	2025	no_match	
+16575	Backrooms	backrooms	2026	no_match	
 9351	Backwoods (2008)	backwoods 2008	2008	no_match	
 16429	Bad Ass	bad ass	2012	no_match	
 4896	The Bad Batch	bad batch	2016	no_match	
@@ -1296,7 +1298,7 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 6462	Chutney Popcorn	chutney popcorn	1999	no_match	
 4840	Cicada	cicada	2020	no_match	
 10392	The Cider House Rules	cider house rules	1999	no_match	
-16234	Cinderella (2006)	cinderella 2006	2006	ambiguous	2015,1950,1997,2021
+16234	Cinderella (2006)	cinderella 2006	2006	ambiguous	1950,1997,2015,2021
 2139	Cinderella 3: a Twist in Time	cinderella iiia twist in time	2007	no_match	
 14288	Cinderella's Curse	cinderellas curse	2024	no_match	
 9795	Circus of the Dead	circus of the dead	2014	no_match	
@@ -4122,6 +4124,7 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 5227	The Loft	loft	2014	no_match	
 3511	Logan's Run	logans run		no_match	
 8562	Loin Du Periph	loin du periph	2022	no_match	
+8211	LOL (2012)	lol 2012		no_match	
 3407	Lola Montez	lola montez	1955	no_match	
 4096	The Loneliest Planet	loneliest planet	2011	no_match	
 10995	In a Lonely Place	a lonely place	1950	no_match	
@@ -4635,6 +4638,7 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 12550	Mortal Kombat Legends: Battle of the Realms	mortal kombat legends battle of the realms	2021	no_match	
 12548	Mortal Kombat Legends: Cage Match	mortal kombat legends cage match	2023	no_match	
 12549	Mortal Kombat Legends: Scorpion's Revenge	mortal kombat legends scorpions revenge	2020	no_match	
+12570	Mortal Kombat Legends: Snow Blind	mortal kombat legends snow blind	2022	no_match	
 9037	The Mortal Storm	mortal storm	1940	no_match	
 15209	Morte À L'Avance	morte à lavance	2020	no_match	
 5271	The Mortuary Collection	mortuary collection		no_match	
@@ -4982,6 +4986,8 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 14711	The Object of My Affection	object of my affection	1998	no_match	
 10710	Observe and Report	observe and report	2009	no_match	
 1403	Obsessed (2009)	obsessed 2009	0	no_match	
+16520	Obsession	obsession		no_match	
+14458	Obsession (1949)	obsession 1949	1949	no_match	
 3927	The Occupant (Hogar)	occupant hogar	2020	no_match	
 14493	Occupation	occupation	2018	no_match	
 14523	Occupation: Rainfall	occupation rainfall	2021	no_match	
@@ -7420,6 +7426,8 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 1713	Wrong Turn 6: Last Resort	wrong turn vi last resort		no_match	
 13906	WtFOCK	wtfock	2018	no_match	
 11733	Wu Kong	wu kong	2017	no_match	
+8694	Wuthering Heights (2003)	wuthering heights 2003	2003	ambiguous	1939,2011
+16194	Wuthering Heights (2026)	wuthering heights 2026	2026	ambiguous	1939,2011
 9997	Wyrm	wyrm	2019	no_match	
 12555	Wyrmwood: Apocolypse	wyrmwood apocolypse	2022	no_match	
 9254	Wyvern	wyvern	2009	no_match	

@@ -1,68 +1,12 @@
 {
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1702043197316,
-      "tag": "0000_closed_rictor",
-      "breakpoints": false
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1702051752537,
-      "tag": "0001_bright_tenebrous",
-      "breakpoints": false
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1703965532601,
-      "tag": "0002_wealthy_trauma",
-      "breakpoints": false
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1703965540655,
-      "tag": "0003_robust_black_bird",
-      "breakpoints": false
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1706394125867,
-      "tag": "0004_wet_menace",
-      "breakpoints": false
-    },
-    {
-      "idx": 5,
       "version": "7",
-      "when": 1780433589201,
-      "tag": "0005_complete_swarm",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1780517178618,
-      "tag": "0006_panoramic_vivisector",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1780604400000,
-      "tag": "0007_um_source_and_match_source",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1780690800000,
-      "tag": "0008_drop_match_source",
+      "when": 1780611640558,
+      "tag": "0000_jazzy_tag",
       "breakpoints": true
     }
   ]
