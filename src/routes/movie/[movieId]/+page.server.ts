@@ -1,16 +1,16 @@
 import type { PageServerLoad } from './$types';
 import { getMovie } from './datasource.server';
-import { getOrCreateDbMovie, getBechdel, getUnconsenting, getUnconsentingCandidates } from './db.server';
-import { getTriggerTagsLive } from './ddd.server';
+import { getDbMovie, getBechdel, getUnconsenting } from '$lib/server/data/media-queries';
+import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
+import { getTriggerTagsLive } from '$lib/server/integrations/ddd';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const movie = await getMovie(params.movieId);
-	const dbMovie = await getOrCreateDbMovie(movie);
+	const dbMovie = await getDbMovie(movie);
 
-	const [bechdel, unconsenting] = await Promise.all([
-		getBechdel(dbMovie.id),
-		getUnconsenting(dbMovie.id),
-	]);
+	const [bechdel, unconsenting] = dbMovie
+		? await Promise.all([getBechdel(dbMovie.id), getUnconsenting(dbMovie.id)])
+		: [null, null];
 
 	// No seeded UM binding → offer catalogue candidates for the same title.
 	// The user's pick renders client-side only; we persist nothing.

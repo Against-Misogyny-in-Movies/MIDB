@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ChangeEventHandler, FormEventHandler } from 'svelte/elements';
-	import Button from '$lib/components/form/button.svelte';
+	import Button from '$lib/components/ui/form/button.svelte';
 
 	interface Props {
 		method?: 'post' | 'get';

@@ -3,6 +3,13 @@ import { resolve } from '$app/paths';
 import { createDebouncedSearchStore } from '$lib/stores/debounced';
 import type { SearchResult } from './types';
 
+/**
+ * Calls the `/api/search` endpoint and returns parsed search results.
+ * Returns an empty array for blank queries without making a network request.
+ *
+ * @param query - The user's search string.
+ * @returns Array of `SearchResult` items (may be empty).
+ */
 async function fetchResults(query: string): Promise<SearchResult[]> {
 	if (!query.trim()) return [];
 	const res = await fetch('/api/search?q=' + encodeURIComponent(query));
@@ -113,7 +120,14 @@ export class MovieSearchState {
 	}
 }
 
-/** Stable DOM id for a result row, shared by the listbox and `aria-activedescendant`. */
+/**
+ * Generates a stable DOM id for a search result row.
+ * Used by both the listbox `role="option"` elements and the input's `aria-activedescendant`.
+ *
+ * @param id - The TMDB item id.
+ * @param mediaType - `"movie"` or `"tv"`.
+ * @returns A unique string id like `"search-option-movie-12345"`.
+ */
 export function optionId(id: number, mediaType: 'movie' | 'tv') {
 	return `search-option-${mediaType}-${id}`;
 }

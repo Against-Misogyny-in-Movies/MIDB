@@ -1,10 +1,19 @@
 import { error } from '@sveltejs/kit';
-import { TMDB_BASE, tmdbHeaders, aggregateGender } from '$lib/server/tmdb';
-import type { Movie } from './types';
+import { TMDB_BASE, tmdbHeaders, aggregateGender } from '$lib/server/integrations/tmdb';
+import type { Movie } from '$lib/media/types/movie';
 
-export type { Movie, GenderBreakdown } from './types';
-export { aggregateGender } from '$lib/server/tmdb';
+export type { Movie } from '$lib/media/types/movie';
+export type { GenderBreakdown } from '$lib/media/types/media';
+export { aggregateGender } from '$lib/server/integrations/tmdb';
 
+/**
+ * Fetches full movie details from TMDB, including credits and external ids.
+ * Also aggregates cast and crew gender breakdowns from the credits response.
+ *
+ * @param movieId - TMDB movie id (numeric string, from the route parameter).
+ * @returns A fully-shaped `Movie` object with metadata, genres, cast, and crew breakdowns.
+ * @throws SvelteKit `error()` if the TMDB response is not OK.
+ */
 export const getMovie = async (movieId: string): Promise<Movie> => {
 	const url = new URL(`${TMDB_BASE}/3/movie/${movieId}`);
 	url.searchParams.set('append_to_response', 'credits,external_ids');

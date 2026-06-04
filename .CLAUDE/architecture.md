@@ -1,12 +1,14 @@
 # MIDB — Architecture Reference
 
-> Snapshot as of 2026-06-04 (branch `chore/dependencies-update`). The movie detail page is built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; movies will also have a **comments section**. The old user-evaluation schema was dropped in migration 0006 but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands. Living document — update as the app evolves.
+> Snapshot as of 2026-06-04 (branch `chore/dependencies-update`). The detail pages are built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The old user-evaluation schema was dropped in migration 0006 but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands.
+>
+> **The `src/lib` tree was reorganised by domain + file-type** (see Directory layout + File-organisation conventions): shared server logic moved out of route folders into `$lib/server/{data,integrations}`, shared types/utils into `$lib/media/{types,utils}`, and components split into `$lib/components/ui/*` (generic primitives) vs domain folders. Living document — update as the app evolves.
 
 ## What it is
 
-**MIDB (Movie Information Database — working title)** is a web platform for displaying movies through a **diversity / content-safety lens**. The audience is survivors and trauma-sensitive viewers, and people who care about women's representation — people deciding whether a film is safe to watch. Users find a movie and see how it scores across structured **metrics** — formal tests and content advisories for representation and harm. Three sources are wired today: the **Bechdel Test**, **Unconsenting Media** (sexual-violence advisories), and **Does The Dog Die** (crowd-sourced trigger tags).
+**MIDB (Movie Information Database — working title)** is a web platform for displaying movies and TV series through a **diversity / content-safety lens**. The audience is survivors and trauma-sensitive viewers, and people who care about women's representation — people deciding whether a title is safe to watch. Users find a title and see how it scores across structured **metrics** — formal tests and content advisories for representation and harm. Three sources are wired today: the **Bechdel Test**, **Unconsenting Media** (sexual-violence advisories), and **Does The Dog Die** (crowd-sourced trigger tags).
 
-Movie facts (poster, overview, release date, credits) are **not stored** — they're fetched live from **TMDB** on each request. What *is* stored locally is a thin movie spine plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
+Title facts (poster, overview, release/air date, credits, seasons) are **not stored** — they're fetched live from **TMDB** on each request. What *is* stored locally is a thin spine (the `movies` table holds both films and series) plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
 
 Each metric is designed to show **two scores side by side**: the original authoritative source (Bechdel, UM, DDD) and a **MIDB community rating** contributed by users who have watched the film. Movies will also have a **comments section** for viewer context and discussion. Community ratings and comments are the next major feature milestone — the schema will need new tables (community metric scores, comments) and the `/user/*` area will expand beyond the current Hanko profile stub.
 
@@ -24,7 +26,7 @@ Each metric is designed to show **two scores side by side**: the original author
 | Auth | **Hanko** (passwordless / passkeys) via `@teamhanko/hanko-elements` 2.6; JWT verified with `jose` 6 |
 | External movie data | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`) |
 | Seed parsing | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs) |
-| Testing | Vitest 4 (unit), Playwright (integration), Storybook 9 (component dev) |
+| Testing | Vitest 4 (unit, co-located in `__tests__/`), Playwright (integration, in `e2e-tests/`), Storybook 9 (component dev) |
 | Lint | ESLint 10 (flat config) + `@typescript-eslint/*` 8 + Prettier |
 
 ---
@@ -48,9 +50,9 @@ Each metric is designed to show **two scores side by side**: the original author
           hooks.server.ts verifies the `hanko` cookie via remote JWKS
 ```
 
-- **Entry point** is the landing page at `/` (hero + search UX). The hero search is a **live, inline TMDB search**: typing queries a server proxy (`/api/search`) and renders a results dropdown in place — there is no `/search` page.
-- **Movie identity** flows by **TMDB id** through the URL (`/movie/[movieId]`), but the internal join key across metric sources is **`imdb_id`** (the Bechdel/DDD key). On a detail-page load, the live TMDB movie is resolved to a local `movies` row via `getOrCreateDbMovie` (matching on `tmdb_id` then `imdb_id`, lazily backfilling `tmdb_id`).
-- **Metric data** comes from three places: **Bechdel + UM** are seeded into Postgres and rendered server-side (SSR); **DDD** is fetched live from its API and **streamed** so a slow external call never blocks first paint.
+- **Entry point** is the landing page at `/` (hero + search UX). The hero search is a **live, inline TMDB search**: typing queries a server proxy (`/api/search`, TMDB `search/multi`) and renders a results dropdown in place — there is no `/search` page. Results carry a `mediaType` (`movie`/`tv`) and route to the matching detail page.
+- **Title identity** flows by **TMDB id** through the URL (`/movie/[movieId]`, `/tv/[seriesId]`), but the internal join key across metric sources is **`imdb_id`** (the Bechdel/DDD key). On a detail-page load the live TMDB title is resolved to a local `movies` row via **read-only** `getDbMovie`/`getDbMedia` (matching on `tmdb_id` then `imdb_id`); a GET never mutates the DB. TV rows use a synthetic `tmdb-tv:` imdb namespace + null `tmdb_id` to avoid colliding with film tmdb ids.
+- **Metric data** comes from three places: **Bechdel + UM** are seeded into Postgres and rendered server-side (SSR); **DDD** is fetched live from its API and **streamed** so a slow external call never blocks first paint. (Bechdel is movie-only; series surface UM + DDD.)
 - **Auth** is entirely Hanko's; the app only verifies the JWT cookie server-side to gate `/user/*`.
 
 ---
@@ -80,21 +82,47 @@ MIDB/
 │   ├── hooks.server.ts         # Auth gate: verifies `hanko` JWT cookie, protects /user/*
 │   ├── app.css                 # Tailwind v4 entry + design tokens + @layer components
 │   ├── app.html / app.d.ts     # SvelteKit shell + ambient types
-│   ├── routes/                 # File-based routing (see below)
+│   ├── __tests__/              # index.test.ts (smoke)
+│   ├── routes/                 # File-based routing (see below). Route folders hold ONLY
+│   │   │                       #   +page/+server/datasource — shared logic lives in $lib.
 │   │   └── +layout.svelte      # Root shell: app.css + remixicon, global Navbar + <main> + Footer
 │   └── lib/
-│       ├── components/         # Reusable UI, grouped by domain
-│       ├── movie/              # Client-safe pure helpers: format.ts (Intl) + metrics.ts (BECHDEL_TIERS / UM_FLAGS / UmCandidate)
+│       ├── server/             # SvelteKit-ENFORCED server-only boundary (no client import)
+│       │   ├── data/           # Postgres / Drizzle access (+ __tests__/)
+│       │   │   ├── media-queries.ts  # identity resolution (getDbMovie/getDbMedia/getOrCreate*) + metric fetches (getBechdel/getUnconsenting)
+│       │   │   └── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates + toCandidate helper
+│       │   └── integrations/   # External API clients (hold secrets) (+ __tests__/)
+│       │       ├── tmdb.ts           # shared TMDB client + aggregateGender
+│       │       ├── ddd.ts            # DDD client + cache; re-exports TriggerTag/DddResult from ddd-types
+│       │       └── ddd-types.ts      # public domain types: TriggerTag, DddResult (no client import of secrets)
+│       ├── media/              # Shared, client-safe media domain (movies + series)
+│       │   ├── types/          # media.ts (MediaDetail/GenderBreakdown), movie.ts, series.ts,
+│       │   │                   #   ddd.ts (type-only re-export from integrations/ddd-types)
+│       │   └── utils/          # format.ts (Intl), metrics.ts (BECHDEL_TIERS/UM_FLAGS/UmCandidate/dddUrl/umFlagCount),
+│       │                       #   dddStream.svelte.ts (createDddState rune factory) (+ __tests__/)
+│       ├── components/         # Reusable UI: ui/* primitives + domain folders (see Component library)
 │       ├── actions/            # Svelte `use:` actions (setAttributesToChilds.ts)
 │       └── stores/             # debounced.ts
 │
+├── e2e-tests/                  # Playwright integration tests (testDir; renamed from tests/)
 ├── drizzle.config.ts           # drizzle-kit config (out, schema glob, dialect/credentials)
+├── playwright.config.ts        # testDir: 'e2e-tests'
 ├── svelte.config.js            # adapter-auto; alias $db/* → ./db/*; vitePreprocess({ style:false })
 ├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest block
 └── .env                        # DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY
 ```
 
-**Key structural choice:** the database layer (`db/`) sits *outside* `src/`, exposed to the app via the `$db/*` alias defined in `svelte.config.js`. Server-only route modules import `db` from `$db/connections`.
+**Key structural choices:**
+- The database layer (`db/`) sits *outside* `src/`, exposed via the `$db/*` alias in `svelte.config.js`. Server-only modules import `db` from `$db/connections`.
+- **Shared server logic does not live inside route folders.** Anything two routes both need (DB queries, external API clients) lives under `$lib/server/`; route folders keep only their route files plus a route-specific `datasource.server.ts`.
+
+### File-organisation conventions
+
+- **`$lib/server/**` is the server-only boundary.** SvelteKit fails the build if any client-reachable code imports from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and DB access live here only. `data/` = Postgres; `integrations/` = external HTTP clients.
+- **Components for types, never routes.** A component that needs a `Movie`/`Series`/`TriggerTag` type imports it from `$lib/media/types/*` — `media/types/ddd.ts` re-exports DDD types from `integrations/ddd-types.ts` (not `ddd.ts`) as **types only** (erased at build, so no server runtime leaks into the client bundle). Components no longer reach back into `routes/.../`.
+- **`ui/` vs domain.** Generic, reusable primitives (button, tile, skeleton, tooltip, progressbar) live in `$lib/components/ui/*`; title-specific UI lives in domain folders (`movies/*`, `search/*`, …).
+- **Imports use `$lib`/`$db` aliases**, with relative `./` reserved for same-folder siblings.
+- **Tests are co-located in a `__tests__/` subfolder** at each location (vitest glob `src/**/*.{spec,test}.{js,ts}` matches any depth). Playwright e2e specs live in top-level `e2e-tests/`.
 
 ---
 
@@ -115,11 +143,14 @@ The styling system is **Tailwind CSS v4, CSS-first**. There is no JS theme confi
 | Route | Files | Status | Notes |
 |---|---|---|---|
 | `/` | `+page.svelte`, `+page.server.ts` | **Working** | Landing: italic brand eyebrow, large serif headline, one-sentence subhead, `HeroSearch` (live inline search), "Rate a film yourself →" CTA to `/auth`, 3-up metrics band (Bechdel / UM / DDD, one sentence each), closing note on the dual-source model. `+page.server.ts` returns `{}`. `heroSearch.svelte` applies landing-specific sizing and a 2px brand focus ring to the search box. |
-| `/api/search` | `+server.ts`, `datasource.server.ts` | **Working** | `GET ?q=…` proxy to TMDB `search/movie`. Empty/whitespace `q` short-circuits to `{ results: [] }`. Returns slim `SearchResult[]`. No `/search` page exists. |
+| `/api/search` | `+server.ts`, `datasource.server.ts` | **Working** | `GET ?q=…` proxy to TMDB **`search/multi`**. Empty/whitespace `q` short-circuits to `{ results: [] }`. Returns slim `SearchResult[]` (movies + tv only, each tagged `mediaType`). No `/search` page exists. |
 | `/auth` | `+page.svelte`, `+page.ts`, `+layout.svelte` | Working | Renders Hanko `<hanko-auth>`. On success redirects to `/user/dashboard`. `ssr=false`. |
-| `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts`, `db.server.ts`, `ddd.server.ts`, `types.ts` | **Working** | Core page — see **Movie detail page** below. |
+| `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts` | **Working** | Core page — see **Detail pages** below. Shared DB/DDD logic imported from `$lib/server/*`; types from `$lib/media/types/*`. |
+| `/tv/[seriesId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts` | **Working** | TV-series detail page. Same metric model as movies minus Bechdel; uses `getDbMedia(series, 'tv')` and `getTriggerTagsForSeries`. |
 | `/user/dashboard` | `+page.svelte`, `+page.ts` | Working (minimal) | Hanko `<hanko-profile>`. Auth-gated by `hooks.server.ts`. `ssr=false`. |
 
+> **Route folders are thin:** `db.server.ts`, `ddd.server.ts`, and the route `types.ts` files that used to live under `/movie/[movieId]/` were moved to `$lib/server/data/media-queries.ts`, `$lib/server/integrations/ddd.ts`, and `$lib/media/types/{movie,series}.ts` respectively.
+>
 > **Removed routes:** `/movie/[movieId]/metric` and `/movie/[movieId]/metric/[metricId]` (user-driven evaluation forms) were deleted when the app moved from user-submitted evaluations to seeded source data.
 
 ---
@@ -176,41 +207,52 @@ Raw CSVs in `db/seeds/sources/`. Scripts run under Bun, use `csv-parse` for stre
 - `normalizeTitle(title)` — lowercase, strip leading articles (en/fr/de/es/it), strip diacritics + punctuation, collapse whitespace. Must mirror UM's `cleanName` conventions.
 - `stripTrailingYear(normalized)` — removes a trailing ` (19|20)\d\d` from an already-normalized string, returns `{ key, year }`. Used to handle the ~12% of UM rows whose `cleanNameArticles` embeds the year.
 
-Both are covered by unit specs (`src/lib/normalizeTitle.spec.ts`).
+Both are covered by unit specs (`src/lib/media/utils/__tests__/normalizeTitle.spec.ts`).
 
 Run order matters: **`db:seed:movies` must run before `db:seed:um`** so the `movies` spine is populated before UM tries to bind to it. Re-running either is safe.
 
 ---
 
-## Movie detail page (`src/routes/movie/[movieId]/`)
+## Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`)
 
-The flagship page. Server-rendered for DB metrics, **streamed** for the live DDD call.
+The flagship pages. Server-rendered for DB metrics, **streamed** for the live DDD call. Movies and series share the same DB/DDD modules in `$lib/server/*` and differ only in their TMDB datasource + which metrics apply.
 
-**Server (`+page.server.ts`):**
+**Server (movie `+page.server.ts`):**
 ```ts
+import { getMovie } from './datasource.server';
+import { getDbMovie, getBechdel, getUnconsenting } from '$lib/server/data/media-queries';
+import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
+import { getTriggerTagsLive } from '$lib/server/integrations/ddd';
+
 const movie = await getMovie(params.movieId);          // TMDB live (Bearer, credits+external_ids)
-const dbMovie = await getOrCreateDbMovie(movie);        // resolve/create movies row
-const [bechdel, unconsenting] = await Promise.all([     // DB, fast → in SSR HTML
-  getBechdel(dbMovie.id), getUnconsenting(dbMovie.id),
-]);
+const dbMovie = await getDbMovie(movie);               // read-only resolve; null if not seeded
+const [bechdel, unconsenting] = dbMovie                // skip DB round-trips when no row exists
+  ? await Promise.all([getBechdel(dbMovie.id), getUnconsenting(dbMovie.id)])
+  : [null, null];
 // No seeded UM binding → look up um_source candidates for runtime disambiguation
 const umCandidates = unconsenting === null ? await getUnconsentingCandidates(movie) : [];
 return { movie, bechdel, unconsenting, umCandidates,
          triggerTags: getTriggerTagsLive(movie.imdbId) };  // UN-awaited → streamed
 ```
+The TV `+page.server.ts` is the same shape: `getSeries(...)` → `getDbMedia(series, 'tv')` → `getUnconsenting`/`getUnconsentingCandidates` → `getTriggerTagsForSeries(series)` streamed. No Bechdel for series.
 
-**DDD live client (`ddd.server.ts`):** two-step fetch with `X-API-KEY`; 1h in-memory `Map` cache keyed by `imdb_id`. Returns `TriggerTag[]` filtered to `yesSum >= noSum && yesSum > 0`.
+**DDD live client (`$lib/server/integrations/ddd.ts`):** `getTriggerTagsLive(imdbId)` (movies, imdb lookup) and `getTriggerTagsForSeries(series)` (title text-search + tmdb/year match). Two-step fetch with `X-API-KEY`; 1h in-memory `Map` cache (keyed `imdb:…` for movies, `tmdb:…` for series). Returns `TriggerTag[]` filtered to `yesSum >= noSum && yesSum > 0`, carrying season/episode scoping for series. `_testExports()` exposes the cache for unit tests. Public types (`TriggerTag`, `DddResult`) live in `ddd-types.ts` — `ddd.ts` re-exports them; `media/types/ddd.ts` imports from `ddd-types` directly so type consumers never transitively load the client.
 
 **Page (`+page.svelte`) — rendered structure:**
-- **`#details` header** (`detailHeader.svelte`): poster + title + year/runtime meta + **metric summary chips** + **fact grid**.
-- **Metric summary chips** — three anchor links (`#bechdel`/`#unconsenting`/`#ddd`). The UM chip shows an **`--accent-bg` (teal) pulsing badge** when candidates are available for disambiguation. Chip reads from `umData` (see UM Disambiguation).
-- **Three collapsible metric sections** (`collapsibleSection.svelte`, native `<details>`): each with a status pill, defaults open when it has data. The UM section also opens when candidates exist.
-- **`#gender` section** — plain `<section>` outside the collapsible stack: `genderDistribution.svelte` stacked bar + legend. Men use `--seg-male` (lilac light / gold dark).
+- **`#details` header** (`movies/facts/detailHeader.svelte`): poster + title + year/runtime meta + **metric summary chips** + **fact grid** (`factGrid` for movies, `seriesFactGrid` for series).
+- **Metric summary chips** — `movies/facts/metricChip.svelte`: one chip per metric, renders as `<a>` when `href` is given (navigates to section anchor), static `<div>` otherwise (series Bechdel N/A). The UM chip's pulsing `--accent-bg` badge is shown via `badgeCount` prop when candidates are available. Value content passed as a snippet.
+- **Collapsible metric sections** — Bechdel stays inline per page; UM section is `movies/metrics/umMetricSection.svelte`; DDD section is `movies/metrics/dddMetricSection.svelte` (accepts a `selector` snippet so the series page injects the `DddEpisodeSelector` without the component knowing about seasons).
+- **`#gender` section** — plain `<section>` outside the collapsible stack: `movies/facts/genderDistribution.svelte` stacked bar + legend. Men use `--seg-male` (lilac light / gold dark).
+- **DDD streaming** — `createDddState(() => data.triggerTags, isSeries)` from `$lib/media/utils/dddStream.svelte.ts` wraps the cancellation-guarded `$effect`; both pages read `dddState.current`.
+- **Comments skeleton** — `movies/sections/commentsSkeleton.svelte` (shared, identical across both pages).
 
-**`db.server.ts`** — the detail page's DB module:
-- `getOrCreateDbMovie(movie)` — tries `tmdb_id` → `imdb_id` → insert, backfilling the missing id. Uses `normalizeTitle()` for `clean_title` on insert.
+**`$lib/server/data/media-queries.ts`** — identity resolution + metric fetches:
+- `getDbMovie(media)` / `getDbMedia(media, kind)` — **read-only** identity resolution. Tries `tmdb_id` → `imdb_id`; returns the row or `null`. Used on GET routes so page visits never mutate the DB. (Movie pages call `getDbMovie`; TV pages call `getDbMedia(series, 'tv')`.)
+- `getOrCreateDbMovie(media)` / `getOrCreateDbMedia(media, kind)` — **write path**. Same lookup, plus lazy id backfill and insert on miss. Reserved for future write endpoints (community ratings, persisted DDD tags) that require a guaranteed-present `movies.id` FK target.
 - `getBechdel(movieId)` / `getUnconsenting(movieId)` — simple `findFirst ?? null`.
-- `getUnconsentingCandidates(movie)` — queries `um_source` by `cleanTitleKey`; applies year-aware filtering (see UM Disambiguation); returns full flag data so a picked candidate renders identically to a seeded row.
+
+**`$lib/server/data/um-candidates.ts`** — UM disambiguation algorithm (split from `media-queries`):
+- `getUnconsentingCandidates(media)` — queries `um_source` by `cleanTitleKey`; applies year-aware filtering (see UM Disambiguation); returns full flag data so a picked candidate renders identically to a seeded row.
 
 ---
 
@@ -228,7 +270,9 @@ UM is the only source with no `imdb_id`, matched purely by normalized title. Whe
 
 **Why `um_source` exists:** `movie_unconsenting` is a binding — keyed by `movie_id`, it can only hold entries that *already matched* a spine movie. For ambiguous (same title, different year) or spine-absent films, `um_source` is the durable, re-queryable catalogue that doesn't require re-parsing the 55k-row CSV per request.
 
-**`UmCandidate` type** (in `src/lib/movie/metrics.ts`) — carries `umId`, `cleanName`, `year`, `flagCount` (concern count, excluding `noRape`) + all 9 flag booleans + `comment`, making it union-compatible with `UnconsentingData` for the shared rendering path.
+**`UmCandidate` type** (in `src/lib/media/utils/metrics.ts`) — carries `umId`, `cleanName`, `year`, `flagCount` (concern count, excluding `noRape`) + all 9 flag booleans + `comment`, making it union-compatible with `UnconsentingData` for the shared rendering path.
+
+**`umFlagCount(umData)` / `dddUrl(itemId)`** (in `src/lib/media/utils/metrics.ts`) — pure helpers shared by both detail pages and by the `umMetricSection` / `dddMetricSection` components. `umFlagCount` excludes `noRape` from the concern tally; `dddUrl` builds the deep-link or falls back to the DDD homepage.
 
 ---
 
@@ -243,32 +287,42 @@ UM is the only source with no `imdb_id`, matched purely by normalized title. Whe
 
 ## Component library (`src/lib/components/`)
 
+Split into **`ui/` generic primitives** (reusable, title-agnostic) and **domain folders**. `movies/` is further split by file-type into `facts/`, `sections/`, `metrics/`, `media/`.
+
 | Group | Components | Notes |
 |---|---|---|
-| `theme/` | themeToggle | Light/dark switch; reads localStorage, writes `document.documentElement.dataset.theme` |
-| `layout/` | navbar, footer | Global chrome, mounted in root `+layout.svelte` |
-| `landing/` | topBar, heroSearch | `heroSearch` wraps `search/movieSearch`. `topBar` is **orphaned** (superseded by `layout/navbar`) |
-| `auth/` | hankoAuth, hankoProfile, logoutButton | Hanko web-component wrappers |
-| `movies/` | tile, description, image, detailHeader, factGrid, genderDistribution, collapsibleSection, dddTags, **umCandidates**, sectionSkeleton | `umCandidates.svelte` — the UM disambiguation picker: `role="list"` of candidate rows (UM glyph + title + year + flag-count pill); each row is a `<button>` that fires an `onselect(candidate)` callback → sets `selectedUm` in the page, no network call. `sectionSkeleton` is **orphaned** (no longer rendered). |
-| `feedback/` | skeleton | Shimmer block. Used by `sectionSkeleton` which is itself orphaned. |
-| `frames/` | metricsFrame | **Orphaned** — powered the deleted metric-evaluation routes. |
-| `tiles/` | tile, tileGrid, processTileGrid | `processTileGrid` powered the deleted evaluation form — **orphaned**. |
-| `form/` | button, linkButton, checkboxTile, radioTile | Status-variant button, tile-form controls |
-| `search/` | movieSearch, searchInput, searchResults, searchResult, resultPoster (+ `movieSearch.svelte.ts`, `types.ts`) | Live inline search (see Live search below) |
-| `navigation/` | simple, item | Inline nav |
-| `text/` | block, tooltip | Collapsible HTML block, tooltip |
-| `visualization/` | progressbar | Horizontal/vertical progress bar |
+| `ui/form/` | button, linkButton, checkboxTile, radioTile | Status-variant button, tile-form controls. `*Tile` wrap `ui/tile/tile`. |
+| `ui/tile/` | tile, tileGrid, processTileGrid | Generic tile primitives. `processTileGrid` powered the deleted evaluation form — **orphaned**. |
+| `ui/feedback/` | skeleton | Shimmer block. Used by `movies/sections/sectionSkeleton` (itself orphaned). |
+| `ui/text/` | block, tooltip | Collapsible HTML block, tooltip. |
+| `ui/visualization/` | progressbar | Horizontal/vertical progress bar. |
+| `theme/` | themeToggle | Light/dark switch; reads localStorage, writes `document.documentElement.dataset.theme`. |
+| `layout/` | navbar, footer | Global chrome, mounted in root `+layout.svelte`. |
+| `landing/` | topBar, heroSearch | `heroSearch` wraps `search/movieSearch`. `topBar` is **orphaned** (superseded by `layout/navbar`). |
+| `auth/` | hankoAuth, hankoProfile, logoutButton | Hanko web-component wrappers. |
+| `movies/facts/` | detailHeader, factGrid, seriesFactGrid, genderDistribution, **metricChip** | Header + fact grids (movie vs series) + gender chart + shared metric chip. `metricChip` renders as `<a>` when `href` given, static `<div>` otherwise; badge (pulsing teal dot) via `badgeCount` prop; value content via snippet. |
+| `movies/sections/` | collapsibleSection, sectionSkeleton, description, **commentsSkeleton** | Section scaffolding. `sectionSkeleton` is **orphaned**. `commentsSkeleton` renders the loading comments section (heading + 4 skeleton rows), shared across movie and series pages. |
+| `movies/metrics/` | dddTags, dddEpisodeSelector, **umCandidates**, **umMetricSection**, **dddMetricSection**, metricsFrame | DDD table + episode selector + UM picker + shared metric sections. `umMetricSection` owns the full UM `CollapsibleSection` (flag list, `umCandidates` picker, comment, no-data state). `dddMetricSection` owns the DDD `CollapsibleSection` (skeleton, `DddTags`, no-data); accepts a `selector` snippet so the series page injects `DddEpisodeSelector` without the component knowing about seasons. `metricsFrame` is **orphaned** (powered the deleted metric-evaluation routes). |
+| `movies/media/` | image, tile, description | TMDB poster `<img>` + result tile. |
+| `search/` | movieSearch, searchInput, searchResults, searchResult, resultPoster (+ `movieSearch.svelte.ts`, `types.ts`) | Live inline search (see Live search below). |
+| `navigation/` | simple, item | Inline nav. |
 
 Notable mechanics:
-- **`collapsibleSection.svelte`** — native `<details>`/`<summary>` card: rotating chevron, Fraunces title, tone-coloured status pill, optional source link, `children` snippet body.
-- **`dddTags.svelte`** — DDD vote table. One **shared** `position: fixed` tooltip for the whole list (avoids per-row CSS hover-gap flicker). Rows with a comment are focusable `<button>`s; tooltip is positioned from the hovered row's rect, flips above/below by available room, dismisses on scroll/resize. Header row (`ddd-header`) labels the Yes/No vote columns in muted `--danger-soft`/`--success-soft` colors. Honors `prefers-reduced-motion`.
-- **`genderDistribution.svelte`** — stacked bar + legend; `total===0` empty state; men use `--seg-male`.
+- **`movies/sections/collapsibleSection.svelte`** — native `<details>`/`<summary>` card: rotating chevron, Fraunces title, tone-coloured status pill, optional source link, `children` snippet body.
+- **`movies/metrics/dddTags.svelte`** — DDD vote table. One **shared** `position: fixed` tooltip for the whole list (avoids per-row CSS hover-gap flicker). Rows with a comment are focusable `<button>`s; tooltip is positioned from the hovered row's rect, flips above/below by available room, dismisses on scroll/resize. Header row (`ddd-header`) labels the Yes/No vote columns in muted `--danger-soft`/`--success-soft` colors. Honors `prefers-reduced-motion`. Types imported from `$lib/media/types/ddd`.
+- **`movies/facts/genderDistribution.svelte`** — stacked bar + legend; `total===0` empty state; men use `--seg-male`.
+- **`movies/facts/metricChip.svelte`** — single summary chip. Owns all `.chip*` styles and the `badge-pulse` keyframe so they're defined once. The page wraps three chips in a `.summary-chips` grid.
+- **`movies/metrics/umMetricSection.svelte`** — full UM section including flag rendering and the `umCandidates` picker fallback. Accepts `umData`, `umFlagCount`, `umCandidates`, `hasUmCandidates`, `mediaNoun`, and `onselect`.
+- **`movies/metrics/dddMetricSection.svelte`** — full DDD section including loading skeleton. The `selector` snippet prop is empty for movies; the series page renders `DddEpisodeSelector` into it.
+- **`$lib/media/utils/dddStream.svelte.ts`** — `createDddState(getPromise, isSeries)` rune factory. Returns `{ current: DddResult | null }`. Internally runs the cancellation-guarded `$effect` that both detail pages previously duplicated. Import with `.js` extension (`dddStream.svelte.js`) per the Svelte 5 runes-module convention.
+
+> **`@reference` depth note:** components now two folders deep under `ui/*` or `movies/*` use `@reference "../../../../app.css"` (four `../`) in their `<style>` blocks; shallower components (e.g. `layout/`, `search/`) keep three. Getting this wrong surfaces as a Tailwind CSS-resolution error in unit tests, not a type error.
 
 ---
 
 ## Live search (`src/lib/components/search/`)
 
-- **`movieSearch.svelte.ts`** — `MovieSearchState` rune class: `query`, `results`, `activeIndex`, `loading`, `open`. Owns the debounced RxJS store (500ms), keyboard model (Arrow wrap-around, Enter→select, Escape→close), and navigation (`resolve('/movie/[movieId]', …)`).
+- **`movieSearch.svelte.ts`** — `MovieSearchState` rune class: `query`, `results`, `activeIndex`, `loading`, `open`. Owns the debounced RxJS store (500ms), keyboard model (Arrow wrap-around, Enter→select, Escape→close), and navigation, which branches on `mediaType` (`resolve('/tv/[seriesId]', …)` vs `resolve('/movie/[movieId]', …)`). `optionId(id, mediaType)` builds the stable `aria-activedescendant` ids.
 - **`movieSearch.svelte`** — orchestrator: instantiates state, wires `$effect(() => search.connect())`, click-outside dismiss, composes child components. Import uses **`.js` extension** (`./movieSearch.svelte.js`) so Vite resolves the `.svelte.ts` module, not the component.
 - Panel visibility is `open && query.trim()` — `close()` flips `open` but preserves `query`/`results` so re-focus re-shows prior results without refetch.
 
@@ -276,9 +330,11 @@ Notable mechanics:
 
 ## TMDB integration
 
-- **`datasource.server.ts`** (`movie/[movieId]/`) — `getMovie(id)` fetches `append_to_response=credits,external_ids`, maps to `Movie` (including `imdbId` from `external_ids`), aggregates cast/crew gender server-side.
-- **`datasource.server.ts`** (`api/search/`) — `searchMovies(q)` → TMDB `search/movie`. Shared `SearchResult` type with client components via `$lib/components/search/types`.
-- **`image.svelte`** — responsive `srcset` from `PUBLIC_TMDB_IMAGE_URL`; `src` defaults to `w500`. `resultPoster.svelte` builds a fixed `w92` URL directly (keeps the 20-row search list cheap).
+- **Shared client** `$lib/server/integrations/tmdb.ts` — `TMDB_BASE`, `tmdbHeaders()` (Bearer), and `aggregateGender(credits)` (0/1/2/3 → unknown/female/male/nonBinary). Used by all three datasources.
+- **`movie/[movieId]/datasource.server.ts`** — `getMovie(id)` fetches `append_to_response=credits,external_ids`, maps to `Movie` (incl. `imdbId` from `external_ids`), aggregates cast/crew gender server-side.
+- **`tv/[seriesId]/datasource.server.ts`** — `getSeries(id)` fetches the `/tv/{id}` equivalent, mapping seasons/networks/created-by into `Series`.
+- **`api/search/datasource.server.ts`** — `search(q)` → TMDB **`search/multi`**, filtered to movie/tv. Shared `SearchResult` type with client components via `$lib/components/search/types`.
+- **`movies/media/image.svelte`** — responsive `srcset` from `PUBLIC_TMDB_IMAGE_URL`; `src` defaults to `w500`. `search/resultPoster.svelte` builds a fixed `w92` URL directly (keeps the 20-row search list cheap).
 
 ---
 
@@ -300,8 +356,8 @@ Notable mechanics:
 | `PUBLIC_HANKO_API_URL` | hooks + auth components | Hanko Cloud tenant URL |
 | `PUBLIC_TMDB_API_URL` | movie + search datasources | `https://api.themoviedb.org` |
 | `PUBLIC_TMDB_IMAGE_URL` | image component | `https://image.tmdb.org/t/p` |
-| `TMDB_API_TOKEN` | movie-detail + search (server only) | v4 Bearer token. `$env/static/private`. |
-| `DDD_API_KEY` | `ddd.server.ts` (server only) | Does The Dog Die API key, `X-API-KEY` header. |
+| `TMDB_API_TOKEN` | `$lib/server/integrations/tmdb.ts` (server only) | v4 Bearer token. `$env/static/private`. |
+| `DDD_API_KEY` | `$lib/server/integrations/ddd.ts` (server only) | Does The Dog Die API key, `X-API-KEY` header. |
 
 ### Local run sequence
 ```bash
@@ -323,14 +379,16 @@ bun run dev
 
 ## Known gaps / TODO
 
-1. **`ddd.spec.ts` is stale** — its mocks use the old `topicId`/`mediaItemComment` field names; the live client maps from `TopicId`/`comment`. Update before relying on a green test run.
-2. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
-3. **Community ratings + comments not yet built** — the next major milestone. Each metric will show the original source score alongside a MIDB community score; movies will also have a comments section. Schema will need new tables (community metric scores keyed by `movie_id` + metric + `user_id`, and a `comments` table). The retained `user` table and `movie_trigger_tags.created_by` FK are the hooks. `/user/dashboard` is currently the Hanko profile only and will need to expand.
-4. **Orphaned UI** — `frames/metricsFrame`, `tiles/processTileGrid`, `movies/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
-5. **UM data is sparse by design** — ~2,981 of ~9,471 spine movies have a UM binding. "No data" is the common, correct state. ~34 title collisions are left as runtime-picker cases (year unknown); ~7,481 have no UM entry at all.
-6. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `detailHeader`, `umCandidates`).
-7. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
-8. **`db:generate` requires a TTY** — drizzle-kit's interactive conflict-resolution prompts require a real terminal. Migrations have been written manually for schema changes made in this session; run `db:generate` from the terminal, not from a CI/non-interactive shell.
+1. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
+2. **Community ratings + comments not yet built** — the next major milestone. Each metric will show the original source score alongside a MIDB community score; titles will also have a comments section. Schema will need new tables (community metric scores keyed by `movie_id` + metric + `user_id`, and a `comments` table). The retained `user` table and `movie_trigger_tags.created_by` FK are the hooks. `/user/dashboard` is currently the Hanko profile only and will need to expand.
+3. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
+4. **UM data is sparse by design** — ~2,981 of ~9,471 spine movies have a UM binding. "No data" is the common, correct state. ~34 title collisions are left as runtime-picker cases (year unknown); ~7,481 have no UM entry at all.
+5. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
+6. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
+7. **`db:generate` requires a TTY** — drizzle-kit's interactive conflict-resolution prompts require a real terminal. Run it from the terminal, not from a CI/non-interactive shell.
+
+> Verification baseline after the `$lib` reorg: `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
+> Verification baseline after the detail-page refactor (server splits + shared components): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 
 ---
 

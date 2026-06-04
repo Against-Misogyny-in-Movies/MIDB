@@ -1,4 +1,4 @@
-import { tmdbHeaders, TMDB_BASE } from '$lib/server/tmdb';
+import { tmdbHeaders, TMDB_BASE } from '$lib/server/integrations/tmdb';
 import type { SearchResult } from '$lib/components/search/types';
 
 export type { SearchResult };
@@ -17,6 +17,13 @@ interface TmdbSearchResponse {
 	results: TmdbMultiItem[];
 }
 
+/**
+ * Searches TMDB's multi-search endpoint for movies and TV series matching `query`.
+ * Filters out non-movie/tv results (people, collections) and normalises the shape.
+ *
+ * @param query - Non-empty search string from the user.
+ * @returns Array of `SearchResult` items; empty on TMDB error or no matches.
+ */
 export async function search(query: string): Promise<SearchResult[]> {
 	const url = new URL(`${TMDB_BASE}/3/search/multi`);
 	url.searchParams.set('query', query);

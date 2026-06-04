@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/form/button.svelte';
+	import Button from '$lib/components/ui/form/button.svelte';
 
 	interface Props {
 		value: string;

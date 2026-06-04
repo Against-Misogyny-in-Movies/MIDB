@@ -1,9 +1,17 @@
 import { error } from '@sveltejs/kit';
-import { TMDB_BASE, tmdbHeaders, aggregateGender } from '$lib/server/tmdb';
-import type { Series } from './types';
+import { TMDB_BASE, tmdbHeaders, aggregateGender } from '$lib/server/integrations/tmdb';
+import type { Series } from '$lib/media/types/series';
 
-export type { Series };
+export type { Series } from '$lib/media/types/series';
 
+/**
+ * Fetches full TV series details from TMDB, including credits, external ids, and seasons.
+ * Also aggregates cast and crew gender breakdowns from the credits response.
+ *
+ * @param seriesId - TMDB series id (numeric string, from the route parameter).
+ * @returns A fully-shaped `Series` object with metadata, seasons, networks, and gender breakdowns.
+ * @throws SvelteKit `error()` if the TMDB response is not OK.
+ */
 export const getSeries = async (seriesId: string): Promise<Series> => {
 	const url = new URL(`${TMDB_BASE}/3/tv/${seriesId}`);
 	url.searchParams.set('append_to_response', 'credits,external_ids');
