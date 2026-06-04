@@ -23,6 +23,23 @@ export const movieBechdel = pgTable('movie_bechdel', {
 	check('rating_range', sql`rating >= 0 AND rating <= 3`),
 ]);
 
+export const umSource = pgTable('um_source', {
+	umId: integer('um_id').primaryKey(),
+	cleanName: varchar('clean_name').notNull(),
+	cleanTitleKey: varchar('clean_title_key').notNull(),
+	year: integer('year'),
+	noRape: boolean('no_rape').notNull(),
+	rapeMenDisImp: boolean('rape_men_dis_imp').notNull(),
+	sexHarOnScrn: boolean('sex_har_on_scrn').notNull(),
+	sexAdultTeen: boolean('sex_adult_teen').notNull(),
+	childSexAbuse: boolean('child_sex_abuse').notNull(),
+	incest: boolean('incest').notNull(),
+	attemptedRape: boolean('attempted_rape').notNull(),
+	rapeOffScrn: boolean('rape_off_scrn').notNull(),
+	rapeOnScreen: boolean('rape_on_screen').notNull(),
+	comment: text('comment'),
+});
+
 export const movieUnconsenting = pgTable('movie_unconsenting', {
 	movieId: uuid('movie_id').primaryKey().references(() => movies.id, { onDelete: 'cascade' }),
 	umId: integer('um_id').notNull(),

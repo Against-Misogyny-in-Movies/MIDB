@@ -5,12 +5,32 @@
 	import GenderDistribution from '$lib/components/movies/genderDistribution.svelte';
 	import CollapsibleSection from '$lib/components/movies/collapsibleSection.svelte';
 	import DddTags from '$lib/components/movies/dddTags.svelte';
-	import { BECHDEL_TIERS, UM_FLAGS } from '$lib/movie/metrics';
+	import UmCandidates from '$lib/components/movies/umCandidates.svelte';
+	import { BECHDEL_TIERS, UM_FLAGS, type UmCandidate } from '$lib/movie/metrics';
 
 	let { data }: { data: PageData } = $props();
 	const movie = $derived(data.movie);
 	const bechdel = $derived(data.bechdel);
 	const unconsenting = $derived(data.unconsenting);
+	const umCandidates = $derived(data.umCandidates ?? []);
+
+	// The candidate the user picked for this page view only. Never persisted —
+	// reset whenever the movie changes so a stale pick can't leak across films.
+	let selectedUm = $state<UmCandidate | null>(null);
+	$effect(() => {
+		movie.id; // track
+		selectedUm = null;
+	});
+
+	// A lone candidate is an exact year match (the server only returns one when
+	// the movie's year pins it), so render it directly — no picker needed.
+	const autoUm = $derived(umCandidates.length === 1 ? umCandidates[0] : null);
+
+	// Unified UM source: a seeded binding, else a year-pinned auto-match, else the
+	// user's current-page pick. All expose the same UM flag keys + umId + comment,
+	// so the section and chip render identically regardless of origin.
+	const umData = $derived(unconsenting ?? autoUm ?? selectedUm);
+	const hasUmCandidates = $derived(umData === null && umCandidates.length > 1);
 
 	// Resolve the streamed promise into reactive state once it settles, so both the
 	// chip and the section read the same settled value.
@@ -35,8 +55,10 @@
 			: 'https://www.doesthedogdie.com';
 	}
 
+	// `noRape` is inverted: true means "no rape/assault" — a reassurance, not a
+	// concern — so it never counts toward the concern tally.
 	const umFlagCount = $derived(
-		unconsenting ? UM_FLAGS.filter((f) => unconsenting[f.key] === true).length : 0
+		umData ? UM_FLAGS.filter((f) => f.key !== 'noRape' && umData[f.key] === true).length : 0
 	);
 </script>
 
@@ -59,21 +81,28 @@
 				</a>
 
 				<!-- UM chip -->
-				<a class="chip" href="#unconsenting" class:chip--empty={unconsenting === null}>
-					<span class="chip-icon" aria-hidden="true"><i class="ri-shield-cross-line"></i></span>
-					<span class="chip-text">
-						<span class="chip-label">Unconsenting Media</span>
-						{#if unconsenting}
-							<span class="chip-value"
-								>{umFlagCount}<span class="chip-unit">
-									concern{umFlagCount === 1 ? '' : 's'}</span
-								></span
-							>
-						{:else}
-							<span class="chip-empty">No data</span>
-						{/if}
-					</span>
-				</a>
+				<div class="chip-wrap">
+					<a class="chip" href="#unconsenting" class:chip--empty={umData === null}>
+						<span class="chip-icon" aria-hidden="true"><i class="ri-shield-cross-line"></i></span>
+						<span class="chip-text">
+							<span class="chip-label">Unconsenting Media</span>
+							{#if umData}
+								<span class="chip-value"
+									>{umFlagCount}<span class="chip-unit">
+										concern{umFlagCount === 1 ? '' : 's'}</span
+									></span
+								>
+							{:else}
+								<span class="chip-empty">No data</span>
+							{/if}
+						</span>
+					</a>
+					{#if hasUmCandidates}
+						<span class="chip-badge" aria-label="{umCandidates.length} possible Unconsenting Media match{umCandidates.length === 1 ? '' : 'es'} — choose below">
+							<i class="ri-error-warning-line" aria-hidden="true"></i>
+						</span>
+					{/if}
+				</div>
 
 				<!-- DDD chip (streamed) -->
 				<a class="chip" href="#ddd" class:chip--empty={ddd !== null && ddd.tags.length === 0}>
@@ -139,31 +168,45 @@
 		<div id="unconsenting">
 			<CollapsibleSection
 				title="Unconsenting Media"
-				status={unconsenting
+				status={umData
 					? `${umFlagCount} concern${umFlagCount === 1 ? '' : 's'}`
 					: 'No data'}
-				tone={unconsenting ? 'data' : 'empty'}
-				open={unconsenting !== null}
-				sourceLabel={unconsenting ? 'UnconsentingMedia.org' : undefined}
-				sourceHref={unconsenting
-					? `https://www.unconsentingmedia.org/items/${unconsenting.umId}`
+				tone={umData ? 'data' : 'empty'}
+				open={umData !== null || hasUmCandidates}
+				sourceLabel={umData ? 'UnconsentingMedia.org' : undefined}
+				sourceHref={umData
+					? `https://www.unconsentingmedia.org/items/${umData.umId}`
 					: undefined}
 			>
-				{#if unconsenting}
+				{#if umData}
 					<ul class="um-flags">
 						{#each UM_FLAGS as flag (flag.key)}
-							{@const present = unconsenting[flag.key] === true}
-							<li class="um-flag" class:um-flag--present={present}>
+							{@const value = umData[flag.key] === true}
+							{@const reassurance = flag.key === 'noRape' && value}
+							{@const present = value && !reassurance}
+							<li
+								class="um-flag"
+								class:um-flag--present={present}
+								class:um-flag--reassurance={reassurance}
+							>
 								<span class="flag-check" aria-hidden="true">
-									<i class={present ? 'ri-alert-fill' : 'ri-checkbox-blank-circle-line'}></i>
+									<i
+										class={reassurance
+											? 'ri-checkbox-circle-fill'
+											: present
+												? 'ri-alert-fill'
+												: 'ri-checkbox-blank-circle-line'}
+									></i>
 								</span>
 								<span>{flag.label}</span>
 							</li>
 						{/each}
 					</ul>
-					{#if unconsenting.comment}
-						<p class="um-comment">{unconsenting.comment}</p>
+					{#if umData.comment}
+						<p class="um-comment">{umData.comment}</p>
 					{/if}
+				{:else if hasUmCandidates}
+					<UmCandidates candidates={umCandidates} onselect={(c) => (selectedUm = c)} />
 				{:else}
 					<p class="no-data">This movie is not in the Unconsenting Media database.</p>
 				{/if}
@@ -289,7 +332,7 @@
 	}
 
 	.chip-unit {
-		@apply text-sm font-normal text-ink-muted;
+		@apply text-sm font-normal text-ink-muted ml-1;
 	}
 
 	.chip-empty,
@@ -306,6 +349,37 @@
 	.chip--empty .chip-icon {
 		background-color: var(--secondary-soft);
 		color: var(--ink-muted);
+	}
+
+	/* Badge: candidate picker available */
+	.chip-wrap {
+		@apply relative;
+	}
+
+	.chip-badge {
+		@apply absolute -top-3 -right-3 flex items-center justify-center w-7 h-7 rounded-full text-base z-10;
+		background-color: var(--accent-bg);
+		color: var(--accent-ink);
+		box-shadow: 0 0 0 2px var(--surface-raised);
+	}
+
+	.chip-badge::after {
+		content: '';
+		@apply absolute inset-0 rounded-full;
+		background-color: var(--accent-bg);
+		opacity: 0.5;
+		animation: badge-pulse 2s ease infinite;
+	}
+
+	@keyframes badge-pulse {
+		0%, 100% { transform: scale(1); opacity: 0.5; }
+		50% { transform: scale(2); opacity: 0; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.chip-badge::after {
+			animation: none;
+		}
 	}
 
 	/* ── Bechdel tiers ── */
@@ -346,6 +420,11 @@
 		@apply text-ink font-medium;
 	}
 
+	/* `noRape` = true is reassuring, not a concern: render it as a green tick. */
+	.um-flag--reassurance {
+		@apply text-ink font-medium;
+	}
+
 	.flag-check {
 		@apply flex items-center justify-center w-5 h-5 shrink-0 text-ink-muted opacity-40;
 	}
@@ -353,6 +432,11 @@
 	.um-flag--present .flag-check {
 		@apply opacity-100;
 		color: var(--warn);
+	}
+
+	.um-flag--reassurance .flag-check {
+		@apply opacity-100;
+		color: var(--success);
 	}
 
 	.um-comment {

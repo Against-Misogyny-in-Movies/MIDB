@@ -53,6 +53,11 @@
 </script>
 
 <ul class="ddd-tags">
+  <li class="ddd-header" aria-hidden="true">
+    <span></span>
+    <span class="header-yes">Yes</span>
+    <span class="header-no">No</span>
+  </li>
   {#each tags as tag (tag.topicItemId)}
     {@const yes = yesPct(tag.yesSum, tag.noSum)}
     {@const hasComment = !!tag.comment}
@@ -102,6 +107,24 @@
 
   .ddd-tags {
     @apply flex flex-col list-none m-0 p-0;
+  }
+
+  .ddd-header {
+    @apply grid items-center gap-md pb-xs border-b border-border;
+    grid-template-columns: minmax(0, 1fr) 6rem 4.5rem;
+  }
+
+  .header-yes,
+  .header-no {
+    @apply text-xs text-ink-muted;
+  }
+
+  .header-yes {
+    color: var(--danger-soft);
+  }
+
+  .header-no {
+    color: var(--success-soft);
   }
 
   .ddd-tag {

@@ -18,3 +18,16 @@ export const UM_FLAGS = [
 ] as const;
 
 export type UmFlagKey = (typeof UM_FLAGS)[number]['key'];
+
+/**
+ * A UM catalogue entry surfaced for an ambiguous title. Carries the full flag
+ * set + comment so a user-picked candidate renders the same UM section as a
+ * seeded binding — entirely client-side, persisting nothing.
+ */
+export type UmCandidate = {
+	umId: number;
+	cleanName: string;
+	year: number | null;
+	flagCount: number;
+	comment: string | null;
+} & Record<UmFlagKey, boolean>;

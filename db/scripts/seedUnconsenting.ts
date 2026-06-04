@@ -1,10 +1,9 @@
 import { createReadStream, createWriteStream } from 'fs';
 import { parse } from 'csv-parse';
 import { sql } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
 import db from '../connections';
-import { movies, movieUnconsenting } from '../schema/movie';
-import { normalizeTitle } from './lib/normalizeTitle';
+import { movies, movieUnconsenting, umSource } from '../schema/movie';
+import { normalizeTitle, stripTrailingYear } from './lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
 
 const CSV_PATH = './db/seeds/sources/unconsenting.csv';
@@ -40,11 +39,17 @@ function parseBool(val: string): boolean {
 	return val?.toLowerCase() === 'true';
 }
 
-async function buildCleanTitleIndex(): Promise<Map<string, string>> {
-	const rows = await db.select({ id: movies.id, cleanTitle: movies.cleanTitle }).from(movies);
-	const index = new Map<string, string>();
+// Map from cleanTitle → Array of { id, year }
+async function buildCleanTitleIndex(): Promise<Map<string, Array<{ id: string; year: number }>>> {
+	const rows = await db.select({ id: movies.id, cleanTitle: movies.cleanTitle, year: movies.year }).from(movies);
+	const index = new Map<string, Array<{ id: string; year: number }>>();
 	for (const r of rows) {
-		index.set(r.cleanTitle, r.id);
+		const existing = index.get(r.cleanTitle);
+		if (existing) {
+			existing.push({ id: r.id, year: r.year });
+		} else {
+			index.set(r.cleanTitle, [{ id: r.id, year: r.year }]);
+		}
 	}
 	return index;
 }
@@ -57,18 +62,46 @@ async function main() {
 	console.log(`  index size: ${titleIndex.size}`);
 
 	const report = createWriteStream(UNMATCHED_REPORT);
-	report.write('id\tname\tcleanNameArticles\tyearOfRelease\treason\n');
+	report.write('id\tname\tcleanNameArticles\tyearOfRelease\treason\tcandidateYears\n');
 
-	const insertBatch: (typeof movieUnconsenting.$inferInsert)[] = [];
+	const sourceBatch: (typeof umSource.$inferInsert)[] = [];
+	const bindingBatch: (typeof movieUnconsenting.$inferInsert)[] = [];
 	let matched = 0;
 	let unmatched = 0;
+	let ambiguous = 0;
 	let skipped = 0;
 	let total = 0;
 
-	const flush = async () => {
-		if (insertBatch.length === 0) return;
-		// Deduplicate by movieId within batch
-		const deduped = [...new Map(insertBatch.map((r) => [r.movieId, r])).values()];
+	const flushSource = async () => {
+		if (sourceBatch.length === 0) return;
+		const deduped = [...new Map(sourceBatch.map((r) => [r.umId, r])).values()];
+		await db
+			.insert(umSource)
+			.values(deduped)
+			.onConflictDoUpdate({
+				target: umSource.umId,
+				set: {
+					cleanName: sql`excluded.clean_name`,
+					cleanTitleKey: sql`excluded.clean_title_key`,
+					year: sql`excluded.year`,
+					noRape: sql`excluded.no_rape`,
+					rapeMenDisImp: sql`excluded.rape_men_dis_imp`,
+					sexHarOnScrn: sql`excluded.sex_har_on_scrn`,
+					sexAdultTeen: sql`excluded.sex_adult_teen`,
+					childSexAbuse: sql`excluded.child_sex_abuse`,
+					incest: sql`excluded.incest`,
+					attemptedRape: sql`excluded.attempted_rape`,
+					rapeOffScrn: sql`excluded.rape_off_scrn`,
+					rapeOnScreen: sql`excluded.rape_on_screen`,
+					comment: sql`excluded.comment`,
+				},
+			});
+		sourceBatch.length = 0;
+	};
+
+	const flushBindings = async () => {
+		if (bindingBatch.length === 0) return;
+		const deduped = [...new Map(bindingBatch.map((r) => [r.movieId, r])).values()];
 		await db
 			.insert(movieUnconsenting)
 			.values(deduped)
@@ -90,7 +123,7 @@ async function main() {
 					rapeOnScreen: sql`excluded.rape_on_screen`,
 				},
 			});
-		insertBatch.length = 0;
+		bindingBatch.length = 0;
 	};
 
 	const parser = createReadStream(CSV_PATH).pipe(
@@ -100,7 +133,6 @@ async function main() {
 	for await (const record of parser as AsyncIterable<UmRow>) {
 		total++;
 
-		// Only process movies
 		if (record.itemType?.toLowerCase() !== 'movie') {
 			skipped++;
 			continue;
@@ -112,37 +144,17 @@ async function main() {
 			continue;
 		}
 
-		// Try cleanNameArticles first (strips leading article), then cleanName, then normalized name
-		const candidates = [
-			record.cleanNameArticles?.trim(),
-			record.cleanName?.trim(),
-			normalizeTitle(record.name?.trim() || ''),
-		].filter(Boolean) as string[];
+		// Derive the canonical key and year from UM's own normalized name.
+		// UM's cleanNameArticles may include a trailing year ("wuthering heights 2026"),
+		// so we strip it to get a stable key and use the embedded year preferentially.
+		const rawKey = record.cleanNameArticles?.trim() || record.cleanName?.trim() || normalizeTitle(record.name?.trim() || '');
+		const { key: titleKey, year: embeddedYear } = stripTrailingYear(rawKey);
+		const csvYear = record.yearOfRelease ? parseInt(record.yearOfRelease, 10) : null;
+		const umYear = embeddedYear ?? (Number.isNaN(csvYear) ? null : csvYear);
+		const displayName = record.cleanNameArticles?.trim() || record.cleanName?.trim() || record.name?.trim() || '';
 
-		let movieId: string | undefined;
-		let matchedKey: string | undefined;
-		for (const candidate of candidates) {
-			const found = titleIndex.get(candidate);
-			if (found) {
-				movieId = found;
-				matchedKey = candidate;
-				break;
-			}
-		}
-
-		if (!movieId) {
-			unmatched++;
-			report.write(`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tno_match\n`);
-			continue;
-		}
-
-		matched++;
-		insertBatch.push({
-			movieId,
-			umId,
-			cleanName: record.cleanNameArticles?.trim() || record.cleanName?.trim() || '',
-			itemType: record.itemType?.trim() || null,
-			comment: record.comment?.trim() || null,
+		// Populate um_source catalog regardless of match outcome
+		const flags = {
 			noRape: parseBool(record.noRape),
 			rapeMenDisImp: parseBool(record.rapeMenDisImp),
 			sexHarOnScrn: parseBool(record.sexHarOnScrn),
@@ -152,21 +164,67 @@ async function main() {
 			attemptedRape: parseBool(record.attemptedRape),
 			rapeOffScrn: parseBool(record.rapeOffScrn),
 			rapeOnScreen: parseBool(record.rapeOnScreen),
+		};
+		sourceBatch.push({
+			umId,
+			cleanName: displayName,
+			cleanTitleKey: titleKey,
+			year: umYear,
+			...flags,
+			comment: record.comment?.trim() || null,
 		});
 
-		if (insertBatch.length >= BATCH_SIZE) {
-			await flush();
+		// Resolve a binding to a movies row
+		const candidates = titleIndex.get(titleKey) ?? [];
+
+		let movieId: string | undefined;
+		if (candidates.length === 1) {
+			// Unambiguous: only one movie with this title
+			movieId = candidates[0].id;
+		} else if (candidates.length > 1 && umYear !== null) {
+			// Try exact year match
+			const byYear = candidates.find((c) => c.year === umYear);
+			movieId = byYear?.id;
+		}
+		// else: ambiguous (multiple same-title, no year hit) — leave unmatched
+
+		if (!movieId) {
+			if (candidates.length > 1) {
+				ambiguous++;
+				const candidateYears = candidates.map((c) => c.year).join(',');
+				report.write(`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tambiguous\t${candidateYears}\n`);
+			} else {
+				unmatched++;
+				report.write(`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tno_match\t\n`);
+			}
+		} else {
+			matched++;
+			bindingBatch.push({
+				movieId,
+				umId,
+				cleanName: displayName,
+				itemType: record.itemType?.trim() || null,
+				comment: record.comment?.trim() || null,
+				...flags,
+			});
+		}
+
+		if (sourceBatch.length >= BATCH_SIZE) {
+			await flushSource();
+			await flushBindings();
 			console.log(`  processed ${total} rows, matched ${matched}...`);
 		}
 	}
 
-	await flush();
+	await flushSource();
+	await flushBindings();
 	report.end();
 
 	console.log(`Done.`);
 	console.log(`  Total rows: ${total}`);
 	console.log(`  Movies matched: ${matched}`);
-	console.log(`  Unmatched: ${unmatched}`);
+	console.log(`  Ambiguous (skipped): ${ambiguous}`);
+	console.log(`  No match: ${unmatched}`);
 	console.log(`  Skipped (non-movie/invalid): ${skipped}`);
 	console.log(`  Unmatched report: ${UNMATCHED_REPORT}`);
 }

@@ -1,3 +1,5 @@
+export type { UmCandidate } from '$lib/movie/metrics.js';
+
 export interface GenderBreakdown {
   unknown: number;
   female: number;

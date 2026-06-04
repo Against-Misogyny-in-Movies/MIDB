@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getMovie } from './datasource.server';
-import { getOrCreateDbMovie, getBechdel, getUnconsenting } from './db.server';
+import { getOrCreateDbMovie, getBechdel, getUnconsenting, getUnconsentingCandidates } from './db.server';
 import { getTriggerTagsLive } from './ddd.server';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -12,10 +12,15 @@ export const load: PageServerLoad = async ({ params }) => {
 		getUnconsenting(dbMovie.id),
 	]);
 
+	// No seeded UM binding → offer catalogue candidates for the same title.
+	// The user's pick renders client-side only; we persist nothing.
+	const umCandidates = unconsenting === null ? await getUnconsentingCandidates(movie) : [];
+
 	return {
 		movie,
 		bechdel,
 		unconsenting,
+		umCandidates,
 		triggerTags: getTriggerTagsLive(movie.imdbId), // un-awaited: streamed
 	};
 };
