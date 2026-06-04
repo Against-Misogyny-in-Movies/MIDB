@@ -1,104 +1,147 @@
 <script lang="ts">
-  import HeroSearch from '$lib/components/landing/heroSearch.svelte';
+	import HeroSearch from '$lib/components/landing/heroSearch.svelte';
 </script>
 
 <section class="hero">
-  <p class="label">A film safety reference</p>
-  <h1 class="display" data-testid="hero-headline">Know before you watch.</h1>
-  <p class="subhead">
-    MIDB flags misogynistic content and violence against women in film —
-    sourced from people and partner organisations.
-  </p>
-  <div class="search-wrap">
-    <HeroSearch />
-  </div>
-  <p class="contribute">
-    Seen something we missed?
-    <a href="/auth" data-testid="contribute-link">Add a rating →</a>
-  </p>
+	<p class="eyebrow display">A film safety reference</p>
+	<h1 class="display" data-testid="hero-headline">Know before you&nbsp;watch.</h1>
+	<p class="subhead">
+		MIDB flags <strong>misogyny and violence against women</strong> in film, so you decide what's safe
+		to watch.
+	</p>
+	<div class="search-wrap">
+		<HeroSearch />
+	</div>
+	<p class="contribute">
+		<a href="/auth" data-testid="contribute-link">Rate a film yourself →</a>
+	</p>
 </section>
 
 <section class="metrics">
-  <div class="metrics-grid">
-    <div>
-      <h3 class="display">Bechdel Test</h3>
-      <p>The seeded baseline: do two named women talk to each other about something other than a man?</p>
-    </div>
-    <div>
-      <h3 class="display">Hybrid data</h3>
-      <p>Ratings contributed by people, partner organisations, and movie metadata from TMDB.</p>
-    </div>
-    <div>
-      <h3 class="display">Transparent marks</h3>
-      <p>Each metric is explained. You see the criteria, the source, and the count behind every mark.</p>
-    </div>
-  </div>
+	<p class="metrics-label label">What we check</p>
+	<div class="metrics-grid">
+		<div>
+			<h3 class="display">Bechdel Test</h3>
+			<p>Do two named women in the film talk to each other about something other than a man?</p>
+			<a class="source-link" href="https://bechdeltest.com" target="_blank" rel="noopener noreferrer">bechdeltest.com ↗</a>
+		</div>
+		<div>
+			<h3 class="display">Unconsenting Media</h3>
+			<p>
+				Flags sexual violence in film, for survivors or anyone who just wants to know before they
+				sit down.
+			</p>
+			<a class="source-link" href="https://www.unconsentingmedia.org" target="_blank" rel="noopener noreferrer">unconsentingmedia.org ↗</a>
+		</div>
+		<div>
+			<h3 class="display">Does The Dog Die</h3>
+			<p>
+				Community warnings for the things mainstream ratings miss: animal deaths, self-harm, eating
+				disorders, and more.
+			</p>
+			<a class="source-link" href="https://www.doesthedogdie.com" target="_blank" rel="noopener noreferrer">doesthedogdie.com ↗</a>
+		</div>
+	</div>
+	<p class="metrics-note">
+		We pull from established sources and combine them with ratings submitted by the MIDB community.
+	</p>
 </section>
 
 <style lang="postcss">
-  @reference "../app.css";
+	@reference "../app.css";
 
-  .hero {
-    @apply mt-xl mb-xl;
-    max-width: 42rem;
-  }
+	.hero {
+		@apply mt-xl;
+		max-width: 46rem;
+		margin-bottom: 5rem;
+		padding-bottom: 3rem;
+	}
 
-  h1 {
-    @apply text-4xl font-semibold text-ink mt-sm mb-sm leading-tight;
-  }
+	.eyebrow {
+		@apply text-brand text-lg;
+		font-style: italic;
+	}
 
-  @media (min-width: 480px) {
-    h1 {
-      @apply text-5xl;
-    }
-  }
+	h1 {
+		@apply text-5xl font-semibold text-ink mt-md mb-md;
+		letter-spacing: -0.01em;
+		line-height: 1.05;
+	}
 
-  .subhead {
-    @apply text-ink-muted text-base mb-lg;
-  }
+	@media (min-width: 480px) {
+		h1 {
+			@apply text-6xl;
+		}
+	}
 
-  @media (min-width: 480px) {
-    .subhead {
-      @apply text-lg;
-    }
-  }
+	.subhead {
+		@apply text-ink-muted text-lg mb-lg leading-relaxed;
+		max-width: 38rem;
+	}
 
-  .search-wrap {
-    @apply w-full;
-    max-width: 32rem;
-  }
+	@media (min-width: 480px) {
+		.subhead {
+			@apply text-xl;
+		}
+	}
 
-  .contribute {
-    @apply text-ink-muted mt-md text-sm;
-  }
+	.subhead strong {
+		@apply text-ink font-semibold;
+	}
 
-  .contribute a {
-    @apply text-brand no-underline;
-  }
+	.search-wrap {
+		@apply w-full;
+		max-width: 34rem;
+	}
 
-  .contribute a:hover {
-    @apply text-brand-strong;
-  }
+	.contribute {
+		@apply flex flex-wrap items-center gap-xs text-ink-muted mt-md text-sm;
+	}
 
-  .metrics {
-    @apply border-t border-border pt-xl pb-xl;
-  }
+	.contribute a {
+		@apply text-brand no-underline;
+	}
 
-  .metrics-grid {
-    @apply grid grid-cols-1 gap-lg;
-  }
+	.contribute a:hover {
+		@apply text-brand-strong;
+	}
 
-  @media (min-width: 768px) {
-    .metrics-grid {
-      @apply grid-cols-3;
-    }
-  }
+	.metrics {
+		@apply border-t border-border pt-xl pb-xl;
+	}
 
-  .metrics h3 {
-    @apply text-brand font-semibold mb-xs text-lg;
-  }
+	.metrics-label {
+		@apply mb-lg block;
+	}
 
-  .metrics p {
-    @apply text-ink-muted text-sm;
-  }
+	.metrics-grid {
+		@apply grid grid-cols-1 gap-lg;
+	}
+
+	@media (min-width: 768px) {
+		.metrics-grid {
+			@apply grid-cols-3;
+		}
+	}
+
+	.metrics h3 {
+		@apply text-brand font-semibold mb-xs text-lg;
+	}
+
+	.metrics p {
+		@apply text-ink-muted text-sm;
+	}
+
+	.metrics-note {
+		@apply text-ink-muted text-sm mt-lg pt-lg border-t border-border;
+		max-width: 42rem;
+	}
+
+	.source-link {
+		@apply text-brand no-underline text-xs mt-xs inline-block;
+	}
+
+	.source-link:hover {
+		@apply text-brand-strong;
+	}
 </style>

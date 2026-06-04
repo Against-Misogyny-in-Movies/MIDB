@@ -13,7 +13,7 @@
     return total === 0 ? 0 : Math.round((yes / total) * 100);
   }
 
-  // ── Single shared tooltip, positioned from the hovered row ──
+  // ── Desktop: single shared tooltip, positioned from the hovered row ──
   let comment = $state<string | null>(null);
   let tipX = $state(0);
   let tipY = $state(0);
@@ -50,6 +50,14 @@
       window.removeEventListener('resize', onScrollOrResize);
     };
   });
+
+  // ── Mobile: hover/tooltips don't exist on touch, so comments expand inline.
+  // Tracks which tag row is currently expanded (by topicItemId).
+  let expandedId = $state<number | null>(null);
+
+  function toggleExpand(id: number) {
+    expandedId = expandedId === id ? null : id;
+  }
 </script>
 
 <ul class="ddd-tags">
@@ -61,36 +69,52 @@
   {#each tags as tag (tag.topicItemId)}
     {@const yes = yesPct(tag.yesSum, tag.noSum)}
     {@const hasComment = !!tag.comment}
+    {@const isExpanded = expandedId === tag.topicItemId}
     <li class="ddd-tag" class:ddd-tag--has-comment={hasComment}>
-      {#if hasComment}
-        <button
-          type="button"
-          class="tag-trigger"
-          aria-label="{tag.doesName}. Show voter comment."
-          onmouseenter={(e) => show(e, tag.comment!)}
-          onmouseleave={hide}
-          onfocus={(e) => show(e, tag.comment!)}
-          onblur={hide}
-        >
+      <div class="ddd-tag-row">
+        {#if hasComment}
+          <!-- Desktop hover tooltip + mobile inline toggle share one trigger.
+               On touch there's no hover, so the click expands the inline panel. -->
+          <button
+            type="button"
+            class="tag-trigger"
+            aria-label="{tag.doesName}. {isExpanded ? 'Hide' : 'Show'} voter comment."
+            aria-expanded={isExpanded}
+            onmouseenter={(e) => show(e, tag.comment!)}
+            onmouseleave={hide}
+            onfocus={(e) => show(e, tag.comment!)}
+            onblur={hide}
+            onclick={() => toggleExpand(tag.topicItemId)}
+          >
+            <span class="tag-name">{tag.doesName}</span>
+            <i
+              class="tag-comment-icon ri-chat-3-line"
+              class:tag-comment-icon--active={isExpanded}
+              aria-hidden="true"
+            ></i>
+          </button>
+        {:else}
           <span class="tag-name">{tag.doesName}</span>
-          <i class="tag-comment-icon ri-chat-3-line" aria-hidden="true"></i>
-        </button>
-      {:else}
-        <span class="tag-name">{tag.doesName}</span>
-      {/if}
+        {/if}
 
-      <span class="tag-bar" role="img" aria-label="{yes}% voted yes">
-        <span class="tag-bar-yes" style="width: {yes}%"></span>
-      </span>
-      <span class="tag-votes">
-        <span class="vote-yes">{tag.yesSum}</span> /
-        <span class="vote-no">{tag.noSum}</span>
-      </span>
+        <span class="tag-bar" role="img" aria-label="{yes}% voted yes">
+          <span class="tag-bar-yes" style="width: {yes}%"></span>
+        </span>
+        <span class="tag-votes">
+          <span class="vote-yes">{tag.yesSum}</span> /
+          <span class="vote-no">{tag.noSum}</span>
+        </span>
+      </div>
+
+      <!-- Mobile-only inline comment, revealed by tapping the row -->
+      {#if hasComment && isExpanded}
+        <p class="tag-comment-inline">{tag.comment}</p>
+      {/if}
     </li>
   {/each}
 </ul>
 
-<!-- One fixed tooltip for the whole list; pointer-events:none so it never flickers -->
+<!-- Desktop: one fixed tooltip for the whole list; pointer-events:none so it never flickers -->
 <div
   bind:this={tipEl}
   class="ddd-tooltip"
@@ -110,7 +134,7 @@
   }
 
   .ddd-header {
-    @apply grid items-center gap-md pb-xs border-b border-border;
+    @apply grid items-center gap-md pb-xs px-sm border-b border-border;
     grid-template-columns: minmax(0, 1fr) 6rem 4.5rem;
   }
 
@@ -128,8 +152,18 @@
   }
 
   .ddd-tag {
-    @apply grid items-center gap-md py-sm border-b border-border;
+    @apply py-sm px-sm border-b border-border cursor-default;
+    border-radius: 4px;
+    transition: background-color 0.12s ease;
+  }
+
+  .ddd-tag-row {
+    @apply grid items-center gap-md;
     grid-template-columns: minmax(0, 1fr) 6rem 4.5rem;
+  }
+
+  .ddd-tag:hover {
+    background-color: color-mix(in oklab, var(--brand) 5%, transparent);
   }
 
   .ddd-tag:last-child {
@@ -158,7 +192,8 @@
   }
 
   .tag-trigger:hover .tag-comment-icon,
-  .tag-trigger:focus-visible .tag-comment-icon {
+  .tag-trigger:focus-visible .tag-comment-icon,
+  .tag-comment-icon--active {
     color: var(--brand);
   }
 
@@ -185,7 +220,13 @@
     color: var(--success);
   }
 
-  /* ── Shared fixed tooltip ── */
+  /* Inline comment shown on mobile when a row is expanded (hidden on desktop) */
+  .tag-comment-inline {
+    @apply hidden text-xs leading-relaxed text-ink-muted mt-sm pl-md;
+    border-left: 2px solid var(--brand);
+  }
+
+  /* ── Shared fixed tooltip (desktop hover) ── */
   .ddd-tooltip {
     @apply pointer-events-none fixed z-50 rounded-md border border-border p-sm text-xs leading-relaxed text-ink shadow-lg opacity-0;
     width: max-content;
@@ -220,6 +261,63 @@
     .ddd-tooltip--visible,
     .ddd-tooltip--visible.ddd-tooltip--below {
       transform: none;
+    }
+  }
+
+  /* ── Mobile: stack the row so the name gets a full line, the bar + votes
+       sit below it, and comments expand inline (no hover on touch). ── */
+  @media (max-width: 767px) {
+    .ddd-header {
+      @apply hidden;
+    }
+
+    .ddd-tag {
+      @apply py-md;
+    }
+
+    /* Tapping a tag with a comment should feel obviously tappable */
+    .ddd-tag--has-comment {
+      @apply cursor-pointer;
+    }
+
+    /* Name on its own line; bar + votes wrap onto a second line below it.
+       The name cell spans the full width to force the wrap. */
+    .ddd-tag-row {
+      @apply flex flex-wrap items-center gap-x-md gap-y-sm;
+    }
+
+    /* Name (and its trigger button) take the whole first line */
+    .tag-trigger {
+      @apply w-full justify-between cursor-pointer;
+    }
+
+    .ddd-tag-row > .tag-name {
+      @apply w-full;
+    }
+
+    .tag-name {
+      @apply whitespace-normal;
+      /* override desktop truncation so long names wrap instead of clipping */
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    /* Bar takes the remaining width on the second line, votes sit beside it */
+    .tag-bar {
+      @apply h-2 flex-1;
+    }
+
+    .tag-votes {
+      @apply text-sm;
+    }
+
+    /* Desktop tooltip is unreachable on touch — hide it, show inline instead */
+    .ddd-tooltip {
+      @apply hidden;
+    }
+
+    .tag-comment-inline {
+      @apply block;
     }
   }
 </style>

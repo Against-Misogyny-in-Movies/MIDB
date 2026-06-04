@@ -1,12 +1,14 @@
 # MIDB — Architecture Reference
 
-> Snapshot as of 2026-06-04 (branch `chore/dependencies-update`). The movie detail page is built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. User-generated evaluation tables were **dropped** in migration 0006. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands. Living document — update as the app evolves.
+> Snapshot as of 2026-06-04 (branch `chore/dependencies-update`). The movie detail page is built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; movies will also have a **comments section**. The old user-evaluation schema was dropped in migration 0006 but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands. Living document — update as the app evolves.
 
 ## What it is
 
-**MIDB (Movie Information Database — working title)** is a web platform for displaying movies through a **diversity / content-safety lens**. Users find a movie and see how it scores across structured **metrics** — formal tests and content advisories for representation and harm. Three sources are wired today: the **Bechdel Test**, **Unconsenting Media** (sexual-violence advisories), and **Does The Dog Die** (crowd-sourced trigger tags).
+**MIDB (Movie Information Database — working title)** is a web platform for displaying movies through a **diversity / content-safety lens**. The audience is survivors and trauma-sensitive viewers, and people who care about women's representation — people deciding whether a film is safe to watch. Users find a movie and see how it scores across structured **metrics** — formal tests and content advisories for representation and harm. Three sources are wired today: the **Bechdel Test**, **Unconsenting Media** (sexual-violence advisories), and **Does The Dog Die** (crowd-sourced trigger tags).
 
-Movie facts (poster, overview, release date, credits) are **not stored** — they're fetched live from **TMDB** on each request. What *is* stored locally is a thin movie spine plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted. The original vision of *user-submitted* evaluations is **deferred** — the schema and routes that supported it were removed in favor of this authoritative, seeded model.
+Movie facts (poster, overview, release date, credits) are **not stored** — they're fetched live from **TMDB** on each request. What *is* stored locally is a thin movie spine plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
+
+Each metric is designed to show **two scores side by side**: the original authoritative source (Bechdel, UM, DDD) and a **MIDB community rating** contributed by users who have watched the film. Movies will also have a **comments section** for viewer context and discussion. Community ratings and comments are the next major feature milestone — the schema will need new tables (community metric scores, comments) and the `/user/*` area will expand beyond the current Hanko profile stub.
 
 ---
 
@@ -112,7 +114,7 @@ The styling system is **Tailwind CSS v4, CSS-first**. There is no JS theme confi
 
 | Route | Files | Status | Notes |
 |---|---|---|---|
-| `/` | `+page.svelte`, `+page.server.ts` | **Working** | Landing: `TopBar`, hero, `HeroSearch` (live inline search), 3-up metrics band, footer. `+page.server.ts` returns `{}`. |
+| `/` | `+page.svelte`, `+page.server.ts` | **Working** | Landing: italic brand eyebrow, large serif headline, one-sentence subhead, `HeroSearch` (live inline search), "Rate a film yourself →" CTA to `/auth`, 3-up metrics band (Bechdel / UM / DDD, one sentence each), closing note on the dual-source model. `+page.server.ts` returns `{}`. `heroSearch.svelte` applies landing-specific sizing and a 2px brand focus ring to the search box. |
 | `/api/search` | `+server.ts`, `datasource.server.ts` | **Working** | `GET ?q=…` proxy to TMDB `search/movie`. Empty/whitespace `q` short-circuits to `{ results: [] }`. Returns slim `SearchResult[]`. No `/search` page exists. |
 | `/auth` | `+page.svelte`, `+page.ts`, `+layout.svelte` | Working | Renders Hanko `<hanko-auth>`. On success redirects to `/user/dashboard`. `ssr=false`. |
 | `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts`, `db.server.ts`, `ddd.server.ts`, `types.ts` | **Working** | Core page — see **Movie detail page** below. |
@@ -323,7 +325,7 @@ bun run dev
 
 1. **`ddd.spec.ts` is stale** — its mocks use the old `topicId`/`mediaItemComment` field names; the live client maps from `TopicId`/`comment`. Update before relying on a green test run.
 2. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
-3. **No user/comments layer** — the schema is designed for it (`movie_trigger_tags.created_by`, retained `user` table) but nothing writes user data. `/user/dashboard` is the Hanko profile only.
+3. **Community ratings + comments not yet built** — the next major milestone. Each metric will show the original source score alongside a MIDB community score; movies will also have a comments section. Schema will need new tables (community metric scores keyed by `movie_id` + metric + `user_id`, and a `comments` table). The retained `user` table and `movie_trigger_tags.created_by` FK are the hooks. `/user/dashboard` is currently the Hanko profile only and will need to expand.
 4. **Orphaned UI** — `frames/metricsFrame`, `tiles/processTileGrid`, `movies/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
 5. **UM data is sparse by design** — ~2,981 of ~9,471 spine movies have a UM binding. "No data" is the common, correct state. ~34 title collisions are left as runtime-picker cases (year unknown); ~7,481 have no UM entry at all.
 6. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `detailHeader`, `umCandidates`).

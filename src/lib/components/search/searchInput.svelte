@@ -40,8 +40,8 @@
 		aria-activedescendant={activeDescendant}
 		autocomplete="off"
 	/>
-	<Button type="submit">
-		Search
+	<Button type="submit" aria-label="Search">
+		<span class="btn-label">Search</span>
 		{#if loading}
 			<i class="ri-loader-4-line spinner" aria-hidden="true"></i>
 		{:else}
@@ -54,11 +54,21 @@
 	@reference "../../../app.css";
 
 	form {
-		@apply flex flex-row bg-surface-raised rounded-md p-xs border-2 border-border;
+		@apply flex flex-row bg-surface-raised rounded-md p-xs border border-border;
 	}
 
 	input {
-		@apply flex-1;
+		@apply flex-1 min-w-0;
+	}
+
+	.btn-label {
+		@apply hidden;
+	}
+
+	@media (min-width: 480px) {
+		.btn-label {
+			@apply inline;
+		}
 	}
 
 	form:focus-within {
