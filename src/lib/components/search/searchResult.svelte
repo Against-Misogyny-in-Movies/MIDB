@@ -13,11 +13,15 @@
 
 	let { movie, active, onhover, onselect }: Props = $props();
 
-	let href = $derived(resolve('/movie/[movieId]', { movieId: String(movie.id) }));
+	let href = $derived(
+		movie.mediaType === 'tv'
+			? resolve('/tv/[seriesId]', { seriesId: String(movie.id) })
+			: resolve('/movie/[movieId]', { movieId: String(movie.id) })
+	);
 </script>
 
 <li
-	id={optionId(movie.id)}
+	id={optionId(movie.id, movie.mediaType)}
 	role="option"
 	aria-selected={active}
 	class="row"
@@ -35,10 +39,18 @@
 		<ResultPoster posterPath={movie.posterPath} alt={movie.title} />
 		<span class="info">
 			<span class="title">{movie.title}</span>
-			{#if movie.releaseYear}
+			{#if movie.releaseYear || movie.mediaType}
 				<span class="meta">
-					<i class="ri-film-line" aria-hidden="true"></i>
-					<span class="year">{movie.releaseYear}</span>
+					{#if movie.mediaType === 'tv'}
+						<i class="ri-tv-2-line" aria-hidden="true"></i>
+						<span class="type-badge">TV</span>
+					{:else}
+						<i class="ri-film-line" aria-hidden="true"></i>
+						<span class="type-badge">Film</span>
+					{/if}
+					{#if movie.releaseYear}
+						<span class="year">{movie.releaseYear}</span>
+					{/if}
 				</span>
 			{/if}
 		</span>
@@ -75,6 +87,10 @@
 
 	.meta i {
 		@apply text-[0.8rem] leading-none opacity-70;
+	}
+
+	.type-badge {
+		@apply leading-none;
 	}
 
 	.year {

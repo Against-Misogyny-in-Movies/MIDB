@@ -1,29 +1,11 @@
 export type { UmCandidate } from '$lib/movie/metrics.js';
+export type { GenderBreakdown } from '$lib/movie/media';
 
-export interface GenderBreakdown {
-  unknown: number;
-  female: number;
-  male: number;
-  nonBinary: number;
-  total: number;
-}
+import type { MediaDetail } from '$lib/movie/media';
 
-export interface Movie {
-  id: string;
-  title: string;
-  imdbId: string | null;
-  posterPath: string | null;
-  overview: string;
-  releaseDate: string;
-  tmdbId: string;
-  tagline: string;
-  runtime: number;
-  budget: number;
-  revenue: number;
-  genres: { id: number; name: string }[];
-  originCountry: string[];
-  originalLanguage: string;
-  spokenLanguages: { iso: string; englishName: string }[];
-  cast: GenderBreakdown;
-  crew: GenderBreakdown;
+export interface Movie extends MediaDetail {
+	tagline: string;
+	runtime: number;
+	budget: number;
+	revenue: number;
 }

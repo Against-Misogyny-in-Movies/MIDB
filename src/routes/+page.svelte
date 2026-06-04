@@ -3,11 +3,11 @@
 </script>
 
 <section class="hero">
-	<p class="eyebrow display">A film safety reference</p>
+	<p class="eyebrow display">A film &amp; TV safety reference</p>
 	<h1 class="display" data-testid="hero-headline">Know before you&nbsp;watch.</h1>
 	<p class="subhead">
-		MIDB flags <strong>misogyny and violence against women</strong> in film, so you decide what's safe
-		to watch.
+		MIDB flags <strong>misogyny and violence against women</strong> in film and television, so you decide
+		what's safe to watch.
 	</p>
 	<div class="search-wrap">
 		<HeroSearch />
@@ -23,7 +23,12 @@
 		<div>
 			<h3 class="display">Bechdel Test</h3>
 			<p>Do two named women in the film talk to each other about something other than a man?</p>
-			<a class="source-link" href="https://bechdeltest.com" target="_blank" rel="noopener noreferrer">bechdeltest.com ↗</a>
+			<a
+				class="source-link"
+				href="https://bechdeltest.com"
+				target="_blank"
+				rel="noopener noreferrer">bechdeltest.com ↗</a
+			>
 		</div>
 		<div>
 			<h3 class="display">Unconsenting Media</h3>
@@ -31,7 +36,12 @@
 				Flags sexual violence in film, for survivors or anyone who just wants to know before they
 				sit down.
 			</p>
-			<a class="source-link" href="https://www.unconsentingmedia.org" target="_blank" rel="noopener noreferrer">unconsentingmedia.org ↗</a>
+			<a
+				class="source-link"
+				href="https://www.unconsentingmedia.org"
+				target="_blank"
+				rel="noopener noreferrer">unconsentingmedia.org ↗</a
+			>
 		</div>
 		<div>
 			<h3 class="display">Does The Dog Die</h3>
@@ -39,7 +49,12 @@
 				Community warnings for the things mainstream ratings miss: animal deaths, self-harm, eating
 				disorders, and more.
 			</p>
-			<a class="source-link" href="https://www.doesthedogdie.com" target="_blank" rel="noopener noreferrer">doesthedogdie.com ↗</a>
+			<a
+				class="source-link"
+				href="https://www.doesthedogdie.com"
+				target="_blank"
+				rel="noopener noreferrer">doesthedogdie.com ↗</a
+			>
 		</div>
 	</div>
 	<p class="metrics-note">

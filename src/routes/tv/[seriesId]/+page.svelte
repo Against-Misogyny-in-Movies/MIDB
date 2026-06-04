@@ -1,46 +1,48 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import DetailHeader from '$lib/components/movies/detailHeader.svelte';
-	import FactGrid from '$lib/components/movies/factGrid.svelte';
+	import SeriesFactGrid from '$lib/components/movies/seriesFactGrid.svelte';
 	import GenderDistribution from '$lib/components/movies/genderDistribution.svelte';
 	import CollapsibleSection from '$lib/components/movies/collapsibleSection.svelte';
 	import DddTags from '$lib/components/movies/dddTags.svelte';
+	import DddEpisodeSelector from '$lib/components/movies/dddEpisodeSelector.svelte';
 	import UmCandidates from '$lib/components/movies/umCandidates.svelte';
-	import { BECHDEL_TIERS, UM_FLAGS, type UmCandidate } from '$lib/movie/metrics';
+	import { UM_FLAGS, type UmCandidate } from '$lib/movie/metrics';
 
 	let { data }: { data: PageData } = $props();
-	const movie = $derived(data.movie);
-	const bechdel = $derived(data.bechdel);
+	const series = $derived(data.series);
 	const unconsenting = $derived(data.unconsenting);
 	const umCandidates = $derived(data.umCandidates ?? []);
 
 	// The candidate the user picked for this page view only. Never persisted —
-	// reset whenever the movie changes so a stale pick can't leak across films.
+	// reset whenever the series changes so a stale pick can't leak across titles.
 	let selectedUm = $state<UmCandidate | null>(null);
+	let selectedSeason = $state<number | null>(null);
+	let selectedEpisode = $state<number | null>(null);
 	$effect(() => {
-		movie.id; // track
+		series.id; // track
 		selectedUm = null;
+		selectedSeason = null;
+		selectedEpisode = null;
 	});
 
 	// A lone candidate is an exact year match (the server only returns one when
-	// the movie's year pins it), so render it directly — no picker needed.
+	// the series's year pins it), so render it directly — no picker needed.
 	const autoUm = $derived(umCandidates.length === 1 ? umCandidates[0] : null);
 
 	// Unified UM source: a seeded binding, else a year-pinned auto-match, else the
-	// user's current-page pick. All expose the same UM flag keys + umId + comment,
-	// so the section and chip render identically regardless of origin.
+	// user's current-page pick.
 	const umData = $derived(unconsenting ?? autoUm ?? selectedUm);
 	const hasUmCandidates = $derived(umData === null && umCandidates.length > 1);
 
-	// Resolve the streamed promise into reactive state once it settles, so both the
-	// chip and the section read the same settled value.
-	type DddResult = import('./ddd.server.js').DddResult;
+	// Resolve the streamed promise into reactive state once it settles.
+	type DddResult = import('../../movie/[movieId]/ddd.server.js').DddResult;
 	let ddd = $state<DddResult | null>(null);
 	$effect(() => {
 		let cancelled = false;
 		ddd = null;
 		data.triggerTags
-			.catch((): DddResult => ({ itemId: null, tags: [], isSeries: false }))
+			.catch((): DddResult => ({ itemId: null, tags: [], isSeries: true }))
 			.then((result) => {
 				if (!cancelled) ddd = result;
 			});
@@ -55,30 +57,37 @@
 			: 'https://www.doesthedogdie.com';
 	}
 
-	// `noRape` is inverted: true means "no rape/assault" — a reassurance, not a
-	// concern — so it never counts toward the concern tally.
+	// `noRape` is inverted: true means "no rape/assault" — a reassurance, not a concern.
 	const umFlagCount = $derived(
 		umData ? UM_FLAGS.filter((f) => f.key !== 'noRape' && umData[f.key] === true).length : 0
 	);
+
+	// Client-side filtering by season/episode — no refetch, one Array.filter over in-memory list.
+	const visibleTags = $derived.by(() => {
+		if (!ddd) return [];
+		if (selectedSeason === null)
+			return ddd.tags.filter((t) => t.season === -1 || t.season === null);
+		if (selectedEpisode === null)
+			return ddd.tags.filter((t) => t.season === selectedSeason || t.season === -1);
+		return ddd.tags.filter(
+			(t) => (t.season === selectedSeason && t.episode === selectedEpisode) || t.season === -1
+		);
+	});
 </script>
 
-<div class="movie-page">
+<div class="series-page">
 	<section id="details">
-		<DetailHeader media={movie}>
-			<!-- Metrics summary chips, in place of the plot overview -->
+		<DetailHeader media={series}>
+			<!-- Metrics summary chips -->
 			<div class="summary-chips">
-				<!-- Bechdel chip -->
-				<a class="chip" href="#bechdel" class:chip--empty={bechdel === null}>
+				<!-- Bechdel chip — N/A for series -->
+				<div class="chip chip--empty" aria-label="Bechdel Test — not applicable to series">
 					<span class="chip-icon" aria-hidden="true"><i class="ri-scales-3-line"></i></span>
 					<span class="chip-text">
 						<span class="chip-label">Bechdel Test</span>
-						{#if bechdel}
-							<span class="chip-value">{bechdel.rating}<span class="chip-unit">/3</span></span>
-						{:else}
-							<span class="chip-empty">No data</span>
-						{/if}
+						<span class="chip-empty">N/A</span>
 					</span>
-				</a>
+				</div>
 
 				<!-- UM chip -->
 				<div class="chip-wrap">
@@ -111,16 +120,16 @@
 				</div>
 
 				<!-- DDD chip (streamed) -->
-				<a class="chip" href="#ddd" class:chip--empty={ddd !== null && ddd.tags.length === 0}>
+				<a class="chip" href="#ddd" class:chip--empty={ddd !== null && visibleTags.length === 0}>
 					<span class="chip-icon" aria-hidden="true"><i class="ri-alarm-warning-line"></i></span>
 					<span class="chip-text">
 						<span class="chip-label">Does the Dog Die</span>
 						{#if ddd === null}
 							<span class="chip-loading" aria-busy="true">Loading…</span>
-						{:else if ddd.tags.length > 0}
+						{:else if visibleTags.length > 0}
 							<span class="chip-value"
-								>{ddd.tags.length}<span class="chip-unit">
-									tag{ddd.tags.length === 1 ? '' : 's'}</span
+								>{visibleTags.length}<span class="chip-unit">
+									tag{visibleTags.length === 1 ? '' : 's'}</span
 								></span
 							>
 						{:else}
@@ -131,42 +140,21 @@
 			</div>
 
 			<div class="facts-wrap">
-				<FactGrid {movie} />
+				<SeriesFactGrid {series} />
 			</div>
 		</DetailHeader>
 	</section>
 
 	<section id="gender" class="gender-section">
 		<p class="label">Cast &amp; crew representation</p>
-		<GenderDistribution cast={movie.cast} crew={movie.crew} />
+		<GenderDistribution cast={series.cast} crew={series.crew} />
 	</section>
 
 	<div class="metrics-stack">
-		<!-- Bechdel section -->
+		<!-- Bechdel section — N/A for series -->
 		<div id="bechdel">
-			<CollapsibleSection
-				title="Bechdel Test"
-				status={bechdel ? `Rating ${bechdel.rating}/3` : 'No data'}
-				tone={bechdel ? 'data' : 'empty'}
-				open={bechdel !== null}
-				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
-				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
-			>
-				{#if bechdel}
-					<ul class="bechdel-tiers">
-						{#each BECHDEL_TIERS as tier (tier.level)}
-							<li class="tier" class:tier--enabled={tier.level <= bechdel.rating}>
-								<span class="tier-check" aria-hidden="true">
-									<i class={tier.level <= bechdel.rating ? 'ri-check-line' : 'ri-close-line'}></i>
-								</span>
-								<span>{tier.label}</span>
-							</li>
-						{/each}
-					</ul>
-					<p class="meta-note">Based on {bechdel.numVotes.toLocaleString()} votes</p>
-				{:else}
-					<p class="no-data">This movie is not in the Bechdel Test database.</p>
-				{/if}
+			<CollapsibleSection title="Bechdel Test" status="Not applicable" tone="empty" open={false}>
+				<p class="no-data">The Bechdel Test rates films, not series.</p>
 			</CollapsibleSection>
 		</div>
 
@@ -210,7 +198,7 @@
 				{:else if hasUmCandidates}
 					<UmCandidates candidates={umCandidates} onselect={(c) => (selectedUm = c)} />
 				{:else}
-					<p class="no-data">This movie is not in the Unconsenting Media database.</p>
+					<p class="no-data">This series is not in the Unconsenting Media database.</p>
 				{/if}
 			</CollapsibleSection>
 		</div>
@@ -221,11 +209,11 @@
 				title="Does the Dog Die"
 				status={ddd === null
 					? 'Loading…'
-					: ddd.tags.length > 0
-						? `${ddd.tags.length} trigger tag${ddd.tags.length === 1 ? '' : 's'}`
+					: visibleTags.length > 0
+						? `${visibleTags.length} trigger tag${visibleTags.length === 1 ? '' : 's'}`
 						: 'No data'}
-				tone={ddd === null ? 'loading' : ddd.tags.length > 0 ? 'data' : 'empty'}
-				open={ddd === null || ddd.tags.length > 0}
+				tone={ddd === null ? 'loading' : visibleTags.length > 0 ? 'data' : 'empty'}
+				open={ddd === null || visibleTags.length > 0}
 				sourceLabel="DoesTheDogDie.com"
 				sourceHref={dddUrl(ddd?.itemId ?? null)}
 			>
@@ -235,10 +223,24 @@
 						<div class="skeleton-tag"></div>
 						<div class="skeleton-tag"></div>
 					</div>
-				{:else if ddd.tags.length > 0}
-					<DddTags tags={ddd.tags} />
 				{:else}
-					<p class="no-data">No trigger tags found for this movie.</p>
+					{#if ddd.isSeries && series.seasons.length > 0}
+						<DddEpisodeSelector
+							seasons={series.seasons}
+							tags={ddd.tags}
+							{selectedSeason}
+							{selectedEpisode}
+							onchange={(season: number | null, episode: number | null) => {
+								selectedSeason = season;
+								selectedEpisode = episode;
+							}}
+						/>
+					{/if}
+					{#if visibleTags.length > 0}
+						<DddTags tags={visibleTags} />
+					{:else}
+						<p class="no-data">No trigger tags found for this series.</p>
+					{/if}
 				{/if}
 			</CollapsibleSection>
 		</div>
@@ -268,7 +270,7 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.movie-page {
+	.series-page {
 		@apply flex flex-col py-xl;
 		gap: var(--spacing-xl);
 	}
@@ -294,15 +296,11 @@
 		@apply text-sm text-ink-muted italic;
 	}
 
-	.meta-note {
-		@apply text-xs text-ink-muted;
-	}
-
 	.facts-wrap {
 		@apply border-t border-border pt-md mt-xs;
 	}
 
-	/* ── Summary chips (status indicators in the header) ── */
+	/* ── Summary chips ── */
 	.summary-chips {
 		@apply grid gap-sm mt-xs;
 		grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
@@ -322,13 +320,13 @@
 			transform 0.15s ease;
 	}
 
-	.chip:hover {
+	a.chip:hover {
 		border-color: var(--brand);
 		transform: translateY(-2px);
 		box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--brand) 55%, transparent);
 	}
 
-	.chip:focus-visible {
+	a.chip:focus-visible {
 		@apply outline-none;
 		box-shadow: 0 0 0 2px var(--brand);
 	}
@@ -362,7 +360,6 @@
 		@apply text-sm text-ink-muted italic leading-tight;
 	}
 
-	/* Muted treatment when a metric has no data */
 	.chip--empty {
 		background-image: none;
 		background-color: var(--surface-raised);
@@ -373,7 +370,6 @@
 		color: var(--ink-muted);
 	}
 
-	/* Badge: candidate picker available */
 	.chip-wrap {
 		@apply relative;
 	}
@@ -411,30 +407,6 @@
 		}
 	}
 
-	/* ── Bechdel tiers ── */
-	.bechdel-tiers {
-		@apply flex flex-col gap-xs list-none m-0 p-0;
-	}
-
-	.tier {
-		@apply flex items-center gap-sm text-sm text-ink-muted;
-	}
-
-	.tier--enabled {
-		@apply text-ink font-medium;
-	}
-
-	.tier-check {
-		@apply flex items-center justify-center w-5 h-5 rounded-full text-xs shrink-0;
-		background-color: var(--secondary-soft);
-		color: var(--ink-muted);
-	}
-
-	.tier--enabled .tier-check {
-		background-color: color-mix(in oklab, var(--success) 22%, transparent);
-		color: var(--success);
-	}
-
 	/* ── UM flags ── */
 	.um-flags {
 		@apply grid gap-xs list-none m-0 p-0;
@@ -449,7 +421,6 @@
 		@apply text-ink font-medium;
 	}
 
-	/* `noRape` = true is reassuring, not a concern: render it as a green tick. */
 	.um-flag--reassurance {
 		@apply text-ink font-medium;
 	}

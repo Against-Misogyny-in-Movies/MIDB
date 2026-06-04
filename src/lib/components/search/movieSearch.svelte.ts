@@ -31,8 +31,8 @@ export class MovieSearchState {
 
 	/** The id of the currently highlighted option, for `aria-activedescendant`. */
 	get activeId() {
-		const movie = this.results[this.activeIndex];
-		return movie ? optionId(movie.id) : undefined;
+		const item = this.results[this.activeIndex];
+		return item ? optionId(item.id, item.mediaType) : undefined;
 	}
 
 	/** Subscribe to the debounced result stream. Returns an unsubscribe fn for `$effect`. */
@@ -104,12 +104,16 @@ export class MovieSearchState {
 		}
 	}
 
-	select(movie: SearchResult) {
-		goto(resolve('/movie/[movieId]', { movieId: String(movie.id) }));
+	select(item: SearchResult) {
+		if (item.mediaType === 'tv') {
+			goto(resolve('/tv/[seriesId]', { seriesId: String(item.id) }));
+		} else {
+			goto(resolve('/movie/[movieId]', { movieId: String(item.id) }));
+		}
 	}
 }
 
 /** Stable DOM id for a result row, shared by the listbox and `aria-activedescendant`. */
-export function optionId(movieId: number) {
-	return `movie-search-option-${movieId}`;
+export function optionId(id: number, mediaType: 'movie' | 'tv') {
+	return `search-option-${mediaType}-${id}`;
 }

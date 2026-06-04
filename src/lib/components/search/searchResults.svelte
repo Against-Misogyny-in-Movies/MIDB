@@ -18,12 +18,14 @@
 	$effect(() => {
 		const movie = results[activeIndex];
 		if (!movie) return;
-		document.getElementById(optionId(movie.id))?.scrollIntoView({ block: 'nearest' });
+		document
+			.getElementById(optionId(movie.id, movie.mediaType))
+			?.scrollIntoView({ block: 'nearest' });
 	});
 </script>
 
 {#if results.length > 0}
-	<ul {id} class="panel" role="listbox" aria-label="Movie results">
+	<ul {id} class="panel" role="listbox" aria-label="Search results">
 		{#each results as movie, i (movie.id)}
 			<SearchResult
 				{movie}

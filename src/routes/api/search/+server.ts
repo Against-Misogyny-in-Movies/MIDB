@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { searchMovies } from './datasource.server';
+import { search } from './datasource.server';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q') ?? '';
@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	try {
-		const results = await searchMovies(q.trim());
+		const results = await search(q.trim());
 		return json({ results });
 	} catch (err) {
 		console.warn('Search error:', err);

@@ -11,7 +11,8 @@
 
 <div class="um-candidates">
 	<p class="intro">
-		We found {candidates.length} possible Unconsenting Media matches for this title — which one is this film?
+		We found {candidates.length} possible Unconsenting Media matches for this title — which one is this
+		title?
 	</p>
 	<ul role="list" class="candidate-list">
 		{#each candidates as candidate (candidate.umId)}
@@ -20,7 +21,9 @@
 					type="button"
 					class="candidate-btn"
 					onclick={() => onselect(candidate)}
-					aria-label="Show Unconsenting Media data for {candidate.cleanName}{candidate.year ? ` (${candidate.year})` : ''}"
+					aria-label="Show Unconsenting Media data for {candidate.cleanName}{candidate.year
+						? ` (${candidate.year})`
+						: ''}"
 				>
 					<span class="candidate-icon" aria-hidden="true">
 						<i class="ri-shield-cross-line"></i>
@@ -34,7 +37,10 @@
 							</span>
 						{/if}
 					</span>
-					<span class="flag-pill" aria-label="{candidate.flagCount} concern{candidate.flagCount === 1 ? '' : 's'}">
+					<span
+						class="flag-pill"
+						aria-label="{candidate.flagCount} concern{candidate.flagCount === 1 ? '' : 's'}"
+					>
 						{candidate.flagCount} concern{candidate.flagCount === 1 ? '' : 's'}
 					</span>
 				</button>

@@ -133,7 +133,8 @@ async function main() {
 	for await (const record of parser as AsyncIterable<UmRow>) {
 		total++;
 
-		if (record.itemType?.toLowerCase() !== 'movie') {
+		const itemTypeLower = record.itemType?.toLowerCase();
+		if (itemTypeLower !== 'movie' && itemTypeLower !== 'tv show') {
 			skipped++;
 			continue;
 		}
@@ -173,6 +174,9 @@ async function main() {
 			...flags,
 			comment: record.comment?.trim() || null,
 		});
+
+		// TV shows have no movies spine row — only populate um_source, skip binding
+		if (itemTypeLower === 'tv show') continue;
 
 		// Resolve a binding to a movies row
 		const candidates = titleIndex.get(titleKey) ?? [];

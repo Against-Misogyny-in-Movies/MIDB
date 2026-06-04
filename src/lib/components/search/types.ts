@@ -3,4 +3,5 @@ export interface SearchResult {
 	title: string;
 	posterPath: string | null;
 	releaseYear: string;
+	mediaType: 'movie' | 'tv';
 }

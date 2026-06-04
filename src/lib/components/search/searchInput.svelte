@@ -28,7 +28,7 @@
 	<input
 		type="text"
 		name="query"
-		placeholder="Search movies..."
+		placeholder="Search movies & TV…"
 		{value}
 		oninput={(e) => oninput(e.currentTarget.value)}
 		{onkeydown}

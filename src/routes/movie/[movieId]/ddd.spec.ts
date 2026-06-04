@@ -1,129 +1,250 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock SvelteKit env before importing the module
 vi.mock('$env/static/private', () => ({ DDD_API_KEY: 'test-key' }));
 
-// We test the logic directly without the cache module boundary
-// by inlining the filter logic here
+// ── Shared mock helpers ────────────────────────────────────────────────────
 
-interface DddTopicStat {
-	topicId: number;
-	doesName: string;
-	yesSum: number;
-	noSum: number;
-	mediaItemComment: string | null;
+function mockSearchResponse(items: object[]) {
+	return { ok: true, json: async () => ({ items }) } as Response;
 }
 
-function filterTriggerTags(stats: DddTopicStat[]) {
-	return stats
-		.filter((s) => s.yesSum >= s.noSum && s.yesSum > 0)
-		.map((s) => ({
-			topicId: s.topicId,
-			doesName: s.doesName,
-			yesSum: s.yesSum,
-			noSum: s.noSum,
-			comment: s.mediaItemComment ?? null,
-		}));
+function mockMediaResponse(stats: object[], itemType?: object) {
+	return {
+		ok: true,
+		json: async () => ({
+			item: itemType ? { itemType } : undefined,
+			topicItemStats: stats
+		})
+	} as Response;
 }
 
-const OLD_YELLER_STATS: DddTopicStat[] = [
-	{ topicId: 1, doesName: 'Does the dog die', yesSum: 950, noSum: 10, mediaItemComment: 'The dog is shot.' },
-	{ topicId: 2, doesName: 'Is there animal cruelty', yesSum: 400, noSum: 50, mediaItemComment: null },
-	{ topicId: 3, doesName: 'Is there a happy ending', yesSum: 20, noSum: 800, mediaItemComment: null },
-	{ topicId: 4, doesName: 'Does a child die', yesSum: 0, noSum: 500, mediaItemComment: null },
-];
-
-describe('DDD filter logic', () => {
-	it('includes topics where yesSum >= noSum and yesSum > 0', () => {
-		const result = filterTriggerTags(OLD_YELLER_STATS);
-		expect(result.map((r) => r.topicId)).toEqual([1, 2]);
-	});
-
-	it('excludes topics where noSum > yesSum', () => {
-		const result = filterTriggerTags(OLD_YELLER_STATS);
-		expect(result.find((r) => r.topicId === 3)).toBeUndefined();
-	});
-
-	it('excludes topics where yesSum is 0', () => {
-		const result = filterTriggerTags(OLD_YELLER_STATS);
-		expect(result.find((r) => r.topicId === 4)).toBeUndefined();
-	});
-
-	it('preserves doesName and comment', () => {
-		const result = filterTriggerTags(OLD_YELLER_STATS);
-		expect(result[0].doesName).toBe('Does the dog die');
-		expect(result[0].comment).toBe('The dog is shot.');
-		expect(result[1].comment).toBeNull();
-	});
-
-	it('returns empty array for empty stats', () => {
-		expect(filterTriggerTags([])).toEqual([]);
-	});
-
-	it('returns empty when all topics have yesSum < noSum', () => {
-		const stats: DddTopicStat[] = [
-			{ topicId: 1, doesName: 'Does X happen', yesSum: 5, noSum: 100, mediaItemComment: null },
-		];
-		expect(filterTriggerTags(stats)).toEqual([]);
-	});
-});
+// ── getTriggerTagsLive ────────────────────────────────────────────────────
 
 describe('getTriggerTagsLive', () => {
-	beforeEach(() => {
-		vi.resetAllMocks();
-	});
+	beforeEach(() => vi.resetAllMocks());
 
-	it('returns empty result for null imdbId', async () => {
+	it('returns EMPTY for null imdbId', async () => {
 		const { getTriggerTagsLive } = await import('./ddd.server.js');
 		const result = await getTriggerTagsLive(null);
-		expect(result).toEqual({ itemId: null, tags: [] });
+		expect(result).toEqual({ itemId: null, tags: [], isSeries: false });
 	});
 
-	it('returns cached result on second call without re-fetching', async () => {
-		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-			ok: true,
-			json: async () => ({ items: [{ id: 42 }] }),
-		} as Response);
-
+	it('maps TopicId, index1→season, index2→episode correctly', async () => {
 		vi.spyOn(globalThis, 'fetch')
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ items: [{ id: 42 }] }),
-			} as Response)
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					topicItemStats: [
-						{ topicId: 1, doesName: 'Does the dog die', yesSum: 100, noSum: 5, mediaItemComment: null },
-					],
-				}),
-			} as Response);
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 42 }]))
+			.mockResolvedValueOnce(
+				mockMediaResponse([
+					{
+						topicItemId: 1,
+						TopicId: 10,
+						doesName: 'Dog dies',
+						yesSum: 100,
+						noSum: 5,
+						comment: 'Yes',
+						index1: null,
+						index2: null
+					},
+					{
+						topicItemId: 2,
+						TopicId: 11,
+						doesName: 'Violence',
+						yesSum: 50,
+						noSum: 3,
+						comment: null,
+						index1: 2,
+						index2: 4
+					}
+				])
+			);
 
 		const { getTriggerTagsLive, _testExports } = await import('./ddd.server.js');
-		const { cache } = _testExports();
-		cache.clear();
+		_testExports().cache.clear();
 
-		const first = await getTriggerTagsLive('tt0052080');
-		expect(first.itemId).toBe(42);
-		expect(first.tags).toHaveLength(1);
-		expect(fetchSpy).toHaveBeenCalledTimes(2); // search + media
+		const result = await getTriggerTagsLive('tt0052080');
+		expect(result.itemId).toBe(42);
+		expect(result.tags).toHaveLength(2);
+		expect(result.tags[0]).toMatchObject({
+			topicItemId: 1,
+			topicId: 10,
+			season: null,
+			episode: null
+		});
+		expect(result.tags[1]).toMatchObject({ topicItemId: 2, topicId: 11, season: 2, episode: 4 });
+	});
 
-		// Second call — should hit cache, no new fetch
-		const second = await getTriggerTagsLive('tt0052080');
-		expect(second).toEqual(first);
-		expect(fetchSpy).toHaveBeenCalledTimes(2); // still 2, no new fetch
+	it('drops rows where yesSum < noSum', async () => {
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 99 }]))
+			.mockResolvedValueOnce(
+				mockMediaResponse([
+					{
+						topicItemId: 1,
+						TopicId: 1,
+						doesName: 'Dog dies',
+						yesSum: 10,
+						noSum: 5,
+						comment: null,
+						index1: null,
+						index2: null
+					},
+					{
+						topicItemId: 2,
+						TopicId: 2,
+						doesName: 'Happy ending',
+						yesSum: 5,
+						noSum: 100,
+						comment: null,
+						index1: null,
+						index2: null
+					}
+				])
+			);
+
+		const { getTriggerTagsLive, _testExports } = await import('./ddd.server.js');
+		_testExports().cache.clear();
+
+		const result = await getTriggerTagsLive('tt1111111');
+		expect(result.tags).toHaveLength(1);
+		expect(result.tags[0].topicId).toBe(1);
 	});
 
 	it('returns empty result when DDD search returns no items', async () => {
-		vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-			ok: true,
-			json: async () => ({ items: [] }),
-		} as Response);
+		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockSearchResponse([]));
 
 		const { getTriggerTagsLive, _testExports } = await import('./ddd.server.js');
 		_testExports().cache.clear();
 
 		const result = await getTriggerTagsLive('tt9999999');
-		expect(result).toEqual({ itemId: null, tags: [] });
+		expect(result).toEqual({ itemId: null, tags: [], isSeries: false });
+	});
+
+	it('cache key is prefixed imdb: and second call skips fetch', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 42 }]))
+			.mockResolvedValueOnce(
+				mockMediaResponse([
+					{
+						topicItemId: 1,
+						TopicId: 1,
+						doesName: 'Dog dies',
+						yesSum: 10,
+						noSum: 1,
+						comment: null,
+						index1: null,
+						index2: null
+					}
+				])
+			);
+
+		const { getTriggerTagsLive, _testExports } = await import('./ddd.server.js');
+		_testExports().cache.clear();
+
+		const first = await getTriggerTagsLive('tt0052080');
+		const second = await getTriggerTagsLive('tt0052080');
+
+		expect(second).toEqual(first);
+		expect(fetchSpy).toHaveBeenCalledTimes(2); // search + media, not 4
+	});
+});
+
+// ── getTriggerTagsForSeries ───────────────────────────────────────────────
+
+describe('getTriggerTagsForSeries', () => {
+	beforeEach(() => vi.resetAllMocks());
+
+	it('selects TV item by tmdbid match (itemType.id === 16)', async () => {
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(
+				mockSearchResponse([
+					{ id: 10, tmdbid: 9999, itemType: { id: 15 }, releaseYear: 2011 }, // movie — skip
+					{ id: 678166, tmdbid: 1399, itemType: { id: 16 }, releaseYear: 2011 } // TV — match
+				])
+			)
+			.mockResolvedValueOnce(
+				mockMediaResponse(
+					[
+						{
+							topicItemId: 5,
+							TopicId: 20,
+							doesName: 'Dragons',
+							yesSum: 200,
+							noSum: 10,
+							comment: null,
+							index1: 1,
+							index2: 1
+						}
+					],
+					{ index1: 'season' }
+				)
+			);
+
+		const { getTriggerTagsForSeries, _testExports } = await import('./ddd.server.js');
+		_testExports().cache.clear();
+
+		const result = await getTriggerTagsForSeries({
+			title: 'Game of Thrones',
+			tmdbId: '1399',
+			firstAirDate: '2011-04-17'
+		});
+
+		expect(result.itemId).toBe(678166);
+		expect(result.isSeries).toBe(true);
+		expect(result.tags[0]).toMatchObject({ topicItemId: 5, season: 1, episode: 1 });
+	});
+
+	it('falls back to releaseYear when no tmdbid match', async () => {
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(
+				mockSearchResponse([
+					{ id: 500, tmdbid: 9000, itemType: { id: 16 }, releaseYear: 2008 } // wrong tmdb, right year
+				])
+			)
+			.mockResolvedValueOnce(mockMediaResponse([]));
+
+		const { getTriggerTagsForSeries, _testExports } = await import('./ddd.server.js');
+		_testExports().cache.clear();
+
+		const result = await getTriggerTagsForSeries({
+			title: 'Breaking Bad',
+			tmdbId: '1396',
+			firstAirDate: '2008-01-20'
+		});
+
+		expect(result.itemId).toBe(500);
+	});
+
+	it('returns EMPTY with isSeries:true when no match found', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockSearchResponse([]));
+
+		const { getTriggerTagsForSeries, _testExports } = await import('./ddd.server.js');
+		_testExports().cache.clear();
+
+		const result = await getTriggerTagsForSeries({
+			title: 'Unknown Show',
+			tmdbId: '99999',
+			firstAirDate: '2020-01-01'
+		});
+
+		expect(result).toEqual({ itemId: null, tags: [], isSeries: true });
+	});
+
+	it('cache key is prefixed tmdb: and second call skips fetch', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(
+				mockSearchResponse([{ id: 678166, tmdbid: 1399, itemType: { id: 16 }, releaseYear: 2011 }])
+			)
+			.mockResolvedValueOnce(mockMediaResponse([]));
+
+		const { getTriggerTagsForSeries, _testExports } = await import('./ddd.server.js');
+		_testExports().cache.clear();
+
+		const series = { title: 'Game of Thrones', tmdbId: '1399', firstAirDate: '2011-04-17' };
+		const first = await getTriggerTagsForSeries(series);
+		const second = await getTriggerTagsForSeries(series);
+
+		expect(second).toEqual(first);
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
 	});
 });
