@@ -20,13 +20,6 @@
 		{ label: 'Background', members: background, range: `#${SUPPORTING_MAX + 1}+` }
 	]);
 
-	function countGender(members: CastMember[], gender: string) {
-		return members.filter((m) => m.gender === gender).length;
-	}
-
-	const top10Count = $derived(Math.min(10, castMembers.length));
-	const top10Female = $derived(countGender(castMembers.slice(0, 10), 'female'));
-
 	const genderLabel: Record<string, string> = {
 		female: 'Women',
 		male: 'Men',
@@ -41,7 +34,11 @@
 		unknown: 'seg-unknown'
 	};
 
-	interface TierSegment { gender: string; n: number; pct: number }
+	interface TierSegment {
+		gender: string;
+		n: number;
+		pct: number;
+	}
 
 	function tierBar(members: CastMember[]): TierSegment[] {
 		if (members.length === 0) return [];
@@ -51,15 +48,24 @@
 			.filter(([, n]) => n > 0)
 			.map(([gender, n]) => ({ gender, n, pct: Math.round((n / members.length) * 100) }));
 	}
+
+	const legend = ['female', 'male', 'nonBinary', 'unknown'] as const;
 </script>
 
 {#if castMembers.length === 0}
 	<p class="empty">No cast data available.</p>
 {:else}
 	<div class="cast-rep">
-		<p class="top10-stat">
-			Women in top {top10Count} billed: <strong>{top10Female}/{top10Count}</strong>
-		</p>
+		<div class="cast-head">
+			<ul class="legend" aria-hidden="true">
+				{#each legend as gender (gender)}
+					<li class="legend-item">
+						<span class="swatch {genderClass[gender]}"></span>
+						<span class="legend-label">{genderLabel[gender]}</span>
+					</li>
+				{/each}
+			</ul>
+		</div>
 
 		<div class="tiers">
 			{#each tiers as tier (tier.label)}
@@ -73,11 +79,7 @@
 						<span class="tier-empty">No data</span>
 					{:else}
 						<div class="tier-bar-wrap">
-							<div
-								class="tier-bar"
-								role="img"
-								aria-label="{tier.label} gender distribution"
-							>
+							<div class="tier-bar" role="img" aria-label="{tier.label} gender distribution">
 								{#each segments as seg (seg.gender)}
 									<div
 										class="segment {genderClass[seg.gender]}"
@@ -88,7 +90,7 @@
 							</div>
 							<span class="tier-counts">
 								{#each segments as seg (seg.gender)}
-									<span class="count-chip">
+									<span class="count-chip" title="{genderLabel[seg.gender]}: {seg.n}">
 										<span class="swatch {genderClass[seg.gender]}" aria-hidden="true"></span>
 										<span class="count-n">{seg.n}</span>
 									</span>
@@ -110,25 +112,42 @@
 	}
 
 	.cast-rep {
-		@apply flex flex-col gap-sm;
+		@apply flex flex-col overflow-hidden rounded-lg border border-border;
+		background-color: var(--surface-raised);
 	}
 
-	.top10-stat {
-		@apply text-sm text-ink-muted mb-xs;
+	/* Header: gender legend */
+	.cast-head {
+		@apply flex flex-wrap items-center justify-end gap-x-md gap-y-xs px-md py-sm;
+		background-color: color-mix(in oklab, var(--brand) 4%, var(--surface-raised));
+		border-bottom: 1px solid var(--border);
 	}
 
-	.top10-stat strong {
-		@apply text-ink font-semibold;
+	.legend {
+		@apply flex flex-wrap items-center gap-x-md gap-y-xs list-none m-0 p-0;
+	}
+
+	.legend-item {
+		@apply flex items-center gap-xs;
+	}
+
+	.legend-label {
+		@apply text-xs text-ink-muted;
 	}
 
 	.tiers {
-		@apply flex flex-col gap-xs;
+		@apply flex flex-col;
 	}
 
 	.tier {
-		@apply grid items-center gap-sm;
+		@apply grid items-center gap-sm px-md py-sm;
 		grid-template-columns: 6rem 3.5rem 1fr;
 		grid-template-rows: auto;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.tier:last-child {
+		@apply border-b-0;
 	}
 
 	.tier-header {
@@ -136,7 +155,7 @@
 	}
 
 	.tier-label {
-		@apply text-sm font-medium text-ink;
+		@apply text-sm font-semibold text-ink;
 	}
 
 	.tier-range {
@@ -149,7 +168,7 @@
 
 	.tier-bar {
 		@apply flex overflow-hidden rounded-sm flex-1;
-		height: 0.875rem;
+		height: 1rem;
 		background-color: var(--border);
 	}
 
@@ -162,7 +181,7 @@
 	}
 
 	.count-chip {
-		@apply flex items-center gap-xs text-xs text-ink-muted;
+		@apply flex items-center gap-xs text-sm text-ink-muted;
 	}
 
 	.count-n {
@@ -170,7 +189,7 @@
 	}
 
 	.tier-empty {
-		@apply text-xs text-ink-muted italic col-span-2;
+		@apply text-xs text-ink-muted italic;
 	}
 
 	.swatch {
@@ -179,10 +198,23 @@
 		height: 0.625rem;
 	}
 
-	.seg-female { background-color: var(--brand); }
-	.seg-male { background-color: var(--seg-male); }
-	.seg-nonbinary { background-color: var(--accent-bg); }
-	.seg-unknown { background-color: var(--border); }
+	.seg-female {
+		background-color: var(--brand);
+	}
+	.seg-male {
+		background-color: var(--seg-male);
+	}
+	.seg-nonbinary {
+		background-color: var(--accent-bg);
+	}
+	/* Unknown shares the track colour, so give it an inset edge to stay visible */
+	.seg-unknown {
+		background-color: var(--border);
+		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 25%, transparent);
+	}
+	.tier-bar .seg-unknown:not(:last-child) {
+		border-right: 1px solid color-mix(in oklab, var(--ink) 25%, transparent);
+	}
 
 	@media (max-width: 480px) {
 		.tier {

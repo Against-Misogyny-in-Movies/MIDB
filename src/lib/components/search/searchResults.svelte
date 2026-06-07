@@ -8,11 +8,12 @@
 		results: SearchResultType[];
 		activeIndex: number;
 		loading: boolean;
+		navigatingTo: SearchResultType | null;
 		onhighlight: (index: number) => void;
 		onselect: (movie: SearchResultType) => void;
 	}
 
-	let { id, results, activeIndex, loading, onhighlight, onselect }: Props = $props();
+	let { id, results, activeIndex, loading, navigatingTo, onhighlight, onselect }: Props = $props();
 
 	// Keep the highlighted row visible as the user arrows through a long list.
 	$effect(() => {
@@ -30,6 +31,7 @@
 			<SearchResult
 				{movie}
 				active={i === activeIndex}
+				pending={navigatingTo?.id === movie.id && navigatingTo?.mediaType === movie.mediaType}
 				onhover={() => onhighlight(i)}
 				onselect={() => onselect(movie)}
 			/>

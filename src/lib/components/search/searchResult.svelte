@@ -7,11 +7,12 @@
 	interface Props {
 		movie: SearchResult;
 		active: boolean;
+		pending: boolean;
 		onhover: () => void;
 		onselect: () => void;
 	}
 
-	let { movie, active, onhover, onselect }: Props = $props();
+	let { movie, active, pending, onhover, onselect }: Props = $props();
 
 	let href = $derived(
 		movie.mediaType === 'tv'
@@ -24,8 +25,10 @@
 	id={optionId(movie.id, movie.mediaType)}
 	role="option"
 	aria-selected={active}
+	aria-busy={pending}
 	class="row"
 	class:active
+	class:pending
 	onmouseenter={onhover}
 >
 	<a
@@ -54,7 +57,11 @@
 				</span>
 			{/if}
 		</span>
-		<i class="chevron ri-arrow-right-s-line" aria-hidden="true"></i>
+		{#if pending}
+			<i class="chevron spinner ri-loader-4-line" aria-hidden="true"></i>
+		{:else}
+			<i class="chevron ri-arrow-right-s-line" aria-hidden="true"></i>
+		{/if}
 	</a>
 </li>
 
@@ -109,9 +116,24 @@
 		transition: opacity 120ms ease-out;
 	}
 
+	.row.pending a {
+		@apply pointer-events-none;
+	}
+
+	.spinner {
+		animation: spin 0.7s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.row.active .chevron {
 			transition: none;
+		}
+		.spinner {
+			animation: none;
 		}
 	}
 </style>

@@ -38,6 +38,7 @@
 			results={search.results}
 			activeIndex={search.activeIndex}
 			loading={search.loading}
+			navigatingTo={search.navigatingTo}
 			onhighlight={(i) => search.highlight(i)}
 			onselect={(movie) => search.select(movie)}
 		/>

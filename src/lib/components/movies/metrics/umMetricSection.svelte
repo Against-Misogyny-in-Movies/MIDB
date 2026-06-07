@@ -14,8 +14,7 @@
 		onselect: (candidate: UmCandidate) => void;
 	}
 
-	let { umData, umCandidates, umFlagCount, hasUmCandidates, mediaNoun, onselect }: Props =
-		$props();
+	let { umData, umCandidates, umFlagCount, hasUmCandidates, mediaNoun, onselect }: Props = $props();
 </script>
 
 <div id="unconsenting">
@@ -38,16 +37,16 @@
 						class:um-flag--present={present}
 						class:um-flag--reassurance={reassurance}
 					>
-						<span class="flag-check" aria-hidden="true">
+						<span class="flag-marker" aria-hidden="true">
 							<i
 								class={reassurance
-									? 'ri-checkbox-circle-fill'
+									? 'ri-check-line'
 									: present
-										? 'ri-alert-fill'
-										: 'ri-checkbox-blank-circle-line'}
+										? 'ri-alert-line'
+										: 'ri-subtract-line'}
 							></i>
 						</span>
-						<span>{flag.label}</span>
+						<span class="flag-label">{flag.label}</span>
 					</li>
 				{/each}
 			</ul>
@@ -70,34 +69,50 @@
 	}
 
 	.um-flags {
-		@apply grid gap-xs list-none m-0 p-0;
-		grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+		@apply grid list-none m-0 p-0;
+		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+		gap: 0 var(--spacing-lg);
 	}
 
+	/* Row rhythm mirrors the Bechdel criteria ladder */
 	.um-flag {
 		@apply flex items-center gap-sm text-sm text-ink-muted;
+		padding-block: var(--spacing-xs);
 	}
 
-	.um-flag--present {
-		@apply text-ink font-medium;
-	}
-
+	.um-flag--present,
 	.um-flag--reassurance {
 		@apply text-ink font-medium;
 	}
 
-	.flag-check {
-		@apply flex items-center justify-center w-5 h-5 shrink-0 text-ink-muted opacity-40;
+	/* Circular marker shared with the Bechdel criteria ladder */
+	.flag-marker {
+		@apply flex items-center justify-center rounded-full text-xs shrink-0;
+		width: 1.375rem;
+		height: 1.375rem;
+		background-color: var(--secondary-soft);
+		color: var(--ink-muted);
 	}
 
-	.um-flag--present .flag-check {
-		@apply opacity-100;
+	/* Absent concerns stay quiet so present ones lead the eye */
+	.um-flag:not(.um-flag--present):not(.um-flag--reassurance) .flag-marker {
+		background-color: transparent;
+		color: color-mix(in oklab, var(--ink-muted) 55%, transparent);
+		box-shadow: inset 0 0 0 1px var(--border);
+	}
+
+	.um-flag--present .flag-marker {
+		background-color: color-mix(in oklab, var(--warn) 16%, transparent);
 		color: var(--warn);
 	}
 
-	.um-flag--reassurance .flag-check {
-		@apply opacity-100;
+	.um-flag--reassurance .flag-marker {
+		background-color: color-mix(in oklab, var(--success) 16%, transparent);
 		color: var(--success);
+	}
+
+	.flag-label {
+		@apply leading-snug;
 	}
 
 	.um-comment {

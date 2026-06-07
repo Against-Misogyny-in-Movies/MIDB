@@ -1976,7 +1976,6 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 13066	DraculaS Daughter	draculas daughter	1936	no_match	
 8653	Drag Becomes Him	drag becomes him	2015	no_match	
 11864	Dragonwasps	dragonwasps	2012	no_match	
-16402	The Drama	drama		no_match	
 4520	Dread	dread	2009	no_match	
 15343	Dreadnaught	dreadnaught	1981	no_match	
 10782	Dreadtime Stories	dreadtime stories	2014	no_match	
@@ -2108,7 +2107,6 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 8302	Elling	elling	2001	no_match	
 6232	Eltavozott Nap	eltavozott nap	1968	no_match	
 4258	Ema (2019)	ema 2019	2019	no_match	
-11407	Emanuelle Around the World	emanuelle around the world	1976	no_match	
 4055	Embrace of the Serpent	embrace of the serpent	2015	no_match	
 9358	Embrace of the Vampire	embrace of the vampire	1995	no_match	
 14889	Emerald Lagoon	emerald lagoon	2011	no_match	
@@ -2875,7 +2873,7 @@ id	name	cleanNameArticles	yearOfRelease	reason	candidateYears
 8042	The Hating Game	hating game		no_match	
 6540	Hating Peter Tatchell	hating peter tatchell	2020	no_match	
 7629	The Hatton Garden Job	hatton garden job	2017	no_match	
-3437	Haunt	haunt		ambiguous	2013,2019
+3437	Haunt	haunt		ambiguous	2019,2013
 15533	Haunt Season	haunt season	2024	no_match	
 2823	The Haunted	haunted	1991	no_match	
 14395	The Haunted Castle (1921)	haunted castle 1921	1921	no_match	

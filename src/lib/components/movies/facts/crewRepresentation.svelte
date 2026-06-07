@@ -29,7 +29,12 @@
 		<li class="crew-header" aria-hidden="true">
 			<span class="header-dept">Department</span>
 			<span class="header-bar">Gender split</span>
-			<span class="header-counts">W / M / NB / ?</span>
+			<span class="header-counts">
+				<span class="head-count"><span class="swatch seg-female"></span>W</span>
+				<span class="head-count"><span class="swatch seg-male"></span>M</span>
+				<span class="head-count"><span class="swatch seg-nonbinary"></span>NB</span>
+				<span class="head-count"><span class="swatch seg-unknown"></span>?</span>
+			</span>
 		</li>
 
 		{#each crewDepartments as dept (dept.department)}
@@ -148,13 +153,23 @@
 	.header-dept,
 	.header-bar,
 	.header-counts {
-		@apply text-xs text-ink-muted;
+		@apply text-xs font-semibold text-ink-muted;
 		font-variant-caps: all-small-caps;
 		letter-spacing: 0.04em;
 	}
 
 	.header-counts {
-		@apply text-right;
+		@apply flex items-center justify-end gap-2;
+	}
+
+	.head-count {
+		@apply inline-flex items-center gap-1;
+	}
+
+	.head-count .swatch {
+		@apply inline-block rounded-xs shrink-0;
+		width: 0.5rem;
+		height: 0.5rem;
 	}
 
 	/* Department row */
@@ -205,7 +220,7 @@
 	.jobs-list {
 		@apply list-none m-0 p-0;
 		border-top: 1px solid var(--border);
-		background-color: color-mix(in oklab, var(--ink) 2%, transparent);
+		background-color: color-mix(in oklab, var(--ink) 4%, transparent);
 	}
 
 	.job-row {
@@ -218,7 +233,7 @@
 	}
 
 	.job-name {
-		@apply text-xs text-ink-muted truncate;
+		@apply text-sm text-ink truncate;
 	}
 
 	/* Bar cell */
@@ -228,7 +243,7 @@
 
 	.mini-bar {
 		@apply relative flex overflow-hidden rounded-sm w-full;
-		height: 0.5rem;
+		height: 0.625rem;
 		background-color: var(--border);
 	}
 
@@ -240,14 +255,16 @@
 
 	/* Counts */
 	.counts-cell {
-		@apply flex items-center justify-end gap-1 text-xs;
+		@apply flex items-center justify-end gap-1 text-sm;
 	}
 
-	.c-sep { @apply text-ink-muted opacity-50; }
-	.c-female { color: var(--brand); @apply font-semibold; }
-	.c-male { color: var(--seg-male); @apply font-semibold; }
-	.c-nb { color: var(--accent-bg); @apply font-semibold; }
-	.c-unknown { @apply text-ink-muted; }
+	.c-sep { @apply text-ink-muted opacity-40; }
+	/* Numbers stay high-contrast for legibility; colour identity lives in the
+	   bar + header swatches, not in the digits themselves. */
+	.c-female,
+	.c-male,
+	.c-nb { @apply font-semibold text-ink tabular-nums; }
+	.c-unknown { @apply text-ink-muted tabular-nums; }
 
 	/* Mobile */
 	@media (max-width: 767px) {

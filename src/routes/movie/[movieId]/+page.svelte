@@ -13,6 +13,8 @@
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
 	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
 	import { BECHDEL_TIERS, umFlagCount } from '$lib/media/utils/metrics';
+
+	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
 	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
 	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
 	import type { UmCandidate } from '$lib/media/utils/metrics';
@@ -45,8 +47,8 @@
 			castMembers: movie.castMembers,
 			crewDepartments: movie.crewDepartments,
 			bechdel,
-			isSeries: false,
-		}),
+			isSeries: false
+		})
 	);
 </script>
 
@@ -57,7 +59,12 @@
 				<VerdictPanel {safety} {representation} />
 			{/snippet}
 			<div class="summary-chips">
-				<MetricChip href="#bechdel" icon="ri-scales-3-line" label="Bechdel Test" empty={bechdel === null}>
+				<MetricChip
+					href="#bechdel"
+					icon="ri-scales-3-line"
+					label="Bechdel Test"
+					empty={bechdel === null}
+				>
 					{#if bechdel}
 						<span class="chip-value">{bechdel.rating}<span class="chip-unit">/3</span></span>
 					{:else}
@@ -73,7 +80,9 @@
 					badgeCount={hasUmCandidates ? umCandidates.length : 0}
 				>
 					{#if umData}
-						<span class="chip-value">{flagCount}<span class="chip-unit"> concern{flagCount === 1 ? '' : 's'}</span></span>
+						<span class="chip-value"
+							>{flagCount}<span class="chip-unit"> concern{flagCount === 1 ? '' : 's'}</span></span
+						>
 					{:else}
 						<span class="chip-empty">No data</span>
 					{/if}
@@ -88,7 +97,11 @@
 					{#if ddd === null}
 						<span class="chip-loading" aria-busy="true">Loading…</span>
 					{:else if ddd.tags.length > 0}
-						<span class="chip-value">{ddd.tags.length}<span class="chip-unit"> tag{ddd.tags.length === 1 ? '' : 's'}</span></span>
+						<span class="chip-value"
+							>{ddd.tags.length}<span class="chip-unit">
+								tag{ddd.tags.length === 1 ? '' : 's'}</span
+							></span
+						>
 					{:else}
 						<span class="chip-empty">No data</span>
 					{/if}
@@ -136,16 +149,17 @@
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
 			>
 				{#if bechdel}
-					<ul class="bechdel-tiers">
-						{#each BECHDEL_TIERS as tier (tier.level)}
-							<li class="tier" class:tier--enabled={tier.level <= bechdel.rating}>
-								<span class="tier-check" aria-hidden="true">
-									<i class={tier.level <= bechdel.rating ? 'ri-check-line' : 'ri-close-line'}></i>
+					<ol class="bechdel-criteria">
+						{#each BECHDEL_CRITERIA as criterion, i (criterion.level)}
+							{@const met = i < bechdel.rating}
+							<li class="criterion" class:criterion--met={met}>
+								<span class="criterion-marker" aria-hidden="true">
+									{#if met}<i class="ri-check-line"></i>{:else}{i + 1}{/if}
 								</span>
-								<span>{tier.label}</span>
+								<span class="criterion-label">{criterion.label}</span>
 							</li>
 						{/each}
-					</ul>
+					</ol>
 					<p class="meta-note">Based on {bechdel.numVotes.toLocaleString()} votes</p>
 				{:else}
 					<p class="no-data">This movie is not in the Bechdel Test database.</p>
@@ -232,27 +246,47 @@
 		@apply text-sm text-ink-muted italic leading-tight;
 	}
 
-	/* ── Bechdel tiers ── */
-	.bechdel-tiers {
-		@apply flex flex-col gap-xs list-none m-0 p-0;
+	.bechdel-criteria {
+		@apply flex flex-col list-none m-0 p-0;
 	}
 
-	.tier {
-		@apply flex items-center gap-sm text-sm text-ink-muted;
+	.criterion {
+		@apply relative flex items-center gap-sm text-sm text-ink-muted;
+		padding-block: var(--spacing-xs);
 	}
 
-	.tier--enabled {
+	.criterion:not(:last-child)::before {
+		content: '';
+		@apply absolute;
+		left: 0.6875rem; /* centre of the 1.375rem marker */
+		top: calc(50% + 0.6875rem);
+		bottom: calc(50% - 0.6875rem - var(--spacing-xs) * 2);
+		width: 2px;
+		background-color: var(--border);
+	}
+
+	.criterion--met:not(:last-child)::before {
+		background-color: color-mix(in oklab, var(--brand) 45%, var(--border));
+	}
+
+	.criterion--met {
 		@apply text-ink font-medium;
 	}
 
-	.tier-check {
-		@apply flex items-center justify-center w-5 h-5 rounded-full text-xs shrink-0;
+	.criterion-marker {
+		@apply flex items-center justify-center rounded-full text-xs font-semibold shrink-0 z-10;
+		width: 1.375rem;
+		height: 1.375rem;
 		background-color: var(--secondary-soft);
 		color: var(--ink-muted);
 	}
 
-	.tier--enabled .tier-check {
-		background-color: color-mix(in oklab, var(--success) 22%, transparent);
-		color: var(--success);
+	.criterion--met .criterion-marker {
+		background-color: color-mix(in oklab, var(--brand) 16%, transparent);
+		color: var(--brand);
+	}
+
+	.criterion-label {
+		@apply leading-snug;
 	}
 </style>

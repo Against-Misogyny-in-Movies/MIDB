@@ -38,7 +38,9 @@
 				<span class="label">{verdict.label}</span>
 				<span class="summary">{verdict.summary}</span>
 				<span class="confidence" aria-busy={verdict.pending ? 'true' : undefined}>
-					Based on {verdict.signalsPresent} of {verdict.signalsTotal} signals{verdict.pending ? ' · updating…' : ''}
+					Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics{verdict.pending
+						? ' · updating…'
+						: ''}
 				</span>
 			</div>
 		</button>
@@ -51,7 +53,9 @@
 				<span class="label">{verdict.label}</span>
 				<span class="summary">{verdict.summary}</span>
 				<span class="confidence" aria-busy={verdict.pending ? 'true' : undefined}>
-					Based on {verdict.signalsPresent} of {verdict.signalsTotal} signals{verdict.pending ? ' · updating…' : ''}
+					Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics{verdict.pending
+						? ' · updating…'
+						: ''}
 				</span>
 			</div>
 		</div>
@@ -70,7 +74,7 @@
 					</li>
 				{/each}
 				<li class="sig sig--meta">
-					Based on {verdict.signalsPresent} of {verdict.signalsTotal} signals
+					Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics
 				</li>
 			</ul>
 		</div>
@@ -88,7 +92,7 @@
 						</li>
 					{/each}
 					<li class="sig sig--meta">
-						Based on {verdict.signalsPresent} of {verdict.signalsTotal} signals
+						Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics
 					</li>
 				</ul>
 			</div>
@@ -109,7 +113,9 @@
 		border-left: 3px solid var(--vt-fg);
 		font: inherit;
 		cursor: help;
-		transition: border-color 0.15s ease, background-color 0.15s ease;
+		transition:
+			border-color 0.15s ease,
+			background-color 0.15s ease;
 
 		@media (prefers-reduced-motion: reduce) {
 			transition: none;
@@ -169,7 +175,9 @@
 		opacity: 0;
 		pointer-events: none;
 		transform: translateY(-4px);
-		transition: opacity 0.14s ease, transform 0.14s ease;
+		transition:
+			opacity 0.14s ease,
+			transform 0.14s ease;
 
 		@media (prefers-reduced-motion: reduce) {
 			transition: opacity 0.14s ease;
