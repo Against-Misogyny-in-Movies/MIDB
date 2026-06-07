@@ -1,25 +1,178 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+@theme {
+  /* Screens */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 976px;
+  --breakpoint-xl: 1440px;
 
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+}
+
+/* ─── Palette ramps + light semantic defaults ─── */
+:root {
+  --rv-900: #170025; --rv-800: #2d0050; --rv-700: #4a0080;
+  --rv-600: #6200aa; --rv-500: #7400b8; --rv-400: #a030d8;
+  --rv-300: #c890ee; --rv-200: #e2c4f8; --rv-100: #f4eafd;
+
+  --aq-600: #006b4f; --aq-500: #008a64; --aq-400: #00b386;
+  --aq-300: #64dfdf; --aq-200: #72efdd; --aq-100: #c4faf8;
+
+  --surface:        #fbf9fd;
+  --surface-raised: #ffffff;
+  --ink:            #1a0b24;
+  --ink-muted:      #4a3a57;
+  --brand:          #7400b8;
+  --brand-strong:   #4a0080;
+  --accent:         #008a64;
+  --accent-bg:      #64dfdf;
+  --accent-ink:     #170025;
+  --border:         #e3dceb;
+  --seg-male:       #c890ee;
+
+  /* Status — base / hover (soft) / on-color text (fg) */
+  --secondary:      #888883; --secondary-soft: #E2E2D5; --secondary-fg: #ffffff;
+  --success:        #22c55e; --success-soft:   #86efac; --success-fg:   #ffffff;
+  --warn:           #f59e0b; --warn-soft:      #fcd34d; --warn-fg:      #170025;
+  --danger:         #ef4444; --danger-soft:    #fca5a5; --danger-fg:    #ffffff;
+  --info:           #3b82f6; --info-soft:      #93c5fd; --info-fg:      #ffffff;
+}
+
+/* ─── System dark (yields to manual override) ─── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --surface:        #120819;
+    --surface-raised: #1e1029;
+    --ink:            #f3ecf8;
+    --ink-muted:      #b9a9c8;
+    --brand:          #c890ee;
+    --brand-strong:   #e2c4f8;
+    --accent:         #72efdd;
+    --accent-bg:      #72efdd;
+    --accent-ink:     #170025;
+    --border:         #34234a;
+    --seg-male:       #fcd34d;
+
+    --secondary:      #888883; --secondary-soft: #55554E; --secondary-fg: #f3ecf8;
+    --success:        #22c55e; --success-soft:   #15803d; --success-fg:   #f3ecf8;
+    --warn:           #f59e0b; --warn-soft:      #b45309; --warn-fg:      #170025;
+    --danger:         #ef4444; --danger-soft:    #b91c1c; --danger-fg:    #f3ecf8;
+    --info:           #3b82f6; --info-soft:      #1d4ed8; --info-fg:      #f3ecf8;
+  }
+}
+
+/* ─── Manual overrides ─── */
+:root[data-theme="light"] {
+  --surface:        #fbf9fd;
+  --surface-raised: #ffffff;
+  --ink:            #1a0b24;
+  --ink-muted:      #4a3a57;
+  --brand:          #7400b8;
+  --brand-strong:   #4a0080;
+  --accent:         #008a64;
+  --accent-bg:      #64dfdf;
+  --accent-ink:     #170025;
+  --border:         #e3dceb;
+  --seg-male:       #c890ee;
+
+  --secondary:      #888883; --secondary-soft: #E2E2D5; --secondary-fg: #ffffff;
+  --success:        #22c55e; --success-soft:   #86efac; --success-fg:   #ffffff;
+  --warn:           #f59e0b; --warn-soft:      #fcd34d; --warn-fg:      #170025;
+  --danger:         #ef4444; --danger-soft:    #fca5a5; --danger-fg:    #ffffff;
+  --info:           #3b82f6; --info-soft:      #93c5fd; --info-fg:      #ffffff;
+}
+
+:root[data-theme="dark"] {
+  --surface:        #120819;
+  --surface-raised: #1e1029;
+  --ink:            #f3ecf8;
+  --ink-muted:      #b9a9c8;
+  --brand:          #c890ee;
+  --brand-strong:   #e2c4f8;
+  --accent:         #72efdd;
+  --accent-bg:      #72efdd;
+  --accent-ink:     #170025;
+  --border:         #34234a;
+  --seg-male:       #72efdd;
+
+  --secondary:      #888883; --secondary-soft: #55554E; --secondary-fg: #f3ecf8;
+  --success:        #22c55e; --success-soft:   #15803d; --success-fg:   #f3ecf8;
+  --warn:           #f59e0b; --warn-soft:      #b45309; --warn-fg:      #170025;
+  --danger:         #ef4444; --danger-soft:    #b91c1c; --danger-fg:    #f3ecf8;
+  --info:           #3b82f6; --info-soft:      #1d4ed8; --info-fg:      #f3ecf8;
+}
+
+/* ─── Semantic tokens exposed to Tailwind (inline = re-cascades on theme change) ─── */
+@theme inline {
+  --color-surface:        var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink:            var(--ink);
+  --color-ink-muted:      var(--ink-muted);
+  --color-brand:          var(--brand);
+  --color-brand-strong:   var(--brand-strong);
+  --color-accent:         var(--accent);
+  --color-accent-bg:      var(--accent-bg);
+  --color-accent-ink:     var(--accent-ink);
+  --color-border:         var(--border);
+  --color-seg-male:       var(--seg-male);
+
+  --color-secondary:      var(--secondary);
+  --color-secondary-soft: var(--secondary-soft);
+  --color-secondary-fg:   var(--secondary-fg);
+  --color-success:        var(--success);
+  --color-success-soft:   var(--success-soft);
+  --color-success-fg:     var(--success-fg);
+  --color-warn:           var(--warn);
+  --color-warn-soft:      var(--warn-soft);
+  --color-warn-fg:        var(--warn-fg);
+  --color-danger:         var(--danger);
+  --color-danger-soft:    var(--danger-soft);
+  --color-danger-fg:      var(--danger-fg);
+  --color-info:           var(--info);
+  --color-info-soft:      var(--info-soft);
+  --color-info-fg:        var(--info-fg);
+
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+}
 
 @layer components {
 
   body {
-    @apply bg-gray-light;
+    @apply bg-surface text-ink;
+    color-scheme: light dark;
+    caret-color: var(--accent-bg);
+  }
+
+  ::selection {
+    background-color: var(--accent-bg);
+    color: var(--accent-ink);
   }
 
   .bg-component {
-    @apply bg-white;
+    @apply bg-surface-raised;
   }
 
   h1 {
     @apply text-3xl;
   }
-  
+
   h2 {
     @apply text-2xl;
+  }
+
+  .label {
+    @apply text-xs tracking-widest uppercase text-ink-muted;
+    font-variant-caps: all-small-caps;
+  }
+
+  .display {
+    font-family: var(--font-display);
   }
 
 }

@@ -1,11 +1,13 @@
-
-
 <script lang="ts">
   import { onMount } from "svelte";
   import { register } from "@teamhanko/hanko-elements";
   import { PUBLIC_HANKO_API_URL} from '$env/static/public'
 
-  
+  interface Props {
+      onsessioncreated?: () => void;
+  }
+
+  let { onsessioncreated }: Props = $props();
 
   onMount(async () => {
     try {
@@ -16,4 +18,4 @@
   });
 </script>
 
-<hanko-auth on:onAuthFlowCompleted/>
+<hanko-auth ononSessionCreated={onsessioncreated}></hanko-auth>
