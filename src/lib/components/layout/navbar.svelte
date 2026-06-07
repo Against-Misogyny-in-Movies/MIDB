@@ -1,10 +1,17 @@
 <script lang="ts">
+  import { page } from '$app/stores';
   import ThemeToggle from '$lib/components/theme/themeToggle.svelte';
+  import NavbarSearch from './navbarSearch.svelte';
+
+  const showSearch = $derived($page.url.pathname !== '/');
 </script>
 
 <nav>
   <a href="/" class="display wordmark">MIDB</a>
   <div class="actions">
+    {#if showSearch}
+      <NavbarSearch />
+    {/if}
     <ThemeToggle />
     <a href="/auth" class="label signin">Sign in</a>
   </div>
@@ -19,15 +26,15 @@
   }
 
   .wordmark {
-    @apply text-brand text-xl font-semibold no-underline;
+    @apply text-brand text-xl font-semibold no-underline shrink-0;
   }
 
   .actions {
-    @apply flex items-center gap-md;
+    @apply flex items-center gap-md min-w-0;
   }
 
   .signin {
-    @apply text-ink-muted no-underline;
+    @apply text-ink-muted no-underline shrink-0;
   }
 
   .signin:hover {

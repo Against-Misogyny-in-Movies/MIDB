@@ -52,8 +52,13 @@ export class MovieSearchState {
 			this.loading = false;
 		});
 		// Clear pending navigation indicator once SvelteKit finishes (or aborts) navigation.
+		// If we initiated the navigation (a result was selected), also reset the box so the
+		// query/results don't linger on the destination page (e.g. the navbar search).
 		const navUnsub = navigating.subscribe((nav) => {
-			if (!nav) this.navigatingTo = null;
+			if (!nav) {
+				if (this.navigatingTo) this.reset();
+				this.navigatingTo = null;
+			}
 		});
 		return () => {
 			sub.unsubscribe();
@@ -89,6 +94,14 @@ export class MovieSearchState {
 		this.activeIndex = -1;
 		this.loading = false;
 		this.navigatingTo = null;
+	}
+
+	/** Fully clear the box — query, results and panel state — e.g. after navigating to a result. */
+	reset() {
+		this.query = '';
+		this.results = [];
+		this.#store.search('');
+		this.close();
 	}
 
 	highlight(index: number) {

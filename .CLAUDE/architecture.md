@@ -319,7 +319,7 @@ Split into **`ui/` generic primitives** (reusable, title-agnostic) and **domain 
 | `ui/text/` | block, tooltip | Collapsible HTML block, tooltip. |
 | `ui/visualization/` | progressbar | Horizontal/vertical progress bar. |
 | `theme/` | themeToggle | Light/dark switch; reads localStorage, writes `document.documentElement.dataset.theme`. |
-| `layout/` | navbar, footer | Global chrome, mounted in root `+layout.svelte`. |
+| `layout/` | navbar, **navbarSearch**, footer | Global chrome, mounted in root `+layout.svelte`. `navbar` renders `navbarSearch` in its actions row on all routes except `/`. `navbarSearch` is a minimalistic, collapse-by-default search: a quiet search-icon trigger (matching `themeToggle` density) that expands inline into a compact borderless field. It owns its own `MovieSearchState` and reuses `search/searchResults`, but provides its own compact input (no `searchInput` submit button), so it does **not** wrap `search/movieSearch`. Collapses back to the icon on click-outside/Escape when the query is empty. |
 | `landing/` | topBar, heroSearch | `heroSearch` wraps `search/movieSearch`. `topBar` is **orphaned** (superseded by `layout/navbar`). |
 | `auth/` | hankoAuth, hankoProfile, logoutButton | Hanko web-component wrappers. |
 | `movies/facts/` | detailHeader, factGrid, seriesFactGrid, genderDistribution, **castRepresentation**, **crewRepresentation**, **representationDisclosure**, **metricChip**, **verdictPanel**, **verdictCard** | Header + fact grids (movie vs series) + gender chart + cast/crew breakdown + shared metric chip + two-axis verdict. `detailHeader` gained a `verdict` snippet prop (rendered between year meta and children). `verdictPanel` composes two `verdictCard`s; each reads tone tokens from `verdict.ts` via inline CSS custom props. `castRepresentation`/`crewRepresentation` are the "see more" disclosure bodies under the `#gender` section, wrapped by `representationDisclosure` (a labelled show/hide toggle). |
@@ -347,7 +347,8 @@ Notable mechanics:
 ## Live search (`src/lib/components/search/`)
 
 - **`movieSearch.svelte.ts`** — `MovieSearchState` rune class: `query`, `results`, `activeIndex`, `loading`, `open`. Owns the debounced RxJS store (500ms), keyboard model (Arrow wrap-around, Enter→select, Escape→close), and navigation, which branches on `mediaType` (`resolve('/tv/[seriesId]', …)` vs `resolve('/movie/[movieId]', …)`). `optionId(id, mediaType)` builds the stable `aria-activedescendant` ids.
-- **`movieSearch.svelte`** — orchestrator: instantiates state, wires `$effect(() => search.connect())`, click-outside dismiss, composes child components. Import uses **`.js` extension** (`./movieSearch.svelte.js`) so Vite resolves the `.svelte.ts` module, not the component.
+- **`movieSearch.svelte`** — orchestrator: instantiates state, wires `$effect(() => search.connect())`, click-outside dismiss, composes child components. Import uses **`.js` extension** (`./movieSearch.svelte.js`) so Vite resolves the `.svelte.ts` module, not the component. Mounted on the landing hero (`landing/heroSearch.svelte`).
+- **Two independent consumers of `MovieSearchState`.** The landing hero uses the full `movieSearch.svelte` (bordered input + submit button via `searchInput`). The global navbar uses `layout/navbarSearch.svelte` — a separate, minimalistic consumer that reuses `MovieSearchState` + `searchResults` directly with its own compact, collapse-by-default field (no submit button). Each consumer instantiates its own `MovieSearchState`; the navbar one only mounts on non-landing routes (`pathname !== '/'`).
 - Panel visibility is `open && query.trim()` — `close()` flips `open` but preserves `query`/`results` so re-focus re-shows prior results without refetch.
 
 ---
