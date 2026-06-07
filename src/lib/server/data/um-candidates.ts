@@ -18,11 +18,18 @@ const UM_CONCERN_COLS = [
 	'rapeOnScreen'
 ] as const;
 
+// UM stores a "year unknown" sentinel of 0 (and the seeder may have persisted it before the
+// fix) — treat any non-positive year as unknown so it falls into the ambiguous/no-picker path
+// instead of failing both the exact-year match and the null-year fallback.
+function knownYear(year: number | null): number | null {
+	return year !== null && year > 0 ? year : null;
+}
+
 function toCandidate(r: typeof umSource.$inferSelect): UmCandidate {
 	return {
 		umId: r.umId,
 		cleanName: r.cleanName,
-		year: r.year,
+		year: knownYear(r.year),
 		flagCount: UM_CONCERN_COLS.filter((k) => r[k] === true).length,
 		comment: r.comment,
 		noRape: r.noRape,
@@ -66,10 +73,10 @@ export async function getUnconsentingCandidates(media: MediaRef): Promise<UmCand
 	const mediaYear = media.releaseDate ? parseInt(media.releaseDate.slice(0, 4), 10) : NaN;
 
 	if (!Number.isNaN(mediaYear)) {
-		const exact = rows.find((r) => r.year === mediaYear);
+		const exact = rows.find((r) => knownYear(r.year) === mediaYear);
 		if (exact) return [toCandidate(exact)];
-		const nullYear = rows.filter((r) => r.year === null);
-		if (nullYear.length > 0) return nullYear.slice(0, 5).map(toCandidate);
+		const unknownYear = rows.filter((r) => knownYear(r.year) === null);
+		if (unknownYear.length > 0) return unknownYear.slice(0, 5).map(toCandidate);
 		return [];
 	}
 

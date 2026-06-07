@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { TMDB_BASE, tmdbHeaders, aggregateGender } from '$lib/server/integrations/tmdb';
+import { TMDB_BASE, tmdbHeaders, aggregateGender, buildCastMembers, buildCrewDepartments } from '$lib/server/integrations/tmdb';
 import { getCached } from '$lib/server/cache';
 import type { Movie } from '$lib/media/types/movie';
 
@@ -20,7 +20,7 @@ const TMDB_TTL_MS = 24 * 60 * 60 * 1000;
  * @throws SvelteKit `error()` if the TMDB response is not OK.
  */
 export const getMovie = (movieId: string): Promise<Movie> =>
-	getCached(`tmdb:movie:${movieId}`, TMDB_TTL_MS, async () => {
+	getCached(`tmdb:movie:v2:${movieId}`, TMDB_TTL_MS, async () => {
 		const url = new URL(`${TMDB_BASE}/3/movie/${movieId}`);
 		url.searchParams.set('append_to_response', 'credits,external_ids');
 		url.searchParams.set('language', 'en-US');
@@ -35,6 +35,8 @@ export const getMovie = (movieId: string): Promise<Movie> =>
 
 		const cast = aggregateGender(data.credits?.cast ?? []);
 		const crew = aggregateGender(data.credits?.crew ?? []);
+		const castMembers = buildCastMembers(data.credits?.cast ?? []);
+		const crewDepartments = buildCrewDepartments(data.credits?.crew ?? []);
 
 		return {
 			id: String(data.id),
@@ -61,6 +63,8 @@ export const getMovie = (movieId: string): Promise<Movie> =>
 				})
 			),
 			cast,
-			crew
+			crew,
+			castMembers,
+			crewDepartments
 		};
 	});

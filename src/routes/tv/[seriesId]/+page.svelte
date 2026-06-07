@@ -4,12 +4,17 @@
 	import SeriesFactGrid from '$lib/components/movies/facts/seriesFactGrid.svelte';
 	import MetricChip from '$lib/components/movies/facts/metricChip.svelte';
 	import GenderDistribution from '$lib/components/movies/facts/genderDistribution.svelte';
+	import CastRepresentation from '$lib/components/movies/facts/castRepresentation.svelte';
+	import CrewRepresentation from '$lib/components/movies/facts/crewRepresentation.svelte';
+	import RepresentationDisclosure from '$lib/components/movies/facts/representationDisclosure.svelte';
 	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
 	import CommentsSkeleton from '$lib/components/movies/sections/commentsSkeleton.svelte';
 	import DddEpisodeSelector from '$lib/components/movies/metrics/dddEpisodeSelector.svelte';
 	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
+	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
 	import { umFlagCount } from '$lib/media/utils/metrics';
+	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
 	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
 	import type { UmCandidate } from '$lib/media/utils/metrics';
 
@@ -46,11 +51,27 @@
 			(t) => (t.season === selectedSeason && t.episode === selectedEpisode) || t.season === -1
 		);
 	});
+
+	const dddForVerdict = $derived(ddd ? { ...ddd, tags: visibleTags } : null);
+	const safety = $derived(scoreSafety(umData, dddForVerdict));
+	const representation = $derived(
+		scoreRepresentation({
+			cast: series.cast,
+			crew: series.crew,
+			castMembers: series.castMembers,
+			crewDepartments: series.crewDepartments,
+			bechdel: null,
+			isSeries: true,
+		}),
+	);
 </script>
 
 <div class="series-page">
 	<section id="details">
 		<DetailHeader media={series}>
+			{#snippet verdict()}
+				<VerdictPanel {safety} {representation} />
+			{/snippet}
 			<div class="summary-chips">
 				<!-- Bechdel N/A for series — no href = renders as static div -->
 				<MetricChip icon="ri-scales-3-line" label="Bechdel Test">
@@ -95,7 +116,26 @@
 
 	<section id="gender" class="gender-section">
 		<p class="label">Cast &amp; crew representation</p>
-		<GenderDistribution cast={series.cast} crew={series.crew} />
+
+		<div class="rep-group">
+			<h3 class="group-label label">Cast</h3>
+			<GenderDistribution label="Cast" breakdown={series.cast} />
+			{#if series.castMembers.length > 0}
+				<RepresentationDisclosure label="cast by billing order">
+					<CastRepresentation castMembers={series.castMembers} />
+				</RepresentationDisclosure>
+			{/if}
+		</div>
+
+		<div class="rep-group">
+			<h3 class="group-label label">Crew</h3>
+			<GenderDistribution label="Crew" breakdown={series.crew} />
+			{#if series.crewDepartments.length > 0}
+				<RepresentationDisclosure label="crew by role">
+					<CrewRepresentation crewDepartments={series.crewDepartments} />
+				</RepresentationDisclosure>
+			{/if}
+		</div>
 	</section>
 
 	<div class="metrics-stack">
@@ -148,7 +188,15 @@
 	}
 
 	.gender-section {
-		@apply flex flex-col gap-md;
+		@apply flex flex-col gap-lg;
+	}
+
+	.rep-group {
+		@apply flex flex-col gap-sm;
+	}
+
+	.group-label {
+		@apply text-ink-muted mb-xs;
 	}
 
 	.metrics-stack {

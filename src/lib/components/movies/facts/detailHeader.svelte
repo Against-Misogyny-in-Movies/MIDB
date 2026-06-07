@@ -5,11 +5,13 @@
 
 	interface Props {
 		media: MediaDetail;
-		/** Rendered in the info column where the plot overview used to sit. */
+		/** Two-axis at-a-glance verdict rendered between the title meta and the chips. */
+		verdict?: Snippet;
+		/** Rendered in the info column below the verdict (chip row + facts). */
 		children?: Snippet;
 	}
 
-	let { media, children }: Props = $props();
+	let { media, children, verdict }: Props = $props();
 
 	const year = $derived(media.releaseDate ? media.releaseDate.slice(0, 4) : '');
 </script>
@@ -33,6 +35,7 @@
 				<span class="release-date">{year ? ' · ' : ''}{media.releaseDate}</span>
 			{/if}
 		</p>
+		{@render verdict?.()}
 		{#if children}
 			{@render children()}
 		{/if}

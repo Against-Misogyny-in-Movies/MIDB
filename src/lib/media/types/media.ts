@@ -6,6 +6,25 @@ export interface GenderBreakdown {
 	total: number;
 }
 
+export type GenderCategory = 'female' | 'male' | 'nonBinary' | 'unknown';
+
+export interface CastMember {
+	name: string;
+	gender: GenderCategory;
+	order: number;
+}
+
+export interface CrewJob {
+	job: string;
+	breakdown: GenderBreakdown;
+}
+
+export interface CrewDepartment {
+	department: string;
+	breakdown: GenderBreakdown;
+	jobs: CrewJob[];
+}
+
 /** Fields common to movies and series — what the shared header/gender components need. */
 export interface MediaDetail {
 	id: string;
@@ -22,4 +41,6 @@ export interface MediaDetail {
 	spokenLanguages: { iso: string; englishName: string }[];
 	cast: GenderBreakdown;
 	crew: GenderBreakdown;
+	castMembers: CastMember[];
+	crewDepartments: CrewDepartment[];
 }

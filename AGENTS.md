@@ -7,6 +7,7 @@
 ## Always
 
 - **Update `.CLAUDE/architecture.md`** whenever you add, move, rename, or delete a file, change a module's responsibility, add a shared component, or alter a structural pattern. The doc is a living snapshot; keep it current.
+- **Save every plan under `.CLAUDE/plans/`** as a markdown file (e.g. `.CLAUDE/plans/plan-<short-name>.md`). Implementation plans, design notes, and multi-step proposals all belong there — not scattered elsewhere or left only in chat.
 - **Run the verification baseline** before reporting a task done: `bun run check` → 0 errors, `bun run test:unit` → all pass, `bun run build` → clean.
 - **Use `$lib` and `$db` aliases** for all cross-folder imports. Relative `./` is for same-folder siblings only.
 
@@ -44,6 +45,7 @@
 - **Components own their styles.** A component's CSS classes should not leak into parent pages. If the same visual pattern appears in two pages, extract a component rather than duplicating the stylesheet.
 - **`@reference` depth.** `<style lang="postcss">` blocks need `@reference` pointing at `src/app.css`. Count the folder depth: four `../` for components two levels deep under `movies/*` or `ui/*`; three for shallower ones (`layout/`, `search/`). Wrong depth causes silent Tailwind resolution failures in unit tests.
 - **No orphan revival.** `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are orphaned — do not reuse or revive them.
+- **Performance & smooth UX are a priority, especially above the fold.** Never block first paint on client-streamed data (e.g. DDD via `dddStream.svelte.js`): render a provisional/`pending` state immediately and update in place. Reserve layout so streamed/async updates cause **zero layout shift** — fixed-height cards, one-line clamped summaries (`line-clamp-1`), no reflow of siblings. Derive view state with `$derived` over already-loaded data (cheap, recomputes only on real input change); avoid effects, DOM measurement, and extra requests for first-render UI. Ease state changes with the shared `0.15s ease` transition and gate every animation on `prefers-reduced-motion` (see `metricChip.svelte`). Use `aria-busy` for in-progress streaming states instead of spinners that shift layout.
 
 ---
 
@@ -52,6 +54,7 @@
 - Tailwind v4, CSS-first. Source of truth is `src/app.css`.
 - Use design tokens (`--brand`, `--surface`, `--ink-muted`, etc.), not raw colours. Status tokens: `--success`, `--warn`, `--danger`, `--info`.
 - `<style lang="postcss">` + `@reference "…/app.css"` in every component that uses `@apply` or tokens.
+- **New components must match the existing visual language — reuse the established vocabulary, don't invent values.** Surfaces are `rounded-md border border-border bg-surface-raised`; hovers tint with `color-mix(in oklab, var(--brand) 35%, var(--border))`; tinted status fills use `color-mix(in oklab, var(--token) 16%, transparent)` with the solid token for text (see `collapsibleSection.svelte` `.status--*`); "no data"/neutral states use `--secondary-soft` bg + `--ink-muted` fg. Titles use the `.display` font; spacing/sizing use the `xs/sm/md/lg/xl` tokens. Before adding a card/pill/chip, copy the pattern from `collapsibleSection.svelte` or `metricChip.svelte` rather than picking new percentages or radii.
 
 ---
 

@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
 	import DddTags from './dddTags.svelte';
+	import DddCategoryFilter from './dddCategoryFilter.svelte';
 	import { dddUrl } from '$lib/media/utils/metrics';
 	import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
 
@@ -13,6 +14,20 @@
 	}
 
 	let { ddd, visibleTags, mediaNoun, selector }: Props = $props();
+
+	let selectedCategory = $state<string | null>(null);
+
+	// Reset filter when the tag set changes (e.g. episode switch)
+	$effect(() => {
+		visibleTags;
+		selectedCategory = null;
+	});
+
+	const filteredTags = $derived(
+		selectedCategory === null
+			? visibleTags
+			: visibleTags.filter((t) => t.category === selectedCategory),
+	);
 </script>
 
 <div id="ddd">
@@ -37,7 +52,12 @@
 		{:else}
 			{@render selector?.()}
 			{#if visibleTags.length > 0}
-				<DddTags tags={visibleTags} />
+				<DddCategoryFilter
+					tags={visibleTags}
+					{selectedCategory}
+					onchange={(cat) => (selectedCategory = cat)}
+				/>
+				<DddTags tags={filteredTags} />
 			{:else}
 				<p class="no-data">No trigger tags found for this {mediaNoun}.</p>
 			{/if}
@@ -59,4 +79,5 @@
 	.skeleton-tag {
 		@apply h-9 w-full rounded-md bg-surface animate-pulse;
 	}
+
 </style>

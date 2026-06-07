@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { TMDB_BASE, tmdbHeaders, aggregateGender } from '$lib/server/integrations/tmdb';
+import { TMDB_BASE, tmdbHeaders, aggregateGender, buildCastMembers, buildCrewDepartments } from '$lib/server/integrations/tmdb';
 import { getCached } from '$lib/server/cache';
 import type { Series } from '$lib/media/types/series';
 
@@ -18,7 +18,7 @@ const TMDB_TTL_MS = 24 * 60 * 60 * 1000;
  * @throws SvelteKit `error()` if the TMDB response is not OK.
  */
 export const getSeries = (seriesId: string): Promise<Series> =>
-	getCached(`tmdb:series:${seriesId}`, TMDB_TTL_MS, async () => {
+	getCached(`tmdb:series:v2:${seriesId}`, TMDB_TTL_MS, async () => {
 		const url = new URL(`${TMDB_BASE}/3/tv/${seriesId}`);
 		url.searchParams.set('append_to_response', 'credits,external_ids');
 		url.searchParams.set('language', 'en-US');
@@ -33,6 +33,8 @@ export const getSeries = (seriesId: string): Promise<Series> =>
 
 		const cast = aggregateGender(data.credits?.cast ?? []);
 		const crew = aggregateGender(data.credits?.crew ?? []);
+		const castMembers = buildCastMembers(data.credits?.cast ?? []);
+		const crewDepartments = buildCrewDepartments(data.credits?.crew ?? []);
 
 		return {
 			id: String(data.id),
@@ -56,6 +58,8 @@ export const getSeries = (seriesId: string): Promise<Series> =>
 			),
 			cast,
 			crew,
+			castMembers,
+			crewDepartments,
 			firstAirDate: data.first_air_date ?? '',
 			lastAirDate: data.last_air_date ?? '',
 			numberOfSeasons: data.number_of_seasons ?? 0,

@@ -151,7 +151,10 @@ async function main() {
 		const rawKey = record.cleanNameArticles?.trim() || record.cleanName?.trim() || normalizeTitle(record.name?.trim() || '');
 		const { key: titleKey, year: embeddedYear } = stripTrailingYear(rawKey);
 		const csvYear = record.yearOfRelease ? parseInt(record.yearOfRelease, 10) : null;
-		const umYear = embeddedYear ?? (Number.isNaN(csvYear) ? null : csvYear);
+		// UM uses yearOfRelease "0" as a "year unknown" sentinel (e.g. um_id 1223, "Mean Girls").
+		// parseInt("0") is 0, not NaN, so coerce any non-positive year to null — otherwise a 0 year
+		// defeats both the seeder's exact-year match and the runtime null-year fallback.
+		const umYear = embeddedYear ?? (csvYear !== null && csvYear > 0 ? csvYear : null);
 		const displayName = record.cleanNameArticles?.trim() || record.cleanName?.trim() || record.name?.trim() || '';
 
 		// Populate um_source catalog regardless of match outcome

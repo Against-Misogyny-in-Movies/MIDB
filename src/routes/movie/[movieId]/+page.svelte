@@ -4,11 +4,16 @@
 	import FactGrid from '$lib/components/movies/facts/factGrid.svelte';
 	import MetricChip from '$lib/components/movies/facts/metricChip.svelte';
 	import GenderDistribution from '$lib/components/movies/facts/genderDistribution.svelte';
+	import CastRepresentation from '$lib/components/movies/facts/castRepresentation.svelte';
+	import CrewRepresentation from '$lib/components/movies/facts/crewRepresentation.svelte';
+	import RepresentationDisclosure from '$lib/components/movies/facts/representationDisclosure.svelte';
 	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
 	import CommentsSkeleton from '$lib/components/movies/sections/commentsSkeleton.svelte';
 	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
+	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
 	import { BECHDEL_TIERS, umFlagCount } from '$lib/media/utils/metrics';
+	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
 	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
 	import type { UmCandidate } from '$lib/media/utils/metrics';
 
@@ -31,11 +36,26 @@
 
 	const dddState = createDddState(() => data.triggerTags, false);
 	const ddd = $derived(dddState.current);
+
+	const safety = $derived(scoreSafety(umData, ddd));
+	const representation = $derived(
+		scoreRepresentation({
+			cast: movie.cast,
+			crew: movie.crew,
+			castMembers: movie.castMembers,
+			crewDepartments: movie.crewDepartments,
+			bechdel,
+			isSeries: false,
+		}),
+	);
 </script>
 
 <div class="movie-page">
 	<section id="details">
 		<DetailHeader media={movie}>
+			{#snippet verdict()}
+				<VerdictPanel {safety} {representation} />
+			{/snippet}
 			<div class="summary-chips">
 				<MetricChip href="#bechdel" icon="ri-scales-3-line" label="Bechdel Test" empty={bechdel === null}>
 					{#if bechdel}
@@ -83,7 +103,26 @@
 
 	<section id="gender" class="gender-section">
 		<p class="label">Cast &amp; crew representation</p>
-		<GenderDistribution cast={movie.cast} crew={movie.crew} />
+
+		<div class="rep-group">
+			<h3 class="group-label label">Cast</h3>
+			<GenderDistribution label="Cast" breakdown={movie.cast} />
+			{#if movie.castMembers.length > 0}
+				<RepresentationDisclosure label="cast by billing order">
+					<CastRepresentation castMembers={movie.castMembers} />
+				</RepresentationDisclosure>
+			{/if}
+		</div>
+
+		<div class="rep-group">
+			<h3 class="group-label label">Crew</h3>
+			<GenderDistribution label="Crew" breakdown={movie.crew} />
+			{#if movie.crewDepartments.length > 0}
+				<RepresentationDisclosure label="crew by role">
+					<CrewRepresentation crewDepartments={movie.crewDepartments} />
+				</RepresentationDisclosure>
+			{/if}
+		</div>
 	</section>
 
 	<div class="metrics-stack">
@@ -142,7 +181,15 @@
 	}
 
 	.gender-section {
-		@apply flex flex-col gap-md;
+		@apply flex flex-col gap-lg;
+	}
+
+	.rep-group {
+		@apply flex flex-col gap-sm;
+	}
+
+	.group-label {
+		@apply text-ink-muted mb-xs;
 	}
 
 	.metrics-stack {
