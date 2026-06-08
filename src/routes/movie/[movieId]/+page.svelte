@@ -148,6 +148,7 @@
 				open={bechdel !== null}
 				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
+				learnHref="/resources#bechdel"
 			>
 				{#if bechdel}
 					<ol class="bechdel-criteria">

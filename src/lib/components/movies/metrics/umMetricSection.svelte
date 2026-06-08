@@ -25,6 +25,7 @@
 		open={umData !== null || hasUmCandidates}
 		sourceLabel={umData ? 'UnconsentingMedia.org' : undefined}
 		sourceHref={umData ? `https://www.unconsentingmedia.org/items/${umData.umId}` : undefined}
+		learnHref="/resources#unconsenting"
 	>
 		{#if umData}
 			<ul class="um-flags">

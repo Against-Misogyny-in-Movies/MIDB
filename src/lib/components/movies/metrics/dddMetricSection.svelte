@@ -42,6 +42,7 @@
 		open={ddd === null || visibleTags.length > 0}
 		sourceLabel="DoesTheDogDie.com"
 		sourceHref={dddUrl(ddd?.itemId ?? null)}
+		learnHref="/resources#ddd"
 	>
 		{#if ddd === null}
 			<div class="ddd-skeleton" aria-busy="true">

@@ -23,12 +23,15 @@
 		<div>
 			<h3 class="display">Bechdel Test</h3>
 			<p>Do two named women in the film talk to each other about something other than a man?</p>
-			<a
-				class="source-link"
-				href="https://bechdeltest.com"
-				target="_blank"
-				rel="noopener noreferrer">bechdeltest.com ↗</a
-			>
+			<div class="card-links">
+				<a class="learn-link" href="/resources#bechdel">How we use it →</a>
+				<a
+					class="source-link"
+					href="https://bechdeltest.com"
+					target="_blank"
+					rel="noopener noreferrer">bechdeltest.com ↗</a
+				>
+			</div>
 		</div>
 		<div>
 			<h3 class="display">Unconsenting Media</h3>
@@ -36,12 +39,15 @@
 				Flags sexual violence in film, for survivors or anyone who just wants to know before they
 				sit down.
 			</p>
-			<a
-				class="source-link"
-				href="https://www.unconsentingmedia.org"
-				target="_blank"
-				rel="noopener noreferrer">unconsentingmedia.org ↗</a
-			>
+			<div class="card-links">
+				<a class="learn-link" href="/resources#unconsenting">How we use it →</a>
+				<a
+					class="source-link"
+					href="https://www.unconsentingmedia.org"
+					target="_blank"
+					rel="noopener noreferrer">unconsentingmedia.org ↗</a
+				>
+			</div>
 		</div>
 		<div>
 			<h3 class="display">Does The Dog Die</h3>
@@ -49,12 +55,15 @@
 				Community warnings for the things mainstream ratings miss: animal deaths, self-harm, eating
 				disorders, and more.
 			</p>
-			<a
-				class="source-link"
-				href="https://www.doesthedogdie.com"
-				target="_blank"
-				rel="noopener noreferrer">doesthedogdie.com ↗</a
-			>
+			<div class="card-links">
+				<a class="learn-link" href="/resources#ddd">How we use it →</a>
+				<a
+					class="source-link"
+					href="https://www.doesthedogdie.com"
+					target="_blank"
+					rel="noopener noreferrer">doesthedogdie.com ↗</a
+				>
+			</div>
 		</div>
 	</div>
 	<p class="metrics-note">
@@ -152,11 +161,21 @@
 		max-width: 42rem;
 	}
 
-	.source-link {
-		@apply text-brand no-underline text-xs mt-xs inline-block;
+	.card-links {
+		@apply flex flex-wrap items-center gap-md mt-xs;
 	}
 
-	.source-link:hover {
+	.source-link,
+	.learn-link {
+		@apply text-brand no-underline text-xs inline-block;
+	}
+
+	.source-link:hover,
+	.learn-link:hover {
 		@apply text-brand-strong;
+	}
+
+	.learn-link {
+		@apply font-medium;
 	}
 </style>

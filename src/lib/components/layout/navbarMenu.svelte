@@ -78,7 +78,7 @@
 	/* Collapsed trigger — borderless icon, matches navbarSearch's trigger and the
 	   theme-toggle density. */
 	.trigger {
-		@apply text-ink-muted bg-transparent border-0 p-0 leading-none;
+		@apply text-brand bg-transparent border-0 p-0 leading-none;
 		@apply hover:text-brand transition-colors cursor-pointer;
 		font-size: 1.375rem;
 	}

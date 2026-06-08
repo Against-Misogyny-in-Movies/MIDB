@@ -10,6 +10,9 @@
     /** External source link rendered in the body header. */
     sourceLabel?: string;
     sourceHref?: string;
+    /** Internal link to the matching /resources explainer section. */
+    learnHref?: string;
+    learnLabel?: string;
     /** Start expanded. Defaults to open when there is data. */
     open?: boolean;
     children: Snippet;
@@ -21,6 +24,8 @@
     tone = 'data',
     sourceLabel,
     sourceHref,
+    learnHref,
+    learnLabel = 'How this works',
     open = true,
     children
   }: Props = $props();
@@ -38,10 +43,19 @@
   </summary>
 
   <div class="body">
-    {#if sourceHref && sourceLabel}
-      <a class="source-link" href={sourceHref} target="_blank" rel="noopener noreferrer">
-        {sourceLabel} <i class="ri-external-link-line" aria-hidden="true"></i>
-      </a>
+    {#if (sourceHref && sourceLabel) || learnHref}
+      <div class="body-links">
+        {#if sourceHref && sourceLabel}
+          <a class="source-link" href={sourceHref} target="_blank" rel="noopener noreferrer">
+            {sourceLabel} <i class="ri-external-link-line" aria-hidden="true"></i>
+          </a>
+        {/if}
+        {#if learnHref}
+          <a class="source-link" href={learnHref}>
+            {learnLabel} <i class="ri-arrow-right-line" aria-hidden="true"></i>
+          </a>
+        {/if}
+      </div>
     {/if}
     {@render children()}
   </div>
@@ -112,6 +126,10 @@
 
   .body {
     @apply flex flex-col gap-md px-md pb-md pt-0;
+  }
+
+  .body-links {
+    @apply flex flex-wrap items-center gap-md;
   }
 
   .source-link {
