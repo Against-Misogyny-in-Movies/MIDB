@@ -6,6 +6,9 @@
 		</div>
 		<nav class="links label" aria-label="Footer">
 			<a href="/">Home</a>
+			<a href="/resources">Resources</a>
+			<a href="/blog">Blog</a>
+			<a href="/about">About us</a>
 			<a href="/auth">Sign in</a>
 		</nav>
 	</div>
@@ -32,7 +35,7 @@
 	}
 
 	.links {
-		@apply flex gap-md;
+		@apply flex flex-wrap gap-md;
 	}
 
 	.links a {

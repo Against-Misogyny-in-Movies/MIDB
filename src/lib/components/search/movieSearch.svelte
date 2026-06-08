@@ -25,7 +25,7 @@
 		value={search.query}
 		{listboxId}
 		expanded={search.results.length > 0}
-		loading={search.loading}
+		loading={search.loading || search.navigatingTo !== null}
 		activeDescendant={search.activeId}
 		oninput={(q) => search.search(q)}
 		onkeydown={(e) => search.handleKeydown(e)}
