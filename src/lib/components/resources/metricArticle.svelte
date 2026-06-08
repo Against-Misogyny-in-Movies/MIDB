@@ -7,7 +7,7 @@
     /** Remixicon class, e.g. "ri-scales-3-line". */
     icon: string;
     title: string;
-    /** One-line summary shown as a pill next to the title. */
+    /** One-line summary shown as a muted subtitle under the title. */
     tagline: string;
     /** External "More info" link. */
     sourceLabel?: string;
@@ -21,8 +21,10 @@
 <section {id} class="article">
   <header class="article-head">
     <span class="article-icon" aria-hidden="true"><i class={icon}></i></span>
-    <h2 class="title display">{title}</h2>
-    <span class="tagline">{tagline}</span>
+    <div class="article-heading">
+      <h2 class="title display">{title}</h2>
+      <p class="tagline">{tagline}</p>
+    </div>
   </header>
 
   <div class="article-body">
@@ -46,7 +48,12 @@
   }
 
   .article-head {
-    @apply flex items-center gap-sm flex-wrap p-md;
+    @apply flex items-center gap-sm p-md;
+  }
+
+  .article-heading {
+    @apply flex flex-col gap-0;
+    min-width: 0;
   }
 
   .article-icon {
@@ -62,12 +69,11 @@
     min-width: 0;
   }
 
+  /* Descriptive subtitle, not a status pill — quiet muted prose under the title,
+     matching the page header's .lede treatment. */
   .tagline {
-    @apply text-xs font-semibold px-sm py-xs rounded-full whitespace-normal;
-    background-color: color-mix(in oklab, var(--brand) 16%, transparent);
-    color: var(--brand);
+    @apply text-sm text-ink-muted leading-snug;
     min-width: 0;
-    max-width: 100%;
   }
 
   .article-body {

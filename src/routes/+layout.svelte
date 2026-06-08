@@ -4,6 +4,7 @@
   import '../app.css';
   import Navbar from '$lib/components/layout/navbar.svelte';
   import Footer from '$lib/components/layout/footer.svelte';
+  import NavProgress from '$lib/components/layout/navProgress.svelte';
 
   interface Props {
     children: Snippet;
@@ -11,6 +12,8 @@
 
   let { children }: Props = $props();
 </script>
+
+<NavProgress />
 
 <div class="shell">
   <header class="header-wrap">

@@ -194,6 +194,20 @@
 <style lang="postcss">
   @reference "../../app.css";
 
+  /* Smooth-scroll the in-page section anchors. Scoped to this route via the
+     component's <style> lifecycle (the rule mounts/unmounts with the page), so
+     it doesn't change scroll behaviour site-wide. Sections already carry
+     scroll-margin-top to clear the sticky bar. */
+  :global(html:has(.resources)) {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html:has(.resources)) {
+      scroll-behavior: auto;
+    }
+  }
+
   .resources {
     @apply flex flex-col py-xl;
     gap: var(--spacing-xl);

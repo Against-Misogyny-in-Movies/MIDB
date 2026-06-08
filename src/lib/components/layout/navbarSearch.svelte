@@ -126,6 +126,24 @@
 		right: 0;
 	}
 
+	/* Below md the bar still holds the theme toggle + hamburger to the right of the
+	   field, so `.root`'s right edge sits mid-bar — anchoring the panel there with
+	   `right: 0` lets a 22rem panel overhang the viewport's left edge. Pin it to the
+	   viewport padding instead (the navbar container is `px-md` = 1rem) so it can't
+	   overflow either side. `fixed` anchors to the viewport, not the mid-bar `.root`;
+	   the search field is only reachable at the top of the page (the navbar isn't
+	   sticky), so a fixed `top` just below the bar tracks the field. */
+	@media (max-width: 767px) {
+		.root.is-expanded :global(.panel) {
+			position: fixed;
+			top: 3.5rem;
+			left: var(--spacing-md);
+			right: var(--spacing-md);
+			width: auto;
+			margin-top: 0;
+		}
+	}
+
 	/* Collapsed trigger — borderless icon, matches the text nav-links. */
 	.trigger {
 		@apply text-ink-muted bg-transparent border-0 p-0 leading-none;

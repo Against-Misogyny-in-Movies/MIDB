@@ -18,9 +18,14 @@
         apply(theme);
     });
 
+    // --brand per theme; keep in sync with app.css and app.html's pre-paint script.
+    const BRAND: Record<Theme, string> = { light: '#7400b8', dark: '#c890ee' };
+
     function apply(t: Theme) {
         document.documentElement.dataset.theme = t;
         localStorage.setItem('theme', t);
+        // Keep the mobile browser chrome tint in step with the active theme.
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BRAND[t]);
     }
 
     function toggle() {
