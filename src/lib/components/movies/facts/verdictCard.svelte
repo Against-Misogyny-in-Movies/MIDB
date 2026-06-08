@@ -16,11 +16,14 @@
 
 	// Touch: the inline detail panel dismisses on scroll (matching dddTags), so a
 	// tapped-open card doesn't linger over content the user has scrolled past.
+	// Use the capture phase so scrolls from any nested scroll container are caught —
+	// the `scroll` event doesn't bubble, so a non-capturing window listener misses
+	// them. Capturing on window is also how dddTags registers its dismiss handler.
 	$effect(() => {
 		if (!open) return;
 		const dismiss = () => (open = false);
-		window.addEventListener('scroll', dismiss, { passive: true });
-		return () => window.removeEventListener('scroll', dismiss);
+		window.addEventListener('scroll', dismiss, { capture: true, passive: true });
+		return () => window.removeEventListener('scroll', dismiss, { capture: true });
 	});
 </script>
 

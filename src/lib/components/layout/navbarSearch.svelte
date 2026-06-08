@@ -116,9 +116,14 @@
 	}
 
 	.root.is-expanded {
-		@apply min-w-0;
-		width: 22rem;
-		max-width: calc(100vw - 8rem);
+		@apply flex-1 min-w-0;
+		max-width: 22rem;
+	}
+
+	.root.is-expanded :global(.panel) {
+		width: min(22rem, calc(100vw - 2rem));
+		left: auto;
+		right: 0;
 	}
 
 	/* Collapsed trigger — borderless icon, matches the text nav-links. */

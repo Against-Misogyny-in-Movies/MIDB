@@ -28,7 +28,7 @@
   @reference "../../../app.css";
 
   nav {
-    @apply flex items-center justify-between py-md;
+    @apply flex items-center justify-between gap-md py-md;
     @apply border-b border-border;
   }
 
