@@ -19,10 +19,20 @@
 
 	$effect(() => search.connect());
 
-	// Selecting a result navigates away and MovieSearchState clears the query on
-	// completion; fold the field back to the icon once that navigation lands.
+	// Selecting a result keeps the field open (with its input spinner) for the
+	// duration of the navigation, so the user has feedback while the destination
+	// page loads. Track that a result-driven navigation is in flight, then fold the
+	// field back to the icon once it lands (MovieSearchState clears `navigatingTo`
+	// and the query on completion). Gating on this flag avoids collapsing a freshly
+	// opened empty field — only a completed navigation triggers the fold.
+	let navigationInFlight = $state(false);
 	$effect(() => {
-		if ($navigating && search.navigatingTo) expanded = false;
+		if (search.navigatingTo) {
+			navigationInFlight = true;
+		} else if (navigationInFlight && !$navigating) {
+			navigationInFlight = false;
+			expanded = false;
+		}
 	});
 
 	async function open() {
@@ -75,7 +85,7 @@
 				aria-activedescendant={search.activeId}
 				autocomplete="off"
 			/>
-			{#if search.loading}
+			{#if search.loading || search.navigatingTo}
 				<i class="ri-loader-4-line spinner" aria-hidden="true"></i>
 			{/if}
 		</div>
@@ -110,9 +120,9 @@
 		max-width: 22rem;
 	}
 
-	/* Collapsed trigger — matches the themeToggle density/vocabulary. */
+	/* Collapsed trigger — borderless icon, matches the text nav-links. */
 	.trigger {
-		@apply bg-surface-raised text-ink border border-border rounded-md p-xs;
+		@apply text-ink-muted bg-transparent border-0 p-0 leading-none;
 		@apply hover:text-brand transition-colors cursor-pointer;
 	}
 
@@ -121,16 +131,17 @@
 		outline-offset: 2px;
 	}
 
-	/* Expanded field — same surface as themeToggle/searchInput, no submit button. */
+	/* Expanded field — minimal underline only (no left/right/top borders),
+	   transparent background, to fit the rest of the app's quiet chrome. */
 	.field {
 		@apply flex items-center gap-xs;
-		@apply bg-surface-raised border border-border rounded-md;
-		@apply px-sm;
+		@apply bg-transparent;
+		border-bottom: 1px solid var(--border);
 		transition: border-color 0.15s ease;
 	}
 
 	.field:focus-within {
-		@apply border-brand;
+		border-bottom-color: var(--brand);
 	}
 
 	.lead {

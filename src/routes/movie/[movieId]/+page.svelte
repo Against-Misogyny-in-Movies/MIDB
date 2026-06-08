@@ -12,6 +12,7 @@
 	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
 	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
+	import BackToTop from '$lib/components/ui/visualization/backToTop.svelte';
 	import { BECHDEL_TIERS, umFlagCount } from '$lib/media/utils/metrics';
 
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
@@ -154,7 +155,7 @@
 							{@const met = i < bechdel.rating}
 							<li class="criterion" class:criterion--met={met}>
 								<span class="criterion-marker" aria-hidden="true">
-									{#if met}<i class="ri-check-line"></i>{:else}{i + 1}{/if}
+									{#if met}<i class="ri-check-line"></i>{:else}<i class="ri-close-line"></i>{/if}
 								</span>
 								<span class="criterion-label">{criterion.label}</span>
 							</li>
@@ -180,6 +181,8 @@
 	</div>
 
 	<CommentsSkeleton />
+
+	<BackToTop />
 </div>
 
 <style lang="postcss">
@@ -266,7 +269,7 @@
 	}
 
 	.criterion--met:not(:last-child)::before {
-		background-color: color-mix(in oklab, var(--brand) 45%, var(--border));
+		background-color: color-mix(in oklab, var(--success) 45%, var(--border));
 	}
 
 	.criterion--met {
@@ -282,8 +285,8 @@
 	}
 
 	.criterion--met .criterion-marker {
-		background-color: color-mix(in oklab, var(--brand) 16%, transparent);
-		color: var(--brand);
+		background-color: color-mix(in oklab, var(--success) 16%, transparent);
+		color: var(--success);
 	}
 
 	.criterion-label {

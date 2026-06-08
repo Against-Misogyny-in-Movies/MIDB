@@ -13,6 +13,15 @@
 
 	let open = $state(false);
 	let hovering = $state(false);
+
+	// Touch: the inline detail panel dismisses on scroll (matching dddTags), so a
+	// tapped-open card doesn't linger over content the user has scrolled past.
+	$effect(() => {
+		if (!open) return;
+		const dismiss = () => (open = false);
+		window.addEventListener('scroll', dismiss, { passive: true });
+		return () => window.removeEventListener('scroll', dismiss);
+	});
 </script>
 
 <div

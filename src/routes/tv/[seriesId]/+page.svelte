@@ -13,6 +13,7 @@
 	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
 	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
+	import BackToTop from '$lib/components/ui/visualization/backToTop.svelte';
 	import { umFlagCount } from '$lib/media/utils/metrics';
 	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
 	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
@@ -173,6 +174,8 @@
 	</div>
 
 	<CommentsSkeleton />
+
+	<BackToTop />
 </div>
 
 <style lang="postcss">
