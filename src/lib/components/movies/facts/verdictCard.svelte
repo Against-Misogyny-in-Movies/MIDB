@@ -14,14 +14,18 @@
 	let open = $state(false);
 	let hovering = $state(false);
 
-	// Touch: the inline detail panel dismisses on scroll (matching dddTags), so a
-	// tapped-open card doesn't linger over content the user has scrolled past.
+	// Touch: the popover dismisses on scroll (matching dddTags), so a tapped-open
+	// card doesn't linger over content the user has scrolled past. Clear `hovering`
+	// too — a tap can fire focus/mouseenter, and that path has no scroll dismiss.
 	// Use the capture phase so scrolls from any nested scroll container are caught —
 	// the `scroll` event doesn't bubble, so a non-capturing window listener misses
 	// them. Capturing on window is also how dddTags registers its dismiss handler.
 	$effect(() => {
-		if (!open) return;
-		const dismiss = () => (open = false);
+		if (!open && !hovering) return;
+		const dismiss = () => {
+			open = false;
+			hovering = false;
+		};
 		window.addEventListener('scroll', dismiss, { capture: true, passive: true });
 		return () => window.removeEventListener('scroll', dismiss, { capture: true });
 	});
@@ -74,8 +78,8 @@
 	{/if}
 
 	{#if hasDetail}
-		<!-- Desktop: popover revealed on hover/focus -->
-		<div class="detail-pop" class:detail-pop--visible={hovering} role="tooltip">
+		<!-- Popover: revealed on hover/focus (desktop) or tap (touch). -->
+		<div class="detail-pop" class:detail-pop--visible={hovering || open} role="tooltip">
 			<ul class="sig-list">
 				{#each verdict.signals as sig}
 					{@const sigTokens = toneTokens(sig.tone ?? verdict.tone)}
@@ -90,25 +94,6 @@
 				</li>
 			</ul>
 		</div>
-
-		<!-- Touch: inline panel revealed on tap -->
-		{#if open}
-			<div class="detail-inline">
-				<ul class="sig-list">
-					{#each verdict.signals as sig}
-						{@const sigTokens = toneTokens(sig.tone ?? verdict.tone)}
-						<li class="sig" style="--sig-fg: var({sigTokens.fg});">
-							<span class="sig-dot" aria-hidden="true"></span>
-							<span class="sig-label">{sig.label}</span>
-							<span class="sig-detail">{sig.detail}</span>
-						</li>
-					{/each}
-					<li class="sig sig--meta">
-						Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics
-					</li>
-				</ul>
-			</div>
-		{/if}
 	{/if}
 </div>
 
@@ -207,25 +192,7 @@
 		}
 	}
 
-	/* Touch: hide the hover popover, show inline instead */
-	@media (hover: none) {
-		.detail-pop {
-			display: none;
-		}
-	}
-
-	/* ── Touch inline panel ── */
-	.detail-inline {
-		@apply hidden mt-xs pt-sm border-t border-border;
-	}
-
-	@media (hover: none) {
-		.detail-inline {
-			@apply block;
-		}
-	}
-
-	/* ── Signal list (shared by popover + inline) ── */
+	/* ── Signal list ── */
 	.sig-list {
 		@apply flex flex-col list-none m-0 p-0 gap-xs;
 	}
