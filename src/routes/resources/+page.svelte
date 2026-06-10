@@ -28,9 +28,9 @@
     <p class="eyebrow display">Resources</p>
     <h1 class="display">How our metrics work</h1>
     <p class="lede">
-      MIDB pulls together a few different sources to flag misogyny and violence against women in film
-      and television. Here's what each metric measures, where the numbers come from, and how we use
-      them.
+      MIDB combines several sources to flag misogyny and violence against women in film and
+      television. This page covers what each metric measures, where its data comes from, and how it is
+      used.
     </p>
   </header>
 
@@ -44,40 +44,63 @@
         id="verdict"
         icon="ri-compass-3-line"
         title="Verdict cards"
-        tagline="The at-a-glance summary"
+        tagline="The summary at the top of every title"
       >
         <SubBlock label="What it is">
           <p>
-            Two cards sit at the top of every title — one for content safety, one for representation.
-            They give you the gist before you read the rest of the page.
+            Verdict cards are the page's at-a-glance summary. Every title opens with two of them, one
+            for content safety and one for representation, each distilling the metrics further down the
+            page into a single tier so the overall picture is clear before reading any detail.
           </p>
         </SubBlock>
         <SubBlock label="How it works">
           <p>
-            Each card settles on a rating with a short label, plus a note telling you how many of its
-            metrics it had to work with — so you know how much weight to put on it.
+            Each card resolves to one of three tiers, plus a fourth "not enough data" state when too
+            few metrics are available. The count shown next to the label is how many signals went into
+            the rating.
           </p>
           <VerdictTierExample />
         </SubBlock>
         <SubBlock label="Where it comes from">
           <p>
-            Nothing here is stored. The cards are worked out in your browser from the metrics already
-            on the page: the Unconsenting Media flags, the Does the Dog Die tags, the Bechdel rating,
-            and the cast and crew gender split from TMDB.
+            Nothing here is stored. The cards are computed in the browser from metrics already on the
+            page: the Unconsenting Media flags, the Does the Dog Die tags, the Bechdel rating, and the
+            cast and crew gender breakdown from TMDB.
           </p>
         </SubBlock>
-        <SubBlock label="How we work it out">
+        <SubBlock label="How safety is scored">
           <p>
-            Safety takes the worst signal it finds. On-screen, off-screen, or attempted rape, child
-            sexual abuse, and incest push it to Harmful. Harassment, adult–teen relationships, and
-            rape that's mentioned or implied push it to Watch with caution. A community trigger tag
-            about sexual violence can raise it to Harmful on its own.
+            Safety reads two sources, the Unconsenting Media flags and the Does the Dog Die tags, and
+            takes the most severe result. With neither source available, the card reads "not enough
+            data".
           </p>
           <p>
-            Representation averages up to four numbers: the share of women in the full cast, among the
-            top five billed, and in the key crew departments (directing, writing, production, editing,
-            camera), plus the Bechdel rating. We need at least two of those, or the card just says it
-            doesn't have enough to go on.
+            Five Unconsenting Media flags set the tier to Harmful: rape on screen, rape off screen,
+            attempted rape, child sexual abuse, and incest. Three set it to Watch with caution when no
+            harmful flag is present: on-screen sexual harassment, adult–teen sexual content, and rape
+            that is only mentioned or implied.
+          </p>
+          <p>
+            Does the Dog Die can raise the tier but never lower it. A community tag naming rape,
+            sexual assault, sexual abuse, molestation, or incest, with more yes votes than no votes,
+            raises the card to Harmful on its own.
+          </p>
+        </SubBlock>
+        <SubBlock label="How representation is scored">
+          <p>
+            Representation draws on up to four signals: the share of women in the full cast, the share
+            among the top five billed, the share across the key crew departments (directing, writing,
+            production, editing, and camera), and the Bechdel rating. Series have no Bechdel rating, so
+            they use the first three.
+          </p>
+          <p>
+            Each signal scores 0, 1, or 2. A gender share of 70% or more scores 2, 40% or more scores
+            1, and anything lower scores 0. The Bechdel rating maps 3/3 to 2, 2/3 to 1, and below that
+            to 0. Fewer than two available signals reads "not enough data".
+          </p>
+          <p>
+            The available scores are averaged. An average of 1.75 or above is Strong representation,
+            1.0 or above is Mixed, and below that is Poor.
           </p>
         </SubBlock>
       </MetricArticle>
@@ -92,24 +115,24 @@
       >
         <SubBlock label="What it is">
           <p>
-            A rough 0–3 score for whether a movie lets two named women talk to each other about
-            anything other than a man.
+            A 0–3 score for whether two named women in a film talk to each other about something other
+            than a man.
           </p>
         </SubBlock>
         <SubBlock label="How it works">
-          <p>Three steps, each building on the last:</p>
+          <p>Three criteria, each building on the one before it:</p>
           <BechdelLadderExample />
         </SubBlock>
         <SubBlock label="Where it comes from">
           <p>
-            The ratings come from BechdelTest.com, a long-running community project. We load them into
-            our database when we seed it. It's a movies-only test, so you won't see it on series.
+            The ratings come from BechdelTest.com, a community project. They are loaded into the
+            database during seeding. The test applies to films only, so it does not appear on series.
           </p>
         </SubBlock>
         <SubBlock label="How we work it out">
           <p>
-            We don't change the rating — we just show which steps a film passed. The result also feeds
-            into the representation card.
+            The rating is used as published. The card shows which criteria a film passed, and the
+            score feeds into the representation verdict.
           </p>
         </SubBlock>
       </MetricArticle>
@@ -124,29 +147,28 @@
       >
         <SubBlock label="What it is">
           <p>
-            A checklist of nine flags about sexual violence on screen. One of them is the reassuring
-            one: "No rape or sexual assault."
+            A set of nine flags covering sexual violence on screen. Eight mark a concern; the ninth,
+            "No rape or sexual assault", is the absence of one.
           </p>
         </SubBlock>
         <SubBlock label="How it works">
           <p>
-            Every flag is either present or not. The reassuring flag shows green when it applies; the
-            other eight are concerns. The count you see ignores the reassuring flag and tallies the
-            rest.
+            Each flag is either present or absent. The "No rape or sexual assault" flag shows green
+            when it applies. The concern count tallies the other eight and ignores it.
           </p>
           <UmFlagsExample />
         </SubBlock>
         <SubBlock label="Where it comes from">
           <p>
             The flags come from the Unconsenting Media dataset, matched to each title by name and year
-            when we seed the database. When a title is ambiguous, we show you the possible matches and
-            let you pick the right one — that choice stays in your browser and isn't saved.
+            during seeding. When a title is ambiguous, the page lists the possible matches to choose
+            from. That choice stays in the browser and is not saved.
           </p>
         </SubBlock>
         <SubBlock label="How we work it out">
           <p>
-            Each title gets one record, shown as the nine flags. The serious ones feed straight into
-            the safety card.
+            Each title resolves to one record of nine flags. Five of them feed into the safety verdict
+            as harmful, and three as caution.
           </p>
         </SubBlock>
       </MetricArticle>
@@ -161,27 +183,28 @@
       >
         <SubBlock label="What it is">
           <p>
-            Community-written trigger warnings — "does a dog die?", "is there blood?", and hundreds
-            more, across categories like animal harm, violence, and sexual content.
+            Community-written trigger warnings: "does a dog die?", "is there blood?", and hundreds
+            more, across categories such as animal harm, violence, and sexual content.
           </p>
         </SubBlock>
         <SubBlock label="How it works">
           <p>
-            People vote yes or no on whether each thing happens. We only show a warning once the crowd
-            agrees it does: at least as many yes votes as no, and at least one yes.
+            People vote yes or no on whether each thing happens. A warning is shown only when the yes
+            votes are at least equal to the no votes, with at least one yes.
           </p>
         </SubBlock>
         <SubBlock label="Where it comes from">
           <p>
-            We pull this live from the Does the Dog Die API every time you open a title — movies by
-            their IMDb id, series by title and year. We cache it for about an hour and don't store it
-            ourselves. It loads in just after the page does, so it never holds up the rest.
+            The data is fetched live from the Does the Dog Die API when a title opens: films by IMDb
+            id, series by title and year. It is cached for about an hour and not stored otherwise. It
+            loads just after the page, so it does not block the rest of the content.
           </p>
         </SubBlock>
         <SubBlock label="How we work it out">
           <p>
-            We keep the agreed-on warnings, sort them by how strong the vote is, and group them by
-            category. Warnings about sexual violence can also raise the safety card.
+            The confirmed warnings are sorted by margin of the vote and grouped by category. A warning
+            naming sexual violence can raise the safety verdict to Harmful, as described under verdict
+            cards.
           </p>
         </SubBlock>
       </MetricArticle>

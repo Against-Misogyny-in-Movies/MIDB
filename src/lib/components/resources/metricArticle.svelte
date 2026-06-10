@@ -70,9 +70,11 @@
   }
 
   /* Descriptive subtitle, not a status pill — quiet muted prose under the title,
-     matching the page header's .lede treatment. */
+     matching the page header's .lede treatment. `pre-line` honours explicit
+     newlines in the tagline while still wrapping long lines on narrow screens. */
   .tagline {
     @apply text-sm text-ink-muted leading-snug;
+    white-space: pre-line;
     min-width: 0;
   }
 

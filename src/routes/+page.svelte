@@ -1,5 +1,23 @@
 <script lang="ts">
 	import HeroSearch from '$lib/components/landing/heroSearch.svelte';
+
+	const principles = [
+		{
+			icon: 'ri-shield-keyhole-line',
+			title: 'Privacy first',
+			body: 'No trackers, no analytics, no ad pixels. The only tokens MIDB uses are the ones that fetch film data and run sign-in. Browsing activity is never recorded.'
+		},
+		{
+			icon: 'ri-git-repository-line',
+			title: 'Open source',
+			body: 'The full source is public. Anyone can read it, fork it, or open a pull request.'
+		},
+		{
+			icon: 'ri-hand-heart-line',
+			title: 'Community funded',
+			body: 'MIDB takes no investment and sells nothing. It runs on contributions from the people who use it.'
+		}
+	];
 </script>
 
 <section class="hero">
@@ -22,7 +40,10 @@
 	<div class="metrics-grid">
 		<div>
 			<h3 class="display">Bechdel Test</h3>
-			<p>Do two named women in the film talk to each other about something other than a man?</p>
+			<p>
+				Do two named women in the film talk to each other about something other than a man? The
+				result is a 0–3 score and applies to films only.
+			</p>
 			<div class="card-links">
 				<a class="learn-link" href="/resources#bechdel">How we use it →</a>
 				<a
@@ -36,8 +57,8 @@
 		<div>
 			<h3 class="display">Unconsenting Media</h3>
 			<p>
-				Flags sexual violence in film, for survivors or anyone who just wants to know before they
-				sit down.
+				Flags depictions of sexual violence in film. Nine fixed flags per title, drawn from a
+				community dataset.
 			</p>
 			<div class="card-links">
 				<a class="learn-link" href="/resources#unconsenting">How we use it →</a>
@@ -52,8 +73,9 @@
 		<div>
 			<h3 class="display">Does The Dog Die</h3>
 			<p>
-				Community warnings for the things mainstream ratings miss: animal deaths, self-harm, eating
-				disorders, and more.
+				Community trigger warnings across hundreds of categories, including animal deaths,
+				self-harm, and eating disorders. Each one is decided by yes/no votes and fetched live per
+				title.
 			</p>
 			<div class="card-links">
 				<a class="learn-link" href="/resources#ddd">How we use it →</a>
@@ -68,6 +90,28 @@
 	</div>
 	<p class="metrics-note">
 		We pull from established sources and combine them with ratings submitted by the MIDB community.
+		Every title opens with a <a href="/resources#verdict">verdict card</a> summarising safety and representation.
+	</p>
+</section>
+
+<section class="principles">
+	<p class="principles-label label">How MIDB is built</p>
+	<div class="principles-grid">
+		{#each principles as p (p.title)}
+			<div class="principle">
+				<span class="principle-icon" aria-hidden="true"><i class={p.icon}></i></span>
+				<h3 class="display">{p.title}</h3>
+				<p>{p.body}</p>
+			</div>
+		{/each}
+	</div>
+	<p class="principles-note">
+		The source lives on
+		<a
+			href="https://github.com/Against-Misogyny-in-Movies/MIDB"
+			target="_blank"
+			rel="noopener noreferrer">GitHub ↗</a
+		>.
 	</p>
 </section>
 
@@ -161,6 +205,14 @@
 		max-width: 42rem;
 	}
 
+	.metrics-note a {
+		@apply text-brand no-underline font-medium;
+	}
+
+	.metrics-note a:hover {
+		@apply text-brand-strong;
+	}
+
 	.card-links {
 		@apply flex flex-wrap items-center gap-md mt-xs;
 	}
@@ -177,5 +229,56 @@
 
 	.learn-link {
 		@apply font-medium;
+	}
+
+	.principles {
+		@apply border-t border-border pt-xl pb-xl;
+	}
+
+	.principles-label {
+		@apply mb-lg block;
+	}
+
+	.principles-grid {
+		@apply grid grid-cols-1 gap-lg;
+	}
+
+	@media (min-width: 768px) {
+		.principles-grid {
+			@apply grid-cols-3;
+		}
+	}
+
+	.principle {
+		@apply rounded-md border border-border bg-surface-raised p-md;
+	}
+
+	.principle-icon {
+		@apply flex items-center justify-center rounded-full text-lg mb-sm;
+		width: 2rem;
+		height: 2rem;
+		background-color: color-mix(in oklab, var(--brand) 16%, transparent);
+		color: var(--brand);
+	}
+
+	.principles h3 {
+		@apply text-ink font-semibold mb-xs text-lg;
+	}
+
+	.principles p {
+		@apply text-ink-muted text-sm leading-relaxed;
+	}
+
+	.principles-note {
+		@apply text-ink-muted text-sm mt-lg pt-lg border-t border-border;
+		max-width: 42rem;
+	}
+
+	.principles-note a {
+		@apply text-brand no-underline font-medium;
+	}
+
+	.principles-note a:hover {
+		@apply text-brand-strong;
 	}
 </style>

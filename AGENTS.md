@@ -60,6 +60,17 @@
 
 ---
 
+## Copy & voice
+
+Applies to all **user-facing** text (page copy, taglines, labels, notes) — not code comments, `<title>` tags, or commits. The `/resources` page is the reference voice; full rationale in `.CLAUDE/architecture.md` → *Copy & voice*.
+
+- **Matter-of-fact, not salesy.** State what a thing is and what happens. No marketing tone, rhetorical questions, reader flattery, or hedging filler ("just", "the gist", "roughly").
+- **Third person everywhere except the landing page (`/`).** Don't address the reader as "you" (use "the page", "a reader"); the landing page is the sole second-person exception. The site's own "we"/"our"/"MIDB" voice is fine.
+- **No em dashes (—) in copy.** Split sentences or use a colon. En dashes (–) stay in ranges (`0–3`, `adult–teen`).
+- **Claims must be code-backed.** Computation details, thresholds, and privacy claims must match the code (e.g. the verdict explainer mirrors `verdict.ts`). Update copy when the code changes.
+
+---
+
 ## Database
 
 - The DB layer lives in `db/` (outside `src/`), aliased as `$db/*`.
