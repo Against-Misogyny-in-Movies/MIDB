@@ -21,6 +21,7 @@ export default [
 		ignores: [
 			'.svelte-kit/**',
 			'build/**',
+			'.vercel/**',
 			'node_modules/**',
 			'package/**',
 			'.env',
