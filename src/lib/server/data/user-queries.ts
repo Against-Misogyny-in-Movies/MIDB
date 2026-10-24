@@ -1,9 +1,10 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import db from '$db/connections';
 import { users } from '$db/schema/auth';
 import { communityMetricSubmissions, comments } from '$db/schema/community';
 import { movies } from '$db/schema/movie';
 import { AVATAR_KEYS } from '$lib/components/user/avatars/avatars';
+import type { PublicUser } from '$lib/media/types/user';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -21,9 +22,11 @@ const RESERVED = new Set([
 ]);
 
 /**
- * JIT-provision: upsert user on first authed request.
+ * JIT-provision, read first. Steady state is one primary-key read and zero writes.
+ * - Hit: return the row. If its email is null and the claim has one, backfill it once.
+ * - Miss: INSERT … ON CONFLICT DO NOTHING; if a concurrent first request won the race,
+ *   nothing is returned, so read the row it wrote.
  * Never bumps updated_at — reserve that for real profile edits.
- * COALESCE lets a later email claim backfill a null without clobbering.
  */
 export async function getOrCreateUser({
 	sub,
@@ -32,15 +35,40 @@ export async function getOrCreateUser({
 	sub: string;
 	email: string | null;
 }): Promise<UserRow> {
-	const [row] = await db
+	const existing = await getUserById(sub);
+	if (existing) {
+		if (existing.email !== null || !email) return existing;
+		const [updated] = await db
+			.update(users)
+			.set({ email })
+			.where(and(eq(users.id, sub), isNull(users.email)))
+			.returning();
+		return updated ?? existing;
+	}
+
+	const [inserted] = await db
 		.insert(users)
 		.values({ id: sub, email })
-		.onConflictDoUpdate({
-			target: users.id,
-			set: { email: sql`COALESCE(excluded.email, "user".email)` }
-		})
+		.onConflictDoNothing({ target: users.id })
 		.returning();
-	return row;
+	if (inserted) return inserted;
+
+	const raced = await getUserById(sub);
+	if (!raced) throw new Error(`getOrCreateUser: user ${sub} missing after insert conflict`);
+	return raced;
+}
+
+/**
+ * Map a row to the client-safe shape. The email is used only for the display-name
+ * fallback and never copied: it reaches the client on /user/profile alone.
+ */
+export function toPublicUser(row: UserRow): PublicUser {
+	return {
+		username: row.username,
+		avatarKey: row.avatarKey,
+		role: row.role,
+		displayName: row.username || row.email?.split('@')[0] || 'Account'
+	};
 }
 
 /** Read-only user lookup by Hanko sub. */

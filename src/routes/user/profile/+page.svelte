@@ -5,7 +5,7 @@
 
 	let { data, form } = $props();
 
-	const user = $derived(form?.user ?? data.user);
+	const user = $derived(form?.me ?? data.me);
 
 	let selectedAvatar = $state<string | null>(null);
 	let usernameInput = $state('');
@@ -47,8 +47,8 @@
 					<span class="prompt">Set a username</span>
 				{/if}
 			</h1>
-			{#if user?.email}
-				<p class="profile-email label">{user.email}</p>
+			{#if data.email}
+				<p class="profile-email label">{data.email}</p>
 			{/if}
 			{#if user?.role}
 				<span class="role-badge role-{user.role}">{roleLabel(user.role)}</span>

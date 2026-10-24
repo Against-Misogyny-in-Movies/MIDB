@@ -1,19 +1,17 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { nanoid } from 'nanoid';
-	import type { UserRow } from '$lib/media/types/user';
+	import { session } from '$lib/media/utils/session.svelte.js';
 
 	// Mobile-only hamburger: collapses the text nav-links into a dropdown surface
 	// panel below the md breakpoint. Reuses the collapse-by-default model from
 	// navbarSearch (a $state boolean, closed on outside-pointerdown/Escape). The search
-	// trigger, account chip, and theme toggle stay in the bar.
-	interface Props {
-		user?: UserRow | null;
-	}
-
-	let { user = null }: Props = $props();
-
-	const canModerate = $derived(user?.role === 'moderator' || user?.role === 'administrator');
+	// trigger, account chip, and theme toggle stay in the bar. Account links read the
+	// client session (the navbar starts it); the Moderation link is a convenience only,
+	// authorization stays server-side.
+	const canModerate = $derived(
+		session.user?.role === 'moderator' || session.user?.role === 'administrator'
+	);
 
 	let open = $state(false);
 	let root = $state<HTMLElement | null>(null);
@@ -68,7 +66,7 @@
 			{#if canModerate}
 				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>
 			{/if}
-			{#if user}
+			{#if session.likelyUser}
 				<a href="/user/profile" class="item" role="menuitem" onclick={close}>Profile</a>
 			{:else}
 				<a href="/auth" class="item" role="menuitem" onclick={close}>Sign in</a>
