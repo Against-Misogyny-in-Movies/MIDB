@@ -60,11 +60,11 @@ Out of scope: the community **feature** itself (rating and comment UI and action
    - `e2e-tests/test.ts` (duplicates `landing.spec.ts`);
    - `ddd_check.mjs`;
    - empty `src/routes/user/dashboard/+page.ts`.
-6. `.github/workflows/ci.yml`, on `pull_request` and pushes to `main`:
+6. Extend the existing `.github/workflows/tests.yml` (it already has a `unit` job and a gated `e2e` job) with a `static` job:
    - `oven-sh/setup-bun` → `bun install --frozen-lockfile` → `cp .env.example .env`
-   - `bun run check`, `bun run lint`, `bun run test:unit --run`, `bun run build`
+   - `bun run check`, `bun run lint`, `bun run build` (unit tests already run in the `unit` job)
    - The migration drift job and the DB test job are added in PR 3.
-   - Playwright e2e is **not** in CI yet: it needs real TMDB/Hanko secrets. Revisit once repo secrets are configured.
+   - The `e2e` job turns on when the `E2E_ENABLED` repo variable and the TMDB/DDD secrets are set. `playwright.config.ts` should switch its `webServer.command` from `npm` to `bun run build && bun run preview` in this PR.
 
 **Done when:** CI is green on the PR, and `bun run check` passes on a fresh clone with only `.env.example` copied.
 

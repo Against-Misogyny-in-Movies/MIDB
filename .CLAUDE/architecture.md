@@ -460,6 +460,11 @@ bun run dev
 ### npm scripts
 `dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin <email>` (case-insensitive promote to administrator).
 
+### CI (`.github/workflows/tests.yml`)
+Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to the local version.
+- **`unit`**: `bun install --frozen-lockfile` → `bun run test:unit --run`. Needs no secrets, because unit specs mock `$env/*`.
+- **`e2e`**: skipped unless the repo variable `E2E_ENABLED` is `'true'`. It starts a `postgres:16` service, runs `db:migrate`, then `bun run test:integration`; `playwright.config.ts` builds and previews the app itself. It needs the secrets `TMDB_API_TOKEN` and `DDD_API_KEY` and the variable `PUBLIC_HANKO_API_URL`. The Playwright report is uploaded on failure.
+
 ---
 
 ## Known gaps / TODO
