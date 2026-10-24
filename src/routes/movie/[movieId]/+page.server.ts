@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { PUBLIC_PAGE } from '$lib/server/http/cache';
-import { getMovie } from './datasource.server';
+import { getMovie } from '$lib/server/integrations/tmdb';
 import { getTitleRow } from '$lib/server/data/title-queries';
 import { getBechdel, getUmEntry } from '$lib/server/data/sources';
 import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { search } from './datasource.server';
+import { searchTitles } from '$lib/server/integrations/tmdb';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q') ?? '';
@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	try {
-		const results = await search(q.trim());
+		const results = await searchTitles(q.trim());
 		return json({ results });
 	} catch (err) {
 		console.warn('Search error:', err);
