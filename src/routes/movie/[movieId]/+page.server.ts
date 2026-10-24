@@ -1,13 +1,14 @@
 import type { PageServerLoad } from './$types';
+import { PUBLIC_PAGE } from '$lib/server/http/cache';
 import { getMovie } from './datasource.server';
 import { getDbMovie, getBechdel, getUnconsenting } from '$lib/server/data/media-queries';
 import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
 import { getTriggerTagsLive } from '$lib/server/integrations/ddd';
 
 export const load: PageServerLoad = async ({ params, setHeaders }) => {
-	// Detail data is non-personalized, so let the browser/back-forward cache and any CDN
-	// serve repeat navigations without re-running this load. s-maxage targets a shared CDN.
-	setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=3600' });
+	// Detail data is user-agnostic (the navbar's session comes from /api/me), so a shared
+	// CDN may serve it. Nothing in this load may read locals.getUser().
+	setHeaders({ 'cache-control': PUBLIC_PAGE });
 
 	const movie = await getMovie(params.movieId);
 	const dbMovie = await getDbMovie(movie);
