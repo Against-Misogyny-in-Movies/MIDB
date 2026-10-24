@@ -2,15 +2,15 @@
 
 Implements every finding in `plan-architecture-review.md`. All the choices are already made. Where the review offered options, this plan picks one and gives the reason. The work ships as **7 PRs in order**, each independently green (`check` 0 errors, `test:unit` pass, `build` clean, plus CI from PR 1 on). Each PR updates `.CLAUDE/architecture.md` for the files it touches, as AGENTS.md requires.
 
-| PR  | Theme                                                                              | Fixes (review §)                           | Risk                                   |
-| --- | ---------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
-| 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)                        | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
-| 2   | Session out of SSR, lazy auth, guards (**done 2026-10-24**)                        | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
-| 3   | DB client from runtime env, migration drift, DB test harness (**done 2026-10-24**) | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
-| 4   | `titles` spine, sources by reference, community tables (**done 2026-10-24**)       | 2.4, 3.1–3.4                               | **High** (data migration)              |
-| 5   | Module consolidation (TMDB, loader, page state, shared constants)                  | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
-| 6   | Dependencies, search caching, rate limit, dead code                                | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
-| 7   | Docs sweep (AGENTS.md, architecture.md)                                            | 4.6 (doc drift)                            | None                                   |
+| PR  | Theme                                                                                   | Fixes (review §)                           | Risk                                   |
+| --- | --------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
+| 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)                             | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
+| 2   | Session out of SSR, lazy auth, guards (**done 2026-10-24**)                             | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
+| 3   | DB client from runtime env, migration drift, DB test harness (**done 2026-10-24**)      | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
+| 4   | `titles` spine, sources by reference, community tables (**done 2026-10-24**)            | 2.4, 3.1–3.4                               | **High** (data migration)              |
+| 5   | Module consolidation (TMDB, loader, page state, shared constants) (**done 2026-10-24**) | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
+| 6   | Dependencies, search caching, rate limit, dead code                                     | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
+| 7   | Docs sweep (AGENTS.md, architecture.md)                                                 | 4.6 (doc drift)                            | None                                   |
 
 Out of scope: the community **feature** itself (rating and comment UI and actions). This plan builds the schema, guards, validation choice and test harness it needs. The feature gets its own plan afterwards (step 9 of the review's ordering).
 
@@ -372,6 +372,18 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
    - Before starting, capture Playwright screenshots (light and dark, 375 px and 1280 px) of `/movie/603`, `/tv/1399` and `/`. Diff them after the change.
    - Run the existing `verdict.spec.ts` unchanged.
    - Add unit tests for the mappers (snapshot of a recorded TMDB fixture JSON in `__tests__/fixtures/`) and for `TitleView` derivations.
+
+**Status: done 2026-10-24.** No visible behaviour change and no schema change (drift check clean). Verified against a local TMDB/DDD stub serving the same fixtures to a `main` build and a branch build, on the same seeded DB: full-page screenshots of `/`, `/movie/603`, `/tv/1399` (plus `/movie/992`, a seeded UM binding, and `/movie/900001`, the UM picker) in light/dark at 375/1280 px are pixel-identical (with Playwright's `animations: 'disabled'`; the comments skeleton shimmer otherwise differs run to run, on either build), as are the visible text (also after a UM pick and a season/episode pick) and `/api/search`. Not checked: real TMDB/DDD responses (no keys) and signed-in pages. Deviations and notes:
+
+- **Page data keys.** Both pages now return `{ media, bechdel, umEntry, umCandidates, triggerTags }` (the plan's sketch): `movie`/`series` became `media`, and TV carries `bechdel: null`. The UM field keeps PR 4's name, `umEntry`. Decoded `__data.json` values are otherwise identical.
+- **Cache keys unchanged** (`tmdb:movie:v2:<id>`, `tmdb:series:v2:<id>`, 24 h): the mapped shape is the same, so cached entries stay valid. Search stays uncached (PR 6).
+- **`searchTitles` error path.** `tmdbFetch` throws an `HttpError`; `searchTitles` catches only that, logs and returns `[]` as `search()` did. A network failure still propagates to `/api/search`, which already answers `{ results: [] }`.
+- **`selectedUm` and the episode selection** are writable `$derived`s keyed on the title id instead of `$state` + a reset `$effect`, so the pages lose two effects. `createDddState`'s effect is the only one left, as before.
+- **`loadTitle` is overloaded** (`'movie'` → `Movie`, `'tv'` → `Series`) and passes the DDD call in per kind, so no cast is needed. Unit-tested with mocks (`titles/__tests__/load-title.spec.ts`), including that it never calls `getOrCreateTitleRow`.
+- **Avatars.** `components/user/avatars/avatars.ts` keeps only `AVATAR_COMPONENTS`; `Avatar`/`AvatarPicker` read `AVATAR_DEFS` from the util. In the server build `user-queries.js` now imports a plain-data chunk (no `<svg>`, no Svelte runtime); the icon components are reached only from the `/user/profile` page SSR entry, which renders them.
+- **TMDB fixtures are trimmed reconstructions**, not live recordings: no TMDB token was available. They follow the real `/3/movie/603`, `/3/tv/1399` and `/3/search/multi` response shapes, cut down to the fields the mappers read (plus a few they ignore), with no profile paths or other personal data.
+- **AGENTS.md** gains a "define a constant once" rule (`$lib/media/utils/` for shared plain data, `db/lib/` for seeder + app code).
+- The detail-page markup duplicated between the two pages (summary chips, `#gender` section, their styles) stays as is: the plan keeps markup in the pages, and extracting components would be a visible-structure change outside this PR.
 
 ---
 
