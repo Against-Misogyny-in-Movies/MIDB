@@ -29,14 +29,12 @@ export function umFlagCount(umData: Record<UmFlagKey, boolean> | null): number {
 }
 
 /**
- * A UM catalogue entry surfaced for an ambiguous title. Carries the full flag
- * set + comment so a user-picked candidate renders the same UM section as a
- * seeded binding — entirely client-side, persisting nothing.
+ * One Unconsenting Media catalogue entry: the full flag set plus comment. Both a seeded binding
+ * and a user-picked candidate render through this shape. The concern count is `umFlagCount`.
  */
-export type UmCandidate = {
+export type UmEntry = {
 	umId: number;
 	cleanName: string;
 	year: number | null;
-	flagCount: number;
 	comment: string | null;
 } & Record<UmFlagKey, boolean>;

@@ -18,22 +18,22 @@
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
 	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
 	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
-	import type { UmCandidate } from '$lib/media/utils/metrics';
+	import type { UmEntry } from '$lib/media/types/um';
 
 	let { data }: { data: PageData } = $props();
 	const movie = $derived(data.movie);
 	const bechdel = $derived(data.bechdel);
-	const unconsenting = $derived(data.unconsenting);
+	const umEntry = $derived(data.umEntry);
 	const umCandidates = $derived(data.umCandidates ?? []);
 
-	let selectedUm = $state<UmCandidate | null>(null);
+	let selectedUm = $state<UmEntry | null>(null);
 	$effect(() => {
 		void movie.id; // track
 		selectedUm = null;
 	});
 
 	const autoUm = $derived(umCandidates.length === 1 ? umCandidates[0] : null);
-	const umData = $derived(unconsenting ?? autoUm ?? selectedUm);
+	const umData = $derived(umEntry ?? autoUm ?? selectedUm);
 	const hasUmCandidates = $derived(umData === null && umCandidates.length > 1);
 	const flagCount = $derived(umFlagCount(umData));
 
