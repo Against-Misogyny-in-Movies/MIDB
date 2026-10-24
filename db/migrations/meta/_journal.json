@@ -8,6 +8,13 @@
       "when": 1780611640558,
       "tag": "0000_jazzy_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792873182378,
+      "tag": "0001_swift_wolverine",
+      "breakpoints": true
     }
   ]
 }
