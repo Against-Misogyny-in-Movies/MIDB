@@ -4,7 +4,7 @@ Implements every finding in `plan-architecture-review.md`. All the choices are a
 
 | PR  | Theme                                                             | Fixes (review §)                           | Risk                                   |
 | --- | ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
-| 1   | Secrets, env template, formatting, CI                             | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
+| 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)       | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
 | 2   | Session out of SSR, lazy auth, guards                             | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
 | 3   | DB client from runtime env, migration drift, DB test harness      | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
 | 4   | `titles` spine, sources by reference, community tables            | 2.4, 3.1–3.4                               | **High** (data migration)              |
@@ -27,6 +27,8 @@ Out of scope: the community **feature** itself (rating and comment UI and action
 ---
 
 ## PR 1: Secrets, env template, formatting, CI
+
+**Status: done 2026-10-24.** `src/routes/user/dashboard/+page.ts` was kept: it is not empty but holds `export const ssr = false`, which the dashboard relies on (see architecture.md _Routes_). Also added: `db/migrations` to `.prettierignore`, so drizzle-kit output is not reformatted and new migrations do not fail `lint`.
 
 **Goal:** the repo is safe to read and every later PR is gated by CI.
 

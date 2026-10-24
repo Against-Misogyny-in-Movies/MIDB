@@ -87,7 +87,6 @@ MIDB/
 │   ├── hooks.server.ts         # Auth gate: module-level JWKS, verifies `hanko` JWT, JIT-provisions user row, populates locals.user, protects /user/*
 │   ├── app.css                 # Tailwind v4 entry + design tokens + @layer components
 │   ├── app.html / app.d.ts     # SvelteKit shell + ambient types
-│   ├── __tests__/              # index.test.ts (smoke)
 │   ├── routes/                 # File-based routing (see below). Route folders hold ONLY
 │   │   │                       #   +page/+server/datasource — shared logic lives in $lib.
 │   │   ├── +layout.svelte      # Root shell: app.css + remixicon, global Navbar + <main> + Footer
@@ -113,12 +112,18 @@ MIDB/
 │       ├── actions/            # Svelte `use:` actions (setAttributesToChilds.ts)
 │       └── stores/             # debounced.ts
 │
-├── e2e-tests/                  # Playwright integration tests (testDir; renamed from tests/)
+├── e2e-tests/                  # Playwright integration tests (testDir; renamed from tests/): landing + navbar search overflow
+├── .github/workflows/tests.yml # CI: static (check/lint/build), unit, gated e2e (see CI)
+├── docker-compose.yml          # local Postgres: `db` service, postgres:16, DB `midb` on 5432
 ├── drizzle.config.ts           # drizzle-kit config (out, schema glob, dialect/credentials)
-├── playwright.config.ts        # testDir: 'e2e-tests'
+├── eslint.config.js            # flat config: typescript-eslint + svelte recommended + prettier
+├── .prettierrc / .prettierignore # tabs, single quotes, width 100; ignores db/migrations (drizzle-kit output)
+├── playwright.config.ts        # testDir: 'e2e-tests'; webServer `bun run build && bun run preview` on 4173
 ├── svelte.config.js            # adapter-auto; alias $db/* → ./db/*; vitePreprocess({ style:false })
 ├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest block
-└── .env                        # DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY, REDIS_URL (optional)
+├── README.md                   # short local setup (compose + seeds), points here and at AGENTS.md
+├── .env.example                # committed template: every var with check/build-safe placeholders
+└── .env                        # local copy of .env.example (git-ignored): DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY, REDIS_URL (optional)
 ```
 
 **Key structural choices:**
@@ -428,7 +433,7 @@ A single swappable cache fronts every external call so repeat detail-page visits
   - **No `REDIS_URL`** → bounded in-process LRU (`MAX_ENTRIES = 500`, TTL'd, insertion-order eviction with read-touch). Persists for the process lifetime — right for a single long-lived Node server.
   - **`REDIS_URL` set** → Redis backend. The `redis` package is an **optional dependency**, imported lazily (`await import(/* @vite-ignore */ 'redis')`) so the app builds and runs without it installed; the `@vite-ignore` stops Vite from failing the build when it's absent.
 - **Keys** are namespaced: `tmdb:movie:<id>`, `tmdb:series:<id>` (24h TTL); `ddd:imdb:<id>`, `ddd:tmdb:<id>` (1h TTL).
-- **Why Redis is optional:** on a single Node process the in-memory cache already survives between requests. Redis earns its place only to share the cache across instances or survive restarts/deploys (and on ephemeral serverless). See `README.md` for the opt-in setup.
+- **Why Redis is optional:** on a single Node process the in-memory cache already survives between requests. Redis earns its place only to share the cache across instances or survive restarts/deploys (and on ephemeral serverless). See _Configuration & environment_ for the opt-in setup.
 
 ---
 
@@ -458,7 +463,7 @@ A single swappable cache fronts every external call so repeat detail-page visits
 
 | Var                     | Used by                                          | Notes                                                                                                                                  |
 | ----------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `DB_CONNECTION`         | `connections.ts`                                 | Postgres URL. Local dev: `postgres://postgres:mysecretpassword@0.0.0.0:5435/midb`                                                      |
+| `DB_CONNECTION`         | `connections.ts`                                 | Postgres URL. Local dev: `postgres://postgres:postgres@localhost:5432/midb` (the compose DB)                                           |
 | `PUBLIC_HANKO_API_URL`  | hooks + auth components                          | Hanko Cloud tenant URL                                                                                                                 |
 | `PUBLIC_TMDB_API_URL`   | movie + search datasources                       | `https://api.themoviedb.org`                                                                                                           |
 | `PUBLIC_TMDB_IMAGE_URL` | image component                                  | `https://image.tmdb.org/t/p`                                                                                                           |
@@ -466,13 +471,15 @@ A single swappable cache fronts every external call so repeat detail-page visits
 | `DDD_API_KEY`           | `$lib/server/integrations/ddd.ts` (server only)  | Does The Dog Die API key, `X-API-KEY` header.                                                                                          |
 | `REDIS_URL`             | `$lib/server/cache` (server only)                | **Optional.** When set, the cache uses Redis instead of in-process LRU. Requires the optional `redis` package. `$env/dynamic/private`. |
 
+`.env.example` is the committed template (allow-listed in `.gitignore`) and lists every variable above. Its placeholders are valid enough for `bun run check` and `bun run build`, so a fresh clone and CI only need `cp .env.example .env`. Title pages need real `TMDB_API_TOKEN`/`DDD_API_KEY` values, and sign-in needs a real Hanko tenant.
+
 ### Local run sequence
 
 ```bash
-docker run --name midb-pg -e POSTGRES_PASSWORD=mysecretpassword \
-  -e POSTGRES_DB=midb -p 5435:5432 -d postgres:16
 bun install
-bun run db:migrate       # optional — dev/boot also runs migrations via hooks.server.ts
+cp .env.example .env     # DB_CONNECTION already points at the compose DB
+docker compose up -d db  # postgres:16, DB midb on localhost:5432
+bun run db:migrate
 bun run db:seed:movies   # must run before db:seed:um
 bun run db:seed:um
 bun run db:backfill:tmdb # optional: resolve tmdb_id ahead of time
@@ -487,8 +494,9 @@ bun run dev
 
 Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to the local version.
 
+- **`static`**: `bun install --frozen-lockfile` → `cp .env.example .env` (so `$env/static/*` resolves) → `bun run check` → `bun run lint` (`prettier --check .` + `eslint .`) → `bun run build`.
 - **`unit`**: `bun install --frozen-lockfile` → `bun run test:unit --run`. Needs no secrets, because unit specs mock `$env/*`.
-- **`e2e`**: skipped unless the repo variable `E2E_ENABLED` is `'true'`. It starts a `postgres:16` service, runs `db:migrate`, then `bun run test:integration`; `playwright.config.ts` builds and previews the app itself. It needs the secrets `TMDB_API_TOKEN` and `DDD_API_KEY` and the variable `PUBLIC_HANKO_API_URL`. The Playwright report is uploaded on failure.
+- **`e2e`**: skipped unless the repo variable `E2E_ENABLED` is `'true'`. It starts a `postgres:16` service, runs `db:migrate`, then `bun run test:integration`; `playwright.config.ts` builds and previews the app itself (`bun run build && bun run preview`). It needs the secrets `TMDB_API_TOKEN` and `DDD_API_KEY` and the variable `PUBLIC_HANKO_API_URL`. The Playwright report is uploaded on failure.
 
 ---
 
@@ -512,7 +520,7 @@ Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to 
 
 ## Related docs
 
-- `.CLAUDE/plans/plan-architecture-remediation.md` — 7-PR plan implementing every review finding (session out of SSR, runtime DB config + drift CI, `titles` spine, module consolidation, deps/cleanup, docs). Not yet started.
+- `.CLAUDE/plans/plan-architecture-remediation.md` — 7-PR plan implementing every review finding (session out of SSR, runtime DB config + drift CI, `titles` spine, module consolidation, deps/cleanup, docs). PR 1 (secrets, `.env.example`, formatting, CI `static` job) done 2026-10-24; PRs 2–7 pending.
 - `.CLAUDE/plans/plan-architecture-review.md` — architecture review (2026-10-24): P0 fixes (committed secret, CDN-cached personalised HTML, migration drift), proposed `titles` spine + per-metric community tables, and a suggested ordering before the community write path.
 - `.CLAUDE/plans/plan-um-matching-fix.md` — the plan that drove the UM matching overhaul (year-aware seeder, `um_source` table, runtime disambiguation picker, `noRape` inversion). Implemented and closed.
 - `.CLAUDE/plans/plan-movie-schema-multi-source.md` — the plan that drove the multi-source schema (Bechdel + UM seeding, streamed DDD, page redesign).
@@ -520,4 +528,4 @@ Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to 
 - `.CLAUDE/plans/plan-a-landing-page.md`, `.CLAUDE/plans/plan-landing-page-search.md` — landing-page and search design notes.
 - `.CLAUDE/plans/plan-movie-detail-sections-1-2.md` — **superseded** earlier §1–2 detail-page design; kept for history.
 - `.CLAUDE/plans/plan-user-schema-auth-flow.md` — the plan that drove the user schema + auth flow (Hanko-sub PK, JIT provision, roles, avatar system, profile/history routes). Implemented 2026-06-21.
-- `README.md` (repo root) — original setup notes (contains stale Auth.js-era env vars).
+- `README.md` (repo root) — short local setup (Bun + `docker compose`, `.env.example`, migrate + seeds), pointing at `AGENTS.md` and this doc. Rewritten in remediation PR 1; the Auth.js-era vars and the (revoked) SendGrid key are gone.
