@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { updateProfile, isUsernameAvailable } from '$lib/server/data/user-queries';
+import { updateProfile } from '$lib/server/data/user-queries';
 
 export const load: PageServerLoad = ({ locals }) => {
 	return { user: locals.user };

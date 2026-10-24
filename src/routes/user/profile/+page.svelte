@@ -34,12 +34,6 @@
 	function roleLabel(role: string) {
 		return { user: 'Member', moderator: 'Moderator', administrator: 'Administrator' }[role] ?? role;
 	}
-
-	function displayName() {
-		if (user?.username) return user.username;
-		if (user?.email) return user.email.split('@')[0];
-		return 'Account';
-	}
 </script>
 
 <div class="profile-page">

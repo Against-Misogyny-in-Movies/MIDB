@@ -28,7 +28,7 @@
 
 	let selectedUm = $state<UmCandidate | null>(null);
 	$effect(() => {
-		movie.id; // track
+		void movie.id; // track
 		selectedUm = null;
 	});
 

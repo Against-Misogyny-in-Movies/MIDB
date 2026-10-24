@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import type { CrewDepartment } from '$lib/media/types/media';
 
 	interface Props {
@@ -7,13 +8,11 @@
 
 	let { crewDepartments }: Props = $props();
 
-	let openDepts = $state<Set<string>>(new Set());
+	const openDepts = new SvelteSet<string>();
 
 	function toggle(dept: string) {
-		const next = new Set(openDepts);
-		if (next.has(dept)) next.delete(dept);
-		else next.add(dept);
-		openDepts = next;
+		if (openDepts.has(dept)) openDepts.delete(dept);
+		else openDepts.add(dept);
 	}
 
 	function pct(count: number, total: number): number {

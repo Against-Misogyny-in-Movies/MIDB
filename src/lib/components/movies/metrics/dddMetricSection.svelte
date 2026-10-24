@@ -19,7 +19,7 @@
 
 	// Reset filter when the tag set changes (e.g. episode switch)
 	$effect(() => {
-		visibleTags;
+		void visibleTags;
 		selectedCategory = null;
 	});
 

@@ -81,7 +81,7 @@
 		<!-- Popover: revealed on hover/focus (desktop) or tap (touch). -->
 		<div class="detail-pop" class:detail-pop--visible={hovering || open} role="tooltip">
 			<ul class="sig-list">
-				{#each verdict.signals as sig}
+				{#each verdict.signals as sig (sig.label)}
 					{@const sigTokens = toneTokens(sig.tone ?? verdict.tone)}
 					<li class="sig" style="--sig-fg: var({sigTokens.fg});">
 						<span class="sig-dot" aria-hidden="true"></span>

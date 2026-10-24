@@ -28,7 +28,7 @@
 	let selectedSeason = $state<number | null>(null);
 	let selectedEpisode = $state<number | null>(null);
 	$effect(() => {
-		series.id; // track
+		void series.id; // track
 		selectedUm = null;
 		selectedSeason = null;
 		selectedEpisode = null;
