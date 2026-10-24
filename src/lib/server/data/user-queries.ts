@@ -145,8 +145,14 @@ export async function getUserSubmissions(userId: string) {
 		.orderBy(sql`${communityMetricSubmissions.createdAt} DESC`);
 }
 
+/** Postgres 23505. Drizzle wraps driver errors in DrizzleQueryError, so check `cause` too. */
 function isUniqueViolation(e: unknown): boolean {
-	return (
-		typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === '23505'
-	);
+	for (
+		let err = e;
+		typeof err === 'object' && err !== null;
+		err = (err as { cause?: unknown }).cause
+	) {
+		if ((err as { code?: unknown }).code === '23505') return true;
+	}
+	return false;
 }
