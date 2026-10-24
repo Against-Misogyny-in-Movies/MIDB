@@ -2,15 +2,15 @@
 
 Implements every finding in `plan-architecture-review.md`. All the choices are already made. Where the review offered options, this plan picks one and gives the reason. The work ships as **7 PRs in order**, each independently green (`check` 0 errors, `test:unit` pass, `build` clean, plus CI from PR 1 on). Each PR updates `.CLAUDE/architecture.md` for the files it touches, as AGENTS.md requires.
 
-| PR  | Theme                                                             | Fixes (review §)                           | Risk                                   |
-| --- | ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
-| 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)       | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
-| 2   | Session out of SSR, lazy auth, guards (**done 2026-10-24**)       | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
-| 3   | DB client from runtime env, migration drift, DB test harness      | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
-| 4   | `titles` spine, sources by reference, community tables            | 2.4, 3.1–3.4                               | **High** (data migration)              |
-| 5   | Module consolidation (TMDB, loader, page state, shared constants) | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
-| 6   | Dependencies, search caching, rate limit, dead code               | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
-| 7   | Docs sweep (AGENTS.md, architecture.md)                           | 4.6 (doc drift)                            | None                                   |
+| PR  | Theme                                                                              | Fixes (review §)                           | Risk                                   |
+| --- | ---------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
+| 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)                        | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
+| 2   | Session out of SSR, lazy auth, guards (**done 2026-10-24**)                        | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
+| 3   | DB client from runtime env, migration drift, DB test harness (**done 2026-10-24**) | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
+| 4   | `titles` spine, sources by reference, community tables                             | 2.4, 3.1–3.4                               | **High** (data migration)              |
+| 5   | Module consolidation (TMDB, loader, page state, shared constants)                  | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
+| 6   | Dependencies, search caching, rate limit, dead code                                | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
+| 7   | Docs sweep (AGENTS.md, architecture.md)                                            | 4.6 (doc drift)                            | None                                   |
 
 Out of scope: the community **feature** itself (rating and comment UI and actions). This plan builds the schema, guards, validation choice and test harness it needs. The feature gets its own plan afterwards (step 9 of the review's ordering).
 
@@ -204,6 +204,14 @@ Options considered:
    - `isUsernameAvailable`.
 
 **Done when:** a fresh `docker compose up` + `db:migrate` gives a DB the app runs against, and CI's `migrations` and `db` jobs are green.
+
+**Status: done 2026-10-24.** Deviations and findings:
+
+- `0001_swift_wolverine`: drizzle-kit asks _create vs rename_ per `user` column, not _create/drop_ per table (the table name is unchanged). Every column was answered _create_, so the Auth.js columns are dropped and the new ones added. Existing Auth.js-era rows stay in the table; their ids are not Hanko subs, so nothing matches them. The SQL was not edited.
+- `$lib/server/db.ts` exports `db` as a lazy proxy plus `closeDb()`. Under Vitest it reads **only** `TEST_DB_CONNECTION` (no fallback to `DB_CONNECTION`), and `global-setup.ts` refuses to run when the two are equal, so the db tests can never wipe the dev DB. `global-setup.ts` drops and recreates the `public` and `drizzle` schemas before migrating, so every local run also migrates from zero.
+- `db/test/reset.ts` is a Vitest `setupFiles` entry (truncate in `beforeEach`, `closeDb` in `afterAll`). It derives the table list from the schema barrel, so new tables are covered automatically.
+- `db/scripts/lib/db.ts` throws when `DB_CONNECTION` is unset, because postgres-js would otherwise fall back to localhost. Scripts close their pool in `finally` instead of calling `process.exit(0)`.
+- The `updateProfile` DB test found a bug: Drizzle 0.45 wraps driver errors in `DrizzleQueryError`, so `isUniqueViolation` never saw `code: '23505'` and a duplicate username threw (500) instead of returning `username-taken`. It now checks the error's `cause` chain.
 
 ---
 

@@ -1,7 +1,7 @@
 import { createReadStream } from 'fs';
 import { parse } from 'csv-parse';
 import { sql } from 'drizzle-orm';
-import db from '../connections';
+import { db, closeDb } from './lib/db';
 import { movies, movieBechdel } from '../schema/movie';
 import { normalizeTitle } from './lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
@@ -132,5 +132,8 @@ async function main() {
 	console.log(`Done. Total: ${total}, skipped: ${skipped}`);
 }
 
-await main();
-process.exit(0);
+try {
+	await main();
+} finally {
+	await closeDb();
+}

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { UserRow } from '$lib/server/data/user-queries';
 
-vi.mock('$db/connections', () => ({ default: {} }));
+vi.mock('$lib/server/db', () => ({ db: {} }));
 
 const { GET } = await import('../routes/api/me/+server');
 

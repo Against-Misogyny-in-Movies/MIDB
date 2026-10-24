@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import db from '$db/connections';
+import { db } from '$lib/server/db';
 import { movies, movieBechdel, movieUnconsenting } from '$db/schema/movie';
 import { normalizeTitle } from '$db/scripts/lib/normalizeTitle';
 
