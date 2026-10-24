@@ -55,9 +55,72 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Unit specs mock $env/*, so no secrets or .env are needed.
+      # Unit specs mock $env/* and $lib/server/db, so no secrets, .env or database are needed.
       - name: Run unit tests
         run: bun run test:unit --run
+
+  # Fails when a schema file changed without a committed migration. Needs no database;
+  # a drizzle-kit prompt (rename vs create) also fails it, because CI has no TTY.
+  migrations:
+    name: Migration drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate migrations from the schema
+        run: bunx drizzle-kit generate --name drift_check
+
+      - name: Fail on uncommitted migration changes
+        run: |
+          if [ -n "$(git status --porcelain db/migrations)" ]; then
+            echo "Schema changed without a committed migration (run bun run db:generate):"
+            git status --porcelain db/migrations
+            git diff db/migrations
+            exit 1
+          fi
+
+  # Data-layer tests against a real Postgres. global-setup migrates the empty database
+  # from zero, so this job also proves the migration chain applies cleanly.
+  db:
+    name: DB tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TEST_DB_CONNECTION: postgres://postgres:postgres@localhost:5432/midb_test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: midb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run DB tests
+        run: bun run test:db
 
   # Disabled until the repo variable E2E_ENABLED is set to 'true' and the secrets
   # below are configured (Settings → Secrets and variables → Actions).
