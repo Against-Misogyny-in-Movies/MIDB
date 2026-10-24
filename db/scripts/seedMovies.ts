@@ -1,8 +1,9 @@
 import { createReadStream } from 'fs';
 import { parse } from 'csv-parse';
 import { sql } from 'drizzle-orm';
-import { db, closeDb } from './lib/db';
-import { movies, movieBechdel } from '../schema/movie';
+import type { Db } from '../client';
+import { titles } from '../schema/titles';
+import { titleBechdel } from '../schema/sources';
 import { normalizeTitle } from './lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
 
@@ -19,28 +20,24 @@ interface BechdelRow {
 	numVotes: string;
 }
 
+type TitleInsert = typeof titles.$inferInsert & { imdbId: string };
+type BechdelPending = { _imdbId: string; bechdelId: number; rating: number; numVotes: number };
+
 function toImdbId(raw: string): string {
 	const n = Math.round(parseFloat(raw));
 	return `tt${String(n).padStart(7, '0')}`;
 }
 
-async function flushBatch(
-	movieBatch: (typeof movies.$inferInsert)[],
-	bechdelBatch: { _imdbId: string; bechdelId: number; rating: number; numVotes: number }[]
-) {
+async function flushBatch(db: Db, titleBatch: TitleInsert[], bechdelBatch: BechdelPending[]) {
 	// Deduplicate by imdbId within the batch (CSV has occasional duplicates)
-	const movieMap = new Map<string, typeof movies.$inferInsert>();
-	for (const m of movieBatch) movieMap.set(m.imdbId, m);
-	const bechdelMap = new Map<string, (typeof bechdelBatch)[number]>();
-	for (const b of bechdelBatch) bechdelMap.set(b._imdbId, b);
-	const dedupedMovies = [...movieMap.values()];
-	const dedupedBechdel = [...bechdelMap.values()];
+	const dedupedTitles = [...new Map(titleBatch.map((t) => [t.imdbId, t])).values()];
+	const dedupedBechdel = [...new Map(bechdelBatch.map((b) => [b._imdbId, b])).values()];
 
 	const inserted = await db
-		.insert(movies)
-		.values(dedupedMovies)
+		.insert(titles)
+		.values(dedupedTitles)
 		.onConflictDoUpdate({
-			target: movies.imdbId,
+			target: titles.imdbId,
 			set: {
 				title: sql`excluded.title`,
 				year: sql`excluded.year`,
@@ -48,25 +45,23 @@ async function flushBatch(
 				updatedAt: sql`now()`
 			}
 		})
-		.returning({ id: movies.id, imdbId: movies.imdbId });
+		.returning({ id: titles.id, imdbId: titles.imdbId });
 
-	const idMap = Object.fromEntries(inserted.map((r) => [r.imdbId, r.id]));
+	const idMap = new Map(inserted.map((r) => [r.imdbId, r.id]));
 
-	const bechdelRows = dedupedBechdel
-		.map((b) => {
-			const movieId = idMap[b._imdbId];
-			return movieId
-				? { movieId, bechdelId: b.bechdelId, rating: b.rating, numVotes: b.numVotes }
-				: null;
-		})
-		.filter((b): b is typeof movieBechdel.$inferInsert => b !== null);
+	const bechdelRows = dedupedBechdel.flatMap((b) => {
+		const titleId = idMap.get(b._imdbId);
+		return titleId
+			? [{ titleId, bechdelId: b.bechdelId, rating: b.rating, numVotes: b.numVotes }]
+			: [];
+	});
 
 	if (bechdelRows.length > 0) {
 		await db
-			.insert(movieBechdel)
+			.insert(titleBechdel)
 			.values(bechdelRows)
 			.onConflictDoUpdate({
-				target: movieBechdel.movieId,
+				target: titleBechdel.titleId,
 				set: {
 					bechdelId: sql`excluded.bechdel_id`,
 					rating: sql`excluded.rating`,
@@ -76,17 +71,17 @@ async function flushBatch(
 	}
 }
 
-async function main() {
-	console.log('Seeding movies + bechdel from', CSV_PATH);
-	await checkCsvColumns(CSV_PATH, REQUIRED_COLUMNS);
+/** Upsert `titles` (kind movie, keyed by IMDb id) and `title_bechdel` from a Bechdel CSV. */
+export async function seedMovies(db: Db, csvPath: string) {
+	console.log('Seeding titles + bechdel from', csvPath);
+	await checkCsvColumns(csvPath, REQUIRED_COLUMNS);
 
-	const movieBatch: (typeof movies.$inferInsert)[] = [];
-	const bechdelBatch: { _imdbId: string; bechdelId: number; rating: number; numVotes: number }[] =
-		[];
+	const titleBatch: TitleInsert[] = [];
+	const bechdelBatch: BechdelPending[] = [];
 	let total = 0;
 	let skipped = 0;
 
-	const parser = createReadStream(CSV_PATH).pipe(
+	const parser = createReadStream(csvPath).pipe(
 		parse({ columns: true, skip_empty_lines: true, trim: true })
 	);
 
@@ -107,33 +102,38 @@ async function main() {
 
 		const imdbId = toImdbId(rawImdbId);
 		const title = record.title?.trim() || '';
-		const year = parseInt(record.year, 10);
+		const parsedYear = parseInt(record.year, 10);
+		const year = parsedYear > 0 ? parsedYear : null; // null = unknown, never 0
 		const bechdelId = parseInt(record.id, 10);
 		const numVotes = Math.round(parseFloat(record.numVotes || '0'));
 
-		movieBatch.push({ imdbId, title, year, cleanTitle: normalizeTitle(title) });
+		titleBatch.push({ kind: 'movie', imdbId, title, year, cleanTitle: normalizeTitle(title) });
 		bechdelBatch.push({ _imdbId: imdbId, bechdelId, rating, numVotes });
 
-		if (movieBatch.length >= BATCH_SIZE) {
-			const batchLen = movieBatch.length;
-			await flushBatch(movieBatch, bechdelBatch);
+		if (titleBatch.length >= BATCH_SIZE) {
+			const batchLen = titleBatch.length;
+			await flushBatch(db, titleBatch, bechdelBatch);
 			total += batchLen;
 			console.log(`  inserted/updated ${total} rows...`);
-			movieBatch.length = 0;
+			titleBatch.length = 0;
 			bechdelBatch.length = 0;
 		}
 	}
 
-	if (movieBatch.length > 0) {
-		await flushBatch(movieBatch, bechdelBatch);
-		total += movieBatch.length;
+	if (titleBatch.length > 0) {
+		await flushBatch(db, titleBatch, bechdelBatch);
+		total += titleBatch.length;
 	}
 
 	console.log(`Done. Total: ${total}, skipped: ${skipped}`);
+	return { total, skipped };
 }
 
-try {
-	await main();
-} finally {
-	await closeDb();
+if (import.meta.main) {
+	const { db, closeDb } = await import('./lib/db');
+	try {
+		await seedMovies(db, CSV_PATH);
+	} finally {
+		await closeDb();
+	}
 }
