@@ -8,15 +8,11 @@ This project is set up using Bun and has only been tested with Bun.
 
 ### Configuration
 
-To run the project, you will need the following prerequisites: a PostgreSQL database, a mail server, and a Bun runtime environment. You must set the following environment variables, which can be done using an .env file:
+To run the project, you will need the following prerequisites: a PostgreSQL database, a [hanko account](https://www.hanko.io/) and a Bun runtime environment. You must set the following environment variables, which can be done using an .env file:
 
 ```env
-EMAIL_SERVER=smtp://apikey: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@smtp.sendgrid.net:465
-EMAIL_SERVER_USER=apikey
-EMAIL_SERVER_PASSWORD=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
-EMAIL_SERVER_HOST=smtp.sendgrid.net
-EMAIL_SERVER_PORT=465
-EMAIL_FROM=midb@cotton-coding.com
+PUBLIC_HANKO_API_URL=<api-key>.hanko.io
+
 DB_CONNECTION=postgres://postgres:mysecretpassword@0.0.0.0:5432/midb
 AUTH_SECRET=secret
 ```
