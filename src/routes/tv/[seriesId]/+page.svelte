@@ -20,7 +20,7 @@
 	import type { UmEntry } from '$lib/media/types/um';
 
 	let { data }: { data: PageData } = $props();
-	const series = $derived(data.series);
+	const series = $derived(data.media);
 	const umEntry = $derived(data.umEntry);
 	const umCandidates = $derived(data.umCandidates ?? []);
 

@@ -21,7 +21,7 @@
 	import type { UmEntry } from '$lib/media/types/um';
 
 	let { data }: { data: PageData } = $props();
-	const movie = $derived(data.movie);
+	const movie = $derived(data.media);
 	const bechdel = $derived(data.bechdel);
 	const umEntry = $derived(data.umEntry);
 	const umCandidates = $derived(data.umCandidates ?? []);
