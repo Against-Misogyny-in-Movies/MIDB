@@ -48,10 +48,8 @@ CREATE TABLE "title_um" (
 --> statement-breakpoint
 ALTER TABLE "community_metric_submissions" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "movie_trigger_tags" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
-ALTER TABLE "movie_unconsenting" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 DROP TABLE "community_metric_submissions" CASCADE;--> statement-breakpoint
 DROP TABLE "movie_trigger_tags" CASCADE;--> statement-breakpoint
-DROP TABLE "movie_unconsenting" CASCADE;--> statement-breakpoint
 ALTER TABLE "movies" RENAME TO "titles";--> statement-breakpoint
 ALTER TABLE "movie_bechdel" RENAME TO "title_bechdel";--> statement-breakpoint
 ALTER TABLE "comments" RENAME COLUMN "movie_id" TO "title_id";--> statement-breakpoint
@@ -63,24 +61,36 @@ ALTER TABLE "comments" DROP CONSTRAINT "comments_movie_id_movies_id_fk";
 ALTER TABLE "title_bechdel" DROP CONSTRAINT "movie_bechdel_movie_id_movies_id_fk";
 --> statement-breakpoint
 DROP INDEX "comments_movie_idx";--> statement-breakpoint
-ALTER TABLE "user" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "user" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "user" ALTER COLUMN "created_at" SET DEFAULT now();--> statement-breakpoint
-ALTER TABLE "user" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "user" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "user" ALTER COLUMN "updated_at" SET DEFAULT now();--> statement-breakpoint
-ALTER TABLE "comments" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "comments" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "comments" ALTER COLUMN "created_at" SET DEFAULT now();--> statement-breakpoint
-ALTER TABLE "comments" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "comments" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "comments" ALTER COLUMN "updated_at" SET DEFAULT now();--> statement-breakpoint
-ALTER TABLE "title_bechdel" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "title_bechdel" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "title_bechdel" ALTER COLUMN "created_at" SET DEFAULT now();--> statement-breakpoint
 ALTER TABLE "titles" ALTER COLUMN "imdb_id" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "titles" ALTER COLUMN "year" DROP NOT NULL;--> statement-breakpoint
-ALTER TABLE "titles" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "titles" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "titles" ALTER COLUMN "created_at" SET DEFAULT now();--> statement-breakpoint
-ALTER TABLE "titles" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "titles" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "titles" ALTER COLUMN "updated_at" SET DEFAULT now();--> statement-breakpoint
 ALTER TABLE "comments" ADD COLUMN "status" "comment_status" DEFAULT 'visible' NOT NULL;--> statement-breakpoint
-ALTER TABLE "titles" ADD COLUMN "kind" "title_kind" NOT NULL;--> statement-breakpoint
+ALTER TABLE "titles" ADD COLUMN "kind" "title_kind" DEFAULT 'movie' NOT NULL;--> statement-breakpoint
+-- Hand-appended data migration (not generated). Runs after the renames and column changes,
+-- before movie_unconsenting is dropped and before the new unique/check constraints.
+UPDATE "titles" SET "kind" = 'tv', "tmdb_id" = substring("imdb_id" from 9)::int, "imdb_id" = NULL WHERE "imdb_id" LIKE 'tmdb-tv:%';--> statement-breakpoint
+UPDATE "titles" SET "tmdb_id" = substring("imdb_id" from 6)::int, "imdb_id" = NULL WHERE "imdb_id" LIKE 'tmdb:%';--> statement-breakpoint
+UPDATE "titles" SET "year" = NULL WHERE "year" <= 0;--> statement-breakpoint
+UPDATE "um_source" SET "year" = NULL WHERE "year" <= 0;--> statement-breakpoint
+INSERT INTO "title_um" ("title_id", "um_id", "created_at")
+  SELECT mu."movie_id", mu."um_id", mu."created_at" AT TIME ZONE 'UTC' FROM "movie_unconsenting" mu JOIN "um_source" us USING ("um_id");--> statement-breakpoint
+ALTER TABLE "titles" ALTER COLUMN "kind" DROP DEFAULT;--> statement-breakpoint
+-- End of hand-appended data migration.
+ALTER TABLE "movie_unconsenting" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+DROP TABLE "movie_unconsenting" CASCADE;--> statement-breakpoint
 ALTER TABLE "community_bechdel_ratings" ADD CONSTRAINT "community_bechdel_ratings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "community_bechdel_ratings" ADD CONSTRAINT "community_bechdel_ratings_title_id_titles_id_fk" FOREIGN KEY ("title_id") REFERENCES "public"."titles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "community_ddd_votes" ADD CONSTRAINT "community_ddd_votes_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
