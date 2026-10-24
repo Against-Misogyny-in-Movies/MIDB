@@ -13,51 +13,23 @@
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
 	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
 	import BackToTop from '$lib/components/ui/visualization/backToTop.svelte';
-	import { BECHDEL_TIERS, umFlagCount } from '$lib/media/utils/metrics';
+	import { BECHDEL_TIERS } from '$lib/media/utils/metrics';
+	import { TitleView } from '$lib/media/utils/titleView.svelte.js';
 
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
-	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
-	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
-	import type { UmEntry } from '$lib/media/types/um';
 
 	let { data }: { data: PageData } = $props();
-	const movie = $derived(data.media);
+	const view = new TitleView(() => data, 'movie');
+	const movie = $derived(view.media);
 	const bechdel = $derived(data.bechdel);
-	const umEntry = $derived(data.umEntry);
-	const umCandidates = $derived(data.umCandidates ?? []);
-
-	let selectedUm = $state<UmEntry | null>(null);
-	$effect(() => {
-		void movie.id; // track
-		selectedUm = null;
-	});
-
-	const autoUm = $derived(umCandidates.length === 1 ? umCandidates[0] : null);
-	const umData = $derived(umEntry ?? autoUm ?? selectedUm);
-	const hasUmCandidates = $derived(umData === null && umCandidates.length > 1);
-	const flagCount = $derived(umFlagCount(umData));
-
-	const dddState = createDddState(() => data.triggerTags, false);
-	const ddd = $derived(dddState.current);
-
-	const safety = $derived(scoreSafety(umData, ddd));
-	const representation = $derived(
-		scoreRepresentation({
-			cast: movie.cast,
-			crew: movie.crew,
-			castMembers: movie.castMembers,
-			crewDepartments: movie.crewDepartments,
-			bechdel,
-			isSeries: false
-		})
-	);
+	const ddd = $derived(view.ddd);
 </script>
 
 <div class="movie-page">
 	<section id="details">
 		<DetailHeader media={movie}>
 			{#snippet verdict()}
-				<VerdictPanel {safety} {representation} />
+				<VerdictPanel safety={view.safety} representation={view.representation} />
 			{/snippet}
 			<div class="summary-chips">
 				<MetricChip
@@ -77,12 +49,14 @@
 					href="#unconsenting"
 					icon="ri-shield-cross-line"
 					label="Unconsenting Media"
-					empty={umData === null}
-					badgeCount={hasUmCandidates ? umCandidates.length : 0}
+					empty={view.umData === null}
+					badgeCount={view.hasUmCandidates ? view.umCandidates.length : 0}
 				>
-					{#if umData}
+					{#if view.umData}
 						<span class="chip-value"
-							>{flagCount}<span class="chip-unit"> concern{flagCount === 1 ? '' : 's'}</span></span
+							>{view.flagCount}<span class="chip-unit">
+								concern{view.flagCount === 1 ? '' : 's'}</span
+							></span
 						>
 					{:else}
 						<span class="chip-empty">No data</span>
@@ -170,15 +144,15 @@
 		</div>
 
 		<UmMetricSection
-			{umData}
-			{umCandidates}
-			umFlagCount={flagCount}
-			{hasUmCandidates}
+			umData={view.umData}
+			umCandidates={view.umCandidates}
+			umFlagCount={view.flagCount}
+			hasUmCandidates={view.hasUmCandidates}
 			mediaNoun="movie"
-			onselect={(c) => (selectedUm = c)}
+			onselect={(c) => view.selectUm(c)}
 		/>
 
-		<DddMetricSection {ddd} visibleTags={ddd?.tags ?? []} mediaNoun="movie" />
+		<DddMetricSection {ddd} visibleTags={view.visibleTags} mediaNoun="movie" />
 	</div>
 
 	<CommentsSkeleton />
