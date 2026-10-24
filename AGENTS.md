@@ -8,7 +8,7 @@
 
 - **Update `.CLAUDE/architecture.md`** whenever you add, move, rename, or delete a file, change a module's responsibility, add a shared component, or alter a structural pattern. The doc is a living snapshot; keep it current.
 - **Save every plan under `.CLAUDE/plans/`** as a markdown file (e.g. `.CLAUDE/plans/plan-<short-name>.md`). Implementation plans, design notes, and multi-step proposals all belong there — not scattered elsewhere or left only in chat.
-- **Run the verification baseline** before reporting a task done: `bun run check` → 0 errors, `bun run test:unit` → all pass, `bun run build` → clean.
+- **Run the verification baseline** before reporting a task done: `bun run check` → 0 errors, `bun run lint` → clean, `bun run test:unit` → all pass, `bun run test:db` → all pass (with `docker compose up -d db`), `bun run build` → clean.
 - **Use `$lib` and `$db` aliases** for all cross-folder imports. Relative `./` is for same-folder siblings only.
 
 ---
@@ -76,14 +76,16 @@ Applies to all **user-facing** text (page copy, taglines, labels, notes) — not
 ## Database
 
 - The DB layer lives in `db/` (outside `src/`), aliased as `$db/*`.
+- **App code gets `db` from `$lib/server/db` only.** It connects lazily from `DB_CONNECTION` in `$env/dynamic/private` and throws if unset. Never read the connection string at build time (no Vite `define`, no `$env/static/private`) and never add a localhost fallback. Scripts use `db/scripts/lib/db.ts` and close the pool when done.
 - GET routes use **read-only** resolvers (`getDbMovie`, `getDbMedia`) — page visits must never mutate the DB.
 - Write paths (`getOrCreateDbMovie`, `getOrCreateDbMedia`) are reserved for future write endpoints (community ratings, persisted DDD tags).
 - Migration order matters: `db:seed:movies` before `db:seed:um`.
-- `db:generate` requires a TTY — run it from a real terminal, not CI.
+- **Every schema change ships its generated migration** (SQL + snapshot + journal from `bun run db:generate`) in the same PR; CI's `migrations` job fails on drift. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts need a TTY; without one, run `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
 
 ---
 
 ## Testing
 
 - Unit tests: Vitest, co-located in `__tests__/` subfolders. Playwright e2e specs in top-level `e2e-tests/`.
+- **Anything touching Postgres gets a `*.db.spec.ts`**, run by `bun run test:db` (Vitest `db` project, real Postgres at `TEST_DB_CONNECTION`, tables truncated before each test). `bun run test:db` joins the verification baseline (with `docker compose up -d db`). Unit specs must not need a live DB: mock `$lib/server/db`.
 - When moving a function to a new file, update its test's import path — don't leave a test importing from the old location.

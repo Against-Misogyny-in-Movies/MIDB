@@ -27,7 +27,7 @@ Each metric is designed to show **two scores side by side**: the original author
 | External movie data       | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`)                                                                     |
 | Server cache              | Swappable backend (`$lib/server/cache`): bounded in-memory LRU by default; **Redis** (optional, lazy `redis` pkg) when `REDIS_URL` is set. Caches TMDB + DDD responses. |
 | Seed parsing              | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs)                                                                                                           |
-| Testing                   | Vitest 4 (unit, co-located in `__tests__/`), Playwright (integration, in `e2e-tests/`), Storybook 9 (component dev)                                                     |
+| Testing                   | Vitest 4 (projects `unit` + `db` against real Postgres, co-located in `__tests__/`), Playwright (integration, in `e2e-tests/`), Storybook 9 (component dev)             |
 | Lint                      | ESLint 10 (flat config) + `@typescript-eslint/*` 8 + Prettier                                                                                                           |
 
 ---
@@ -67,21 +67,25 @@ Each metric is designed to show **two scores side by side**: the original author
 ```
 MIDB/
 ├── db/                         # Data layer — lives OUTSIDE src/, aliased as $db/*
-│   ├── connections.ts          # Drizzle init + migrateDatabase(); registers movie + auth + community schema
+│   ├── client.ts               # createDb(url, { max? }) → { db, sql } (connect_timeout 10, schema barrel) + type Db. Reads no env
 │   ├── schema/                 # Drizzle table definitions (drizzle-kit reads ./schema/**/*.ts)
+│   │   ├── index.ts            # barrel re-exporting every schema file (passed to drizzle() as `schema`)
 │   │   ├── movie.ts            # movies + movieBechdel + umSource + movieUnconsenting + movieTriggerTags
 │   │   ├── auth.ts             # user (Hanko-sub PK, role enum, username/avatarKey, lower(username) idx)
 │   │   └── community.ts        # communityMetricSubmissions + comments (empty, indexes ready)
 │   ├── scripts/
-│   │   ├── migrate.ts          # `bun run db:migrate` → calls migrateDatabase()
+│   │   ├── migrate.ts          # `bun run db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → movies spine + movie_bechdel
 │   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + movie_unconsenting (matched)
 │   │   ├── seedAdmin.ts        # `db:seed:admin <email>` — case-insensitive promote to administrator
 │   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id via TMDB /find
-│   │   └── lib/                # normalizeTitle.ts + stripTrailingYear + checkCsvColumns.ts
+│   │   └── lib/                # db.ts (script client from process.env.DB_CONNECTION + closeDb), normalizeTitle.ts + stripTrailingYear, checkCsvColumns.ts
 │   ├── seeds/
 │   │   └── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
-│   └── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots
+│   ├── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots (never hand-edited)
+│   └── test/                   # Vitest `db` project harness
+│       ├── global-setup.ts     # wipes TEST_DB_CONNECTION (refuses if it equals DB_CONNECTION) and migrates it from zero
+│       └── reset.ts            # setupFile: TRUNCATE every schema table RESTART IDENTITY CASCADE beforeEach; closeDb afterAll
 │
 ├── src/
 │   ├── hooks.server.ts         # Auth gate: verifies `hanko` JWT → locals.claims (no DB), lazy memoised locals.getUser(), gates /user + /user/* on claims, role check on /user/moderation*
@@ -95,7 +99,9 @@ MIDB/
 │   │   └── user/+layout.*      # requireUser → { me: PublicUser }, `private, no-store`; +layout.svelte hands `me` to the session
 │   └── lib/
 │       ├── server/             # SvelteKit-ENFORCED server-only boundary (no client import)
-│       │   ├── data/           # Postgres / Drizzle access (+ __tests__/)
+│       │   ├── db.ts           # the app's `db`: lazy createDb on first use from $env/dynamic/private DB_CONNECTION
+│       │   │                   #   (TEST_DB_CONNECTION under Vitest); throws if unset, no localhost fallback; closeDb() (+ __tests__/)
+│       │   ├── data/           # Postgres / Drizzle access, all via $lib/server/db (+ __tests__/, incl. *.db.spec.ts)
 │       │   │   ├── media-queries.ts  # identity resolution (getDbMovie/getDbMedia/getOrCreate*) + metric fetches (getBechdel/getUnconsenting)
 │       │   │   ├── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates + toCandidate helper
 │       │   │   └── user-queries.ts   # read-first JIT provision + toPublicUser + profile update (validated) + username availability + history queries
@@ -121,22 +127,22 @@ MIDB/
 │       └── stores/             # debounced.ts
 │
 ├── e2e-tests/                  # Playwright integration tests (testDir; renamed from tests/): landing + navbar search overflow
-├── .github/workflows/tests.yml # CI: static (check/lint/build), unit, gated e2e (see CI)
+├── .github/workflows/tests.yml # CI: static (check/lint/build), unit, migrations (drift), db (Postgres), gated e2e (see CI)
 ├── docker-compose.yml          # local Postgres: `db` service, postgres:16, DB `midb` on 5432
 ├── drizzle.config.ts           # drizzle-kit config (out, schema glob, dialect/credentials)
 ├── eslint.config.js            # flat config: typescript-eslint + svelte recommended + prettier
 ├── .prettierrc / .prettierignore # tabs, single quotes, width 100; ignores db/migrations (drizzle-kit output)
 ├── playwright.config.ts        # testDir: 'e2e-tests'; webServer `bun run build && bun run preview` on 4173
 ├── svelte.config.js            # adapter-auto; alias $db/* → ./db/*; vitePreprocess({ style:false })
-├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest block
+├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest projects `unit` (jsdom) and `db` (node, real Postgres). No `define`, no build-time env
 ├── README.md                   # short local setup (compose + seeds), points here and at AGENTS.md
 ├── .env.example                # committed template: every var with check/build-safe placeholders
-└── .env                        # local copy of .env.example (git-ignored): DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY, REDIS_URL (optional)
+└── .env                        # local copy of .env.example (git-ignored): DB_CONNECTION, TEST_DB_CONNECTION, PUBLIC_HANKO_API_URL, PUBLIC_TMDB_*, TMDB_API_TOKEN, DDD_API_KEY, REDIS_URL (optional)
 ```
 
 **Key structural choices:**
 
-- The database layer (`db/`) sits _outside_ `src/`, exposed via the `$db/*` alias in `svelte.config.js`. Server-only modules import `db` from `$db/connections`.
+- The database layer (`db/`) sits _outside_ `src/`, exposed via the `$db/*` alias in `svelte.config.js`. App code imports `db` from `$lib/server/db` (lazy, runtime env); scripts import it from `db/scripts/lib/db.ts`. Both build it with `createDb` from `$db/client`, which reads no env itself.
 - **Shared server logic does not live inside route folders.** Anything two routes both need (DB queries, external API clients) lives under `$lib/server/`; route folders keep only their route files plus a route-specific `datasource.server.ts`.
 
 ### File-organisation conventions
@@ -145,7 +151,7 @@ MIDB/
 - **Components for types, never routes.** A component that needs a `Movie`/`Series`/`TriggerTag` type imports it from `$lib/media/types/*` — `media/types/ddd.ts` re-exports DDD types from `integrations/ddd-types.ts` (not `ddd.ts`) as **types only** (erased at build, so no server runtime leaks into the client bundle). Components no longer reach back into `routes/.../`.
 - **`ui/` vs domain.** Generic, reusable primitives (button, tile, skeleton, tooltip, progressbar) live in `$lib/components/ui/*`; title-specific UI lives in domain folders (`movies/*`, `search/*`, …).
 - **Imports use `$lib`/`$db` aliases**, with relative `./` reserved for same-folder siblings.
-- **Tests are co-located in a `__tests__/` subfolder** at each location (vitest glob `src/**/*.{spec,test}.{js,ts}` matches any depth). Playwright e2e specs live in top-level `e2e-tests/`.
+- **Tests are co-located in a `__tests__/` subfolder** at each location (vitest glob `src/**/*.{spec,test}.{js,ts}` matches any depth). Specs that touch Postgres are named `*.db.spec.ts` and run only in the `db` project (`bun run test:db`); the `unit` project excludes them and mocks `$lib/server/db`. Playwright e2e specs live in top-level `e2e-tests/`.
 
 ---
 
@@ -212,7 +218,7 @@ Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored
 
 ## Database schema
 
-The active schema spans `db/schema/movie.ts`, `auth.ts`, and `community.ts`. `connections.ts` registers all three.
+The active schema spans `db/schema/movie.ts`, `auth.ts`, and `community.ts`. The barrel `db/schema/index.ts` re-exports all three, and `createDb` (`db/client.ts`) registers it.
 
 > The old user-evaluation model (`metrics`, `metric_options`, `evaluations`, `evaluation_results`) is gone: `db/schema/metric.ts` has been **deleted** and the migrations were **squashed** (2026-06-05), so the current `0000` baseline simply never creates those tables. (Historically they were dropped in the old migration `0006`, which no longer exists on disk.)
 
@@ -260,17 +266,17 @@ The active schema spans `db/schema/movie.ts`, `auth.ts`, and `community.ts`. `co
 
 - **`0000_jazzy_tag`** — the full current schema: `movies`, `movie_bechdel`, `um_source` (incl. `um_source_clean_title_key_idx`), `movie_unconsenting`, `movie_trigger_tags`, `user`.
 
-**`0001_*`** — pending generation (`bun run db:generate` TTY). Adds: `user_role` + `metric_kind` enums, rewrites `user` table (Hanko-sub PK, new cols, `lower(username)` unique idx, drops Auth.js cols), adds `onDelete: 'set null'` to `movie_trigger_tags.created_by`, creates `community_metric_submissions` + `comments` tables with all indexes.
+- **`0001_swift_wolverine`** (generated 2026-10-24, remediation PR 3) — `user_role` + `metric_kind` enums; `user` rewritten in place (every new column answered _create_, so the Auth.js `name`/`emailVerified`/`image` columns are dropped, `email` becomes nullable, `role`/`username`/`avatar_key`/`created_at`/`updated_at` added, `lower(username)` unique idx + `role` idx); `movie_trigger_tags.created_by` FK re-created with `ON DELETE SET NULL`; `community_metric_submissions` + `comments` with all indexes. Auth.js-era `user` rows are not deleted (drizzle-kit prompts per column, not per table); their ids are not Hanko subs, so nothing ever matches them.
 
-Future schema changes append `0002`, `0003`, … from here.
+Future schema changes append `0002`, `0003`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
 
-**Boot does NOT auto-migrate** (commit `742c612`). Run `bun run db:migrate` explicitly after `bun run db:generate`.
+**Boot does NOT auto-migrate** (commit `742c612`). Run `bun run db:migrate` explicitly after `bun run db:generate`. A fresh DB migrated from zero matches the schema; the CI `db` job proves it on every run.
 
 ---
 
 ## Seeding
 
-Raw CSVs in `db/seeds/sources/`. Scripts run under Bun, use `csv-parse` for streaming, and import `db` from `$db/connections`. All upserts are idempotent (`onConflictDoUpdate`).
+Raw CSVs in `db/seeds/sources/`. Scripts run under Bun, use `csv-parse` for streaming, and import `db` + `closeDb` from `db/scripts/lib/db.ts` (built from `process.env.DB_CONNECTION`, which Bun loads from `.env`; throws if unset). Each script closes its pool when done so the process exits. All upserts are idempotent (`onConflictDoUpdate`).
 
 1. **`db:seed:movies`** (`seedMovies.ts`) — stream the **Bechdel CSV** → upsert `movies` (spine) + `movie_bechdel`. Source of `imdb_id`, `title`, `year`, `clean_title`.
 2. **`db:seed:um`** (`seedUnconsenting.ts`) — stream the **UM CSV**:
@@ -484,17 +490,18 @@ A single swappable cache fronts every external call so repeat detail-page visits
 
 ## Configuration & environment
 
-| Var                     | Used by                                          | Notes                                                                                                                                  |
-| ----------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `DB_CONNECTION`         | `connections.ts`                                 | Postgres URL. Local dev: `postgres://postgres:postgres@localhost:5432/midb` (the compose DB)                                           |
-| `PUBLIC_HANKO_API_URL`  | `$lib/server/auth/hanko.ts` + auth components    | Hanko Cloud tenant URL                                                                                                                 |
-| `PUBLIC_TMDB_API_URL`   | movie + search datasources                       | `https://api.themoviedb.org`                                                                                                           |
-| `PUBLIC_TMDB_IMAGE_URL` | image component                                  | `https://image.tmdb.org/t/p`                                                                                                           |
-| `TMDB_API_TOKEN`        | `$lib/server/integrations/tmdb.ts` (server only) | v4 Bearer token. `$env/static/private`.                                                                                                |
-| `DDD_API_KEY`           | `$lib/server/integrations/ddd.ts` (server only)  | Does The Dog Die API key, `X-API-KEY` header.                                                                                          |
-| `REDIS_URL`             | `$lib/server/cache` (server only)                | **Optional.** When set, the cache uses Redis instead of in-process LRU. Requires the optional `redis` package. `$env/dynamic/private`. |
+| Var                     | Used by                                          | Notes                                                                                                                                           |
+| ----------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DB_CONNECTION`         | `$lib/server/db.ts`, `db/scripts/lib/db.ts`      | Postgres URL, read at **runtime** (`$env/dynamic/private`) on first DB use; unset → clear error, no fallback. Local: the compose DB             |
+| `TEST_DB_CONNECTION`    | `db/test/global-setup.ts`, `$lib/server/db.ts`   | **Tests only.** Separate DB (`midb_test` on the compose server) that `test:db` wipes and migrates. Used instead of `DB_CONNECTION` under Vitest |
+| `PUBLIC_HANKO_API_URL`  | `$lib/server/auth/hanko.ts` + auth components    | Hanko Cloud tenant URL                                                                                                                          |
+| `PUBLIC_TMDB_API_URL`   | movie + search datasources                       | `https://api.themoviedb.org`                                                                                                                    |
+| `PUBLIC_TMDB_IMAGE_URL` | image component                                  | `https://image.tmdb.org/t/p`                                                                                                                    |
+| `TMDB_API_TOKEN`        | `$lib/server/integrations/tmdb.ts` (server only) | v4 Bearer token. `$env/static/private`.                                                                                                         |
+| `DDD_API_KEY`           | `$lib/server/integrations/ddd.ts` (server only)  | Does The Dog Die API key, `X-API-KEY` header.                                                                                                   |
+| `REDIS_URL`             | `$lib/server/cache` (server only)                | **Optional.** When set, the cache uses Redis instead of in-process LRU. Requires the optional `redis` package. `$env/dynamic/private`.          |
 
-`.env.example` is the committed template (allow-listed in `.gitignore`) and lists every variable above. Its placeholders are valid enough for `bun run check` and `bun run build`, so a fresh clone and CI only need `cp .env.example .env`. Title pages need real `TMDB_API_TOKEN`/`DDD_API_KEY` values, and sign-in needs a real Hanko tenant.
+Nothing is inlined at build time: `vite.config.ts` has no `define`, so `build` and `check` need no database and the server bundle contains no connection string. `.env.example` is the committed template (allow-listed in `.gitignore`) and lists every variable above. Its placeholders are valid enough for `bun run check` and `bun run build`, so a fresh clone and CI only need `cp .env.example .env`. Title pages need real `TMDB_API_TOKEN`/`DDD_API_KEY` values, and sign-in needs a real Hanko tenant.
 
 ### Local run sequence
 
@@ -507,43 +514,48 @@ bun run db:seed:movies   # must run before db:seed:um
 bun run db:seed:um
 bun run db:backfill:tmdb # optional: resolve tmdb_id ahead of time
 bun run dev
+
+# DB tests (once): a separate database on the same server
+docker compose exec db createdb -U postgres midb_test
+bun run test:db          # wipes midb_test, migrates it from zero, runs *.db.spec.ts
 ```
 
 ### npm scripts
 
-`dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin <email>` (case-insensitive promote to administrator).
+`dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `test:unit` = `vitest --project unit` (no DB) · `test:db` = `vitest run --project db` (needs `TEST_DB_CONNECTION`) · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin <email>` (case-insensitive promote to administrator).
 
 ### CI (`.github/workflows/tests.yml`)
 
 Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to the local version.
 
 - **`static`**: `bun install --frozen-lockfile` → `cp .env.example .env` (so `$env/static/*` resolves) → `bun run check` → `bun run lint` (`prettier --check .` + `eslint .`) → `bun run build`.
-- **`unit`**: `bun install --frozen-lockfile` → `bun run test:unit --run`. Needs no secrets, because unit specs mock `$env/*`.
+- **`unit`**: `bun install --frozen-lockfile` → `bun run test:unit --run`. Needs no secrets, `.env` or database, because unit specs mock `$env/*` and `$lib/server/db`.
+- **`migrations`**: `bunx drizzle-kit generate --name drift_check`, then fails (printing the status and diff) if `git status --porcelain db/migrations` is non-empty. Needs no DB. A drizzle-kit prompt also fails it (no TTY), which is the correct outcome.
+- **`db`**: `postgres:16` service with DB `midb_test`, `TEST_DB_CONNECTION` set, then `bun run test:db`. Global setup migrates the empty DB from zero, so this job also proves the migration chain applies cleanly.
 - **`e2e`**: skipped unless the repo variable `E2E_ENABLED` is `'true'`. It starts a `postgres:16` service, runs `db:migrate`, then `bun run test:integration`; `playwright.config.ts` builds and previews the app itself (`bun run build && bun run preview`). It needs the secrets `TMDB_API_TOKEN` and `DDD_API_KEY` and the variable `PUBLIC_HANKO_API_URL`. The Playwright report is uploaded on failure.
 
 ---
 
 ## Known gaps / TODO
 
-1. **`bun run db:generate` + `bun run db:migrate` pending** — schema changes (user rewrite + community tables) are in code but migration `0001_*` has not been generated or applied yet. Run `bun run db:generate` in a real terminal (may prompt for rename vs drop on the `user` rewrite — dev DB is disposable), then `bun run db:migrate`.
-2. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
-3. **Community write path not built** — `community_metric_submissions` and `comments` tables exist and are index-ready but have no write endpoints. Empty-state history views are wired at `/user/metrics` and `/user/comments`. The write path (rating submission + comment posting on title detail pages) is the next milestone.
-4. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
-5. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
-6. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
-7. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
-8. **`db:generate` requires a TTY** — drizzle-kit's interactive conflict-resolution prompts require a real terminal. Run it from the terminal, not from a CI/non-interactive shell.
+1. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
+2. **Community write path not built** — `community_metric_submissions` and `comments` tables exist and are index-ready but have no write endpoints. Empty-state history views are wired at `/user/metrics` and `/user/comments`. The write path (rating submission + comment posting on title detail pages) is the next milestone.
+3. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
+4. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
+5. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
+6. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
 
 > Verification baseline after the `$lib` reorg: `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the detail-page refactor (server splits + shared components): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the cache layer + startup-migrations + migration squash + dead-seeder removal (2026-06-05): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Removed deps: `@loom-io/fs`, `marked` (orphaned with `seed.ts`).
 > Verification baseline after user schema + auth flow (2026-06-21): same — `bun run check` → 0 errors/warnings, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Migration `0001_*` pending `bun run db:generate` + `bun run db:migrate`.
+> Verification baseline after remediation PR 3 (2026-10-24): `bun run check` → 0 errors, `bun run lint` → clean, `bun run test:unit` → 155/155 (13 files), `bun run test:db` → 14/14 (1 file), `bun run build` → clean with `DB_CONNECTION` unset. Migration `0001_swift_wolverine` generated and applied from zero.
 
 ---
 
 ## Related docs
 
-- `.CLAUDE/plans/plan-architecture-remediation.md` — 7-PR plan implementing every review finding (session out of SSR, runtime DB config + drift CI, `titles` spine, module consolidation, deps/cleanup, docs). PR 1 (secrets, `.env.example`, formatting, CI `static` job) and PR 2 (user-agnostic SSR, `/api/me` + client session, lazy `getUser`, guards, `PublicUser`, `PUBLIC_PAGE`) done 2026-10-24; PRs 3–7 pending.
+- `.CLAUDE/plans/plan-architecture-remediation.md` — 7-PR plan implementing every review finding (session out of SSR, runtime DB config + drift CI, `titles` spine, module consolidation, deps/cleanup, docs). PR 1 (secrets, `.env.example`, formatting, CI `static` job), PR 2 (user-agnostic SSR, `/api/me` + client session, lazy `getUser`, guards, `PublicUser`, `PUBLIC_PAGE`) and PR 3 (runtime DB config via `$lib/server/db`, migration `0001` + CI drift check, Vitest `db` project against real Postgres) done 2026-10-24; PRs 4–7 pending.
 - `.CLAUDE/plans/plan-architecture-review.md` — architecture review (2026-10-24): P0 fixes (committed secret, CDN-cached personalised HTML, migration drift), proposed `titles` spine + per-metric community tables, and a suggested ordering before the community write path.
 - `.CLAUDE/plans/plan-um-matching-fix.md` — the plan that drove the UM matching overhaul (year-aware seeder, `um_source` table, runtime disambiguation picker, `noRape` inversion). Implemented and closed.
 - `.CLAUDE/plans/plan-movie-schema-multi-source.md` — the plan that drove the multi-source schema (Bechdel + UM seeding, streamed DDD, page redesign).
