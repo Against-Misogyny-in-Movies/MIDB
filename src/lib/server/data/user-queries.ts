@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { users } from '$db/schema/auth';
 import { communityBechdelRatings, communityUmReports, comments } from '$db/schema/community';
 import { titles } from '$db/schema/titles';
-import { AVATAR_KEYS } from '$lib/components/user/avatars/avatars';
+import { AVATAR_KEYS } from '$lib/media/utils/avatars';
 import { umFlagCount } from '$lib/media/utils/metrics';
 import type { PublicUser } from '$lib/media/types/user';
 import { isUniqueViolation } from './pg-errors';

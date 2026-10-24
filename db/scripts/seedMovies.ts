@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import type { Db } from '../client';
 import { titles } from '../schema/titles';
 import { titleBechdel } from '../schema/sources';
-import { normalizeTitle } from './lib/normalizeTitle';
+import { normalizeTitle } from '../lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
 
 const CSV_PATH = './db/seeds/sources/bechdel.csv';

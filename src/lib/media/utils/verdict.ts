@@ -1,6 +1,7 @@
 import type { GenderBreakdown, CastMember, CrewDepartment } from '$lib/media/types/media';
 import type { DddResult } from '$lib/media/types/ddd';
 import { UM_FLAGS, type UmFlagKey } from './metrics';
+import { PRIORITY_DEPARTMENTS } from './departments';
 
 export type VerdictTone = 'success' | 'warn' | 'danger' | 'neutral';
 export type SafetyTier = 'safe' | 'caution' | 'harmful' | 'unknown';
@@ -68,16 +69,6 @@ export const SV_DDD_MATCHERS: string[] = [
 	'incest'
 ];
 
-// Departments whose gender composition matters most for the representation verdict.
-// Must stay in sync with PRIORITY_DEPARTMENTS in tmdb.ts.
-export const CREW_SCORED_DEPARTMENTS = [
-	'Directing',
-	'Writing',
-	'Production',
-	'Editing',
-	'Camera'
-] as const;
-
 export function femaleShare(b: GenderBreakdown): number | null {
 	const denom = b.female + b.male + b.nonBinary;
 	if (denom === 0) return null;
@@ -99,7 +90,7 @@ export function directorOrCrewShare(
 ): number | null {
 	// Aggregate over the important departments only; fall back to full crew when none present.
 	const scored = departments.filter((d) =>
-		(CREW_SCORED_DEPARTMENTS as readonly string[]).includes(d.department)
+		(PRIORITY_DEPARTMENTS as readonly string[]).includes(d.department)
 	);
 	if (scored.length === 0) return femaleShare(crew);
 	const combined: GenderBreakdown = scored.reduce(

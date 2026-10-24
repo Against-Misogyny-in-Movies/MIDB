@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../client';
 import { titles } from '../schema/titles';
 import { titleUm, umSource } from '../schema/sources';
-import { normalizeTitle, stripTrailingYear } from './lib/normalizeTitle';
+import { normalizeTitle, stripTrailingYear } from '../lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
 
 const CSV_PATH = './db/seeds/sources/unconsenting.csv';
