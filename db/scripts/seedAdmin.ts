@@ -1,6 +1,6 @@
-import db from '$db/connections';
-import { users } from '$db/schema/auth';
 import { sql } from 'drizzle-orm';
+import { users } from '../schema/auth';
+import { db, closeDb } from './lib/db';
 
 const email = process.argv[2];
 if (!email) {
@@ -8,14 +8,18 @@ if (!email) {
 	process.exit(1);
 }
 
-const result = await db
-	.update(users)
-	.set({ role: 'administrator' })
-	.where(sql`lower(${users.email}) = lower(${email})`)
-	.returning({ email: users.email });
+try {
+	const result = await db
+		.update(users)
+		.set({ role: 'administrator' })
+		.where(sql`lower(${users.email}) = lower(${email})`)
+		.returning({ email: users.email });
 
-if (result.length === 0) {
-	console.log('No row matched — user must sign in first.');
-} else {
-	console.log(`Promoted ${result[0].email} to administrator.`);
+	if (result.length === 0) {
+		console.log('No row matched — user must sign in first.');
+	} else {
+		console.log(`Promoted ${result[0].email} to administrator.`);
+	}
+} finally {
+	await closeDb();
 }

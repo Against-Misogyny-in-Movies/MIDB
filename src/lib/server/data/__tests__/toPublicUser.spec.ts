@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { UserRow } from '$lib/server/data/user-queries';
 
 // toPublicUser is pure; stub the DB client so importing the module opens no connection.
-vi.mock('$db/connections', () => ({ default: {} }));
+vi.mock('$lib/server/db', () => ({ db: {} }));
 
 const { toPublicUser } = await import('$lib/server/data/user-queries');
 

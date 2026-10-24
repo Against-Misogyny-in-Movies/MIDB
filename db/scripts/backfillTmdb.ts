@@ -1,6 +1,6 @@
 import { isNull } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
-import db from '../connections';
+import { db, closeDb } from './lib/db';
 import { movies } from '../schema/movie';
 
 const TMDB_BASE = process.env.PUBLIC_TMDB_API_URL || 'https://api.themoviedb.org';
@@ -55,5 +55,8 @@ async function main() {
 	console.log(`Done. Updated: ${updated}, not found: ${notFound}`);
 }
 
-await main();
-process.exit(0);
+try {
+	await main();
+} finally {
+	await closeDb();
+}

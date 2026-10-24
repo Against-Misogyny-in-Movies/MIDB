@@ -1,5 +1,5 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import db from '$db/connections';
+import { db } from '$lib/server/db';
 import { users } from '$db/schema/auth';
 import { communityMetricSubmissions, comments } from '$db/schema/community';
 import { movies } from '$db/schema/movie';

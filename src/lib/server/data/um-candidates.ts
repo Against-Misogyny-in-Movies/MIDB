@@ -1,5 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
-import db from '$db/connections';
+import { db } from '$lib/server/db';
 import { umSource } from '$db/schema/movie';
 import { normalizeTitle, stripTrailingYear } from '$db/scripts/lib/normalizeTitle';
 import type { UmCandidate } from '$lib/media/utils/metrics';

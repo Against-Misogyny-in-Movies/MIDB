@@ -1,7 +1,7 @@
 import { createReadStream, createWriteStream } from 'fs';
 import { parse } from 'csv-parse';
 import { sql } from 'drizzle-orm';
-import db from '../connections';
+import { db, closeDb } from './lib/db';
 import { movies, movieUnconsenting, umSource } from '../schema/movie';
 import { normalizeTitle, stripTrailingYear } from './lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
@@ -259,5 +259,8 @@ async function main() {
 	console.log(`  Unmatched report: ${UNMATCHED_REPORT}`);
 }
 
-await main();
-process.exit(0);
+try {
+	await main();
+} finally {
+	await closeDb();
+}
