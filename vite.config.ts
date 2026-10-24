@@ -9,12 +9,12 @@ export default defineConfig(({ mode }) => {
 	return {
 		plugins: [tailwindcss(), sveltekit(), svelteTesting()],
 		define: {
-			'process.env.DB_CONNECTION': JSON.stringify(env.DB_CONNECTION ?? ''),
+			'process.env.DB_CONNECTION': JSON.stringify(env.DB_CONNECTION ?? '')
 		},
 		test: {
 			include: ['src/**/*.{test,spec}.{js,ts}'],
 			globals: true,
-			environment: "jsdom"
+			environment: 'jsdom'
 		}
 	};
 });

@@ -10,8 +10,14 @@ export type UserRole = UserRow['role'];
 
 const USERNAME_RE = /^[a-z0-9_]{3,32}$/;
 const RESERVED = new Set([
-	'admin', 'administrator', 'moderator', 'mod',
-	'midb', 'support', 'staff', 'root',
+	'admin',
+	'administrator',
+	'moderator',
+	'mod',
+	'midb',
+	'support',
+	'staff',
+	'root'
 ]);
 
 /**
@@ -19,13 +25,19 @@ const RESERVED = new Set([
  * Never bumps updated_at — reserve that for real profile edits.
  * COALESCE lets a later email claim backfill a null without clobbering.
  */
-export async function getOrCreateUser({ sub, email }: { sub: string; email: string | null }): Promise<UserRow> {
+export async function getOrCreateUser({
+	sub,
+	email
+}: {
+	sub: string;
+	email: string | null;
+}): Promise<UserRow> {
 	const [row] = await db
 		.insert(users)
 		.values({ id: sub, email })
 		.onConflictDoUpdate({
 			target: users.id,
-			set: { email: sql`COALESCE(excluded.email, "user".email)` },
+			set: { email: sql`COALESCE(excluded.email, "user".email)` }
 		})
 		.returning();
 	return row;
@@ -77,7 +89,7 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
  */
 export async function isUsernameAvailable(username: string, excludingId: string): Promise<boolean> {
 	const row = await db.query.users.findFirst({
-		where: sql`lower(${users.username}) = lower(${username}) AND ${users.id} != ${excludingId}`,
+		where: sql`lower(${users.username}) = lower(${username}) AND ${users.id} != ${excludingId}`
 	});
 	return !row;
 }
@@ -97,7 +109,7 @@ export async function getUserSubmissions(userId: string) {
 		.select({
 			submission: communityMetricSubmissions,
 			movieTitle: movies.title,
-			movieId: movies.id,
+			movieId: movies.id
 		})
 		.from(communityMetricSubmissions)
 		.leftJoin(movies, eq(communityMetricSubmissions.movieId, movies.id))
@@ -107,9 +119,6 @@ export async function getUserSubmissions(userId: string) {
 
 function isUniqueViolation(e: unknown): boolean {
 	return (
-		typeof e === 'object' &&
-		e !== null &&
-		'code' in e &&
-		(e as { code: string }).code === '23505'
+		typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === '23505'
 	);
 }

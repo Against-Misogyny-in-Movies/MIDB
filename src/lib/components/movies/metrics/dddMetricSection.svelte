@@ -26,7 +26,7 @@
 	const filteredTags = $derived(
 		selectedCategory === null
 			? visibleTags
-			: visibleTags.filter((t) => t.category === selectedCategory),
+			: visibleTags.filter((t) => t.category === selectedCategory)
 	);
 </script>
 
@@ -80,5 +80,4 @@
 	.skeleton-tag {
 		@apply h-9 w-full rounded-md bg-surface animate-pulse;
 	}
-
 </style>

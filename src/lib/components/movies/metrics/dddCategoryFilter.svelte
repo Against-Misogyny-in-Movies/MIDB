@@ -27,11 +27,7 @@
 	<div class="category-filter">
 		<label class="select-wrap">
 			<span class="select-label label">Category</span>
-			<select
-				class="select"
-				value={selectedCategory ?? ''}
-				onchange={handleChange}
-			>
+			<select class="select" value={selectedCategory ?? ''} onchange={handleChange}>
 				<option value="">All categories</option>
 				{#each categories as cat (cat)}
 					<option value={cat}>{cat}</option>

@@ -13,11 +13,12 @@ change delivers two things together:
 
 1. A **light/dark theme system** stemming from the user's violet→aqua palette, defaulting to the
    OS preference, overridable by a persisted manual toggle, with **no flash** of the wrong theme.
-2. A **landing page** with an **editorial/serious** identity (deep royal_violet anchor, a single
-   aqua accent), minimalistic and deliberately *not* AI-generic, leading with **movie search** as
+2. A **landing page** with an **editorial/serious** identity (deep royal*violet anchor, a single
+   aqua accent), minimalistic and deliberately \_not* AI-generic, leading with **movie search** as
    the primary CTA and a quiet **"contribute a rating"** secondary action.
 
 ### Locked decisions (from the user)
+
 - **Theme behavior:** system default (`prefers-color-scheme`) + manual toggle that overrides +
   persisted in `localStorage` + no-flash init.
 - **Primary CTA:** search box is the hero action; secondary line invites contributing/sign-up.
@@ -28,6 +29,7 @@ change delivers two things together:
 - **Scope:** build the theme system **and** the landing page, with tests.
 
 ### Tech ground truth (verified)
+
 - Svelte 5 (runes), SvelteKit 2.21, Tailwind **v4** via `@tailwindcss/vite`, configured entirely in
   `src/app.css` (`@import "tailwindcss"` + `@theme {}` + `@layer components`). `tailwind.config.js`
   is **orphaned** (v4 ignores it by default) — do not rely on it.
@@ -37,7 +39,7 @@ change delivers two things together:
   4173). Scripts: `bun run test:unit` (vitest), `bun run test:integration` (playwright),
   `bun run check` (svelte-check).
 - `src/lib/components/search/searchForm.svelte` is real and reusable (`{ method, action, onaction }`,
-  placeholder `"Search..."`). **Caveat:** it fires `onaction` on `oninput`/`onchange` *and* submit.
+  placeholder `"Search..."`). **Caveat:** it fires `onaction` on `oninput`/`onchange` _and_ submit.
 - `src/lib/components/search/movieSearch.svelte` is a **0-byte empty file** — not reusable.
 - `tests/test.ts` asserts the boilerplate "Welcome to SvelteKit" h1 — it **will break** and must be
   edited in this change.
@@ -73,17 +75,17 @@ Semantic tokens: `--color-surface`, `--color-surface-raised`, `--color-ink`, `--
 
 Concrete mappings (high contrast):
 
-| token | light | dark | notes |
-|---|---|---|---|
-| surface | `#fbf9fd` (violet-warm white) | `#120819` (violet-black) | |
-| surface-raised | `#ffffff` | `#1e1029` | |
-| ink | `#1a0b24` | `#f3ecf8` | ~16:1 on surface (AAA) |
-| ink-muted | `#4a3a57` | `#b9a9c8` | ~8:1 (AAA) |
-| brand | `#7400b8` (rv-500) | `#c890ee` (rv-800) | dark needs lightened violet for AA+ |
-| accent | `#008a64` (aqua, dark enough for AA UI text) | `#72efdd` | labels/marks only |
-| accent-bg | `#64dfdf` | `#72efdd` | search submit fill |
-| accent-ink | `#170025` | `#170025` | ink on aqua ≈ 11:1 (AAA) |
-| border | `#e3dceb` | `#34234a` | hairline |
+| token          | light                                        | dark                     | notes                               |
+| -------------- | -------------------------------------------- | ------------------------ | ----------------------------------- |
+| surface        | `#fbf9fd` (violet-warm white)                | `#120819` (violet-black) |                                     |
+| surface-raised | `#ffffff`                                    | `#1e1029`                |                                     |
+| ink            | `#1a0b24`                                    | `#f3ecf8`                | ~16:1 on surface (AAA)              |
+| ink-muted      | `#4a3a57`                                    | `#b9a9c8`                | ~8:1 (AAA)                          |
+| brand          | `#7400b8` (rv-500)                           | `#c890ee` (rv-800)       | dark needs lightened violet for AA+ |
+| accent         | `#008a64` (aqua, dark enough for AA UI text) | `#72efdd`                | labels/marks only                   |
+| accent-bg      | `#64dfdf`                                    | `#72efdd`                | search submit fill                  |
+| accent-ink     | `#170025`                                    | `#170025`                | ink on aqua ≈ 11:1 (AAA)            |
+| border         | `#e3dceb`                                    | `#34234a`                | hairline                            |
 
 Also: `--font-display: "Fraunces", ui-serif, Georgia, serif;` in `@theme`; switch `body` to
 `@apply bg-surface text-ink;` + `color-scheme: light dark;`; add `.label` (small-caps:
@@ -98,9 +100,13 @@ In `<head>`, **before** `%sveltekit.head%`, add a synchronous inline script that
 "system"). Wrap in `try/catch`.
 
 Also add Fraunces minimally (headlines only; body stays system stack):
+
 ```html
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+	href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap"
+	rel="stylesheet"
+/>
 ```
 
 ### 3. `src/lib/components/theme/themeToggle.svelte` (new)
@@ -164,6 +170,7 @@ outline in `--accent`. Style via `@reference "../../../app.css"` using `bg-surfa
 ---
 
 ## Ordered steps
+
 1. `src/app.css` — ramps, light defaults, system-dark media block, manual overrides, `@theme inline`,
    `--font-display`, `.label`/`.display`, retune `body`.
 2. `src/app.html` — no-flash script + Fraunces links.
@@ -174,6 +181,7 @@ outline in `--accent`. Style via `@reference "../../../app.css"` using `bg-surfa
 7. `tests/landing.spec.ts` + edit `tests/test.ts`.
 
 ## Verification
+
 - `bun run test:unit` — toggle component test passes.
 - `bun run test:integration` — landing e2e passes (headline, search focus, contribute link,
   theme switch + persistence across reload).
@@ -183,6 +191,7 @@ outline in `--accent`. Style via `@reference "../../../app.css"` using `bg-surfa
   changes (validates the `@theme inline` choice). Check contrast on both themes.
 
 ## Risks / watch-items
+
 - **`@theme inline` is mandatory** for the swap — a plain `@theme` silently fails to re-cascade.
   Verify in-browser first.
 - **Do not delete legacy color ramps** in `app.css` — existing components depend on them.

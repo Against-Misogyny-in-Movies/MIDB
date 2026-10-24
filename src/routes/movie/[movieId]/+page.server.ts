@@ -25,6 +25,6 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		bechdel,
 		unconsenting,
 		umCandidates,
-		triggerTags: getTriggerTagsLive(movie.imdbId), // un-awaited: streamed
+		triggerTags: getTriggerTagsLive(movie.imdbId) // un-awaited: streamed
 	};
 };

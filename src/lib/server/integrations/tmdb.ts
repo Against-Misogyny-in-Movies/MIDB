@@ -1,6 +1,12 @@
 import { PUBLIC_TMDB_API_URL } from '$env/static/public';
 import { TMDB_API_TOKEN } from '$env/static/private';
-import type { GenderBreakdown, GenderCategory, CastMember, CrewDepartment, CrewJob } from '$lib/media/types/media';
+import type {
+	GenderBreakdown,
+	GenderCategory,
+	CastMember,
+	CrewDepartment,
+	CrewJob
+} from '$lib/media/types/media';
 
 export const TMDB_BASE = PUBLIC_TMDB_API_URL;
 
@@ -58,11 +64,14 @@ export const PRIORITY_DEPARTMENTS = [
 	'Writing',
 	'Production',
 	'Editing',
-	'Camera',
+	'Camera'
 ] as const;
 
 export function buildCrewDepartments(crew: TmdbCrewEntry[]): CrewDepartment[] {
-	const deptMap = new Map<string, { allEntries: TmdbCreditEntry[]; jobMap: Map<string, TmdbCreditEntry[]> }>();
+	const deptMap = new Map<
+		string,
+		{ allEntries: TmdbCreditEntry[]; jobMap: Map<string, TmdbCreditEntry[]> }
+	>();
 	for (const c of crew) {
 		let dept = deptMap.get(c.department);
 		if (!dept) {
@@ -82,8 +91,12 @@ export function buildCrewDepartments(crew: TmdbCrewEntry[]): CrewDepartment[] {
 			return { department, breakdown: aggregateGender(allEntries), jobs };
 		})
 		.sort((a, b) => {
-			const aPriority = PRIORITY_DEPARTMENTS.indexOf(a.department as typeof PRIORITY_DEPARTMENTS[number]);
-			const bPriority = PRIORITY_DEPARTMENTS.indexOf(b.department as typeof PRIORITY_DEPARTMENTS[number]);
+			const aPriority = PRIORITY_DEPARTMENTS.indexOf(
+				a.department as (typeof PRIORITY_DEPARTMENTS)[number]
+			);
+			const bPriority = PRIORITY_DEPARTMENTS.indexOf(
+				b.department as (typeof PRIORITY_DEPARTMENTS)[number]
+			);
 			// Both priority: sort by declared order
 			if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
 			// One priority: it goes first

@@ -13,12 +13,7 @@
 </script>
 
 <div class="disclosure">
-	<button
-		class="toggle"
-		type="button"
-		aria-expanded={open}
-		onclick={() => (open = !open)}
-	>
+	<button class="toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
 		<i class="ri-arrow-right-s-line chevron" class:chevron--open={open} aria-hidden="true"></i>
 		{open ? `Hide ${label}` : `See ${label}`}
 	</button>

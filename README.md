@@ -26,6 +26,6 @@ AUTH_SECRET=secret
 To get started, follow these steps, migration run at starup time:
 
 1. Install the project dependencies.
-```bun install```
+   `bun install`
 2. Run the development server. This project is based on SvelteKit.
-```bun run dev```
+   `bun run dev`

@@ -6,7 +6,7 @@ The movie details page needs to display three diversity/safety metrics from thre
 sources, plus the existing TMDB-sourced movie facts and gender breakdown. Today the page has a
 **summary section** (`DetailHeader` + `FactGrid`) and a placeholder **metrics section**. The
 existing DB schema (`movies`, `metrics`, `metric_options`, `evaluations`, `evaluation_results`)
-was designed for *user-generated* ratings — a poor fit for authoritative, seeded source data.
+was designed for _user-generated_ ratings — a poor fit for authoritative, seeded source data.
 
 Per the user's decision, we **disregard the existing metric/evaluation schema** and design a
 clean, purpose-built schema where:
@@ -14,8 +14,8 @@ clean, purpose-built schema where:
 - **Bechdel Test** and **Unconsenting Media (UM)** are **seeded source-of-truth** data: one fixed
   record per movie, loaded from CSVs at seed time and stored in dedicated tables.
 - **Does The Dog Die (DDD)** is **fetched live** from their API on every details-page load
-  (streamed + short-TTL cached). Its trigger tags get a table that's *defined now but only written
-  to later*, once user-interaction features exist.
+  (streamed + short-TTL cached). Its trigger tags get a table that's _defined now but only written
+  to later_, once user-interaction features exist.
 
 The page's **summary section is replaced** by a summary of these 3 metrics; the **metrics
 section** gains one sub-section per source, each with a link back to that source's website.
@@ -28,36 +28,36 @@ slots in cleanly without rework.
 ## Database Schema (PostgreSQL + Drizzle)
 
 > Replaces `db/schema/metric.ts` and extends `db/schema/movie.ts`. `db/schema/auth.ts` (users)
-> stays as-is for the future; new tables reference it only where noted as *future*.
+> stays as-is for the future; new tables reference it only where noted as _future_.
 
 ### 1. `movies` — the spine (seeded from Bechdel CSV)
 
 The Bechdel CSV is the only source carrying a reliable `imdbid` **and** `title`/`year`, so it is
 the movie seed spine.
 
-| column        | type            | notes |
-|---------------|-----------------|-------|
-| `id`          | uuid PK         | `defaultRandom()` — internal stable ID |
-| `imdb_id`     | varchar unique  | from Bechdel `imdbid` (e.g. `tt0089755`); the cross-source join key |
-| `tmdb_id`     | integer unique nullable | backfilled lazily on first page visit (or batch) |
-| `title`       | varchar(255)    | from Bechdel `title` |
-| `year`        | integer         | from Bechdel `year` |
-| `clean_title` | varchar(255)    | normalized title (lowercased, articles/punct stripped) — index for UM matching |
-| `created_at`  | timestamp       | `defaultNow()` |
-| `updated_at`  | timestamp       | `defaultNow()` |
+| column        | type                    | notes                                                                          |
+| ------------- | ----------------------- | ------------------------------------------------------------------------------ |
+| `id`          | uuid PK                 | `defaultRandom()` — internal stable ID                                         |
+| `imdb_id`     | varchar unique          | from Bechdel `imdbid` (e.g. `tt0089755`); the cross-source join key            |
+| `tmdb_id`     | integer unique nullable | backfilled lazily on first page visit (or batch)                               |
+| `title`       | varchar(255)            | from Bechdel `title`                                                           |
+| `year`        | integer                 | from Bechdel `year`                                                            |
+| `clean_title` | varchar(255)            | normalized title (lowercased, articles/punct stripped) — index for UM matching |
+| `created_at`  | timestamp               | `defaultNow()`                                                                 |
+| `updated_at`  | timestamp               | `defaultNow()`                                                                 |
 
 - Index on `imdb_id` (unique), `tmdb_id` (unique, partial where not null), and `clean_title`.
 - `tmdb_id` nullable + backfilled: avoids resolving every Bechdel row through TMDB at seed time.
 
 ### 2. `movie_bechdel` — seeded, 1:1 with movie
 
-| column           | type    | notes |
-|------------------|---------|-------|
-| `movie_id`       | uuid PK FK → movies.id (cascade) | one row per movie |
-| `bechdel_id`     | integer | their `id`, used for the link URL |
-| `rating`         | smallint| 0–3 (CHECK 0..3) |
-| `num_votes`      | integer | from CSV `numVotes` |
-| `created_at`     | timestamp |
+| column       | type                             | notes                             |
+| ------------ | -------------------------------- | --------------------------------- |
+| `movie_id`   | uuid PK FK → movies.id (cascade) | one row per movie                 |
+| `bechdel_id` | integer                          | their `id`, used for the link URL |
+| `rating`     | smallint                         | 0–3 (CHECK 0..3)                  |
+| `num_votes`  | integer                          | from CSV `numVotes`               |
+| `created_at` | timestamp                        |
 
 - Link URL built in the app: `https://bechdeltest.com/view/{bechdel_id}`.
 - The 4 rating tiers (0–3) and their labels are **static UI constants**, not DB rows — they never
@@ -68,23 +68,23 @@ the movie seed spine.
 UM has no imdb_id, so rows are matched to movies by `clean_title`. Store the 9 boolean flags as
 explicit columns (queryable/indexable) rather than JSON.
 
-| column            | type    | notes |
-|-------------------|---------|-------|
-| `movie_id`        | uuid PK FK → movies.id (cascade) | |
-| `um_id`           | integer | their `id`, for the link URL |
-| `clean_name`      | varchar | from CSV `cleanName` |
-| `item_type`       | varchar | from CSV `itemType` |
-| `comment`         | text    | from CSV `comment` |
-| `no_rape`         | boolean | |
-| `rape_men_dis_imp`| boolean | "Rape or sexual assault mentioned/discussed/implied" |
-| `sex_har_on_scrn` | boolean | "Sexual harassment …" |
-| `sex_adult_teen`  | boolean | "Sexual relationship between adult and teenager" |
-| `child_sex_abuse` | boolean | |
-| `incest`          | boolean | |
-| `attempted_rape`  | boolean | |
-| `rape_off_scrn`   | boolean | "Rape off-screen or strongly implied" |
-| `rape_on_screen`  | boolean | |
-| `created_at`      | timestamp |
+| column             | type                             | notes                                                |
+| ------------------ | -------------------------------- | ---------------------------------------------------- |
+| `movie_id`         | uuid PK FK → movies.id (cascade) |                                                      |
+| `um_id`            | integer                          | their `id`, for the link URL                         |
+| `clean_name`       | varchar                          | from CSV `cleanName`                                 |
+| `item_type`        | varchar                          | from CSV `itemType`                                  |
+| `comment`          | text                             | from CSV `comment`                                   |
+| `no_rape`          | boolean                          |                                                      |
+| `rape_men_dis_imp` | boolean                          | "Rape or sexual assault mentioned/discussed/implied" |
+| `sex_har_on_scrn`  | boolean                          | "Sexual harassment …"                                |
+| `sex_adult_teen`   | boolean                          | "Sexual relationship between adult and teenager"     |
+| `child_sex_abuse`  | boolean                          |                                                      |
+| `incest`           | boolean                          |                                                      |
+| `attempted_rape`   | boolean                          |                                                      |
+| `rape_off_scrn`    | boolean                          | "Rape off-screen or strongly implied"                |
+| `rape_on_screen`   | boolean                          |                                                      |
+| `created_at`       | timestamp                        |
 
 - Link URL: `https://www.unconsentingmedia.org/items/{um_id}`.
 - Human-readable labels for the 9 flags live as a **static UI map** (flag column → label string),
@@ -95,17 +95,17 @@ explicit columns (queryable/indexable) rather than JSON.
 DDD tags are fetched live for display. This table exists so persistence is ready when user
 features land; **no writes in this phase**.
 
-| column          | type    | notes |
-|-----------------|---------|-------|
-| `id`            | serial PK | |
-| `movie_id`      | uuid FK → movies.id (cascade) | |
-| `topic_id`      | integer | DDD topic id |
-| `does_name`     | varchar | e.g. "Does the dog die" (display label) |
-| `yes_sum`       | integer | snapshot of votes when persisted |
-| `no_sum`        | integer | |
-| `comment`       | text    | |
-| `created_by`    | text FK → users.id (*future*, nullable for now) | which user's interaction persisted it |
-| `created_at`    | timestamp |
+| column       | type                                            | notes                                   |
+| ------------ | ----------------------------------------------- | --------------------------------------- |
+| `id`         | serial PK                                       |                                         |
+| `movie_id`   | uuid FK → movies.id (cascade)                   |                                         |
+| `topic_id`   | integer                                         | DDD topic id                            |
+| `does_name`  | varchar                                         | e.g. "Does the dog die" (display label) |
+| `yes_sum`    | integer                                         | snapshot of votes when persisted        |
+| `no_sum`     | integer                                         |                                         |
+| `comment`    | text                                            |                                         |
+| `created_by` | text FK → users.id (_future_, nullable for now) | which user's interaction persisted it   |
+| `created_at` | timestamp                                       |
 
 - Unique index `(movie_id, topic_id)`.
 - Wired into the schema and migrations now; the write path is deferred.
@@ -134,7 +134,7 @@ New scripts under `db/scripts/`, run via new `package.json` entries (mirroring e
    Log unmatched rows to a report file for manual review (don't create movie rows from UM —
    it lacks imdb_id).
 
-3. **`backfill:tmdb`** *(optional batch, also done lazily)* — for movies with null `tmdb_id`,
+3. **`backfill:tmdb`** _(optional batch, also done lazily)_ — for movies with null `tmdb_id`,
    resolve `tmdb_id` via TMDB using `imdb_id` (TMDB `/find/{imdb_id}?external_source=imdb_id`).
    Lazy fallback: when a details page loads a movie whose `tmdb_id` is null, resolve and persist
    it then.
@@ -159,16 +159,16 @@ The route param is currently a TMDB id. Keep that, but load DB-backed metrics by
 
 ```ts
 export const load: PageServerLoad = async ({ params }) => {
-  const movie = await getMovie(params.movieId);          // TMDB live (existing)
-  const dbMovie = await getOrCreateDbMovie(movie);       // ensures movies row, backfills tmdb_id
-  const bechdel = getBechdel(dbMovie.id);                // awaited (DB, fast)
-  const unconsenting = getUnconsenting(dbMovie.id);      // awaited (DB, fast)
-  return {
-    movie,
-    bechdel: await bechdel,
-    unconsenting: await unconsenting,
-    triggerTags: getTriggerTagsLive(movie.imdbId)        // STREAMED promise (DDD live)
-  };
+	const movie = await getMovie(params.movieId); // TMDB live (existing)
+	const dbMovie = await getOrCreateDbMovie(movie); // ensures movies row, backfills tmdb_id
+	const bechdel = getBechdel(dbMovie.id); // awaited (DB, fast)
+	const unconsenting = getUnconsenting(dbMovie.id); // awaited (DB, fast)
+	return {
+		movie,
+		bechdel: await bechdel,
+		unconsenting: await unconsenting,
+		triggerTags: getTriggerTagsLive(movie.imdbId) // STREAMED promise (DDD live)
+	};
 };
 ```
 
@@ -210,7 +210,7 @@ export const load: PageServerLoad = async ({ params }) => {
   (fast, indexable). DDD is streamed (SvelteKit promise-in-load) so a slow external API never
   blocks first paint. No client-side fetching needed for metrics.
 - **JSON vs columns**: UM flags are explicit boolean columns (not JSONB) so they're queryable
-  (e.g. future "filter movies without X") and self-documenting. DDD live data is *not* normalized
+  (e.g. future "filter movies without X") and self-documenting. DDD live data is _not_ normalized
   into columns — it's ephemeral display data.
 - **Identity & scalability**: internal `uuid` PK decouples us from any single external id; all
   three external ids (`imdb_id`, `tmdb_id`, `bechdel_id`/`um_id`) are stored and indexed. This

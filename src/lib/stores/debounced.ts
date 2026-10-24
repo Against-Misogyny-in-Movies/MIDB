@@ -1,7 +1,6 @@
 import { Subject, distinctUntilChanged, debounceTime, switchMap, startWith } from 'rxjs';
 
-
-type sourceFunction<T> = (test: string) => Promise<T>; 
+type sourceFunction<T> = (test: string) => Promise<T>;
 
 /**
  * Creates a debounced search store backed by an RxJS pipeline.
@@ -13,20 +12,17 @@ type sourceFunction<T> = (test: string) => Promise<T>;
  * @param time - Debounce delay in milliseconds (default: 500).
  * @returns An object with `search(input)` to trigger a query and `subscribe` to observe results.
  */
-export function createDebouncedSearchStore<T>(source: sourceFunction<T>, time = 500 ) {
+export function createDebouncedSearchStore<T>(source: sourceFunction<T>, time = 500) {
+	const search$ = new Subject<string>();
+	const _items$ = search$.pipe(
+		debounceTime(time),
+		distinctUntilChanged(),
+		switchMap<string, Promise<T>>((query) => source(query)),
+		startWith([])
+	);
 
-    const search$ = new Subject<string>();
-    const _items$ = search$.pipe(
-        debounceTime(time),
-        distinctUntilChanged(),
-        switchMap<string, Promise<T>>(query => source(query)),
-        startWith([])
-    );
-
-    return  {
-        search: (input: string) => search$.next(input), 
-        subscribe: _items$.subscribe.bind(_items$)
-    }
-
+	return {
+		search: (input: string) => search$.next(input),
+		subscribe: _items$.subscribe.bind(_items$)
+	};
 }
-

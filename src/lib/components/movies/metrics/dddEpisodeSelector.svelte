@@ -76,7 +76,6 @@
 			</select>
 		</label>
 	</div>
-
 </div>
 
 <style lang="postcss">
@@ -112,5 +111,4 @@
 	.select:disabled {
 		@apply opacity-50 cursor-not-allowed;
 	}
-
 </style>

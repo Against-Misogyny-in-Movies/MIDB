@@ -16,7 +16,7 @@ if (!TMDB_TOKEN) {
 async function resolveTmdbId(imdbId: string): Promise<number | null> {
 	const url = `${TMDB_BASE}/3/find/${imdbId}?external_source=imdb_id`;
 	const res = await fetch(url, {
-		headers: { Authorization: `Bearer ${TMDB_TOKEN}`, Accept: 'application/json' },
+		headers: { Authorization: `Bearer ${TMDB_TOKEN}`, Accept: 'application/json' }
 	});
 	if (!res.ok) return null;
 	const data = await res.json();

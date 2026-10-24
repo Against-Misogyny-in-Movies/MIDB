@@ -10,6 +10,7 @@ poster plus condensed info (title + release year), and clicking a result navigat
 to that movie's overview page (`/movie/[movieId]`).
 
 Most of the scaffolding already exists but is unwired:
+
 - `src/lib/stores/debounced.ts` — `createDebouncedSearchStore` (RxJS: `debounceTime`,
   `distinctUntilChanged`, `switchMap`). Ready to reuse, currently unused.
 - `src/lib/components/search/searchForm.svelte` — input + button, emits `onaction(query)`
@@ -22,6 +23,7 @@ Most of the scaffolding already exists but is unwired:
   `poster_path`. Reuse for thumbnails.
 
 **Decisions (confirmed with user):**
+
 - Inline live results only — remove the submit-and-navigate behavior; no `/search` page.
 - Browser reaches TMDB via a **SvelteKit server API route** that proxies the request
   using the server-only `TMDB_API_TOKEN` (v4 Bearer). This keeps the token off the
@@ -37,6 +39,7 @@ requires auth, so this is the first authenticated TMDB call.
 ### 1. Server proxy endpoint — `src/routes/api/search/+server.ts` (new)
 
 A `GET` handler that:
+
 - Reads `q` from `url.searchParams`. If empty/whitespace, return `{ results: [] }`
   (200) without calling TMDB.
 - Imports `TMDB_API_TOKEN` from `$env/static/private` and `PUBLIC_TMDB_API_URL` from
@@ -47,10 +50,10 @@ A `GET` handler that:
   row renders (avoids shipping full overviews):
   ```ts
   type SearchResult = {
-    id: number;
-    title: string;
-    posterPath: string | null;   // poster_path
-    releaseYear: string;         // release_date.slice(0,4), '' if missing
+  	id: number;
+  	title: string;
+  	posterPath: string | null; // poster_path
+  	releaseYear: string; // release_date.slice(0,4), '' if missing
   };
   ```
 - Returns via `json({ results })` from `@sveltejs/kit`.
@@ -92,6 +95,7 @@ mapping style.
 ### 2b. Keyboard navigation (in movieSearch.svelte)
 
 Make the dropdown fully keyboard-operable while focus stays in the input:
+
 - Track `let activeIndex = $state(-1)` (–1 = nothing highlighted; raw text query).
 - Reset `activeIndex = -1` whenever a new `results` array arrives.
 - On the input's `onkeydown`:
@@ -121,6 +125,7 @@ Make the dropdown fully keyboard-operable while focus stays in the input:
 
 Replace `HeroSearch` usage with the new live `MovieSearch`. Two options, pick the
 smaller diff:
+
 - **Preferred:** change `src/lib/components/landing/heroSearch.svelte` to render
   `MovieSearch` instead of the bare `SearchForm` + `goto`. The landing page keeps
   importing `HeroSearch`, so `+page.svelte` is untouched and the `.search-wrap`
@@ -162,6 +167,7 @@ Reused as-is: `src/lib/stores/debounced.ts`, `src/lib/components/search/searchFo
 8. Type-check: `bun run check`. Lint: `bun run lint`.
 
 ### Optional follow-ups (not in scope unless requested)
+
 - A `movieSearch` Storybook story (a `searchForm.stories.svelte` already exists).
 
 ---
@@ -173,6 +179,7 @@ This repo is **Svelte 5 + SvelteKit 2 + Tailwind v4**, run with **Bun**. Match
 existing conventions exactly — do not introduce new patterns or libraries.
 
 ### Order of work (build inside-out, verify as you go)
+
 1. `src/routes/api/search/datasource.server.ts` — TMDB call + mapping.
 2. `src/routes/api/search/+server.ts` — the GET handler that uses it.
 3. Smoke-test the endpoint alone: `bun run dev`, then
@@ -183,6 +190,7 @@ existing conventions exactly — do not introduce new patterns or libraries.
 6. Run `bun run check` and `bun run lint`, then do the manual Verification steps.
 
 ### Read these before writing code (ground yourself in the conventions)
+
 - `src/routes/movie/[movieId]/datasource.server.ts` — the exact snake_case→camelCase
   mapping style and `$env/static/public` import to mirror.
 - `src/lib/stores/debounced.ts` — the store you consume; note it returns a plain
@@ -195,13 +203,17 @@ existing conventions exactly — do not introduce new patterns or libraries.
   (`bg-surface-raised`, `border-border`, `rounded-md`, `shadow-md`, `p-sm`, etc.).
 
 ### Svelte 5 specifics (do not regress to Svelte 4)
+
 - Props: `let { ... }: Props = $props();` with an `interface Props`. No `export let`.
 - State: `let results = $state<SearchResult[]>([])`, `let activeIndex = $state(-1)`.
 - Side effects / subscription: use `$effect`. Because the store is RxJS-backed, do:
   ```ts
   $effect(() => {
-    const sub = store.subscribe((r) => { results = r; activeIndex = -1; });
-    return () => sub.unsubscribe();   // RxJS Subscription
+  	const sub = store.subscribe((r) => {
+  		results = r;
+  		activeIndex = -1;
+  	});
+  	return () => sub.unsubscribe(); // RxJS Subscription
   });
   ```
   Do **not** use `$store` auto-subscription syntax — it won't satisfy the Svelte store
@@ -212,6 +224,7 @@ existing conventions exactly — do not introduce new patterns or libraries.
   from the file's location — for `search/` it is `../../../app.css`). Use `@apply`.
 
 ### Server route (`+server.ts`) details
+
 - Export `const GET: RequestHandler`. Import `RequestHandler` from `./$types`.
 - `import { json } from '@sveltejs/kit'`.
 - `import { TMDB_API_TOKEN } from '$env/static/private'` — note **private**, not public.
@@ -223,6 +236,7 @@ existing conventions exactly — do not introduce new patterns or libraries.
   with `query`, `include_adult=false`, `language=en-US`, `page=1`.
 
 ### Keyboard nav details
+
 - Implement the keydown handler in `movieSearch.svelte`. SearchForm currently only
   exposes `onaction`, so threading `onkeydown`/ARIA attrs through it is awkward — the
   cleanest path is to **render the input locally in movieSearch** (copying SearchForm's
@@ -240,6 +254,7 @@ existing conventions exactly — do not introduce new patterns or libraries.
   clicks via the `contains` check.
 
 ### Guardrails
+
 - Keep `posterPath` nullable; render a neutral placeholder block when it's null
   (don't pass null into the Image component blindly — check first).
 - Don't add new dependencies; RxJS, Tailwind, and SvelteKit are already present.

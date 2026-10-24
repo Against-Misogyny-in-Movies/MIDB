@@ -7,7 +7,7 @@ import {
 	directorOrCrewShare,
 	toneTokens,
 	SAFETY_HARMFUL_FLAGS,
-	SAFETY_CAUTION_FLAGS,
+	SAFETY_CAUTION_FLAGS
 } from '$lib/media/utils/verdict';
 import type { GenderBreakdown, CastMember, CrewDepartment } from '$lib/media/types/media';
 import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
@@ -21,8 +21,15 @@ function mkBreakdown(partial: Partial<GenderBreakdown> = {}): GenderBreakdown {
 
 type UmRecord = Record<UmFlagKey, boolean>;
 const UM_KEYS: UmFlagKey[] = [
-	'noRape', 'rapeMenDisImp', 'sexHarOnScrn', 'sexAdultTeen',
-	'childSexAbuse', 'incest', 'attemptedRape', 'rapeOffScrn', 'rapeOnScreen',
+	'noRape',
+	'rapeMenDisImp',
+	'sexHarOnScrn',
+	'sexAdultTeen',
+	'childSexAbuse',
+	'incest',
+	'attemptedRape',
+	'rapeOffScrn',
+	'rapeOnScreen'
 ];
 
 function mkUm(overrides: Partial<UmRecord> = {}): UmRecord {
@@ -31,7 +38,17 @@ function mkUm(overrides: Partial<UmRecord> = {}): UmRecord {
 }
 
 function mkTag(doesName: string, yesSum: number, noSum: number): TriggerTag {
-	return { topicItemId: 1, topicId: 1, doesName, yesSum, noSum, comment: null, category: null, season: null, episode: null };
+	return {
+		topicItemId: 1,
+		topicId: 1,
+		doesName,
+		yesSum,
+		noSum,
+		comment: null,
+		category: null,
+		season: null,
+		episode: null
+	};
 }
 
 function mkDdd(tags: TriggerTag[] = []): DddResult {
@@ -45,7 +62,7 @@ const safeMembers: CastMember[] = [
 	{ name: 'B', gender: 'female', order: 1 },
 	{ name: 'C', gender: 'male', order: 2 },
 	{ name: 'D', gender: 'female', order: 3 },
-	{ name: 'E', gender: 'male', order: 4 },
+	{ name: 'E', gender: 'male', order: 4 }
 ];
 
 // ── femaleShare ───────────────────────────────────────────────────────────────
@@ -79,7 +96,9 @@ describe('leadsFemaleShare', () => {
 
 	test('returns null when all unknown in top N', () => {
 		const members: CastMember[] = Array.from({ length: 5 }, (_, i) => ({
-			name: 'X', gender: 'unknown' as const, order: i,
+			name: 'X',
+			gender: 'unknown' as const,
+			order: i
 		}));
 		expect(leadsFemaleShare(members)).toBeNull();
 	});
@@ -91,7 +110,7 @@ describe('leadsFemaleShare', () => {
 			{ name: 'B', gender: 'female', order: 1 },
 			{ name: 'C', gender: 'male', order: 2 },
 			{ name: 'D', gender: 'male', order: 3 },
-			{ name: 'E', gender: 'unknown', order: 4 },
+			{ name: 'E', gender: 'unknown', order: 4 }
 		];
 		expect(leadsFemaleShare(members)).toBeCloseTo(2 / 5);
 	});
@@ -103,8 +122,12 @@ describe('directorOrCrewShare', () => {
 	test('aggregates over priority departments (Directing + Writing)', () => {
 		const crew = mkBreakdown({ female: 0, male: 10, total: 10 });
 		const depts: CrewDepartment[] = [
-			{ department: 'Directing', breakdown: mkBreakdown({ female: 2, male: 8, total: 10 }), jobs: [] },
-			{ department: 'Writing', breakdown: mkBreakdown({ female: 4, male: 6, total: 10 }), jobs: [] },
+			{
+				department: 'Directing',
+				breakdown: mkBreakdown({ female: 2, male: 8, total: 10 }),
+				jobs: []
+			},
+			{ department: 'Writing', breakdown: mkBreakdown({ female: 4, male: 6, total: 10 }), jobs: [] }
 		];
 		// combined: 6 female / 20 total = 0.3
 		expect(directorOrCrewShare(crew, depts)).toBeCloseTo(0.3);
@@ -113,7 +136,7 @@ describe('directorOrCrewShare', () => {
 	test('falls back to crew when no priority depts present', () => {
 		const crew = mkBreakdown({ female: 4, male: 6, total: 10 });
 		const depts: CrewDepartment[] = [
-			{ department: 'Stunts', breakdown: mkBreakdown({ female: 0, male: 10, total: 10 }), jobs: [] },
+			{ department: 'Stunts', breakdown: mkBreakdown({ female: 0, male: 10, total: 10 }), jobs: [] }
 		];
 		expect(directorOrCrewShare(crew, depts)).toBeCloseTo(0.4);
 	});
@@ -126,8 +149,12 @@ describe('directorOrCrewShare', () => {
 	test('ignores non-priority departments when priority ones exist', () => {
 		const crew = mkBreakdown({ female: 0, male: 10, total: 10 });
 		const depts: CrewDepartment[] = [
-			{ department: 'Directing', breakdown: mkBreakdown({ female: 5, male: 5, total: 10 }), jobs: [] },
-			{ department: 'Stunts', breakdown: mkBreakdown({ female: 0, male: 20, total: 20 }), jobs: [] },
+			{
+				department: 'Directing',
+				breakdown: mkBreakdown({ female: 5, male: 5, total: 10 }),
+				jobs: []
+			},
+			{ department: 'Stunts', breakdown: mkBreakdown({ female: 0, male: 20, total: 20 }), jobs: [] }
 		];
 		// Only Directing counts → 5/10 = 0.5
 		expect(directorOrCrewShare(crew, depts)).toBeCloseTo(0.5);
@@ -138,13 +165,21 @@ describe('directorOrCrewShare', () => {
 
 describe('toneTokens', () => {
 	test('success maps to --success tokens', () => {
-		expect(toneTokens('success')).toEqual({ fg: '--success', soft: '--success-soft', on: '--success-fg' });
+		expect(toneTokens('success')).toEqual({
+			fg: '--success',
+			soft: '--success-soft',
+			on: '--success-fg'
+		});
 	});
 	test('warn', () => {
 		expect(toneTokens('warn')).toEqual({ fg: '--warn', soft: '--warn-soft', on: '--warn-fg' });
 	});
 	test('danger', () => {
-		expect(toneTokens('danger')).toEqual({ fg: '--danger', soft: '--danger-soft', on: '--danger-fg' });
+		expect(toneTokens('danger')).toEqual({
+			fg: '--danger',
+			soft: '--danger-soft',
+			on: '--danger-fg'
+		});
 	});
 	test('neutral maps to --info tokens', () => {
 		expect(toneTokens('neutral')).toEqual({ fg: '--info', soft: '--info-soft', on: '--info-fg' });
@@ -303,7 +338,7 @@ describe('scoreSafety', () => {
 			label: 'No sexual violence flagged',
 			detail: 'Clear',
 			present: false,
-			tone: 'success',
+			tone: 'success'
 		});
 	});
 
@@ -326,7 +361,7 @@ describe('scoreRepresentation', () => {
 		castMembers: safeMembers,
 		crewDepartments: [] as CrewDepartment[],
 		bechdel: { rating: 3 },
-		isSeries: false,
+		isSeries: false
 	};
 
 	test('strong: high cast, leads, crew, bechdel 3', () => {
@@ -347,11 +382,11 @@ describe('scoreRepresentation', () => {
 				{ name: 'B', gender: 'male', order: 1 },
 				{ name: 'C', gender: 'male', order: 2 },
 				{ name: 'D', gender: 'male', order: 3 },
-				{ name: 'E', gender: 'female', order: 4 },
+				{ name: 'E', gender: 'female', order: 4 }
 			],
 			crewDepartments: [],
 			bechdel: { rating: 0 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('poor');
 		expect(r.tone).toBe('danger');
@@ -368,11 +403,11 @@ describe('scoreRepresentation', () => {
 				{ name: 'B', gender: 'female', order: 1 },
 				{ name: 'C', gender: 'male', order: 2 },
 				{ name: 'D', gender: 'male', order: 3 },
-				{ name: 'E', gender: 'male', order: 4 },
+				{ name: 'E', gender: 'male', order: 4 }
 			],
 			crewDepartments: [],
 			bechdel: { rating: 2 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('mixed');
 	});
@@ -388,11 +423,11 @@ describe('scoreRepresentation', () => {
 				{ name: 'B', gender: 'female', order: 1 },
 				{ name: 'C', gender: 'female', order: 2 },
 				{ name: 'D', gender: 'female', order: 3 },
-				{ name: 'E', gender: 'male', order: 4 },
+				{ name: 'E', gender: 'male', order: 4 }
 			],
 			crewDepartments: [],
 			bechdel: { rating: 2 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('strong');
 	});
@@ -408,11 +443,11 @@ describe('scoreRepresentation', () => {
 				{ name: 'B', gender: 'female', order: 1 },
 				{ name: 'C', gender: 'male', order: 2 },
 				{ name: 'D', gender: 'male', order: 3 },
-				{ name: 'E', gender: 'male', order: 4 },
+				{ name: 'E', gender: 'male', order: 4 }
 			],
 			crewDepartments: [],
 			bechdel: { rating: 2 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('mixed');
 	});
@@ -423,11 +458,13 @@ describe('scoreRepresentation', () => {
 			cast: mkBreakdown({ female: 5, male: 5, total: 10 }),
 			crew: mkBreakdown({ female: 5, male: 5, total: 10 }),
 			castMembers: Array.from({ length: 5 }, (_, i) => ({
-				name: 'X', gender: 'male' as const, order: i,
+				name: 'X',
+				gender: 'male' as const,
+				order: i
 			})),
 			crewDepartments: [],
 			bechdel: { rating: 3 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('mixed');
 	});
@@ -438,11 +475,13 @@ describe('scoreRepresentation', () => {
 			cast: mkBreakdown({ female: 5, male: 5, total: 10 }),
 			crew: mkBreakdown({ female: 5, male: 5, total: 10 }),
 			castMembers: Array.from({ length: 5 }, (_, i) => ({
-				name: 'X', gender: 'male' as const, order: i,
+				name: 'X',
+				gender: 'male' as const,
+				order: i
 			})),
 			crewDepartments: [],
 			bechdel: { rating: 0 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('poor');
 	});
@@ -451,7 +490,7 @@ describe('scoreRepresentation', () => {
 		const r = scoreRepresentation({
 			...baseInput,
 			bechdel: null,
-			isSeries: true,
+			isSeries: true
 		});
 		expect(r.signalsTotal).toBe(3);
 		expect(r.tier).not.toBe('unknown');
@@ -465,7 +504,7 @@ describe('scoreRepresentation', () => {
 			castMembers: [], // leadsFemaleShare null
 			crewDepartments: [],
 			bechdel: null,
-			isSeries: true,
+			isSeries: true
 		});
 		expect(r.tier).toBe('unknown');
 		expect(r.tone).toBe('neutral');
@@ -479,7 +518,7 @@ describe('scoreRepresentation', () => {
 			castMembers: [],
 			crewDepartments: [],
 			bechdel: null,
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('unknown');
 		expect(r.signalsPresent).toBe(0);
@@ -493,7 +532,7 @@ describe('scoreRepresentation', () => {
 			'Cast — women',
 			'Leads — women',
 			'Crew — women',
-			'Bechdel',
+			'Bechdel'
 		]);
 		expect(r.signals.find((s) => s.label === 'Bechdel')?.detail).toBe('3/3');
 		expect(r.signals.find((s) => s.label === 'Bechdel')?.tone).toBe('success');
@@ -515,11 +554,11 @@ describe('scoreRepresentation', () => {
 				{ name: 'B', gender: 'male', order: 1 },
 				{ name: 'C', gender: 'male', order: 2 },
 				{ name: 'D', gender: 'male', order: 3 },
-				{ name: 'E', gender: 'male', order: 4 },
+				{ name: 'E', gender: 'male', order: 4 }
 			],
 			crewDepartments: [],
 			bechdel: { rating: 2 },
-			isSeries: false,
+			isSeries: false
 		});
 		const sig = r.signals.find((s) => s.label === 'Leads — women');
 		expect(sig?.detail).toBe('1/5 women');
@@ -530,10 +569,14 @@ describe('scoreRepresentation', () => {
 		const r = scoreRepresentation({
 			cast: mkBreakdown({ female: 1, male: 9, total: 10 }),
 			crew: mkBreakdown({ female: 1, male: 9, total: 10 }),
-			castMembers: Array.from({ length: 5 }, (_, i) => ({ name: 'X', gender: 'male' as const, order: i })),
+			castMembers: Array.from({ length: 5 }, (_, i) => ({
+				name: 'X',
+				gender: 'male' as const,
+				order: i
+			})),
 			crewDepartments: [],
 			bechdel: { rating: 0 },
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.signals.every((s) => s.tone === 'danger')).toBe(true);
 	});
@@ -546,7 +589,7 @@ describe('scoreRepresentation', () => {
 			castMembers: [],
 			crewDepartments: [],
 			bechdel: null,
-			isSeries: false,
+			isSeries: false
 		});
 		expect(r.tier).toBe('unknown');
 		expect(r.signals.some((s) => s.label === 'Cast — women')).toBe(true);

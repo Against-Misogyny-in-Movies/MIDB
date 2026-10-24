@@ -2,7 +2,10 @@
 	let { data } = $props();
 
 	function metricLabel(metric: string) {
-		return { bechdel: 'Bechdel', unconsenting: 'Unconsenting Media', ddd: 'Does the Dog Die' }[metric] ?? metric;
+		return (
+			{ bechdel: 'Bechdel', unconsenting: 'Unconsenting Media', ddd: 'Does the Dog Die' }[metric] ??
+			metric
+		);
 	}
 </script>
 

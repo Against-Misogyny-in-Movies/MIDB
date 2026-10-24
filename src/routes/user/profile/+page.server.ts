@@ -18,10 +18,10 @@ export const actions: Actions = {
 
 		const result = await updateProfile(locals.user!.id, {
 			...(username !== undefined ? { username } : {}),
-			...(avatarKey !== undefined ? { avatarKey } : {}),
+			...(avatarKey !== undefined ? { avatarKey } : {})
 		});
 
 		if (!result.ok) return fail(422, { error: result.reason });
 		return { success: true, user: result.user };
-	},
+	}
 };

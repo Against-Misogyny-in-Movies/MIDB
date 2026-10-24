@@ -19,17 +19,19 @@ purple + aqua accent, calm vertical rhythm. This is a representation page, so co
 in the gender chart must be neutral and not imply value judgments.
 
 Decisions confirmed with the user:
+
 - **Layout:** single scrolling page.
 - **Data fetch:** authenticated (`Bearer ${TMDB_API_TOKEN}`) + `append_to_response=credits`
-  so movie details *and* cast/crew arrive in one request (also fixes known gap #6).
+  so movie details _and_ cast/crew arrive in one request (also fixes known gap #6).
 
 ---
 
 ## 1. Data layer
 
 ### `src/routes/movie/[movieId]/datasource.server.ts` (rewrite `getMovie`)
-- Switch from `joinPath` to `new URL(\`${PUBLIC_TMDB_API_URL}/3/movie/${movieId}\`)` so we can
-  add query params. Set `append_to_response=credits` and `language=en-US`.
+
+- Switch from `joinPath` to `new URL(\`${PUBLIC_TMDB_API_URL}/3/movie/${movieId}\`)`so we can
+add query params. Set`append_to_response=credits`and`language=en-US`.
 - Add headers `Authorization: Bearer ${TMDB_API_TOKEN}` (import from `$env/static/private`) and
   `accept: application/json` — mirror `src/routes/api/search/datasource.server.ts`.
 - Add a `!response.ok` guard: `throw error(response.status, ...)` from `@sveltejs/kit` so the
@@ -45,16 +47,20 @@ Decisions confirmed with the user:
   Keep the reduce in a small named helper so a later (sections 3/4) raw-credits field can coexist.
 
 ### `src/routes/movie/[movieId]/types.ts` (new, non-server)
+
 Move the `Movie` and `GenderBreakdown` interfaces here (mirrors how `search/types.ts` is split
 from `search/datasource.server.ts`). The datasource imports + re-exports them; client components
 import the types from here, never from `*.server.ts`.
 
 ### `src/routes/movie/[movieId]/+page.server.ts`
+
 No structural change — it already calls `getMovie`. Keep the `Promise.all` wrapper and add a
 `// TODO(sections 3/4)` comment marking where the metrics (Postgres) and comments loads will go.
 
 ### `src/lib/movie/format.ts` (new, plain TS — client-safe, `Intl` only)
+
 Pure helpers, unit-testable (precedent: `radioTile.spec.ts`):
+
 - `formatCurrency(n)` → `Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0})`; returns `'—'` when `n` is 0/falsy (TMDB uses 0 = unknown).
 - `countryName(iso)` / `languageName(iso)` → `Intl.DisplayNames`, wrapped in try/catch with a
   fallback to the raw code (or `englishName` for languages — some TMDB ISO codes aren't valid 639-1).
@@ -126,14 +132,14 @@ nav/toggle semantics). Vertical rhythm via `space-y-xl` / `mt-xl`.
 Each `<section>` gets a stable `id` so a future in-page nav (replacing the current
 `?metrics`/`?cast` `SimpleNav`) can anchor-scroll. This retires the dead Cast nav link.
 
-**Sync vs. streamed sections.** Sections 1 & 2 come from the *same* awaited TMDB request, so they
+**Sync vs. streamed sections.** Sections 1 & 2 come from the _same_ awaited TMDB request, so they
 are present in the SSR HTML — **no skeleton, no spinner** (a skeleton over already-rendered data
 reads as slower, not faster). Sections 3 (metrics from Postgres) & 4 (comments) are the genuinely
-async ones and are deferred to a later plan. For *this* plan they render a **static skeleton**
+async ones and are deferred to a later plan. For _this_ plan they render a **static skeleton**
 inside the placeholder so the page looks intentional and complete on first paint.
 
 When sections 3/4 are implemented later, they become **streamed** via SvelteKit's deferred-promise
-pattern: `+page.server.ts` returns the awaited `movie` plus *un-awaited* promises
+pattern: `+page.server.ts` returns the awaited `movie` plus _un-awaited_ promises
 (`{ movie, metrics: getMetrics(...), comments: getComments(...) }` — no `await`), and `+page.svelte`
 wraps each in `{#await data.metrics}` showing `<SectionSkeleton>` in the pending branch. Because §1
 is awaited and §3/§4 are not, the shell + details stream first and the skeletons fill in without
@@ -143,19 +149,19 @@ blocking LCP or shifting layout.
 
 ## Files
 
-| File | Change |
-|---|---|
-| `src/routes/movie/[movieId]/datasource.server.ts` | Auth + `append_to_response=credits`, error guard, extend mapping, server-side gender aggregation |
-| `src/routes/movie/[movieId]/types.ts` | **new** — `Movie`, `GenderBreakdown` interfaces |
-| `src/routes/movie/[movieId]/+page.server.ts` | TODO markers for sections 3/4 (no structural change) |
-| `src/routes/movie/[movieId]/+page.svelte` | **rewrite** — scrolling layout + section anchors |
-| `src/lib/movie/format.ts` | **new** — currency / Intl.DisplayNames / runtime helpers |
-| `src/lib/components/movies/detailHeader.svelte` | **new** — poster + title block (null-poster guard) |
-| `src/lib/components/movies/factGrid.svelte` | **new** — budget/revenue/genres/country/languages |
-| `src/lib/components/movies/overview.svelte` | **new** — overview paragraph |
-| `src/lib/components/movies/genderDistribution.svelte` | **new** — stacked distribution bar + legend |
-| `src/lib/components/feedback/skeleton.svelte` | **new** — primitive shimmer block (`width`/`height`/`rounded` props) |
-| `src/lib/components/movies/sectionSkeleton.svelte` | **new** — composed placeholder for streamed §3/§4 (`variant`) |
+| File                                                  | Change                                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `src/routes/movie/[movieId]/datasource.server.ts`     | Auth + `append_to_response=credits`, error guard, extend mapping, server-side gender aggregation |
+| `src/routes/movie/[movieId]/types.ts`                 | **new** — `Movie`, `GenderBreakdown` interfaces                                                  |
+| `src/routes/movie/[movieId]/+page.server.ts`          | TODO markers for sections 3/4 (no structural change)                                             |
+| `src/routes/movie/[movieId]/+page.svelte`             | **rewrite** — scrolling layout + section anchors                                                 |
+| `src/lib/movie/format.ts`                             | **new** — currency / Intl.DisplayNames / runtime helpers                                         |
+| `src/lib/components/movies/detailHeader.svelte`       | **new** — poster + title block (null-poster guard)                                               |
+| `src/lib/components/movies/factGrid.svelte`           | **new** — budget/revenue/genres/country/languages                                                |
+| `src/lib/components/movies/overview.svelte`           | **new** — overview paragraph                                                                     |
+| `src/lib/components/movies/genderDistribution.svelte` | **new** — stacked distribution bar + legend                                                      |
+| `src/lib/components/feedback/skeleton.svelte`         | **new** — primitive shimmer block (`width`/`height`/`rounded` props)                             |
+| `src/lib/components/movies/sectionSkeleton.svelte`    | **new** — composed placeholder for streamed §3/§4 (`variant`)                                    |
 
 Reused: `movies/image.svelte`, `app.css` tokens (`.label`/`.display`/`brand`/`accent`/`ink-muted`/spacing), `search/datasource.server.ts` auth pattern.
 
@@ -176,10 +182,11 @@ placeholders look finished today and the later streaming plan just drops data in
   section-shaped placeholder, keyed by `variant: 'metrics' | 'comments'`:
   - `metrics` → a row of 3 tile-shaped blocks (mirrors the metric tile grid that will replace it).
   - `comments` → 2–3 stacked comment rows (small avatar circle + two text lines of varying width).
-  The shape should roughly match the real content's footprint so there's **no layout shift** when
-  the streamed component swaps in.
+    The shape should roughly match the real content's footprint so there's **no layout shift** when
+    the streamed component swaps in.
 
 UX rules:
+
 - **Reserve the real height.** Size each skeleton to the section's expected height so the swap from
   skeleton → content (or skeleton → empty state) doesn't jump the page.
 - **`aria-hidden="true"`** on skeletons; expose loading state to AT via `aria-busy` on the
@@ -250,6 +257,7 @@ The page is SSR'd from a single TMDB request, so the main levers are payload siz
 and layout stability. Keep it fast and quiet — no jank, no flashes, no layout shift.
 
 **Payload**
+
 - The single-request decision already wins here: one authenticated `?append_to_response=credits`
   call instead of two round-trips. Reinforce it by **aggregating gender counts server-side** so the
   ~225 raw cast/crew entries never cross the wire — the page payload carries two tiny
@@ -260,6 +268,7 @@ and layout stability. Keep it fast and quiet — no jank, no flashes, no layout 
   serialized SSR payload on every load.
 
 **Images (the heaviest asset on the page)**
+
 - The lead poster is the one place `original` is acceptable (it's the hero visual), but **set
   explicit `width`/`height`** (or a fixed aspect-ratio box, 2:3 for posters) on it and any
   placeholder so the text column doesn't reflow when the image lands — this is the biggest CLS risk
@@ -273,6 +282,7 @@ and layout stability. Keep it fast and quiet — no jank, no flashes, no layout 
   `(max-width: 768px) 40vw, 300px` cuts mobile poster weight substantially.
 
 **Layout stability & perceived speed**
+
 - Because data is SSR'd, the page arrives fully populated — no client-side loading spinner needed
   for sections 1 & 2. Avoid introducing one; a spinner on already-present data reads as slower.
 - Reserve space for the gender bars (fixed bar height) so the legend below them doesn't jump as
@@ -283,6 +293,7 @@ and layout stability. Keep it fast and quiet — no jank, no flashes, no layout 
   that. No animation on the numbers/legend.
 
 **Rendering**
+
 - `$derived` for percentages is effectively free; don't memoize further.
 - Build the `Intl.NumberFormat`/`Intl.DisplayNames` instances **once at module scope** in
   `format.ts` (not per cell/render) — constructing them is the expensive part of `Intl`.
@@ -328,24 +339,27 @@ Sections 1 & 2 are **implemented and merged**. `npm run check` is clean (0 error
 - **Navbar + footer were lifted into the root layout** (see the separate layout work below).
 
 ### Files actually shipped
-| File | State |
-|---|---|
-| `src/routes/movie/[movieId]/types.ts` | new — `Movie`, `GenderBreakdown` |
-| `src/routes/movie/[movieId]/datasource.server.ts` | rewritten — auth + `credits`, error guard, exported `aggregateGender` |
-| `src/routes/movie/[movieId]/datasource.spec.ts` | new — `aggregateGender` fixture tests |
-| `src/routes/movie/[movieId]/+page.server.ts` | TODO(sections 3/4) markers |
-| `src/routes/movie/[movieId]/+page.svelte` | rewritten — `#details`/`#gender`/`#metrics`/`#comments` sections |
-| `src/lib/movie/format.ts` (+ `format.spec.ts`) | new — currency/Intl/runtime helpers |
-| `src/lib/components/movies/detailHeader.svelte` | new — poster + title + **summary** (was tagline) |
-| `src/lib/components/movies/factGrid.svelte` | new |
-| `src/lib/components/movies/genderDistribution.svelte` | new — stacked bar, static (no width animation) |
-| `src/lib/components/feedback/skeleton.svelte` | new — shimmer primitive w/ `static` prop |
-| `src/lib/components/movies/sectionSkeleton.svelte` | new — `metrics`/`comments` variants |
-| `src/lib/components/movies/image.svelte` | edited — `imgSizes`, `decoding`, bounded `src` |
-| ~~`src/lib/components/movies/overview.svelte`~~ | built then **removed** (summary moved into header) |
+
+| File                                                  | State                                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------------------- |
+| `src/routes/movie/[movieId]/types.ts`                 | new — `Movie`, `GenderBreakdown`                                      |
+| `src/routes/movie/[movieId]/datasource.server.ts`     | rewritten — auth + `credits`, error guard, exported `aggregateGender` |
+| `src/routes/movie/[movieId]/datasource.spec.ts`       | new — `aggregateGender` fixture tests                                 |
+| `src/routes/movie/[movieId]/+page.server.ts`          | TODO(sections 3/4) markers                                            |
+| `src/routes/movie/[movieId]/+page.svelte`             | rewritten — `#details`/`#gender`/`#metrics`/`#comments` sections      |
+| `src/lib/movie/format.ts` (+ `format.spec.ts`)        | new — currency/Intl/runtime helpers                                   |
+| `src/lib/components/movies/detailHeader.svelte`       | new — poster + title + **summary** (was tagline)                      |
+| `src/lib/components/movies/factGrid.svelte`           | new                                                                   |
+| `src/lib/components/movies/genderDistribution.svelte` | new — stacked bar, static (no width animation)                        |
+| `src/lib/components/feedback/skeleton.svelte`         | new — shimmer primitive w/ `static` prop                              |
+| `src/lib/components/movies/sectionSkeleton.svelte`    | new — `metrics`/`comments` variants                                   |
+| `src/lib/components/movies/image.svelte`              | edited — `imgSizes`, `decoding`, bounded `src`                        |
+| ~~`src/lib/components/movies/overview.svelte`~~       | built then **removed** (summary moved into header)                    |
 
 ### Layout chrome (follow-up, same session)
+
 A nav bar and footer were added to the **root layout** so every route gets them:
+
 - `src/lib/components/layout/navbar.svelte` — wordmark + `ThemeToggle` + Sign in (extracted from
   `landing/topBar.svelte`; bottom border).
 - `src/lib/components/layout/footer.svelte` — brand wordmark + Home/Sign in links.

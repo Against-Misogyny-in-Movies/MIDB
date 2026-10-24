@@ -2,7 +2,7 @@ export const BECHDEL_TIERS = [
 	{ level: 0, label: 'Two named women' },
 	{ level: 1, label: 'Who talk to each other' },
 	{ level: 2, label: 'About something other than a man' },
-	{ level: 3, label: 'Passes the Bechdel Test' },
+	{ level: 3, label: 'Passes the Bechdel Test' }
 ] as const;
 
 export const UM_FLAGS = [
@@ -14,15 +14,13 @@ export const UM_FLAGS = [
 	{ key: 'incest', label: 'Incest' },
 	{ key: 'attemptedRape', label: 'Attempted rape' },
 	{ key: 'rapeOffScrn', label: 'Rape off-screen or strongly implied' },
-	{ key: 'rapeOnScreen', label: 'Rape on screen' },
+	{ key: 'rapeOnScreen', label: 'Rape on screen' }
 ] as const;
 
 export type UmFlagKey = (typeof UM_FLAGS)[number]['key'];
 
 export function dddUrl(itemId: number | null): string {
-	return itemId
-		? `https://www.doesthedogdie.com/media/${itemId}`
-		: 'https://www.doesthedogdie.com';
+	return itemId ? `https://www.doesthedogdie.com/media/${itemId}` : 'https://www.doesthedogdie.com';
 }
 
 export function umFlagCount(umData: Record<UmFlagKey, boolean> | null): number {

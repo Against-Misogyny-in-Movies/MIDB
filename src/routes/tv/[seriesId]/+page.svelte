@@ -62,8 +62,8 @@
 			castMembers: series.castMembers,
 			crewDepartments: series.crewDepartments,
 			bechdel: null,
-			isSeries: true,
-		}),
+			isSeries: true
+		})
 	);
 </script>
 
@@ -87,7 +87,9 @@
 					badgeCount={hasUmCandidates ? umCandidates.length : 0}
 				>
 					{#if umData}
-						<span class="chip-value">{flagCount}<span class="chip-unit"> concern{flagCount === 1 ? '' : 's'}</span></span>
+						<span class="chip-value"
+							>{flagCount}<span class="chip-unit"> concern{flagCount === 1 ? '' : 's'}</span></span
+						>
 					{:else}
 						<span class="chip-empty">No data</span>
 					{/if}
@@ -102,7 +104,11 @@
 					{#if ddd === null}
 						<span class="chip-loading" aria-busy="true">Loading…</span>
 					{:else if visibleTags.length > 0}
-						<span class="chip-value">{visibleTags.length}<span class="chip-unit"> tag{visibleTags.length === 1 ? '' : 's'}</span></span>
+						<span class="chip-value"
+							>{visibleTags.length}<span class="chip-unit">
+								tag{visibleTags.length === 1 ? '' : 's'}</span
+							></span
+						>
 					{:else}
 						<span class="chip-empty">No data</span>
 					{/if}

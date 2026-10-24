@@ -53,19 +53,31 @@ describe('normalizeTitle', () => {
 
 describe('stripTrailingYear', () => {
 	it('strips a 2000s year from a normalized title', () => {
-		expect(stripTrailingYear('wuthering heights 2026')).toEqual({ key: 'wuthering heights', year: 2026 });
+		expect(stripTrailingYear('wuthering heights 2026')).toEqual({
+			key: 'wuthering heights',
+			year: 2026
+		});
 	});
 
 	it('strips a 1900s year', () => {
-		expect(stripTrailingYear('wuthering heights 1939')).toEqual({ key: 'wuthering heights', year: 1939 });
+		expect(stripTrailingYear('wuthering heights 1939')).toEqual({
+			key: 'wuthering heights',
+			year: 1939
+		});
 	});
 
 	it('returns null year when no trailing year', () => {
-		expect(stripTrailingYear('wuthering heights')).toEqual({ key: 'wuthering heights', year: null });
+		expect(stripTrailingYear('wuthering heights')).toEqual({
+			key: 'wuthering heights',
+			year: null
+		});
 	});
 
 	it('does not strip year-like numbers that are not trailing years', () => {
-		expect(stripTrailingYear('2001 a space odyssey')).toEqual({ key: '2001 a space odyssey', year: null });
+		expect(stripTrailingYear('2001 a space odyssey')).toEqual({
+			key: '2001 a space odyssey',
+			year: null
+		});
 	});
 
 	it('strips year when it follows a multi-word title', () => {
