@@ -34,7 +34,7 @@
 
 - **One concern per file.** When a file mixes identity resolution, algorithm logic, and rendering — split it. Name files after what they do, not what they are adjacent to.
 - **Split along these lines for the data layer:**
-  - Identity resolution + trivial DB fetches → `server/data/media-queries.ts`
+  - Identity resolution → `server/data/title-queries.ts`; trivial seeded-metric fetches → `server/data/sources.ts`
   - Domain-specific query algorithms (e.g. UM disambiguation) → their own file (`um-candidates.ts`)
   - Public domain types with no runtime → `integrations/*-types.ts`, re-exported via `media/types/`
 - **Rune modules** (`.svelte.ts`) must be imported with an explicit `.js` extension or Vite resolves the Svelte component instead of the module. Pattern: `import { x } from './foo.svelte.js'`.
@@ -77,8 +77,9 @@ Applies to all **user-facing** text (page copy, taglines, labels, notes) — not
 
 - The DB layer lives in `db/` (outside `src/`), aliased as `$db/*`.
 - **App code gets `db` from `$lib/server/db` only.** It connects lazily from `DB_CONNECTION` in `$env/dynamic/private` and throws if unset. Never read the connection string at build time (no Vite `define`, no `$env/static/private`) and never add a localhost fallback. Scripts use `db/scripts/lib/db.ts` and close the pool when done.
-- GET routes use **read-only** resolvers (`getDbMovie`, `getDbMedia`) — page visits must never mutate the DB.
-- Write paths (`getOrCreateDbMovie`, `getOrCreateDbMedia`) are reserved for future write endpoints (community ratings, persisted DDD tags).
+- GET routes use the **read-only** resolver `getTitleRow(kind, ref)` — page visits must never mutate the DB.
+- The write path `getOrCreateTitleRow(kind, ref)` is reserved for future write endpoints (community ratings, comments).
+- Titles are keyed by `(kind, tmdb_id)`, `imdb_id` is optional; never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
 - Migration order matters: `db:seed:movies` before `db:seed:um`.
 - **Every schema change ships its generated migration** (SQL + snapshot + journal from `bun run db:generate`) in the same PR; CI's `migrations` job fails on drift. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts need a TTY; without one, run `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
 

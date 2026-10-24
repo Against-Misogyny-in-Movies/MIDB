@@ -7,7 +7,7 @@ Implements every finding in `plan-architecture-review.md`. All the choices are a
 | 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)                        | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
 | 2   | Session out of SSR, lazy auth, guards (**done 2026-10-24**)                        | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
 | 3   | DB client from runtime env, migration drift, DB test harness (**done 2026-10-24**) | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
-| 4   | `titles` spine, sources by reference, community tables                             | 2.4, 3.1–3.4                               | **High** (data migration)              |
+| 4   | `titles` spine, sources by reference, community tables (**done 2026-10-24**)       | 2.4, 3.1–3.4                               | **High** (data migration)              |
 | 5   | Module consolidation (TMDB, loader, page state, shared constants)                  | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
 | 6   | Dependencies, search caching, rate limit, dead code                                | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
 | 7   | Docs sweep (AGENTS.md, architecture.md)                                            | 4.6 (doc drift)                            | None                                   |
@@ -315,6 +315,19 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
   - Bechdel 4 rejected;
   - a DDD vote with null season/episode is unique.
 - Seeder smoke test: run `seedMovies` and `seedUnconsenting` on a 50-row CSV fixture.
+
+**Status: done 2026-10-24** (code and local/CI verification). The pre-flight items (does a deployed DB exist; `comments` and `community_metric_submissions` empty there; `pg_dump` taken) are owner actions and are **not confirmed** by this PR; apply `0002` nowhere but a local or CI database until they are. Deviations and findings:
+
+- **drizzle-kit bug.** 0.31.10 (and 0.31.11) crash in `preparePgAlterColumns` when one `generate` both renames a table and alters its columns: it reads the previous snapshot under the _new_ table name. The value it wants there only decides whether the old column type was an enum, and none of the altered columns on `titles`/`title_bechdel` were. The migration was generated with that one lookup optional-chained in the local `node_modules` (never committed); the stock package was then reinstalled, and the stock drift check reports no changes. SQL, snapshot and journal are drizzle-kit output; no snapshot was hand-edited.
+- **Hand edits beyond appending**, all in the SQL only: `ADD COLUMN "kind" … NOT NULL` gets a temporary `DEFAULT 'movie'` (the generated form fails on a populated table), dropped at the end of the data block; `DROP TABLE "movie_unconsenting"` (and its `DISABLE ROW LEVEL SECURITY`) is moved below the data block, because drizzle-kit emits the drops before the renames; the `title_um` copy converts `movie_unconsenting.created_at` with `AT TIME ZONE 'UTC'`.
+- **`community_ddd_votes` has a surrogate `id uuid` PK.** The plan names no PK, and nullable `season`/`episode` can't be part of one; uniqueness is the `cdv_vote_uniq` NULLS NOT DISTINCT constraint as planned.
+- `getTitleRow` filters the `imdb_id` fallback by `kind` too, so a TV page can never pick up a movie row.
+- `getOrCreateTitleRow`'s backfill writes only null columns and leaves an id alone if another row already owns it (catches 23505). `isUniqueViolation` moved to `$lib/server/data/pg-errors.ts` (shared with `user-queries.ts`).
+- `timestamps()`' `$onUpdate` would bump `user.updated_at` on the JIT email backfill; it pins the column (``updatedAt: sql`${users.updatedAt}` ``) so the existing "no bump" test stays green. `updateProfile` relies on `$onUpdate` instead of setting `updatedAt`.
+- `/user/metrics` read `community_metric_submissions`: `getUserSubmissions` became `getUserRatings` (Bechdel ratings + UM reports, joined to `titles`). `/user/comments` joins `titles`. Both link with `titleHref(kind, tmdbId)`; they used to link to `/movie/<uuid>`, which never resolved. DDD votes aren't listed (that's feature work).
+- `seedUnconsenting(db, csvPath, reportPath?)`: the optional report path lets the smoke test avoid rewriting `unconsenting_unmatched.txt`. `seedAdmin.ts` already used `db/scripts/lib/db` (PR 3).
+- The UM Disambiguation table in `architecture.md` said "no candidate shares the year → `[]`"; the code returns the unknown-year entries first. The doc now matches the code (no behaviour change).
+- Behaviour change only on hand-made data: a `tmdb-tv:` row with a `movie_unconsenting` binding now shows the bound `um_source` entry (its copied flags are gone, by design), and is found even when TMDB returns an IMDb id for the series (the old `imdbId ?? 'tmdb-tv:…'` lookup missed it). Seeders never create TV bindings, so seeded data renders the same.
 
 ---
 

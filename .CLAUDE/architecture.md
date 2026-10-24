@@ -1,6 +1,6 @@
 # MIDB — Architecture Reference
 
-> Snapshot as of 2026-06-08 (branch `main`). The detail pages are built around a **multi-source metrics model** — seeded source-of-truth tables (`movie_bechdel`, `movie_unconsenting`) plus a **spine-independent UM catalogue** (`um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The old user-evaluation schema was removed (and the migrations later squashed to a clean `0000` baseline) but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands.
+> Snapshot as of 2026-06-08 (branch `main`), schema sections updated 2026-10-24 (remediation PR 4). The detail pages are built around a **multi-source metrics model** — a `titles` spine (movies and TV), seeded source-of-truth tables (`title_bechdel`, and `title_um` bindings into the **spine-independent UM catalogue** `um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The old user-evaluation schema was removed (and the migrations later squashed to a clean `0000` baseline) but the product direction has pivoted back to community contribution — community rating + comments are the next major feature milestone. Earlier work (landing page + theme toggle, live inline `/api/search`, global nav/footer, Svelte 5 / Vite 8 / Tailwind 4 / Storybook 9 stack) still stands.
 >
 > **The `src/lib` tree was reorganised by domain + file-type** (see Directory layout + File-organisation conventions): shared server logic moved out of route folders into `$lib/server/{data,integrations}`, shared types/utils into `$lib/media/{types,utils}`, and components split into `$lib/components/ui/*` (generic primitives) vs domain folders. Living document — update as the app evolves.
 
@@ -8,9 +8,9 @@
 
 **MIDB (Movie Information Database — working title)** is a web platform for displaying movies and TV series through a **diversity / content-safety lens**. The audience is survivors and trauma-sensitive viewers, and people who care about women's representation — people deciding whether a title is safe to watch. Users find a title and see how it scores across structured **metrics** — formal tests and content advisories for representation and harm. Three sources are wired today: the **Bechdel Test**, **Unconsenting Media** (sexual-violence advisories), and **Does The Dog Die** (crowd-sourced trigger tags).
 
-Title facts (poster, overview, release/air date, credits, seasons) are **not stored** — they're fetched live from **TMDB** on each request. What _is_ stored locally is a thin spine (the `movies` table holds both films and series) plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
+Title facts (poster, overview, release/air date, credits, seasons) are **not stored** — they're fetched live from **TMDB** on each request. What _is_ stored locally is a thin spine (`titles`, keyed by `(kind, tmdb_id)` for films and series) plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
 
-Each metric is designed to show **two scores side by side**: the original authoritative source (Bechdel, UM, DDD) and a **MIDB community rating** contributed by users who have watched the film. Movies will also have a **comments section** for viewer context and discussion. Community ratings and comments are the next major feature milestone — the schema will need new tables (community metric scores, comments) and the `/user/*` area will expand beyond the current Hanko profile stub.
+Each metric is designed to show **two scores side by side**: the original authoritative source (Bechdel, UM, DDD) and a **MIDB community rating** contributed by users who have watched the film. Movies will also have a **comments section** for viewer context and discussion. Community ratings and comments are the next major feature milestone — the per-metric community tables and `comments` exist (remediation PR 4) and the `/user/*` area will expand beyond the current Hanko profile stub.
 
 ---
 
@@ -46,7 +46,7 @@ Each metric is designed to show **two scores side by side**: the original author
                         └──────────┘ └──────────┘ └─────────────┘
                          ▲            ▲ (streamed,   ▲
               poster / overview /     │  cached 1h)  │  seeded source data:
-              credits / imdb_id    trigger tags    movies + Bechdel + UM
+              credits / imdb_id    trigger tags    titles + Bechdel + UM
               (cached 24h)
 
    Auth:  Browser ⇄ Hanko Cloud (web components + JWT cookie)
@@ -55,7 +55,7 @@ Each metric is designed to show **two scores side by side**: the original author
 ```
 
 - **Entry point** is the landing page at `/` (hero + search UX). The hero search is a **live, inline TMDB search**: typing queries a server proxy (`/api/search`, TMDB `search/multi`) and renders a results dropdown in place — there is no `/search` page. Results carry a `mediaType` (`movie`/`tv`) and route to the matching detail page.
-- **Title identity** flows by **TMDB id** through the URL (`/movie/[movieId]`, `/tv/[seriesId]`), but the internal join key across metric sources is **`imdb_id`** (the Bechdel/DDD key). On a detail-page load the live TMDB title is resolved to a local `movies` row via **read-only** `getDbMovie`/`getDbMedia` (matching on `tmdb_id` then `imdb_id`); a GET never mutates the DB. TV rows use a synthetic `tmdb-tv:` imdb namespace + null `tmdb_id` to avoid colliding with film tmdb ids.
+- **Title identity** flows by **TMDB id** through the URL (`/movie/[movieId]`, `/tv/[seriesId]`), but the internal join key across metric sources is **`imdb_id`** (the Bechdel/DDD key). On a detail-page load the live TMDB title is resolved to a local `titles` row via **read-only** `getTitleRow(kind, ref)` (matching on `(kind, tmdb_id)` then `imdb_id`); a GET never mutates the DB. Movies and series share the TMDB numeric id space, so `kind` is part of the key; there are no synthetic ids.
 - **Metric data** comes from three places: **Bechdel + UM** are seeded into Postgres and rendered server-side (SSR); **DDD** is fetched live from its API and **streamed** so a slow external call never blocks first paint. (Bechdel is movie-only; series surface UM + DDD.)
 - **Caching.** TMDB title fetches (`getMovie`/`getSeries`) and DDD lookups go through `$lib/server/cache` so repeat visits to a title skip the external round-trip — the dominant source of detail-page latency. Default backend is a bounded in-process LRU (fine on a long-lived Node server); set `REDIS_URL` for a shared backend that survives restarts / scales across instances. Detail loads also set `cache-control: public, max-age=0, s-maxage=3600` so the browser/back-forward cache and any CDN can serve repeat navigations.
 - **Auth** is entirely Hanko's; the app only verifies the JWT cookie server-side to gate `/user/*`.
@@ -70,22 +70,27 @@ MIDB/
 │   ├── client.ts               # createDb(url, { max? }) → { db, sql } (connect_timeout 10, schema barrel) + type Db. Reads no env
 │   ├── schema/                 # Drizzle table definitions (drizzle-kit reads ./schema/**/*.ts)
 │   │   ├── index.ts            # barrel re-exporting every schema file (passed to drizzle() as `schema`)
-│   │   ├── movie.ts            # movies + movieBechdel + umSource + movieUnconsenting + movieTriggerTags
+│   │   ├── columns.ts          # shared column sets: timestamps() (timestamptz, $onUpdate) + umFlagColumns() (the 9 UM flags)
+│   │   ├── titles.ts           # title_kind enum + titles (the spine; unique (kind, tmdb_id), unique imdb_id)
+│   │   ├── sources.ts          # titleBechdel + umSource (UM catalogue) + titleUm (binding only)
 │   │   ├── auth.ts             # user (Hanko-sub PK, role enum, username/avatarKey, lower(username) idx)
-│   │   └── community.ts        # communityMetricSubmissions + comments (empty, indexes ready)
+│   │   ├── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
+│   │   └── __tests__/          # community.db.spec.ts (constraints)
 │   ├── scripts/
 │   │   ├── migrate.ts          # `bun run db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
-│   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → movies spine + movie_bechdel
-│   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + movie_unconsenting (matched)
+│   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → titles (kind movie) + title_bechdel; exports seedMovies(db, csvPath)
+│   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + title_um bindings (matched); exports seedUnconsenting(db, csvPath, reportPath?)
 │   │   ├── seedAdmin.ts        # `db:seed:admin <email>` — case-insensitive promote to administrator
-│   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id via TMDB /find
+│   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id on movie titles via TMDB /find
+│   │   ├── __tests__/          # seeders.db.spec.ts (smoke test on the 50-row fixtures)
 │   │   └── lib/                # db.ts (script client from process.env.DB_CONNECTION + closeDb), normalizeTitle.ts + stripTrailingYear, checkCsvColumns.ts
 │   ├── seeds/
 │   │   └── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
 │   ├── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots (never hand-edited)
 │   └── test/                   # Vitest `db` project harness
 │       ├── global-setup.ts     # wipes TEST_DB_CONNECTION (refuses if it equals DB_CONNECTION) and migrates it from zero
-│       └── reset.ts            # setupFile: TRUNCATE every schema table RESTART IDENTITY CASCADE beforeEach; closeDb afterAll
+│       ├── reset.ts            # setupFile: TRUNCATE every schema table RESTART IDENTITY CASCADE beforeEach; closeDb afterAll
+│       └── fixtures/           # 50-row bechdel.csv + unconsenting.csv for the seeder smoke test
 │
 ├── src/
 │   ├── hooks.server.ts         # Auth gate: verifies `hanko` JWT → locals.claims (no DB), lazy memoised locals.getUser(), gates /user + /user/* on claims, role check on /user/moderation*
@@ -102,9 +107,11 @@ MIDB/
 │       │   ├── db.ts           # the app's `db`: lazy createDb on first use from $env/dynamic/private DB_CONNECTION
 │       │   │                   #   (TEST_DB_CONNECTION under Vitest); throws if unset, no localhost fallback; closeDb() (+ __tests__/)
 │       │   ├── data/           # Postgres / Drizzle access, all via $lib/server/db (+ __tests__/, incl. *.db.spec.ts)
-│       │   │   ├── media-queries.ts  # identity resolution (getDbMovie/getDbMedia/getOrCreate*) + metric fetches (getBechdel/getUnconsenting)
-│       │   │   ├── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates + toCandidate helper
-│       │   │   └── user-queries.ts   # read-first JIT provision + toPublicUser + profile update (validated) + username availability + history queries
+│       │   │   ├── title-queries.ts  # identity resolution: getTitleRow(kind, ref) (read-only) + getOrCreateTitleRow (write path, unused by GETs)
+│       │   │   ├── sources.ts        # seeded metric reads: getBechdel, getUmEntry (title_um → um_source) + toUmEntry mapper
+│       │   │   ├── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates (maps rows with toUmEntry)
+│       │   │   ├── pg-errors.ts      # isUniqueViolation (walks DrizzleQueryError's cause chain for 23505)
+│       │   │   └── user-queries.ts   # read-first JIT provision + toPublicUser + profile update (validated) + username availability + history queries (comments, community ratings)
 │       │   ├── auth/           # (+ __tests__/)
 │       │   │   ├── hanko.ts          # module-level JWKS, verifyClaims(event), emailFromClaims(payload)
 │       │   │   └── guards.ts         # requireUser / requireRole: redirect (page) or 401/403 (actions, endpoints)
@@ -117,9 +124,9 @@ MIDB/
 │       │   └── cache/          # getCached(key, ttlMs, fetcher): in-memory LRU default, Redis if REDIS_URL set
 │       ├── media/              # Shared, client-safe media domain (movies + series)
 │       │   ├── types/          # media.ts (MediaDetail/GenderBreakdown), movie.ts, series.ts,
-│       │   │                   #   ddd.ts (type-only re-export from integrations/ddd-types),
+│       │   │                   #   ddd.ts (type-only re-export from integrations/ddd-types), um.ts (UmEntry/UmFlagKey re-export),
 │       │   │                   #   user.ts (PublicUser DTO + type-only UserRole re-export; UserRow is NOT re-exported)
-│       │   └── utils/          # format.ts (Intl), metrics.ts (BECHDEL_TIERS/UM_FLAGS/UmCandidate/dddUrl/umFlagCount),
+│       │   └── utils/          # format.ts (Intl), metrics.ts (BECHDEL_TIERS/UM_FLAGS/UmEntry/dddUrl/umFlagCount), titleHref.ts,
 │       │                       #   dddStream.svelte.ts (createDddState rune factory),
 │       │                       #   session.svelte.ts (client session rune: pending | anon | user) (+ __tests__/)
 │       ├── components/         # Reusable UI: ui/* primitives + domain folders (see Component library)
@@ -189,14 +196,14 @@ User-facing copy follows a small house style. Apply it when writing or editing a
 | `/api/me`          | `+server.ts`                                                 | **Working**     | `GET` → `PublicUser \| null` via `locals.getUser()` + `toPublicUser`, always `cache-control: private, no-store`. Fetched once per full page load by the client session (see _Auth flow_).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `/auth`            | `+page.svelte`, `+page.ts`, `+layout.svelte`                 | Working         | Renders Hanko `<hanko-auth>`. On success redirects to `/user/profile`. `ssr=false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts`    | **Working**     | Core page — see **Detail pages** below. Shared DB/DDD logic imported from `$lib/server/*`; types from `$lib/media/types/*`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `/tv/[seriesId]`   | `+page.svelte`, `+page.server.ts`, `datasource.server.ts`    | **Working**     | TV-series detail page. Same metric model as movies minus Bechdel; uses `getDbMedia(series, 'tv')` and `getTriggerTagsForSeries`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `/tv/[seriesId]`   | `+page.svelte`, `+page.server.ts`, `datasource.server.ts`    | **Working**     | TV-series detail page. Same metric model as movies minus Bechdel; uses `getTitleRow('tv', series)` and `getTriggerTagsForSeries`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `/user/*` layout   | `+layout.server.ts`, `+layout.svelte`                        | **Working**     | `requireUser(locals, { page: true })` → `{ me: PublicUser }`, `cache-control: private, no-store` for every `/user/*` page. `+layout.svelte` calls `session.set(data.me)` in an effect (browser only).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `/user/profile`    | `+page.svelte`, `+page.server.ts`, `availability/+server.ts` | **Working**     | Profile view/edit: avatar picker, username (debounced availability check), role badge. Reads `me` from the layout; its own load returns `email`, the only route that sends it to the client. `?/updateProfile` (guarded, 401) returns `me: PublicUser`. `availability` is guarded (401). Auth-gated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `/user/dashboard`  | `+page.svelte`, `+page.ts`                                   | Working         | Hanko `<hanko-profile>` (account settings). Linked from profile. Auth-gated. `ssr=false` (the `/user` layout's server load still runs and sets the session).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/user/comments`   | `+page.svelte`, `+page.server.ts`                            | Working (empty) | Comment history — empty state today; `(userId,createdAt)` query ready. Auth-gated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `/user/metrics`    | `+page.svelte`, `+page.server.ts`                            | Working (empty) | Rating submission history — empty state today; joins `movies` for title. Auth-gated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `/user/comments`   | `+page.svelte`, `+page.server.ts`                            | Working (empty) | Comment history — empty state today; `getUserComments` joins `titles` and links via `titleHref`. Auth-gated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `/user/metrics`    | `+page.svelte`, `+page.server.ts`                            | Working (empty) | Community rating history (Bechdel ratings + UM reports via `getUserRatings`) — empty state today; joins `titles` and links via `titleHref`. Auth-gated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-> **Route folders are thin:** `db.server.ts`, `ddd.server.ts`, and the route `types.ts` files that used to live under `/movie/[movieId]/` were moved to `$lib/server/data/media-queries.ts`, `$lib/server/integrations/ddd.ts`, and `$lib/media/types/{movie,series}.ts` respectively.
+> **Route folders are thin:** `db.server.ts`, `ddd.server.ts`, and the route `types.ts` files that used to live under `/movie/[movieId]/` were moved to `$lib/server/data/media-queries.ts` (since split into `title-queries.ts` + `sources.ts`), `$lib/server/integrations/ddd.ts`, and `$lib/media/types/{movie,series}.ts` respectively.
 >
 > **Removed routes:** `/movie/[movieId]/metric` and `/movie/[movieId]/metric/[metricId]` (user-driven evaluation forms) were deleted when the app moved from user-submitted evaluations to seeded source data.
 
@@ -218,47 +225,42 @@ Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored
 
 ## Database schema
 
-The active schema spans `db/schema/movie.ts`, `auth.ts`, and `community.ts`. The barrel `db/schema/index.ts` re-exports all three, and `createDb` (`db/client.ts`) registers it.
+The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `community.ts`, with shared column sets in `columns.ts`. The barrel `db/schema/index.ts` re-exports every file, and `createDb` (`db/client.ts`) and `db/test/reset.ts` rely on it.
 
 > The old user-evaluation model (`metrics`, `metric_options`, `evaluations`, `evaluation_results`) is gone: `db/schema/metric.ts` has been **deleted** and the migrations were **squashed** (2026-06-05), so the current `0000` baseline simply never creates those tables. (Historically they were dropped in the old migration `0006`, which no longer exists on disk.)
 
+**Conventions (remediation PR 4):** every timestamp is `timestamptz`; tables with `created_at`/`updated_at` use `timestamps()` from `columns.ts`, whose `$onUpdate` bumps `updated_at` on every Drizzle update (pin it with ``updatedAt: sql`${col}` `` when a write must not count as an edit). The nine UM flag columns are defined once in `umFlagColumns()`. There are no `0` sentinels: unknown years and missing ids are `NULL`.
+
 ### Tables (active)
 
-**`movies`** — the spine; seeded from the Bechdel CSV, enriched lazily from TMDB.
+**`titles`** (`titles.ts`) — the spine for movies **and** TV; seeded from the Bechdel CSV, ids backfilled from TMDB.
 
-- `id` uuid PK, `imdb_id` varchar **unique NOT NULL** (cross-source join key), `tmdb_id` integer **unique nullable** (backfilled lazily), `title` varchar(255), `year` integer, `clean_title` varchar(255) (output of `normalizeTitle()` — the UM match key), `created_at`, `updated_at`.
-- `clean_title` is computed via `normalizeTitle(movie.title)` in `getOrCreateDbMovie` (Bug B fixed: previously used bare `.toLowerCase().trim()` which left quote chars from TMDB titles unnormalized).
+- `id` uuid PK, `kind` enum `title_kind` (`movie`|`tv`) NOT NULL, `tmdb_id` integer nullable, `imdb_id` varchar nullable **unique**, `title` varchar(255), `clean_title` varchar(255) (output of `normalizeTitle()`, the UM match key), `year` integer nullable (**NULL = unknown**), `created_at`, `updated_at`.
+- **Unique index `titles_kind_tmdb_idx` on `(kind, tmdb_id)`**: the natural key, because TMDB movie and TV ids share a numeric space (movie 1399 and TV 1399 coexist). Postgres treats NULLs as distinct, so seeded rows without a TMDB id coexist. IMDb ids are globally unique across movies and series, so `imdb_id` has a plain unique.
 
-**`movie_bechdel`** — seeded, **1:1 with movie**.
+**`title_bechdel`** (`sources.ts`) — seeded, **1:1 with a title**.
 
-- `movie_id` uuid **PK** → `movies.id` (cascade), `bechdel_id` integer, `rating` smallint (**CHECK 0..3**), `num_votes` integer, `created_at`.
+- `title_id` uuid **PK** → `titles.id` (cascade), `bechdel_id` integer, `rating` smallint (**CHECK 0..3**), `num_votes` integer, `created_at`.
 
-**`um_source`** — spine-independent **UM catalogue**; every movie-type UM row from the CSV.
+**`um_source`** (`sources.ts`) — spine-independent **UM catalogue**; every movie and TV row from the UM CSV.
 
-- `um_id` integer **PK**, `clean_name` varchar, `clean_title_key` varchar (year-stripped normalized key, the lookup index), `year` integer nullable, all **9 boolean flag columns**, `comment` text.
+- `um_id` integer **PK**, `clean_name` varchar, `clean_title_key` varchar (year-stripped normalized key, the lookup index), `year` integer nullable (NULL = unknown), the 9 flag columns (`umFlagColumns()`), `comment` text.
 - **B-tree index `um_source_clean_title_key_idx` on `clean_title_key`** — `getUnconsentingCandidates` queries this column on every media page with no seeded UM binding (the common case); without the index that's a full table scan.
-- Populated by `db:seed:um` for **all** UM movie rows regardless of whether a `movies` row exists. Enables runtime candidate lookup without re-parsing the CSV.
+- Populated by `db:seed:um` for **all** UM movie/TV rows regardless of whether a title matches. Enables runtime candidate lookup without re-parsing the CSV.
 
-**`movie_unconsenting`** — seeded, **1:1 with movie**; the resolved UM binding.
+**`title_um`** (`sources.ts`) — seeded, **1:1 with a title**; the resolved UM binding, **by reference only**.
 
-- `movie_id` uuid **PK** → `movies.id` (cascade), `um_id` integer, `clean_name` varchar, `item_type` varchar, `comment` text, all **9 boolean flag columns**, `created_at`.
-- Matched by `clean_title` at seed time using a year-aware policy (see Seeding). No `match_source` column — user choices are never persisted (see UM Disambiguation below).
+- `title_id` uuid **PK** → `titles.id` (cascade), `um_id` integer → `um_source.um_id`, `created_at`.
+- The flags are read through the join (`getUmEntry`), so a UM reseed is reflected immediately and there is one row shape (`UmEntry`). Matched by `clean_title` at seed time using a year-aware policy (see Seeding). User choices are never persisted (see UM Disambiguation below).
 
-**`movie_trigger_tags`** — DDD, **defined now, NOT written yet**.
+**`user`** (`auth.ts`) — Hanko-sub PK. `id` text (Hanko `sub`), `email` nullable, `role` enum `user_role` default `user`, `username` varchar(32) nullable, `avatar_key` varchar(48) nullable, `timestamps()`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide). Index on `role`.
 
-- `id` serial PK, `movie_id` uuid, `topic_id` integer, `does_name` varchar, `yes_sum`/`no_sum` integer, `comment` text, `created_by` text → `user.id` (**`onDelete: 'set null'`**), `created_at`. Unique index on (`movie_id`, `topic_id`). DDD tags are live-only today.
+**Community tables** (`community.ts`) — empty; one table per metric shape so each can hold what it names. No write path yet (see Known gaps).
 
-**`user`** (`auth.ts`) — Hanko-sub PK. `id` text (Hanko `sub`), `email` nullable, `role` enum `user_role` default `user`, `username` varchar(32) nullable, `avatar_key` varchar(48) nullable, `created_at`, `updated_at`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide). Index on `role`.
-
-**`community_metric_submissions`** (`community.ts`) — empty, ready for write path.
-
-- `id` uuid PK, `movie_id` → `movies.id` (cascade), `user_id` → `user.id` (cascade), `metric` enum `metric_kind` (`bechdel`|`unconsenting`|`ddd`), `value` smallint, `created_at`, `updated_at`.
-- Unique on `(user_id, movie_id, metric)` — resubmit = upsert. Indexes: `(movie_id, metric)` for aggregate queries, `(user_id, created_at)` for history.
-
-**`comments`** (`community.ts`) — empty, ready for write path.
-
-- `id` uuid PK, `movie_id` → `movies.id` (cascade), `user_id` → `user.id` (cascade), `body` text, `created_at`, `updated_at`.
-- Indexes: `(movie_id, created_at)` for title thread, `(user_id, created_at)` for history.
+- **`community_bechdel_ratings`**: `user_id` → `user.id` (cascade), `title_id` → `titles.id` (cascade), `rating` smallint (**CHECK 0..3**, `cbr_rating_range`), `timestamps()`. PK `(user_id, title_id)` (resubmit = upsert), index `cbr_title_idx (title_id)`.
+- **`community_um_reports`**: `user_id`, `title_id` (both cascade), the 9 flag columns as explicit booleans (`umFlagColumns()`, same shape as `um_source`, aggregatable as `avg(col::int)`), `timestamps()`. PK `(user_id, title_id)`, index `cur_title_idx (title_id)`.
+- **`community_ddd_votes`**: `id` uuid PK, `user_id`, `title_id` (both cascade), `topic_id` integer, `season`/`episode` integer nullable (NULL = whole title), `yes` boolean, `timestamps()`. Constraint `cdv_vote_uniq UNIQUE NULLS NOT DISTINCT (user_id, title_id, topic_id, season, episode)` (PG ≥ 15; compose and CI run 16), index `cdv_title_topic_idx (title_id, topic_id)`.
+- **`comments`**: `id` uuid PK, `title_id` → `titles.id` (cascade), `user_id` → `user.id` (cascade), `body` text (**CHECK `char_length(body) BETWEEN 1 AND 5000`**), `status` enum `comment_status` (`visible`|`hidden`|`deleted`, default `visible`), `timestamps()`. Indexes `(title_id, created_at)` for the title thread, `(user_id, created_at)` for history. No `parent_id` yet: threads are an additive migration when designed.
 
 ### Migrations
 
@@ -268,7 +270,9 @@ The active schema spans `db/schema/movie.ts`, `auth.ts`, and `community.ts`. The
 
 - **`0001_swift_wolverine`** (generated 2026-10-24, remediation PR 3) — `user_role` + `metric_kind` enums; `user` rewritten in place (every new column answered _create_, so the Auth.js `name`/`emailVerified`/`image` columns are dropped, `email` becomes nullable, `role`/`username`/`avatar_key`/`created_at`/`updated_at` added, `lower(username)` unique idx + `role` idx); `movie_trigger_tags.created_by` FK re-created with `ON DELETE SET NULL`; `community_metric_submissions` + `comments` with all indexes. Auth.js-era `user` rows are not deleted (drizzle-kit prompts per column, not per table); their ids are not Hanko subs, so nothing ever matches them.
 
-Future schema changes append `0002`, `0003`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
+- **`0002_titles_spine`** (generated 2026-10-24, remediation PR 4) — answers: _rename_ `movies`→`titles`, `movie_bechdel`→`title_bechdel`, `movie_id`→`title_id` (in `comments` and `title_bechdel`); _create_ for everything else (`title_kind`/`comment_status` enums, `title_um`, the three community tables, `comments.status`). Drops `community_metric_submissions`, `movie_trigger_tags`, `movie_unconsenting` and the `metric_kind` enum; drops `movies.tmdb_id`'s unique in favour of `titles_kind_tmdb_idx`; every timestamp becomes `timestamptz`. **Hand-edited SQL** (snapshot untouched): `USING … AT TIME ZONE 'UTC'` on each `timestamp → timestamptz`; `kind` added with a temporary `DEFAULT 'movie'` that the data block drops; a data block (unpack `tmdb-tv:<id>`/`tmdb:<id>` into `kind`/`tmdb_id` with `imdb_id` NULL, `year <= 0` → NULL in `titles` and `um_source`, copy `movie_unconsenting` bindings into `title_um`) placed after the renames and column changes and before `DROP TABLE movie_unconsenting` and the new unique/check constraints. Not reversible by revert: roll back by restoring a `pg_dump`. drizzle-kit 0.31.10/0.31.11 crash when one `generate` both renames a table and alters its columns (`preparePgAlterColumns` reads the old snapshot under the new table name); the snapshot was generated with that one lookup made optional-chained in the local `node_modules` (it only decides whether the old column type was an enum, and none were), then the stock package was reinstalled and the drift check confirmed clean.
+
+Future schema changes append `0003`, `0004`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
 
 **Boot does NOT auto-migrate** (commit `742c612`). Run `bun run db:migrate` explicitly after `bun run db:generate`. A fresh DB migrated from zero matches the schema; the CI `db` job proves it on every run.
 
@@ -276,15 +280,15 @@ Future schema changes append `0002`, `0003`, … and **commit the generated SQL,
 
 ## Seeding
 
-Raw CSVs in `db/seeds/sources/`. Scripts run under Bun, use `csv-parse` for streaming, and import `db` + `closeDb` from `db/scripts/lib/db.ts` (built from `process.env.DB_CONNECTION`, which Bun loads from `.env`; throws if unset). Each script closes its pool when done so the process exits. All upserts are idempotent (`onConflictDoUpdate`).
+Raw CSVs in `db/seeds/sources/`. Scripts run under Bun and use `csv-parse` for streaming. Each seeder exports its core as a function taking `(db, csvPath)` (the DB smoke test calls it with the test client and the 50-row fixtures in `db/test/fixtures/`); the `bun` entry point (`if (import.meta.main)`) imports `db` + `closeDb` from `db/scripts/lib/db.ts` (built from `process.env.DB_CONNECTION`, which Bun loads from `.env`; throws if unset) and closes the pool when done. All upserts are idempotent (`onConflictDoUpdate`).
 
-1. **`db:seed:movies`** (`seedMovies.ts`) — stream the **Bechdel CSV** → upsert `movies` (spine) + `movie_bechdel`. Source of `imdb_id`, `title`, `year`, `clean_title`.
+1. **`db:seed:movies`** (`seedMovies.ts`) — stream the **Bechdel CSV** → upsert `titles` (`kind: 'movie'`, keyed by `imdb_id`) + `title_bechdel`. Source of `imdb_id`, `title`, `year` (non-positive → NULL), `clean_title`.
 2. **`db:seed:um`** (`seedUnconsenting.ts`) — stream the **UM CSV**:
-   - Populates **`um_source`** for every movie-type row (idempotent, regardless of match outcome).
-   - Derives a `(titleKey, umYear)` pair per row using **`stripTrailingYear`** (UM's `cleanNameArticles` often embeds the year: `"wuthering heights 2026"`).
-   - Matches to `movies` by **year-aware policy**: (1) exact `(titleKey, umYear)` → bind; (2) only one movie with this title → bind (unambiguous); (3) multiple same-title movies, no year hit → leave unmatched (`ambiguous` in report). Unmatched rows logged to `unconsenting_unmatched.txt`.
-   - Does **not** create `movies` rows from UM data.
-3. **`db:backfill:tmdb`** (`backfillTmdb.ts`) — resolve null `tmdb_id` via TMDB `/find/{imdb_id}`. Also done lazily by `getOrCreateDbMovie` on first page visit.
+   - Populates **`um_source`** for every movie and TV row (idempotent, regardless of match outcome).
+   - Derives a `(titleKey, umYear)` pair per row using **`stripTrailingYear`** (UM's `cleanNameArticles` often embeds the year: `"wuthering heights 2026"`); UM's `yearOfRelease = 0` becomes NULL.
+   - Matches movie rows to movie `titles` by **year-aware policy**: (1) only one movie with this title → bind (unambiguous); (2) several same-title movies → bind the exact `(titleKey, umYear)` hit; (3) several, no year hit → leave unmatched (`ambiguous` in report). Writes only `(title_id, um_id)` into `title_um`. Unmatched rows go to the report (`unconsenting_unmatched.txt` by default; the third argument overrides it, which the smoke test uses). TV rows are never bound at seed time; the runtime picker covers them.
+   - Does **not** create `titles` rows from UM data.
+3. **`db:backfill:tmdb`** (`backfillTmdb.ts`) — resolve null `tmdb_id` on **movie** titles with an IMDb id via TMDB `/find/{imdb_id}`. `getOrCreateTitleRow` will also backfill once a write endpoint uses it.
 
 **`db/scripts/lib/normalizeTitle.ts`** — two exports:
 
@@ -293,7 +297,7 @@ Raw CSVs in `db/seeds/sources/`. Scripts run under Bun, use `csv-parse` for stre
 
 Both are covered by unit specs (`src/lib/media/utils/__tests__/normalizeTitle.spec.ts`).
 
-Run order matters: **`db:seed:movies` must run before `db:seed:um`** so the `movies` spine is populated before UM tries to bind to it. Re-running either is safe.
+Run order matters: **`db:seed:movies` must run before `db:seed:um`** so the `titles` spine is populated before UM tries to bind to it. Re-running either is safe. `db:seed:um` rewrites `db/seeds/sources/unconsenting_unmatched.txt`; don't commit seed-run changes to it.
 
 ---
 
@@ -305,28 +309,29 @@ The flagship pages. Server-rendered for DB metrics, **streamed** for the live DD
 
 ```ts
 import { getMovie } from './datasource.server';
-import { getDbMovie, getBechdel, getUnconsenting } from '$lib/server/data/media-queries';
+import { getTitleRow } from '$lib/server/data/title-queries';
+import { getBechdel, getUmEntry } from '$lib/server/data/sources';
 import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
 import { getTriggerTagsLive } from '$lib/server/integrations/ddd';
 
 setHeaders({ 'cache-control': PUBLIC_PAGE }); // $lib/server/http/cache — CDN-cacheable, so never read the user here
 const movie = await getMovie(params.movieId); // TMDB (Bearer, credits+external_ids); cached 24h via $lib/server/cache
-const dbMovie = await getDbMovie(movie); // read-only resolve; null if not seeded
-const [bechdel, unconsenting] = dbMovie // skip DB round-trips when no row exists
-	? await Promise.all([getBechdel(dbMovie.id), getUnconsenting(dbMovie.id)])
+const title = await getTitleRow('movie', movie); // read-only resolve; null if not seeded
+const [bechdel, umEntry] = title // skip DB round-trips when no row exists
+	? await Promise.all([getBechdel(title.id), getUmEntry(title.id)])
 	: [null, null];
 // No seeded UM binding → look up um_source candidates for runtime disambiguation
-const umCandidates = unconsenting === null ? await getUnconsentingCandidates(movie) : [];
+const umCandidates = umEntry === null ? await getUnconsentingCandidates(movie) : [];
 return {
 	movie,
 	bechdel,
-	unconsenting,
+	umEntry,
 	umCandidates,
 	triggerTags: getTriggerTagsLive(movie.imdbId)
 }; // UN-awaited → streamed
 ```
 
-The TV `+page.server.ts` is the same shape: `getSeries(...)` → `getDbMedia(series, 'tv')` → `getUnconsenting`/`getUnconsentingCandidates` → `getTriggerTagsForSeries(series)` streamed. No Bechdel for series.
+The TV `+page.server.ts` is the same shape: `getSeries(...)` → `getTitleRow('tv', series)` → `getUmEntry`/`getUnconsentingCandidates` → `getTriggerTagsForSeries(series)` streamed. No Bechdel for series.
 
 **DDD live client (`$lib/server/integrations/ddd.ts`):** `getTriggerTagsLive(imdbId)` (movies, imdb lookup) and `getTriggerTagsForSeries(series)` (title text-search + tmdb/year match). Two-step fetch with `X-API-KEY`; results cached 1h via `$lib/server/cache` (keys `ddd:imdb:…` for movies, `ddd:tmdb:…` for series). Returns `TriggerTag[]` filtered to `yesSum >= noSum && yesSum > 0`, carrying season/episode scoping for series. `_testExports()` exposes a `cache.clear()` (delegating to the shared cache) for unit tests. Public types (`TriggerTag`, `DddResult`) live in `ddd-types.ts` — `ddd.ts` re-exports them; `media/types/ddd.ts` imports from `ddd-types` directly so type consumers never transitively load the client.
 
@@ -340,33 +345,39 @@ The TV `+page.server.ts` is the same shape: `getSeries(...)` → `getDbMedia(ser
 - **DDD streaming** — `createDddState(() => data.triggerTags, isSeries)` from `$lib/media/utils/dddStream.svelte.ts` wraps the cancellation-guarded `$effect`; both pages read `dddState.current`.
 - **Comments skeleton** — `movies/sections/commentsSkeleton.svelte` (shared, identical across both pages).
 
-**`$lib/server/data/media-queries.ts`** — identity resolution + metric fetches:
+**`$lib/server/data/title-queries.ts`** — identity resolution:
 
-- `getDbMovie(media)` / `getDbMedia(media, kind)` — **read-only** identity resolution. Tries `tmdb_id` → `imdb_id`; returns the row or `null`. Used on GET routes so page visits never mutate the DB. (Movie pages call `getDbMovie`; TV pages call `getDbMedia(series, 'tv')`.)
-- `getOrCreateDbMovie(media)` / `getOrCreateDbMedia(media, kind)` — **write path**. Same lookup, plus lazy id backfill and insert on miss. Reserved for future write endpoints (community ratings, persisted DDD tags) that require a guaranteed-present `movies.id` FK target.
-- `getBechdel(movieId)` / `getUnconsenting(movieId)` — simple `findFirst ?? null`.
+- `getTitleRow(kind, ref)` — **read-only**. Tries `(kind, tmdb_id)` → `(kind, imdb_id)`; returns the row or `null`. Used on GET routes so page visits never mutate the DB.
+- `getOrCreateTitleRow(kind, ref)` — **write path**. Same lookup, then a race-safe insert on a miss (`ON CONFLICT DO NOTHING RETURNING`, then read again), then a backfill of whichever id was null (skipped if another row owns it). Reserved for future write endpoints (community ratings, comments) that need a guaranteed `titles.id` FK target; no GET route calls it.
+- `TitleRef` is the structural `{ title, imdbId, tmdbId, releaseDate }` that both `Movie` and `Series` satisfy. Unknown release dates give a NULL year.
 
-**`$lib/server/data/um-candidates.ts`** — UM disambiguation algorithm (split from `media-queries`):
+**`$lib/server/data/sources.ts`** — seeded metric reads:
 
-- `getUnconsentingCandidates(media)` — queries `um_source` by `cleanTitleKey`; applies year-aware filtering (see UM Disambiguation); returns full flag data so a picked candidate renders identically to a seeded row.
+- `getBechdel(titleId)` — `title_bechdel` row or `null`.
+- `getUmEntry(titleId)` — joins `title_um` → `um_source`, returns `UmEntry | null`.
+- `toUmEntry(row)` — the single `um_source` → `UmEntry` mapper, also used by `um-candidates.ts`.
+
+**`$lib/server/data/um-candidates.ts`** — UM disambiguation algorithm:
+
+- `getUnconsentingCandidates(ref)` — queries `um_source` by `cleanTitleKey` (plus the singular/plural alternate); applies year-aware filtering (see UM Disambiguation); returns full `UmEntry`s so a picked candidate renders identically to a seeded binding.
 
 ---
 
 ## UM Disambiguation
 
-UM is the only source with no `imdb_id`, matched purely by normalized title. When a movie has no seeded `movie_unconsenting` binding, `getUnconsentingCandidates` resolves candidates from `um_source`:
+UM is the only source with no `imdb_id`, matched purely by normalized title. When a title has no seeded `title_um` binding, `getUnconsentingCandidates` resolves candidates from `um_source`:
 
-| Movie year known?              | Candidates                   | Outcome                                                                          |
-| ------------------------------ | ---------------------------- | -------------------------------------------------------------------------------- |
-| Yes                            | Exact year match found       | Return that one candidate → **rendered directly, no picker** (auto-match)        |
-| Yes                            | No candidate shares the year | Return `[]` → **"No data"** (film isn't in UM; don't offer mismatched-year data) |
-| Unknown (0 / no `releaseDate`) | Any                          | Return all candidates → **picker shown**                                         |
+| Title year known?          | Candidates                   | Outcome                                                                                                                     |
+| -------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Yes                        | Exact year match found       | Return that one candidate → **rendered directly, no picker** (auto-match)                                                   |
+| Yes                        | No candidate shares the year | Return the unknown-year (`year IS NULL`) entries, up to 5 (one → auto-match, several → picker); none → `[]` → **"No data"** |
+| Unknown (no `releaseDate`) | Any                          | Return up to 5 candidates → **picker shown** (one → auto-match)                                                             |
 
-**Nothing is persisted.** A user's pick lives only for the current page view — `selectedUm` is a `$state` variable, reset whenever `movie.id` changes. The page derives `umData = unconsenting ?? autoUm ?? selectedUm`; the chip, section header, and flag list all read from `umData` so a picked candidate renders identically to a seeded binding.
+**Nothing is persisted.** A user's pick lives only for the current page view — `selectedUm` is a `$state` variable, reset whenever `movie.id` changes. The page derives `umData = umEntry ?? autoUm ?? selectedUm`; the chip, section header, and flag list all read from `umData` so a picked candidate renders identically to a seeded binding.
 
-**Why `um_source` exists:** `movie_unconsenting` is a binding — keyed by `movie_id`, it can only hold entries that _already matched_ a spine movie. For ambiguous (same title, different year) or spine-absent films, `um_source` is the durable, re-queryable catalogue that doesn't require re-parsing the 55k-row CSV per request.
+**Why `um_source` exists:** `title_um` is a binding, keyed by `title_id`, so it only covers entries that _already matched_ a spine title. For ambiguous (same title, different year), TV, or spine-absent titles, `um_source` is the durable, re-queryable catalogue that doesn't require re-parsing the CSV per request. Bindings reference it, so both paths read one row shape.
 
-**`UmCandidate` type** (in `src/lib/media/utils/metrics.ts`) — carries `umId`, `cleanName`, `year`, `flagCount` (concern count, excluding `noRape`) + all 9 flag booleans + `comment`, making it union-compatible with `UnconsentingData` for the shared rendering path.
+**`UmEntry` type** (in `src/lib/media/utils/metrics.ts`, re-exported from `$lib/media/types/um.ts`) — `umId`, `cleanName`, `year`, `comment` + all 9 flag booleans. Seeded bindings and picked candidates both use it; the concern count is derived with `umFlagCount`, not stored.
 
 **`umFlagCount(umData)` / `dddUrl(itemId)`** (in `src/lib/media/utils/metrics.ts`) — pure helpers shared by both detail pages and by the `umMetricSection` / `dddMetricSection` components. `umFlagCount` excludes `noRape` from the concern tally; `dddUrl` builds the deep-link or falls back to the DDD homepage.
 
@@ -424,7 +435,7 @@ Notable mechanics:
 - **`movies/facts/genderDistribution.svelte`** — stacked bar + legend; `total===0` empty state; men use `--seg-male`.
 - **`movies/facts/castRepresentation.svelte` / `crewRepresentation.svelte`** — the `#gender` "see more" disclosure bodies. Both render as a **surface card** (`rounded-lg border border-border bg-surface-raised`) with a tinted header (`color-mix(--brand 4%, --surface-raised)`) carrying a gender **legend** (shared `seg-*` swatch classes; `--seg-male` for men), then dividered rows. Cast = Leads/Supporting/Background tiers, each a proportion bar + count chips. Crew = a department/job table with mini-bars; counts render in high-contrast `--ink` (colour identity lives in the bars + header swatches, **not** coloured digits — bright `--accent-bg` as text fails contrast). The `unknown` segment shares the track colour, so it gets an inset edge to stay visible. Wrapped by `representationDisclosure` (labelled show/hide toggle).
 - **`movies/facts/metricChip.svelte`** — single summary chip. Owns all `.chip*` styles and the `badge-pulse` keyframe so they're defined once. The page wraps three chips in a `.summary-chips` grid.
-- **`movies/metrics/umMetricSection.svelte`** — full UM section including flag rendering and the `umCandidates` picker fallback. Accepts `umData`, `umFlagCount`, `umCandidates`, `hasUmCandidates`, `mediaNoun`, and `onselect`. Flag rows use the **shared marker pattern** (above) — keep them in sync with the Bechdel ladder geometry.
+- **`movies/metrics/umMetricSection.svelte`** — full UM section including flag rendering and the `umCandidates` picker fallback. Accepts `umData: UmEntry | null`, `umFlagCount`, `umCandidates`, `hasUmCandidates`, `mediaNoun`, and `onselect`. Flag rows use the **shared marker pattern** (above) — keep them in sync with the Bechdel ladder geometry.
 - **`movies/metrics/dddMetricSection.svelte`** — full DDD section including loading skeleton. The `selector` snippet prop is empty for movies; the series page renders `DddEpisodeSelector` into it.
 - **`$lib/media/utils/dddStream.svelte.ts`** — `createDddState(getPromise, isSeries)` rune factory. Returns `{ current: DddResult | null }`. Internally runs the cancellation-guarded `$effect` that both detail pages previously duplicated. Import with `.js` extension (`dddStream.svelte.js`) per the Svelte 5 runes-module convention.
 - **`$lib/media/utils/verdict.ts`** — pure, client-safe two-axis scoring. `scoreSafety(umData, ddd)` → `SafetyVerdict`; `scoreRepresentation({cast, crew, castMembers, crewDepartments, bechdel, isSeries})` → `RepVerdict`. Each returns `{ tier, label, summary, signals: VerdictSignal[], signalsPresent, signalsTotal, tone, icon, pending? }`. `VerdictSignal = { label, detail, present, tone? }` carries per-signal human labels and findings for the hover breakdown (e.g. "Rape on screen / Flagged", "Cast — women / 22%"). Summaries are clean one-liners; the detail count is in `signals`, not appended to `summary`. `subTone(score)` maps 0/1/2 sub-scores to danger/warn/success per signal. Exported helpers: `femaleShare`, `leadsFemaleShare`, `directorOrCrewShare`, `toneTokens`, `SAFETY_HARMFUL_FLAGS`, `SAFETY_CAUTION_FLAGS`, `SV_DDD_MATCHERS`. No imports from `$lib/server/**`. Unit-tested in `src/lib/media/utils/__tests__/verdict.spec.ts`.
@@ -538,24 +549,24 @@ Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to 
 
 ## Known gaps / TODO
 
-1. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
-2. **Community write path not built** — `community_metric_submissions` and `comments` tables exist and are index-ready but have no write endpoints. Empty-state history views are wired at `/user/metrics` and `/user/comments`. The write path (rating submission + comment posting on title detail pages) is the next milestone.
-3. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
-4. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
-5. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
-6. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
+1. **Community write path not built** — `community_bechdel_ratings`, `community_um_reports`, `community_ddd_votes` and `comments` exist with their constraints but have no write endpoints (they will resolve titles with `getOrCreateTitleRow`). Empty-state history views are wired at `/user/metrics` and `/user/comments`. The write path (rating submission + comment posting on title detail pages) is the next milestone. DDD stays live and cached; if persistence is ever needed it will be a `ddd_snapshot (title_id, payload jsonb, fetched_at)` cache table, not normalised rows.
+2. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
+3. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
+4. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
+5. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
 
 > Verification baseline after the `$lib` reorg: `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the detail-page refactor (server splits + shared components): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the cache layer + startup-migrations + migration squash + dead-seeder removal (2026-06-05): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Removed deps: `@loom-io/fs`, `marked` (orphaned with `seed.ts`).
 > Verification baseline after user schema + auth flow (2026-06-21): same — `bun run check` → 0 errors/warnings, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Migration `0001_*` pending `bun run db:generate` + `bun run db:migrate`.
+> Verification baseline after remediation PR 4 (2026-10-24): `bun run check` → 0 errors, `bun run lint` → clean, `bun run test:unit` → 155/155 (13 files), `bun run test:db` → 43/43 (6 files), `bun run build` → clean with `DB_CONNECTION` unset. `0002_titles_spine` applied to a seeded `0001` copy and from zero.
 > Verification baseline after remediation PR 3 (2026-10-24): `bun run check` → 0 errors, `bun run lint` → clean, `bun run test:unit` → 155/155 (13 files), `bun run test:db` → 14/14 (1 file), `bun run build` → clean with `DB_CONNECTION` unset. Migration `0001_swift_wolverine` generated and applied from zero.
 
 ---
 
 ## Related docs
 
-- `.CLAUDE/plans/plan-architecture-remediation.md` — 7-PR plan implementing every review finding (session out of SSR, runtime DB config + drift CI, `titles` spine, module consolidation, deps/cleanup, docs). PR 1 (secrets, `.env.example`, formatting, CI `static` job), PR 2 (user-agnostic SSR, `/api/me` + client session, lazy `getUser`, guards, `PublicUser`, `PUBLIC_PAGE`) and PR 3 (runtime DB config via `$lib/server/db`, migration `0001` + CI drift check, Vitest `db` project against real Postgres) done 2026-10-24; PRs 4–7 pending.
+- `.CLAUDE/plans/plan-architecture-remediation.md` — 7-PR plan implementing every review finding (session out of SSR, runtime DB config + drift CI, `titles` spine, module consolidation, deps/cleanup, docs). PR 1 (secrets, `.env.example`, formatting, CI `static` job), PR 2 (user-agnostic SSR, `/api/me` + client session, lazy `getUser`, guards, `PublicUser`, `PUBLIC_PAGE`) PR 3 (runtime DB config via `$lib/server/db`, migration `0001` + CI drift check, Vitest `db` project against real Postgres) and PR 4 (`titles` spine, UM by reference, per-metric community tables, migration `0002_titles_spine`) done 2026-10-24; PRs 5–7 pending.
 - `.CLAUDE/plans/plan-architecture-review.md` — architecture review (2026-10-24): P0 fixes (committed secret, CDN-cached personalised HTML, migration drift), proposed `titles` spine + per-metric community tables, and a suggested ordering before the community write path.
 - `.CLAUDE/plans/plan-um-matching-fix.md` — the plan that drove the UM matching overhaul (year-aware seeder, `um_source` table, runtime disambiguation picker, `noRape` inversion). Implemented and closed.
 - `.CLAUDE/plans/plan-movie-schema-multi-source.md` — the plan that drove the multi-source schema (Bechdel + UM seeding, streamed DDD, page redesign).
