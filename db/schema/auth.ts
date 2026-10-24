@@ -1,5 +1,6 @@
-import { pgTable, text, varchar, timestamp, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { timestamps } from './columns';
 
 export const userRole = pgEnum('user_role', ['user', 'moderator', 'administrator']);
 
@@ -11,8 +12,7 @@ export const users = pgTable(
 		role: userRole('role').notNull().default('user'),
 		username: varchar('username', { length: 32 }),
 		avatarKey: varchar('avatar_key', { length: 48 }),
-		createdAt: timestamp('created_at').notNull().defaultNow(),
-		updatedAt: timestamp('updated_at').notNull().defaultNow()
+		...timestamps()
 	},
 	(t) => [
 		uniqueIndex('user_username_lower_idx').on(sql`lower(${t.username})`),
