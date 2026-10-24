@@ -5,7 +5,7 @@ Implements every finding in `plan-architecture-review.md`. All the choices are a
 | PR  | Theme                                                             | Fixes (review §)                           | Risk                                   |
 | --- | ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
 | 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)       | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
-| 2   | Session out of SSR, lazy auth, guards                             | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
+| 2   | Session out of SSR, lazy auth, guards (**done 2026-10-24**)       | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
 | 3   | DB client from runtime env, migration drift, DB test harness      | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
 | 4   | `titles` spine, sources by reference, community tables            | 2.4, 3.1–3.4                               | **High** (data migration)              |
 | 5   | Module consolidation (TMDB, loader, page state, shared constants) | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
@@ -74,6 +74,19 @@ Out of scope: the community **feature** itself (rating and comment UI and action
 ---
 
 ## PR 2: Session out of SSR, lazy auth, guards
+
+**Status: done 2026-10-24.** Implemented as specified. Deviations and additions:
+
+- **Guard signature:** `requireUser(locals, { page })` / `requireRole(locals, roles, { page })` (an options object and a roles array instead of `...roles`), so page loads can opt into the redirect explicitly. The default is 401.
+- **Moderation link** moved from a text link in the desktop nav row into the navbar's fixed-size auth slot, as a shield icon (md+; the mobile menu keeps its text item). A text link that appears after `/api/me` resolves would shift its siblings.
+- **"Sign in"** moved from the desktop link row into the auth slot, and so it now also shows in the bar below md. The slot is a fixed `10.5rem` (5.5rem below 480px), and the username truncates to fit.
+- **`PRIVATE_NO_STORE`** constant added next to `PUBLIC_PAGE` in `cache.ts`.
+- **`/resources/+page.server.ts`** added only to set `PUBLIC_PAGE` (the page had no server load, so it sent no `cache-control`).
+- **Profile action** returns `me: PublicUser` instead of the `UserRow`; the profile load returns only `email` (the rest comes from the layout's `me`).
+- **`UserRow` is no longer re-exported** from `$lib/media/types/user.ts`, so client code cannot type a prop as a full row.
+- **`.vercel/**`added to the eslint ignores**, so`bun run lint`passes after a local`bun run build` (adapter-vercel writes there).
+- **DB-level "no write on repeat" test** for `getOrCreateUser` (`xmin` unchanged) is deferred to PR 3's harness, as planned.
+- **Not verified on a real detail page:** no TMDB token was available, so `/movie/603` rendered its 401 error page. The header and payload checks ran on it and on `/` and `/resources`. Observed, not changed: the detail loads set `PUBLIC_PAGE` before fetching, so TMDB error pages are CDN-cacheable for an hour too.
 
 ### Decision: user-agnostic HTML plus a client-side session
 

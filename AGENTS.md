@@ -18,6 +18,8 @@
 - `$lib/server/**` is a hard SvelteKit boundary — nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and all DB access live here only.
 - To expose a server type to a client component, re-export it **as a type** from `$lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
 - `data/` = Postgres/Drizzle modules. `integrations/` = external HTTP clients.
+- **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.** The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout; the email reaches the client on `/user/profile` alone. Public pages (`PUBLIC_PAGE` from `$lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()` or read `locals.claims`. The navbar reads the client session (`session.svelte.js`).
+- **Authorize with the guards.** Every load, action and endpoint that needs a user calls `requireUser` / `requireRole` from `$lib/server/auth/guards.ts` (redirect for pages, 401/403 otherwise). The hook's `/user` gate is claims-only and does not cover form actions on public pages.
 
 ---
 
