@@ -8,9 +8,22 @@ import { checkCsvColumns } from './lib/checkCsvColumns';
 
 const CSV_PATH = './db/seeds/sources/unconsenting.csv';
 const REQUIRED_COLUMNS = [
-	'id', 'name', 'cleanName', 'cleanNameArticles', 'itemType', 'comment', 'yearOfRelease',
-	'noRape', 'rapeMenDisImp', 'sexHarOnScrn', 'sexAdultTeen', 'childSexAbuse',
-	'incest', 'attemptedRape', 'rapeOffScrn', 'rapeOnScreen',
+	'id',
+	'name',
+	'cleanName',
+	'cleanNameArticles',
+	'itemType',
+	'comment',
+	'yearOfRelease',
+	'noRape',
+	'rapeMenDisImp',
+	'sexHarOnScrn',
+	'sexAdultTeen',
+	'childSexAbuse',
+	'incest',
+	'attemptedRape',
+	'rapeOffScrn',
+	'rapeOnScreen'
 ];
 const UNMATCHED_REPORT = './db/seeds/sources/unconsenting_unmatched.txt';
 const BATCH_SIZE = 500;
@@ -41,7 +54,9 @@ function parseBool(val: string): boolean {
 
 // Map from cleanTitle → Array of { id, year }
 async function buildCleanTitleIndex(): Promise<Map<string, Array<{ id: string; year: number }>>> {
-	const rows = await db.select({ id: movies.id, cleanTitle: movies.cleanTitle, year: movies.year }).from(movies);
+	const rows = await db
+		.select({ id: movies.id, cleanTitle: movies.cleanTitle, year: movies.year })
+		.from(movies);
 	const index = new Map<string, Array<{ id: string; year: number }>>();
 	for (const r of rows) {
 		const existing = index.get(r.cleanTitle);
@@ -93,8 +108,8 @@ async function main() {
 					attemptedRape: sql`excluded.attempted_rape`,
 					rapeOffScrn: sql`excluded.rape_off_scrn`,
 					rapeOnScreen: sql`excluded.rape_on_screen`,
-					comment: sql`excluded.comment`,
-				},
+					comment: sql`excluded.comment`
+				}
 			});
 		sourceBatch.length = 0;
 	};
@@ -120,8 +135,8 @@ async function main() {
 					incest: sql`excluded.incest`,
 					attemptedRape: sql`excluded.attempted_rape`,
 					rapeOffScrn: sql`excluded.rape_off_scrn`,
-					rapeOnScreen: sql`excluded.rape_on_screen`,
-				},
+					rapeOnScreen: sql`excluded.rape_on_screen`
+				}
 			});
 		bindingBatch.length = 0;
 	};
@@ -148,14 +163,18 @@ async function main() {
 		// Derive the canonical key and year from UM's own normalized name.
 		// UM's cleanNameArticles may include a trailing year ("wuthering heights 2026"),
 		// so we strip it to get a stable key and use the embedded year preferentially.
-		const rawKey = record.cleanNameArticles?.trim() || record.cleanName?.trim() || normalizeTitle(record.name?.trim() || '');
+		const rawKey =
+			record.cleanNameArticles?.trim() ||
+			record.cleanName?.trim() ||
+			normalizeTitle(record.name?.trim() || '');
 		const { key: titleKey, year: embeddedYear } = stripTrailingYear(rawKey);
 		const csvYear = record.yearOfRelease ? parseInt(record.yearOfRelease, 10) : null;
 		// UM uses yearOfRelease "0" as a "year unknown" sentinel (e.g. um_id 1223, "Mean Girls").
 		// parseInt("0") is 0, not NaN, so coerce any non-positive year to null — otherwise a 0 year
 		// defeats both the seeder's exact-year match and the runtime null-year fallback.
 		const umYear = embeddedYear ?? (csvYear !== null && csvYear > 0 ? csvYear : null);
-		const displayName = record.cleanNameArticles?.trim() || record.cleanName?.trim() || record.name?.trim() || '';
+		const displayName =
+			record.cleanNameArticles?.trim() || record.cleanName?.trim() || record.name?.trim() || '';
 
 		// Populate um_source catalog regardless of match outcome
 		const flags = {
@@ -167,7 +186,7 @@ async function main() {
 			incest: parseBool(record.incest),
 			attemptedRape: parseBool(record.attemptedRape),
 			rapeOffScrn: parseBool(record.rapeOffScrn),
-			rapeOnScreen: parseBool(record.rapeOnScreen),
+			rapeOnScreen: parseBool(record.rapeOnScreen)
 		};
 		sourceBatch.push({
 			umId,
@@ -175,7 +194,7 @@ async function main() {
 			cleanTitleKey: titleKey,
 			year: umYear,
 			...flags,
-			comment: record.comment?.trim() || null,
+			comment: record.comment?.trim() || null
 		});
 
 		// TV shows have no movies spine row — only populate um_source, skip binding
@@ -199,10 +218,14 @@ async function main() {
 			if (candidates.length > 1) {
 				ambiguous++;
 				const candidateYears = candidates.map((c) => c.year).join(',');
-				report.write(`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tambiguous\t${candidateYears}\n`);
+				report.write(
+					`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tambiguous\t${candidateYears}\n`
+				);
 			} else {
 				unmatched++;
-				report.write(`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tno_match\t\n`);
+				report.write(
+					`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tno_match\t\n`
+				);
 			}
 		} else {
 			matched++;
@@ -212,7 +235,7 @@ async function main() {
 				cleanName: displayName,
 				itemType: record.itemType?.trim() || null,
 				comment: record.comment?.trim() || null,
-				...flags,
+				...flags
 			});
 		}
 

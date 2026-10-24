@@ -2,15 +2,15 @@
 
 Implements every finding in `plan-architecture-review.md`. All the choices are already made. Where the review offered options, this plan picks one and gives the reason. The work ships as **7 PRs in order**, each independently green (`check` 0 errors, `test:unit` pass, `build` clean, plus CI from PR 1 on). Each PR updates `.CLAUDE/architecture.md` for the files it touches, as AGENTS.md requires.
 
-| PR | Theme | Fixes (review §) | Risk |
-|---|---|---|---|
-| 1 | Secrets, env template, formatting, CI | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low |
-| 2 | Session out of SSR, lazy auth, guards | 2.2, 2.5, 5.3 | Medium (navbar UX) |
-| 3 | DB client from runtime env, migration drift, DB test harness | 2.3, 4.4 (`define`), 5.6 | Low |
-| 4 | `titles` spine, sources by reference, community tables | 2.4, 3.1–3.4 | **High** (data migration) |
-| 5 | Module consolidation (TMDB, loader, page state, shared constants) | 4.2, 4.3 | Medium (refactor, no behaviour change) |
-| 6 | Dependencies, search caching, rate limit, dead code | 4.4 (deps), 4.5, 4.6, 5.5 | Low |
-| 7 | Docs sweep (AGENTS.md, architecture.md) | 4.6 (doc drift) | None |
+| PR  | Theme                                                             | Fixes (review §)                           | Risk                                   |
+| --- | ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
+| 1   | Secrets, env template, formatting, CI (**done 2026-10-24**)       | 2.1, 4.4 (`.env.example`), 4.6 partly, 5.7 | Low                                    |
+| 2   | Session out of SSR, lazy auth, guards                             | 2.2, 2.5, 5.3                              | Medium (navbar UX)                     |
+| 3   | DB client from runtime env, migration drift, DB test harness      | 2.3, 4.4 (`define`), 5.6                   | Low                                    |
+| 4   | `titles` spine, sources by reference, community tables            | 2.4, 3.1–3.4                               | **High** (data migration)              |
+| 5   | Module consolidation (TMDB, loader, page state, shared constants) | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
+| 6   | Dependencies, search caching, rate limit, dead code               | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
+| 7   | Docs sweep (AGENTS.md, architecture.md)                           | 4.6 (doc drift)                            | None                                   |
 
 Out of scope: the community **feature** itself (rating and comment UI and actions). This plan builds the schema, guards, validation choice and test harness it needs. The feature gets its own plan afterwards (step 9 of the review's ordering).
 
@@ -27,6 +27,8 @@ Out of scope: the community **feature** itself (rating and comment UI and action
 ---
 
 ## PR 1: Secrets, env template, formatting, CI
+
+**Status: done 2026-10-24.** `src/routes/user/dashboard/+page.ts` was kept: it is not empty but holds `export const ssr = false`, which the dashboard relies on (see architecture.md _Routes_). Also added: `db/migrations` to `.prettierignore`, so drizzle-kit output is not reformatted and new migrations do not fail `lint`.
 
 **Goal:** the repo is safe to read and every later PR is gated by CI.
 
@@ -52,8 +54,9 @@ Out of scope: the community **feature** itself (rating and comment UI and action
    - `postgres:16` (matches the architecture doc);
    - drop the obsolete `version:` key;
    - DB `midb` on 5432.
-   
+
    Then make `architecture.md`'s "Local run sequence" use compose instead of the ad-hoc `docker run` on port 5435, so the README, the doc and `.env.example` share one URL.
+
 4. **Formatting baseline.** One commit, `chore: format`, containing only `bun run format`, so the diff is reviewable as "whitespace only". Then fix the 9 eslint errors in a separate commit.
 5. Delete pure noise:
    - `src/__tests__/index.test.ts` (`1 + 2`);
@@ -73,12 +76,15 @@ Out of scope: the community **feature** itself (rating and comment UI and action
 ## PR 2: Session out of SSR, lazy auth, guards
 
 ### Decision: user-agnostic HTML plus a client-side session
+
 Options considered:
+
 - **(a) Conditional `cache-control`** (public when signed out, private when signed in): rejected. The Vercel edge cache key ignores cookies, so a signed-in visitor would be served the cached signed-out page.
 - **(b) `private` everywhere:** rejected. It loses the CDN, which conflicts with AGENTS.md's performance priority.
 - **(c) Chosen: server-rendered HTML never contains user data.** Detail and landing pages stay CDN-cacheable, and the navbar's auth slot hydrates from a tiny uncached endpoint. AGENTS.md's zero-layout-shift rule is met by giving the slot a reserved fixed size.
 
 ### Steps
+
 1. **`$lib/server/auth/hanko.ts`**: move the JWKS, `emailFromClaims` and `verifyClaims` code out of `hooks.server.ts` unchanged.
 2. **`$lib/server/data/user-queries.ts`**: change `getOrCreateUser` to read first:
    - `SELECT` by id; on a hit, return it. If `email` is null and the claim has one, `UPDATE` once.
@@ -86,12 +92,15 @@ Options considered:
    - Steady state: one primary-key read, zero writes.
 3. **Lazy user resolution** in `hooks.server.ts`:
    ```ts
-   event.locals.claims = await verifyClaims(event);          // local crypto; JWKS cached
+   event.locals.claims = await verifyClaims(event); // local crypto; JWKS cached
    let userP: Promise<UserRow | null> | undefined;
    event.locals.getUser = () =>
-     (userP ??= event.locals.claims?.sub
-       ? getOrCreateUser({ sub: event.locals.claims.sub, email: emailFromClaims(event.locals.claims) })
-       : Promise.resolve(null));
+   	(userP ??= event.locals.claims?.sub
+   		? getOrCreateUser({
+   				sub: event.locals.claims.sub,
+   				email: emailFromClaims(event.locals.claims)
+   			})
+   		: Promise.resolve(null));
    ```
    - The hook only gates. `/user` and `/user/*` (tightened from `startsWith('/user')`, which also caught `/users…`) redirect on missing claims, with no DB access.
    - `/user/moderation*` awaits `getUser()` for the role.
@@ -102,7 +111,12 @@ Options considered:
    - Every `/user/*` load, action and endpoint calls one of these instead of `locals.user!`. This also covers form actions on public pages later.
 5. **`PublicUser` DTO** in `$lib/media/types/user.ts` (client-safe, no runtime from server):
    ```ts
-   export type PublicUser = { username: string | null; avatarKey: string | null; role: UserRole; displayName: string };
+   export type PublicUser = {
+   	username: string | null;
+   	avatarKey: string | null;
+   	role: UserRole;
+   	displayName: string;
+   };
    ```
    - `toPublicUser(row)` in `$lib/server/data/user-queries.ts`.
    - The `displayName` fallback (username → email local-part → "Account") moves server-side, so the email never leaves the server except on `/user/profile`.
@@ -121,6 +135,7 @@ Options considered:
 12. **Cache headers helper** `$lib/server/http/cache.ts` exports `PUBLIC_PAGE = 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'`. Movie, TV, `/` and `/resources` loads use it. Keeping it in one constant makes the policy greppable.
 
 ### Tests
+
 - Unit:
   - `toPublicUser` (the email is never present, plus the fallback order);
   - the guards (redirect, 401, 403);
@@ -135,7 +150,10 @@ Options considered:
 
 1. **`db/client.ts`** (replaces `db/connections.ts`):
    ```ts
-   export function createDb(url: string, opts?: { max?: number }) { const sql = postgres(url, { connect_timeout: 10, max: opts?.max ?? 10 }); return { db: drizzle(sql, { schema }), sql }; }
+   export function createDb(url: string, opts?: { max?: number }) {
+   	const sql = postgres(url, { connect_timeout: 10, max: opts?.max ?? 10 });
+   	return { db: drizzle(sql, { schema }), sql };
+   }
    export type Db = ReturnType<typeof createDb>['db'];
    ```
    - `schema` is `db/schema/index.ts`, a single barrel re-exporting every schema file. `drizzle.config.ts` points at the barrel's folder as before.
@@ -150,8 +168,9 @@ Options considered:
    - answer **create/drop** (the Auth.js-era `user` rows are useless: their ids are not Hanko subs);
    - review the SQL;
    - commit SQL and snapshot.
-   
+
    Agents without a TTY run it through `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts. If that isn't possible, hand the step to the owner. **Never hand-write a snapshot JSON.**
+
 6. **Drift check** (CI job `migrations`):
    ```sh
    bunx drizzle-kit generate --name drift_check
@@ -178,16 +197,24 @@ Options considered:
 ## PR 4: `titles` spine, sources by reference, community tables
 
 ### Target schema (`db/schema/`)
+
 Shared helpers in `db/schema/columns.ts`:
+
 ```ts
 export const timestamps = () => ({
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true })
+		.notNull()
+		.defaultNow()
+		.$onUpdate(() => new Date())
 });
-export const umFlagColumns = () => ({ noRape: boolean('no_rape').notNull(), /* …8 more, one definition */ });
+export const umFlagColumns = () => ({
+	noRape: boolean('no_rape').notNull() /* …8 more, one definition */
+});
 ```
 
 **`titles.ts`**
+
 - `titleKind = pgEnum('title_kind', ['movie','tv'])`
 - `titles`:
   - `id uuid pk`, `kind title_kind not null`;
@@ -199,11 +226,13 @@ export const umFlagColumns = () => ({ noRape: boolean('no_rape').notNull(), /* �
   - Postgres treats NULLs as distinct, so seeded rows without a TMDB id coexist. IMDb ids are globally unique across movies and series, so a plain unique works.
 
 **`sources.ts`**
+
 - `titleBechdel`: renamed from `movie_bechdel`, `title_id` pk/fk.
 - `umSource`: unchanged columns, built via `umFlagColumns()`.
 - `titleUm (titleId pk fk→titles cascade, umId fk→um_source.um_id, createdAt)`: a **binding only**. The flags are read through the join, so a UM reseed is reflected immediately and there is one row shape.
 
 **`community.ts`** (replaces `community_metric_submissions` and `metric_kind`)
+
 - `communityBechdelRatings (userId, titleId, rating smallint check 0..3, ...timestamps(), pk(userId,titleId), index(titleId))`.
 - `communityUmReports (userId, titleId, ...umFlagColumns(), ...timestamps(), pk(userId,titleId), index(titleId))`.
   - **Decision: explicit booleans, not jsonb.** They match `um_source`, are typed end-to-end by Drizzle, and SQL can aggregate them (`avg(rape_on_screen::int)`) without JSON extraction.
@@ -221,8 +250,10 @@ export const umFlagColumns = () => ({ noRape: boolean('no_rape').notNull(), /* �
 **Dropped:** `movie_trigger_tags`. **Decision:** DDD stays live and cached. Persisting third-party rows that go stale is the wrong shape. If persistence is ever needed, it will be a `ddd_snapshot (title_id, payload jsonb, fetched_at)` cache table.
 
 ### Migration `0002_titles_spine`
+
 1. Generate with `db:generate`. When it asks whether `titles` was created or renamed from `movies` (and `title_bechdel` from `movie_bechdel`, `title_id` from `movie_id`), answer **rename** in each case.
 2. Then hand-append the data statements to the generated SQL (allowed; the snapshot still matches the schema), placed after the rename and column changes and before the new constraints:
+
 ```sql
 UPDATE titles SET kind = 'tv', tmdb_id = substring(imdb_id from 9)::int, imdb_id = NULL WHERE imdb_id LIKE 'tmdb-tv:%';
 UPDATE titles SET tmdb_id = substring(imdb_id from 6)::int, imdb_id = NULL WHERE imdb_id LIKE 'tmdb:%';
@@ -232,9 +263,11 @@ INSERT INTO title_um (title_id, um_id, created_at)
   SELECT mu.movie_id, mu.um_id, mu.created_at FROM movie_unconsenting mu JOIN um_source us USING (um_id);
 -- timestamp → timestamptz: drizzle emits ALTER TYPE; add USING created_at AT TIME ZONE 'UTC'
 ```
+
 Rename instead of drop/create because the `movies` and `movie_bechdel` data includes ~9.7k `tmdb_id`s backfilled through the rate-limited TMDB API (~40 min to redo). Test the migration on a copy of a seeded dev DB **and** from empty (CI does the latter).
 
 ### Data layer
+
 - `$lib/server/data/media-queries.ts` → **`title-queries.ts`**:
   - `getTitleRow(kind, ref)`: read-only. Looks up by `(kind, tmdbId)`, falling back to `imdbId`. Deletes `getDbMovie`/`getDbMedia` and the `'0'` hack (review 2.4).
   - `getOrCreateTitleRow(kind, ref)`: the same lookup, plus a race-safe insert (`ON CONFLICT DO NOTHING RETURNING`, then select again), plus backfill of the missing id. Still unused by GET routes.
@@ -250,6 +283,7 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
   - `seedAdmin.ts` uses `db/scripts/lib/db`.
 
 ### Tests (DB project)
+
 - **Regression for 2.4:** movie tmdb 1399 and tv tmdb 1399 coexist; inserting a second TV title succeeds.
 - `getTitleRow`: prefers tmdb, falls back to imdb, and never writes (row count unchanged).
 - `getOrCreateTitleRow`: backfills the missing id; two concurrent calls create one row.
@@ -282,12 +316,15 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
 3. **One loader** `$lib/server/titles/load-title.ts`:
    ```ts
    export async function loadTitle(kind: TitleKind, tmdbId: string) {
-     const media = kind === 'movie' ? await getMovie(tmdbId) : await getSeries(tmdbId);
-     const row = await getTitleRow(kind, media);
-     const [bechdel, um] = row ? await Promise.all([kind === 'movie' ? getBechdel(row.id) : null, getUmEntry(row.id)]) : [null, null];
-     const umCandidates = um ? [] : await getUnconsentingCandidates(media);
-     const triggerTags = kind === 'movie' ? getTriggerTagsLive(media.imdbId) : getTriggerTagsForSeries(media); // streamed
-     return { media, bechdel, um, umCandidates, triggerTags };
+   	const media = kind === 'movie' ? await getMovie(tmdbId) : await getSeries(tmdbId);
+   	const row = await getTitleRow(kind, media);
+   	const [bechdel, um] = row
+   		? await Promise.all([kind === 'movie' ? getBechdel(row.id) : null, getUmEntry(row.id)])
+   		: [null, null];
+   	const umCandidates = um ? [] : await getUnconsentingCandidates(media);
+   	const triggerTags =
+   		kind === 'movie' ? getTriggerTagsLive(media.imdbId) : getTriggerTagsForSeries(media); // streamed
+   	return { media, bechdel, um, umCandidates, triggerTags };
    }
    ```
    Each `+page.server.ts` becomes `setHeaders({ 'cache-control': PUBLIC_PAGE }); return loadTitle('movie', params.movieId);`.
@@ -330,8 +367,9 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
    - `movies/sections/sectionSkeleton.svelte`;
    - `landing/topBar.svelte`;
    - `components/navigation/{item,simple}.svelte`.
-   
+
    Remove the "No orphan revival" rule from AGENTS.md (git history is the archive).
+
 7. Delete `_testExports` from `ddd.ts`; tests call `clearCache()` directly.
 
 ---
@@ -356,8 +394,10 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
 ---
 
 ## Verification baseline (every PR)
+
 `bun run check` → 0 errors · `bun run lint` → clean (from PR 1) · `bun run test:unit` → all pass · `bun run test:db` → all pass (from PR 3) · `bun run build` → clean · CI green.
 
 ## Rollback
+
 - PRs 1–3 and 5–7 are code-only, or additive, and revert cleanly.
 - PR 4's migration is not reversible by revert. To roll back, restore the pre-flight `pg_dump` and redeploy the previous commit. That is why the dump is a hard prerequisite and the migration is rehearsed on a seeded copy first.

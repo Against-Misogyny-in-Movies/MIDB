@@ -19,14 +19,14 @@
 
 	// Reset filter when the tag set changes (e.g. episode switch)
 	$effect(() => {
-		visibleTags;
+		void visibleTags;
 		selectedCategory = null;
 	});
 
 	const filteredTags = $derived(
 		selectedCategory === null
 			? visibleTags
-			: visibleTags.filter((t) => t.category === selectedCategory),
+			: visibleTags.filter((t) => t.category === selectedCategory)
 	);
 </script>
 
@@ -80,5 +80,4 @@
 	.skeleton-tag {
 		@apply h-9 w-full rounded-md bg-surface animate-pulse;
 	}
-
 </style>

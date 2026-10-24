@@ -18,13 +18,10 @@
 	// Episodes with DDD data for the selected season
 	const availableEpisodes = $derived.by(() => {
 		if (selectedSeason === null) return [];
-		const eps = new Set<number>();
-		for (const tag of tags) {
-			if (tag.season === selectedSeason && tag.episode !== null && tag.episode > 0) {
-				eps.add(tag.episode);
-			}
-		}
-		return [...eps].sort((a, b) => a - b);
+		const eps = tags
+			.filter((tag) => tag.season === selectedSeason && tag.episode !== null && tag.episode > 0)
+			.map((tag) => tag.episode as number);
+		return [...new Set(eps)].sort((a, b) => a - b);
 	});
 
 	function handleSeasonChange(e: Event) {
@@ -76,7 +73,6 @@
 			</select>
 		</label>
 	</div>
-
 </div>
 
 <style lang="postcss">
@@ -112,5 +108,4 @@
 	.select:disabled {
 		@apply opacity-50 cursor-not-allowed;
 	}
-
 </style>

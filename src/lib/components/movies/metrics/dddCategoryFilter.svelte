@@ -9,13 +9,9 @@
 
 	let { tags, selectedCategory, onchange }: Props = $props();
 
-	const categories = $derived.by(() => {
-		const seen = new Set<string>();
-		for (const t of tags) {
-			if (t.category) seen.add(t.category);
-		}
-		return [...seen].sort();
-	});
+	const categories = $derived(
+		[...new Set(tags.map((t) => t.category).filter((c): c is string => Boolean(c)))].sort()
+	);
 
 	function handleChange(e: Event) {
 		const val = (e.currentTarget as HTMLSelectElement).value;
@@ -27,11 +23,7 @@
 	<div class="category-filter">
 		<label class="select-wrap">
 			<span class="select-label label">Category</span>
-			<select
-				class="select"
-				value={selectedCategory ?? ''}
-				onchange={handleChange}
-			>
+			<select class="select" value={selectedCategory ?? ''} onchange={handleChange}>
 				<option value="">All categories</option>
 				{#each categories as cat (cat)}
 					<option value={cat}>{cat}</option>

@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { register } from "@teamhanko/hanko-elements";
-  import { PUBLIC_HANKO_API_URL} from '$env/static/public'
+	import { onMount } from 'svelte';
+	import { register } from '@teamhanko/hanko-elements';
+	import { PUBLIC_HANKO_API_URL } from '$env/static/public';
 
-  interface Props {
-      onsessioncreated?: () => void;
-  }
+	interface Props {
+		onsessioncreated?: () => void;
+	}
 
-  let { onsessioncreated }: Props = $props();
+	let { onsessioncreated }: Props = $props();
 
-  onMount(async () => {
-    try {
-      await register(PUBLIC_HANKO_API_URL);
-    } catch (error) {
-      console.error(error);
-    }
-  });
+	onMount(async () => {
+		try {
+			await register(PUBLIC_HANKO_API_URL);
+		} catch (error) {
+			console.error(error);
+		}
+	});
 </script>
 
 <hanko-auth ononSessionCreated={onsessioncreated}></hanko-auth>

@@ -23,9 +23,7 @@ export interface MediaRef {
  * @param media - Minimal media descriptor with at least one of `tmdbId` or `imdbId`.
  * @returns The matching `movies` row, or `null` if no row exists for this media.
  */
-export async function getDbMovie(
-	media: MediaRef
-): Promise<typeof movies.$inferSelect | null> {
+export async function getDbMovie(media: MediaRef): Promise<typeof movies.$inferSelect | null> {
 	const tmdbId = parseInt(media.tmdbId, 10);
 
 	if (!isNaN(tmdbId)) {
@@ -171,4 +169,3 @@ export async function getUnconsenting(movieId: string): Promise<UnconsentingData
 		})) ?? null
 	);
 }
-

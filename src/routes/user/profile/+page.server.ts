@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { updateProfile, isUsernameAvailable } from '$lib/server/data/user-queries';
+import { updateProfile } from '$lib/server/data/user-queries';
 
 export const load: PageServerLoad = ({ locals }) => {
 	return { user: locals.user };
@@ -18,10 +18,10 @@ export const actions: Actions = {
 
 		const result = await updateProfile(locals.user!.id, {
 			...(username !== undefined ? { username } : {}),
-			...(avatarKey !== undefined ? { avatarKey } : {}),
+			...(avatarKey !== undefined ? { avatarKey } : {})
 		});
 
 		if (!result.ok) return fail(422, { error: result.reason });
 		return { success: true, user: result.user };
-	},
+	}
 };

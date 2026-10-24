@@ -19,7 +19,10 @@
 
 	function checkAvailability(value: string) {
 		if (availabilityTimer) clearTimeout(availabilityTimer);
-		if (!value || value === user?.username) { availability = 'idle'; return; }
+		if (!value || value === user?.username) {
+			availability = 'idle';
+			return;
+		}
 		availability = 'checking';
 		availabilityTimer = setTimeout(async () => {
 			const res = await fetch(`/user/profile/availability?username=${encodeURIComponent(value)}`);
@@ -30,12 +33,6 @@
 
 	function roleLabel(role: string) {
 		return { user: 'Member', moderator: 'Moderator', administrator: 'Administrator' }[role] ?? role;
-	}
-
-	function displayName() {
-		if (user?.username) return user.username;
-		if (user?.email) return user.email.split('@')[0];
-		return 'Account';
 	}
 </script>
 
@@ -62,7 +59,8 @@
 	{#if form?.error}
 		<div class="form-error" role="alert">
 			{#if form.error === 'username-taken'}Username is already taken.
-			{:else if form.error === 'username-format'}Username must be 3–32 characters: lowercase letters, numbers, underscores only.
+			{:else if form.error === 'username-format'}Username must be 3–32 characters: lowercase
+				letters, numbers, underscores only.
 			{:else if form.error === 'username-reserved'}That username is reserved.
 			{:else if form.error === 'avatar-invalid'}Please choose a valid avatar.
 			{:else}Something went wrong. Please try again.
@@ -105,7 +103,12 @@
 
 		<section class="form-section">
 			<p class="field-label">Avatar</p>
-			<AvatarPicker value={selectedAvatar} onselect={(key) => { selectedAvatar = key; }} />
+			<AvatarPicker
+				value={selectedAvatar}
+				onselect={(key) => {
+					selectedAvatar = key;
+				}}
+			/>
 		</section>
 
 		<button type="submit" class="save-btn label">Save profile</button>
@@ -149,9 +152,15 @@
 		@apply text-xs font-medium px-sm py-xs rounded-full w-fit;
 	}
 
-	.role-user         { @apply bg-surface-raised text-ink-muted border border-border; }
-	.role-moderator    { @apply bg-info-soft text-info-fg; }
-	.role-administrator { @apply bg-brand text-surface; }
+	.role-user {
+		@apply bg-surface-raised text-ink-muted border border-border;
+	}
+	.role-moderator {
+		@apply bg-info-soft text-info-fg;
+	}
+	.role-administrator {
+		@apply bg-brand text-surface;
+	}
 
 	.form-error {
 		@apply text-sm text-danger border border-danger-soft bg-danger-soft rounded-lg px-md py-sm;
@@ -182,9 +191,15 @@
 		@apply text-xs mt-xs;
 	}
 
-	.avail-hint.checking  { @apply text-ink-muted; }
-	.avail-hint.available { @apply text-success; }
-	.avail-hint.taken     { @apply text-danger; }
+	.avail-hint.checking {
+		@apply text-ink-muted;
+	}
+	.avail-hint.available {
+		@apply text-success;
+	}
+	.avail-hint.taken {
+		@apply text-danger;
+	}
 
 	.save-btn {
 		@apply self-start px-lg py-sm rounded-lg bg-brand text-surface cursor-pointer border-0;

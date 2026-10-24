@@ -40,12 +40,11 @@ effects, per the perf rules in CLAUDE.md.)
 Compose the existing component — **do not duplicate search logic**:
 
 ```svelte
-import MovieSearch from '$lib/components/search/movieSearch.svelte';
-...
+import MovieSearch from '$lib/components/search/movieSearch.svelte'; ...
 {#if showSearch}
-  <div class="nav-search">
-    <MovieSearch />
-  </div>
+	<div class="nav-search">
+		<MovieSearch />
+	</div>
 {/if}
 ```
 
@@ -99,6 +98,7 @@ the button label on small widths (already done via `.btn-label` media query in
 ## Architecture doc update
 
 Per CLAUDE.md "Always" rule, update `.CLAUDE/architecture.md`:
+
 - In the **Component library** table / `layout/` row: note `navbar` now embeds
   `search/movieSearch`, shown on all routes except `/`.
 - In the **Live search** section: note there are now two `MovieSearch` mount points

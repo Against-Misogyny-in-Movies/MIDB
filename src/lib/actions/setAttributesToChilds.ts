@@ -1,7 +1,7 @@
 export interface SetAttributesToChildsProps {
-  selector: string;
-  attribute: string;
-  value: string | number | boolean | (() => (string | number | boolean));
+	selector: string;
+	attribute: string;
+	value: string | number | boolean | (() => string | number | boolean);
 }
 
 /**
@@ -11,9 +11,12 @@ export interface SetAttributesToChildsProps {
  * @param node - The host element whose descendants will be queried.
  * @param params - `selector` to match descendants, `attribute` name, and `value` (static or factory fn).
  */
-export function setAttributesToChilds(node: HTMLElement, { selector, attribute, value }: SetAttributesToChildsProps) {
-  node.querySelectorAll(selector).forEach(child => {
-    const attributeValue = typeof value === 'function' ? value() : value;
-    child.setAttribute(attribute, attributeValue.toString());
-  });
+export function setAttributesToChilds(
+	node: HTMLElement,
+	{ selector, attribute, value }: SetAttributesToChildsProps
+) {
+	node.querySelectorAll(selector).forEach((child) => {
+		const attributeValue = typeof value === 'function' ? value() : value;
+		child.setAttribute(attribute, attributeValue.toString());
+	});
 }

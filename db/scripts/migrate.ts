@@ -1,12 +1,11 @@
 // for migrations
-import { migrateDatabase } from "../connections";
+import { migrateDatabase } from '../connections';
 
 try {
-    await migrateDatabase();
+	await migrateDatabase();
 } catch (e) {
-    console.error(e);
-    process.exit(1);
+	console.error(e);
+	process.exit(1);
 }
 
 process.exit(0);
-

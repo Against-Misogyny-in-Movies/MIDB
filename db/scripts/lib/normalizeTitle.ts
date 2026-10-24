@@ -1,4 +1,5 @@
-const LEADING_ARTICLES = /^(the|a|an|le|la|les|los|las|el|un|une|des|il|lo|gli|i|eine|ein|der|die|das)\s+/i;
+const LEADING_ARTICLES =
+	/^(the|a|an|le|la|les|los|las|el|un|une|des|il|lo|gli|i|eine|ein|der|die|das)\s+/i;
 const TRAILING_YEAR = /\s+((?:19|20)\d{2})$/;
 
 /**
@@ -13,7 +14,7 @@ export function normalizeTitle(title: string): string {
 		.replace(LEADING_ARTICLES, '')
 		.normalize('NFD')
 		.replace(/[̀-ͯ]/g, '') // strip diacritics
-		.replace(/[^a-z0-9\s]/g, '')     // strip punctuation
+		.replace(/[^a-z0-9\s]/g, '') // strip punctuation
 		.replace(/\s+/g, ' ')
 		.trim();
 }

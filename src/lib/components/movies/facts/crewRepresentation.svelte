@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import type { CrewDepartment } from '$lib/media/types/media';
 
 	interface Props {
@@ -7,13 +8,11 @@
 
 	let { crewDepartments }: Props = $props();
 
-	let openDepts = $state<Set<string>>(new Set());
+	const openDepts = new SvelteSet<string>();
 
 	function toggle(dept: string) {
-		const next = new Set(openDepts);
-		if (next.has(dept)) next.delete(dept);
-		else next.add(dept);
-		openDepts = next;
+		if (openDepts.has(dept)) openDepts.delete(dept);
+		else openDepts.add(dept);
 	}
 
 	function pct(count: number, total: number): number {
@@ -68,10 +67,12 @@
 							role="img"
 							aria-label="{dept.department}: {femalePct}% women, {malePct}% men"
 						>
-							{#if femalePct > 0}<span class="seg seg-female" style="width: {femalePct}%"></span>{/if}
+							{#if femalePct > 0}<span class="seg seg-female" style="width: {femalePct}%"
+								></span>{/if}
 							{#if malePct > 0}<span class="seg seg-male" style="width: {malePct}%"></span>{/if}
 							{#if nbPct > 0}<span class="seg seg-nonbinary" style="width: {nbPct}%"></span>{/if}
-							{#if unknownPct > 0}<span class="seg seg-unknown" style="width: {unknownPct}%"></span>{/if}
+							{#if unknownPct > 0}<span class="seg seg-unknown" style="width: {unknownPct}%"
+								></span>{/if}
 						</span>
 					</span>
 					<span class="counts-cell tabular-nums">
@@ -101,10 +102,14 @@
 										role="img"
 										aria-label="{job.job}: {jFemalePct}% women, {jMalePct}% men"
 									>
-										{#if jFemalePct > 0}<span class="seg seg-female" style="width: {jFemalePct}%"></span>{/if}
-										{#if jMalePct > 0}<span class="seg seg-male" style="width: {jMalePct}%"></span>{/if}
-										{#if jNbPct > 0}<span class="seg seg-nonbinary" style="width: {jNbPct}%"></span>{/if}
-										{#if jUnknownPct > 0}<span class="seg seg-unknown" style="width: {jUnknownPct}%"></span>{/if}
+										{#if jFemalePct > 0}<span class="seg seg-female" style="width: {jFemalePct}%"
+											></span>{/if}
+										{#if jMalePct > 0}<span class="seg seg-male" style="width: {jMalePct}%"
+											></span>{/if}
+										{#if jNbPct > 0}<span class="seg seg-nonbinary" style="width: {jNbPct}%"
+											></span>{/if}
+										{#if jUnknownPct > 0}<span class="seg seg-unknown" style="width: {jUnknownPct}%"
+											></span>{/if}
 									</span>
 								</span>
 								<span class="counts-cell tabular-nums">
@@ -247,24 +252,40 @@
 		background-color: var(--border);
 	}
 
-	.seg { @apply h-full; }
-	.seg-female { background-color: var(--brand); }
-	.seg-male { background-color: var(--seg-male); }
-	.seg-nonbinary { background-color: var(--accent-bg); }
-	.seg-unknown { background-color: var(--border); }
+	.seg {
+		@apply h-full;
+	}
+	.seg-female {
+		background-color: var(--brand);
+	}
+	.seg-male {
+		background-color: var(--seg-male);
+	}
+	.seg-nonbinary {
+		background-color: var(--accent-bg);
+	}
+	.seg-unknown {
+		background-color: var(--border);
+	}
 
 	/* Counts */
 	.counts-cell {
 		@apply flex items-center justify-end gap-1 text-sm;
 	}
 
-	.c-sep { @apply text-ink-muted opacity-40; }
+	.c-sep {
+		@apply text-ink-muted opacity-40;
+	}
 	/* Numbers stay high-contrast for legibility; colour identity lives in the
 	   bar + header swatches, not in the digits themselves. */
 	.c-female,
 	.c-male,
-	.c-nb { @apply font-semibold text-ink tabular-nums; }
-	.c-unknown { @apply text-ink-muted tabular-nums; }
+	.c-nb {
+		@apply font-semibold text-ink tabular-nums;
+	}
+	.c-unknown {
+		@apply text-ink-muted tabular-nums;
+	}
 
 	/* Mobile */
 	@media (max-width: 767px) {

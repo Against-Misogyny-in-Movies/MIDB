@@ -45,8 +45,8 @@ async function flushBatch(
 				title: sql`excluded.title`,
 				year: sql`excluded.year`,
 				cleanTitle: sql`excluded.clean_title`,
-				updatedAt: sql`now()`,
-			},
+				updatedAt: sql`now()`
+			}
 		})
 		.returning({ id: movies.id, imdbId: movies.imdbId });
 
@@ -70,8 +70,8 @@ async function flushBatch(
 				set: {
 					bechdelId: sql`excluded.bechdel_id`,
 					rating: sql`excluded.rating`,
-					numVotes: sql`excluded.num_votes`,
-				},
+					numVotes: sql`excluded.num_votes`
+				}
 			});
 	}
 }
@@ -81,7 +81,8 @@ async function main() {
 	await checkCsvColumns(CSV_PATH, REQUIRED_COLUMNS);
 
 	const movieBatch: (typeof movies.$inferInsert)[] = [];
-	const bechdelBatch: { _imdbId: string; bechdelId: number; rating: number; numVotes: number }[] = [];
+	const bechdelBatch: { _imdbId: string; bechdelId: number; rating: number; numVotes: number }[] =
+		[];
 	let total = 0;
 	let skipped = 0;
 

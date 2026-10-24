@@ -40,7 +40,7 @@ export interface ToneTokens {
 }
 
 const UM_LABELS: Record<UmFlagKey, string> = Object.fromEntries(
-	UM_FLAGS.map((f) => [f.key, f.label]),
+	UM_FLAGS.map((f) => [f.key, f.label])
 ) as Record<UmFlagKey, string>;
 
 function subTone(score: number | null): VerdictTone {
@@ -55,26 +55,28 @@ export const SAFETY_HARMFUL_FLAGS: UmFlagKey[] = [
 	'rapeOffScrn',
 	'attemptedRape',
 	'childSexAbuse',
-	'incest',
+	'incest'
 ];
 
-export const SAFETY_CAUTION_FLAGS: UmFlagKey[] = [
-	'sexHarOnScrn',
-	'sexAdultTeen',
-	'rapeMenDisImp',
-];
+export const SAFETY_CAUTION_FLAGS: UmFlagKey[] = ['sexHarOnScrn', 'sexAdultTeen', 'rapeMenDisImp'];
 
 export const SV_DDD_MATCHERS: string[] = [
 	'rape',
 	'sexual assault',
 	'sexual abuse',
 	'molest',
-	'incest',
+	'incest'
 ];
 
 // Departments whose gender composition matters most for the representation verdict.
 // Must stay in sync with PRIORITY_DEPARTMENTS in tmdb.ts.
-export const CREW_SCORED_DEPARTMENTS = ['Directing', 'Writing', 'Production', 'Editing', 'Camera'] as const;
+export const CREW_SCORED_DEPARTMENTS = [
+	'Directing',
+	'Writing',
+	'Production',
+	'Editing',
+	'Camera'
+] as const;
 
 export function femaleShare(b: GenderBreakdown): number | null {
 	const denom = b.female + b.male + b.nonBinary;
@@ -93,11 +95,11 @@ export function leadsFemaleShare(members: CastMember[], topN = 5): number | null
 
 export function directorOrCrewShare(
 	crew: GenderBreakdown,
-	departments: CrewDepartment[],
+	departments: CrewDepartment[]
 ): number | null {
 	// Aggregate over the important departments only; fall back to full crew when none present.
 	const scored = departments.filter((d) =>
-		(CREW_SCORED_DEPARTMENTS as readonly string[]).includes(d.department),
+		(CREW_SCORED_DEPARTMENTS as readonly string[]).includes(d.department)
 	);
 	if (scored.length === 0) return femaleShare(crew);
 	const combined: GenderBreakdown = scored.reduce(
@@ -106,14 +108,18 @@ export function directorOrCrewShare(
 			male: acc.male + d.breakdown.male,
 			nonBinary: acc.nonBinary + d.breakdown.nonBinary,
 			unknown: acc.unknown + d.breakdown.unknown,
-			total: acc.total + d.breakdown.total,
+			total: acc.total + d.breakdown.total
 		}),
-		{ female: 0, male: 0, nonBinary: 0, unknown: 0, total: 0 },
+		{ female: 0, male: 0, nonBinary: 0, unknown: 0, total: 0 }
 	);
 	return femaleShare(combined);
 }
 
-function scoreShare(share: number | null, thresholdHigh: number, thresholdMid: number): number | null {
+function scoreShare(
+	share: number | null,
+	thresholdHigh: number,
+	thresholdMid: number
+): number | null {
 	if (share === null) return null;
 	if (share >= thresholdHigh) return 2;
 	if (share >= thresholdMid) return 1;
@@ -135,7 +141,7 @@ export function toneTokens(tone: VerdictTone): ToneTokens {
 
 export function scoreSafety(
 	umData: Record<UmFlagKey, boolean> | null,
-	ddd: DddResult | null,
+	ddd: DddResult | null
 ): SafetyVerdict {
 	// Signal presence
 	const hasUm = umData !== null;
@@ -156,7 +162,7 @@ export function scoreSafety(
 			signalsTotal,
 			tone: 'neutral',
 			icon: 'ri-question-line',
-			pending,
+			pending
 		};
 	}
 
@@ -199,9 +205,11 @@ export function scoreSafety(
 					label: UM_LABELS[f.key],
 					detail: 'Flagged',
 					present: true,
-					tone: SAFETY_HARMFUL_FLAGS.includes(f.key) ? 'danger'
-						: SAFETY_CAUTION_FLAGS.includes(f.key) ? 'warn'
-						: 'neutral',
+					tone: SAFETY_HARMFUL_FLAGS.includes(f.key)
+						? 'danger'
+						: SAFETY_CAUTION_FLAGS.includes(f.key)
+							? 'warn'
+							: 'neutral'
 				});
 			}
 		}
@@ -214,34 +222,42 @@ export function scoreSafety(
 			label: 'Community trigger warnings',
 			detail: `${n} warning${n === 1 ? '' : 's'}`,
 			present: true,
-			tone: dddEscalates ? 'danger' : 'neutral',
+			tone: dddEscalates ? 'danger' : 'neutral'
 		});
 	}
 
 	// Safe sentinel when nothing flagged
 	if (signals.length === 0) {
-		signals.push({ label: 'No sexual violence flagged', detail: 'Clear', present: false, tone: 'success' });
+		signals.push({
+			label: 'No sexual violence flagged',
+			detail: 'Clear',
+			present: false,
+			tone: 'success'
+		});
 	}
 
-	const SAFETY_META: Record<Tier, { label: string; summary: string; tone: VerdictTone; icon: string }> = {
+	const SAFETY_META: Record<
+		Tier,
+		{ label: string; summary: string; tone: VerdictTone; icon: string }
+	> = {
 		safe: {
 			label: 'Safer to watch',
 			summary: 'No sexual violence flagged in our sources.',
 			tone: 'success',
-			icon: 'ri-shield-check-line',
+			icon: 'ri-shield-check-line'
 		},
 		caution: {
 			label: 'Watch with caution',
 			summary: 'Contains sexual harassment or coercion themes.',
 			tone: 'warn',
-			icon: 'ri-error-warning-line',
+			icon: 'ri-error-warning-line'
 		},
 		harmful: {
 			label: 'Harmful content',
 			summary: 'Depicts sexual assault or abuse.',
 			tone: 'danger',
-			icon: 'ri-alert-line',
-		},
+			icon: 'ri-alert-line'
+		}
 	};
 
 	const meta = SAFETY_META[tier];
@@ -255,7 +271,7 @@ export function scoreSafety(
 		signalsTotal,
 		tone: meta.tone,
 		icon: meta.icon,
-		pending,
+		pending
 	};
 }
 
@@ -274,23 +290,52 @@ export function scoreRepresentation(input: {
 	const leadsS = leadsFemaleShare(castMembers);
 	const crewS = directorOrCrewShare(crew, crewDepartments);
 
-	const castScore = scoreShare(castS, 0.70, 0.40);
-	const leadsScore = scoreShare(leadsS, 0.70, 0.40);
-	const crewScore = scoreShare(crewS, 0.70, 0.40);
-	const bechdelScore = !isSeries && bechdel !== null
-		? (bechdel.rating === 3 ? 2 : bechdel.rating === 2 ? 1 : 0)
-		: null;
+	const castScore = scoreShare(castS, 0.7, 0.4);
+	const leadsScore = scoreShare(leadsS, 0.7, 0.4);
+	const crewScore = scoreShare(crewS, 0.7, 0.4);
+	const bechdelScore =
+		!isSeries && bechdel !== null
+			? bechdel.rating === 3
+				? 2
+				: bechdel.rating === 2
+					? 1
+					: 0
+			: null;
 
 	// Build signals (single site; included in both unknown and final return)
 	const leadsN = Math.min(5, castMembers.length);
 	const signals: VerdictSignal[] = [];
-	if (castScore !== null) signals.push({ label: 'Cast — women', detail: `${Math.round(castS! * 100)}%`, present: true, tone: subTone(castScore) });
-	if (leadsScore !== null) signals.push({ label: 'Leads — women', detail: `${Math.round(leadsS! * leadsN)}/${leadsN} women`, present: true, tone: subTone(leadsScore) });
-	if (crewScore !== null) signals.push({ label: 'Crew — women', detail: `${Math.round(crewS! * 100)}%`, present: true, tone: subTone(crewScore) });
-	if (bechdelScore !== null) signals.push({ label: 'Bechdel', detail: `${bechdel!.rating}/3`, present: true, tone: subTone(bechdelScore) });
+	if (castScore !== null)
+		signals.push({
+			label: 'Cast — women',
+			detail: `${Math.round(castS! * 100)}%`,
+			present: true,
+			tone: subTone(castScore)
+		});
+	if (leadsScore !== null)
+		signals.push({
+			label: 'Leads — women',
+			detail: `${Math.round(leadsS! * leadsN)}/${leadsN} women`,
+			present: true,
+			tone: subTone(leadsScore)
+		});
+	if (crewScore !== null)
+		signals.push({
+			label: 'Crew — women',
+			detail: `${Math.round(crewS! * 100)}%`,
+			present: true,
+			tone: subTone(crewScore)
+		});
+	if (bechdelScore !== null)
+		signals.push({
+			label: 'Bechdel',
+			detail: `${bechdel!.rating}/3`,
+			present: true,
+			tone: subTone(bechdelScore)
+		});
 
 	const scores = [castScore, leadsScore, crewScore, bechdelScore].filter(
-		(s): s is number => s !== null,
+		(s): s is number => s !== null
 	);
 	const signalsPresent = scores.length;
 
@@ -304,7 +349,7 @@ export function scoreRepresentation(input: {
 			signalsPresent,
 			signalsTotal,
 			tone: 'neutral',
-			icon: 'ri-question-line',
+			icon: 'ri-question-line'
 		};
 	}
 
@@ -313,25 +358,28 @@ export function scoreRepresentation(input: {
 	type RepTierKnown = 'strong' | 'mixed' | 'poor';
 	const tier: RepTierKnown = avg >= 1.75 ? 'strong' : avg >= 1.0 ? 'mixed' : 'poor';
 
-	const REP_META: Record<RepTierKnown, { label: string; summary: string; tone: VerdictTone; icon: string }> = {
+	const REP_META: Record<
+		RepTierKnown,
+		{ label: string; summary: string; tone: VerdictTone; icon: string }
+	> = {
 		strong: {
 			label: 'Strong representation',
 			summary: 'Women are well represented on and off screen.',
 			tone: 'success',
-			icon: 'ri-women-line',
+			icon: 'ri-women-line'
 		},
 		mixed: {
 			label: 'Mixed representation',
 			summary: 'Some female presence, but uneven across cast and crew.',
 			tone: 'warn',
-			icon: 'ri-scales-3-line',
+			icon: 'ri-scales-3-line'
 		},
 		poor: {
 			label: 'Poor representation',
 			summary: 'Few women in cast, crew, or story.',
 			tone: 'danger',
-			icon: 'ri-user-unfollow-line',
-		},
+			icon: 'ri-user-unfollow-line'
+		}
 	};
 
 	const meta = REP_META[tier];
@@ -344,6 +392,6 @@ export function scoreRepresentation(input: {
 		signalsPresent,
 		signalsTotal,
 		tone: meta.tone,
-		icon: meta.icon,
+		icon: meta.icon
 	};
 }

@@ -3,9 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 const config: StorybookConfig = {
 	stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx|svelte)'],
-	addons: [
-		'@storybook/addon-svelte-csf'
-	],
+	addons: ['@storybook/addon-svelte-csf'],
 	framework: {
 		name: '@storybook/sveltekit',
 		options: {}

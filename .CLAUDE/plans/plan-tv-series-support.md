@@ -70,34 +70,38 @@ gender breakdown.
 
 ```ts
 export interface GenderBreakdown {
-  unknown: number; female: number; male: number; nonBinary: number; total: number;
+	unknown: number;
+	female: number;
+	male: number;
+	nonBinary: number;
+	total: number;
 }
 
 /** Fields common to movies and series — what the shared header/gender components need. */
 export interface MediaDetail {
-  id: string;
-  title: string;
-  imdbId: string | null;
-  posterPath: string | null;
-  overview: string;
-  tmdbId: string;
-  /** Movie release date OR series first-air date — already a YYYY-... string or ''. */
-  releaseDate: string;
-  genres: { id: number; name: string }[];
-  originCountry: string[];
-  originalLanguage: string;
-  spokenLanguages: { iso: string; englishName: string }[];
-  cast: GenderBreakdown;
-  crew: GenderBreakdown;
+	id: string;
+	title: string;
+	imdbId: string | null;
+	posterPath: string | null;
+	overview: string;
+	tmdbId: string;
+	/** Movie release date OR series first-air date — already a YYYY-... string or ''. */
+	releaseDate: string;
+	genres: { id: number; name: string }[];
+	originCountry: string[];
+	originalLanguage: string;
+	spokenLanguages: { iso: string; englishName: string }[];
+	cast: GenderBreakdown;
+	crew: GenderBreakdown;
 }
 ```
 
 - `movie/[movieId]/types.ts`: `export interface Movie extends MediaDetail { tagline; runtime;
-  budget; revenue; }`. Re-export `GenderBreakdown` from `media.ts` so existing imports keep working.
+budget; revenue; }`. Re-export `GenderBreakdown` from `media.ts` so existing imports keep working.
 - `Series` (Step 2) also `extends MediaDetail`.
 
 > **Sonnet 4.6 tip:** `GenderBreakdown` currently lives in `movie/[movieId]/types.ts` and is
-> re-exported from `datasource.server.ts`. Move the *definition* to `media.ts` and turn the old
+> re-exported from `datasource.server.ts`. Move the _definition_ to `media.ts` and turn the old
 > spot into a re-export (`export type { GenderBreakdown } from '$lib/movie/media';`). Then run
 > `bun run check` — TS will point you at every consumer; don't hand-hunt them.
 
@@ -109,11 +113,15 @@ import { TMDB_API_TOKEN } from '$env/static/private';
 
 export const TMDB_BASE = PUBLIC_TMDB_API_URL;
 export function tmdbHeaders() {
-  return { Authorization: `Bearer ${TMDB_API_TOKEN}`, accept: 'application/json' };
+	return { Authorization: `Bearer ${TMDB_API_TOKEN}`, accept: 'application/json' };
 }
 
-export interface TmdbCreditEntry { gender: number; }
-export function aggregateGender(entries: TmdbCreditEntry[]): GenderBreakdown { /* moved verbatim */ }
+export interface TmdbCreditEntry {
+	gender: number;
+}
+export function aggregateGender(entries: TmdbCreditEntry[]): GenderBreakdown {
+	/* moved verbatim */
+}
 ```
 
 - Move `aggregateGender` out of `movie/[movieId]/datasource.server.ts` to here; re-export it
@@ -162,13 +170,15 @@ export function aggregateGender(entries: TmdbCreditEntry[]): GenderBreakdown { /
 import type { MediaDetail } from '$lib/movie/media';
 export type { UmCandidate } from '$lib/movie/metrics.js';
 export interface Series extends MediaDetail {
-  firstAirDate: string; lastAirDate: string;
-  numberOfSeasons: number; numberOfEpisodes: number;
-  episodeRunTime: number[];                                  // TMDB returns an array
-  seasons: { seasonNumber: number; episodeCount: number; name: string; airDate: string }[];
-  networks: { id: number; name: string }[];
-  createdBy: { id: number; name: string }[];
-  // no budget/revenue/runtime
+	firstAirDate: string;
+	lastAirDate: string;
+	numberOfSeasons: number;
+	numberOfEpisodes: number;
+	episodeRunTime: number[]; // TMDB returns an array
+	seasons: { seasonNumber: number; episodeCount: number; name: string; airDate: string }[];
+	networks: { id: number; name: string }[];
+	createdBy: { id: number; name: string }[];
+	// no budget/revenue/runtime
 }
 ```
 
@@ -183,7 +193,7 @@ on non-ok, same as `getMovie`.
 
 ```ts
 const series = await getSeries(params.seriesId);
-const dbMedia = await getOrCreateDbMedia(series);                       // adapter, see DB note
+const dbMedia = await getOrCreateDbMedia(series); // adapter, see DB note
 const unconsenting = await getUnconsenting(dbMedia.id);
 const umCandidates = unconsenting === null ? await getUnconsentingCandidates(series) : [];
 return { series, unconsenting, umCandidates, triggerTags: getTriggerTagsForSeries(series) };
@@ -199,13 +209,12 @@ return { series, unconsenting, umCandidates, triggerTags: getTriggerTagsForSerie
 >   (both `Movie` and `Series` satisfy it). One-line signature widenings — no body changes for the
 >   movie path.
 > - Add a thin `getOrCreateDbMedia(media: MediaRef, kind: 'movie' | 'tv' = 'movie')` wrapper (or a
->   param) that, for `tv`, forces `imdbId: media.imdbId ?? \`tmdb-tv:${media.tmdbId}\`` and
->   `tmdbId: null` before the existing insert/lookup logic. Movies are unaffected.
+>   param) that, for `tv`, forces `imdbId: media.imdbId ?? \`tmdb-tv:${media.tmdbId}\``and`tmdbId: null` before the existing insert/lookup logic. Movies are unaffected.
 > - `getUnconsentingCandidates` already reads only `title` + `releaseDate` — for series, `releaseDate`
 >   is the first-air date, which is exactly what UM year-matching wants.
 >
 > TV rows are **UM-only** (no Bechdel/DDD persistence). Document this in `architecture.md`.
-> *Deferred follow-up* (only if TV ever needs seeded UM/Bechdel): add a `media_type` column +
+> _Deferred follow-up_ (only if TV ever needs seeded UM/Bechdel): add a `media_type` column +
 > composite unique indexes `(tmdb_id, media_type)` / `(imdb_id, media_type)` via `db:generate`.
 
 **`src/routes/tv/[seriesId]/+page.svelte`** — mirror `movie/[movieId]/+page.svelte`:
@@ -216,7 +225,7 @@ return { series, unconsenting, umCandidates, triggerTags: getTriggerTagsForSerie
   First & last air date vs Budget / Revenue / Runtime).
 - **Gender section:** `<GenderDistribution cast={series.cast} crew={series.crew} />` — reused as-is.
 - **Bechdel section + chip:** `CollapsibleSection title="Bechdel Test" status="Not applicable"
-  tone="empty" open={false}`, no source link, body "The Bechdel Test rates films, not series." Keep a
+tone="empty" open={false}`, no source link, body "The Bechdel Test rates films, not series." Keep a
   disabled/"N/A" chip so the three-section symmetry holds. **No `getBechdel` call** anywhere in the TV load.
 - **UM section:** copy the movie page's `umData = unconsenting ?? autoUm ?? selectedUm` logic verbatim
   (incl. the `$effect` that resets `selectedUm` on id change, and `umFlagCount`).
@@ -237,12 +246,20 @@ Keep `getTriggerTagsLive(imdbId)` for movies. Add `getTriggerTagsForSeries(serie
 
 ```ts
 export interface TriggerTag {
-  topicItemId: number; topicId: number; doesName: string;
-  yesSum: number; noSum: number; comment: string | null;
-  season: number | null;   // index1: -1 = series-level, null = unscoped, n = season n
-  episode: number | null;  // index2
+	topicItemId: number;
+	topicId: number;
+	doesName: string;
+	yesSum: number;
+	noSum: number;
+	comment: string | null;
+	season: number | null; // index1: -1 = series-level, null = unscoped, n = season n
+	episode: number | null; // index2
 }
-export interface DddResult { itemId: number | null; tags: TriggerTag[]; isSeries: boolean; }
+export interface DddResult {
+	itemId: number | null;
+	tags: TriggerTag[];
+	isSeries: boolean;
+}
 ```
 
 - **TV lookup (verified):** `dddsearch?q={encodeURIComponent(series.title)}` → among items with
@@ -255,11 +272,11 @@ export interface DddResult { itemId: number | null; tags: TriggerTag[]; isSeries
   whatever season/episode the stats carry (usually null) — the movie page ignores them.
 
 > **Sonnet 4.6 tip:** `ddd.spec.ts` is already noted stale in architecture.md §"Known gaps" #1 — its
-> mocks use old field names. Don't try to make the *existing* assertions pass first; rewrite the spec
-> against the *current* `TriggerTag` shape, then add: (a) a TV case asserting `index1/index2` →
+> mocks use old field names. Don't try to make the _existing_ assertions pass first; rewrite the spec
+> against the _current_ `TriggerTag` shape, then add: (a) a TV case asserting `index1/index2` →
 > `season/episode`, (b) `q=`+`itemType.id:16`+`tmdbid` selection picks the right item, (c) the
 > `yesSum < noSum` row is still dropped. Mock `fetch` (two responses: search, then media).
-> **DB-perf note:** DDD is *not* persisted (`movie_trigger_tags` stays write-free per architecture.md
+> **DB-perf note:** DDD is _not_ persisted (`movie_trigger_tags` stays write-free per architecture.md
 > §gaps #2) — this stays an in-memory cache, no DB writes added.
 
 ---
@@ -270,11 +287,11 @@ export interface DddResult { itemId: number | null; tags: TriggerTag[]; isSeries
 
 ```ts
 interface Props {
-  seasons: Series['seasons'];                 // drives the season dropdown from TMDB
-  tags: TriggerTag[];                          // to know which episodes actually have DDD data
-  selectedSeason: number | null;              // null = whole series (default)
-  selectedEpisode: number | null;             // null = whole season
-  onchange: (season: number | null, episode: number | null) => void;
+	seasons: Series['seasons']; // drives the season dropdown from TMDB
+	tags: TriggerTag[]; // to know which episodes actually have DDD data
+	selectedSeason: number | null; // null = whole series (default)
+	selectedEpisode: number | null; // null = whole season
+	onchange: (season: number | null, episode: number | null) => void;
 }
 ```
 
@@ -290,11 +307,13 @@ interface Props {
 
 ```ts
 const visibleTags = $derived.by(() => {
-  if (!ddd) return [];
-  if (selectedSeason === null) return ddd.tags.filter(t => t.season === -1 || t.season === null);
-  if (selectedEpisode === null) return ddd.tags.filter(t => t.season === selectedSeason || t.season === -1);
-  return ddd.tags.filter(t =>
-    (t.season === selectedSeason && t.episode === selectedEpisode) || t.season === -1);
+	if (!ddd) return [];
+	if (selectedSeason === null) return ddd.tags.filter((t) => t.season === -1 || t.season === null);
+	if (selectedEpisode === null)
+		return ddd.tags.filter((t) => t.season === selectedSeason || t.season === -1);
+	return ddd.tags.filter(
+		(t) => (t.season === selectedSeason && t.episode === selectedEpisode) || t.season === -1
+	);
 });
 ```
 
@@ -329,7 +348,7 @@ const visibleTags = $derived.by(() => {
   from `$lib/movie/format` and `formatRuntime` for `episodeRunTime` (e.g. average or first entry).
 
 > **Maintainability tip:** this is the crux of keeping the two routes from drifting. After Step 0+5, the
-> *only* TV-specific UI is `seriesFactGrid.svelte`, `dddEpisodeSelector.svelte`, the Bechdel-N/A body,
+> _only_ TV-specific UI is `seriesFactGrid.svelte`, `dddEpisodeSelector.svelte`, the Bechdel-N/A body,
 > and the DDD `visibleTags` wiring. Header, gender chart, UM section, collapsible sections, and DDD tag
 > table are shared verbatim. If you find yourself copying a third component, stop and generalize it instead.
 
@@ -381,14 +400,14 @@ Runtime **bun**; `$db` → repo-root `db/`. Needs `.env` (`PUBLIC_TMDB_API_URL`,
 
 ## Files touched (summary)
 
-| Kind | Path |
-|---|---|
-| new | `src/lib/movie/media.ts`, `src/lib/server/tmdb.ts` |
-| new | `src/routes/tv/[seriesId]/{types.ts,datasource.server.ts,+page.server.ts,+page.svelte}` |
-| new | `src/lib/components/movies/{seriesFactGrid,dddEpisodeSelector}.svelte` |
+| Kind | Path                                                                                                                                                                                |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| new  | `src/lib/movie/media.ts`, `src/lib/server/tmdb.ts`                                                                                                                                  |
+| new  | `src/routes/tv/[seriesId]/{types.ts,datasource.server.ts,+page.server.ts,+page.svelte}`                                                                                             |
+| new  | `src/lib/components/movies/{seriesFactGrid,dddEpisodeSelector}.svelte`                                                                                                              |
 | edit | `src/routes/api/search/{datasource.server.ts,+server.ts}`, `src/lib/components/search/{types.ts,movieSearch.svelte.ts,searchResult.svelte,searchResults.svelte,searchInput.svelte}` |
-| edit | `src/routes/movie/[movieId]/{datasource.server.ts,types.ts,db.server.ts,ddd.server.ts,+page.svelte}` |
-| edit | `src/lib/components/movies/{detailHeader,genderDistribution,umCandidates}.svelte` |
-| edit | `src/routes/+page.svelte`, `src/lib/components/layout/footer.svelte` |
-| test | `src/routes/movie/[movieId]/ddd.spec.ts` (rewrite) + new `getSeries` datasource spec |
-| doc | `.CLAUDE/architecture.md` (note `/tv` route, shared `MediaDetail`, TV-rows-are-UM-only) |
+| edit | `src/routes/movie/[movieId]/{datasource.server.ts,types.ts,db.server.ts,ddd.server.ts,+page.svelte}`                                                                                |
+| edit | `src/lib/components/movies/{detailHeader,genderDistribution,umCandidates}.svelte`                                                                                                   |
+| edit | `src/routes/+page.svelte`, `src/lib/components/layout/footer.svelte`                                                                                                                |
+| test | `src/routes/movie/[movieId]/ddd.spec.ts` (rewrite) + new `getSeries` datasource spec                                                                                                |
+| doc  | `.CLAUDE/architecture.md` (note `/tv` route, shared `MediaDetail`, TV-rows-are-UM-only)                                                                                             |

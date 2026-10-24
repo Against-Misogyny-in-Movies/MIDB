@@ -14,11 +14,11 @@ export interface AvatarDef {
 
 export const AVATARS: AvatarDef[] = [
 	{ key: 'wollstonecraft', name: 'Mary Wollstonecraft', component: WollstonecraftIcon },
-	{ key: 'pankhurst',      name: 'Emmeline Pankhurst',  component: PankhurstIcon },
-	{ key: 'truth',          name: 'Sojourner Truth',      component: TruthIcon },
-	{ key: 'de-beauvoir',    name: 'Simone de Beauvoir',   component: DeBeauvoirIcon },
-	{ key: 'davis',          name: 'Angela Davis',          component: DavisIcon },
-	{ key: 'kahlo',          name: 'Frida Kahlo',           component: KahloIcon },
+	{ key: 'pankhurst', name: 'Emmeline Pankhurst', component: PankhurstIcon },
+	{ key: 'truth', name: 'Sojourner Truth', component: TruthIcon },
+	{ key: 'de-beauvoir', name: 'Simone de Beauvoir', component: DeBeauvoirIcon },
+	{ key: 'davis', name: 'Angela Davis', component: DavisIcon },
+	{ key: 'kahlo', name: 'Frida Kahlo', component: KahloIcon }
 ];
 
-export const AVATAR_KEYS = new Set(AVATARS.map(a => a.key));
+export const AVATAR_KEYS = new Set(AVATARS.map((a) => a.key));

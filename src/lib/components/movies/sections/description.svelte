@@ -1,45 +1,45 @@
 <script lang="ts">
-    interface Props {
-        title: string;
-        date: string;
-        description: string;
-    }
+	interface Props {
+		title: string;
+		date: string;
+		description: string;
+	}
 
-    let { title, date, description }: Props = $props();
+	let { title, date, description }: Props = $props();
 
-    function formatDate(releaseDate: string) {
-        const d = new Date(releaseDate);
-        return d.toDateString().split(' ').slice(1).join(' ');
-    }
+	function formatDate(releaseDate: string) {
+		const d = new Date(releaseDate);
+		return d.toDateString().split(' ').slice(1).join(' ');
+	}
 </script>
 
 <div>
-    <h2>
-        {title}
-    </h2>
+	<h2>
+		{title}
+	</h2>
 
-    <small>{formatDate(date)}</small>
+	<small>{formatDate(date)}</small>
 
-    <p class="description">
-        {description}
-    </p>
+	<p class="description">
+		{description}
+	</p>
 </div>
 
 <style lang="postcss">
 	@reference "../../../../app.css";
-    div {
-        @apply p-md;
-    }
+	div {
+		@apply p-md;
+	}
 
-    h2 {
-        @apply leading-4 pt-sm;
-    }
+	h2 {
+		@apply leading-4 pt-sm;
+	}
 
-    small {
-        @apply text-ink-muted;
-    }
+	small {
+		@apply text-ink-muted;
+	}
 
-    p {
-        @apply mt-md;
-    }
+	p {
+		@apply mt-md;
+	}
 </style>

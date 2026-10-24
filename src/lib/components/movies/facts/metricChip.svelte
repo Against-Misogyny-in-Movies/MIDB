@@ -34,7 +34,9 @@
 	{#if badgeCount > 0}
 		<span
 			class="chip-badge"
-			aria-label="{badgeCount} possible Unconsenting Media match{badgeCount === 1 ? '' : 'es'} — choose below"
+			aria-label="{badgeCount} possible Unconsenting Media match{badgeCount === 1
+				? ''
+				: 'es'} — choose below"
 		>
 			<i class="ri-error-warning-line" aria-hidden="true"></i>
 		</span>

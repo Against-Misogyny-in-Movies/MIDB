@@ -1,5 +1,11 @@
 import { error } from '@sveltejs/kit';
-import { TMDB_BASE, tmdbHeaders, aggregateGender, buildCastMembers, buildCrewDepartments } from '$lib/server/integrations/tmdb';
+import {
+	TMDB_BASE,
+	tmdbHeaders,
+	aggregateGender,
+	buildCastMembers,
+	buildCrewDepartments
+} from '$lib/server/integrations/tmdb';
 import { getCached } from '$lib/server/cache';
 import type { Series } from '$lib/media/types/series';
 

@@ -3,10 +3,7 @@ import type { DddResult } from '$lib/media/types/ddd';
 const EMPTY_MOVIE: DddResult = { itemId: null, tags: [], isSeries: false };
 const EMPTY_SERIES: DddResult = { itemId: null, tags: [], isSeries: true };
 
-export function createDddState(
-	getPromise: () => Promise<DddResult>,
-	isSeries: boolean = false
-) {
+export function createDddState(getPromise: () => Promise<DddResult>, isSeries: boolean = false) {
 	let current = $state<DddResult | null>(null);
 
 	$effect(() => {
