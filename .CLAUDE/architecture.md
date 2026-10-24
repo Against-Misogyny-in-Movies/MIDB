@@ -74,8 +74,7 @@ MIDB/
 │   │   ├── titles.ts           # title_kind enum + titles (the spine; unique (kind, tmdb_id), unique imdb_id)
 │   │   ├── sources.ts          # titleBechdel + umSource (UM catalogue) + titleUm (binding only)
 │   │   ├── auth.ts             # user (Hanko-sub PK, role enum, username/avatarKey, lower(username) idx)
-│   │   ├── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
-│   │   └── __tests__/          # community.db.spec.ts (constraints)
+│   │   └── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
 │   ├── scripts/
 │   │   ├── migrate.ts          # `bun run db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → titles (kind movie) + title_bechdel; exports seedMovies(db, csvPath)
@@ -90,6 +89,7 @@ MIDB/
 │   └── test/                   # Vitest `db` project harness
 │       ├── global-setup.ts     # wipes TEST_DB_CONNECTION (refuses if it equals DB_CONNECTION) and migrates it from zero
 │       ├── reset.ts            # setupFile: TRUNCATE every schema table RESTART IDENTITY CASCADE beforeEach; closeDb afterAll
+│       ├── community.db.spec.ts # community table constraints (kept out of db/schema/: drizzle-kit loads every .ts there)
 │       └── fixtures/           # 50-row bechdel.csv + unconsenting.csv for the seeder smoke test
 │
 ├── src/
