@@ -69,7 +69,7 @@ export const movieTriggerTags = pgTable('movie_trigger_tags', {
 	yesSum: integer('yes_sum').notNull(),
 	noSum: integer('no_sum').notNull(),
 	comment: text('comment'),
-	createdBy: text('created_by').references(() => users.id),
+	createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
 	uniqueIndex('movie_trigger_tags_movie_topic_idx').on(t.movieId, t.topicId),

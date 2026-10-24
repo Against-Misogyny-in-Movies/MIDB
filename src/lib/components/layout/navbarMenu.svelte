@@ -1,11 +1,20 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { nanoid } from 'nanoid';
+	import type { UserRow } from '$lib/media/types/user';
 
-	// Mobile-only hamburger: collapses the text nav-links + Sign-in into a dropdown
-	// surface panel below the md breakpoint. Reuses the collapse-by-default model from
+	// Mobile-only hamburger: collapses the text nav-links into a dropdown surface
+	// panel below the md breakpoint. Reuses the collapse-by-default model from
 	// navbarSearch (a $state boolean, closed on outside-pointerdown/Escape). The search
-	// trigger and theme toggle stay in the bar — they live outside this component.
+	// trigger, account chip, and theme toggle stay in the bar.
+	interface Props {
+		user?: UserRow | null;
+	}
+
+	let { user = null }: Props = $props();
+
+	const canModerate = $derived(user?.role === 'moderator' || user?.role === 'administrator');
+
 	let open = $state(false);
 	let root = $state<HTMLElement | null>(null);
 	let firstLink = $state<HTMLAnchorElement | null>(null);
@@ -56,7 +65,14 @@
 			</a>
 			<a href="/blog" class="item" role="menuitem" onclick={close}>Blog</a>
 			<a href="/about" class="item" role="menuitem" onclick={close}>About us</a>
-			<a href="/auth" class="item" role="menuitem" onclick={close}>Sign in</a>
+			{#if canModerate}
+				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>
+			{/if}
+			{#if user}
+				<a href="/user/profile" class="item" role="menuitem" onclick={close}>Profile</a>
+			{:else}
+				<a href="/auth" class="item" role="menuitem" onclick={close}>Sign in</a>
+			{/if}
 		</div>
 	{/if}
 </div>

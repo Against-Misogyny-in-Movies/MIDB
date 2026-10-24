@@ -8,16 +8,17 @@
 
   interface Props {
     children: Snippet;
+    data: { user?: import('$lib/server/data/user-queries').UserRow | null };
   }
 
-  let { children }: Props = $props();
+  let { children, data }: Props = $props();
 </script>
 
 <NavProgress />
 
 <div class="shell">
   <header class="header-wrap">
-    <Navbar />
+    <Navbar user={data.user ?? null} />
   </header>
 
   <main>

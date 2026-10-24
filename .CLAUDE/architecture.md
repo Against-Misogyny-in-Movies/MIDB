@@ -67,14 +67,16 @@ Each metric is designed to show **two scores side by side**: the original author
 ```
 MIDB/
 ├── db/                         # Data layer — lives OUTSIDE src/, aliased as $db/*
-│   ├── connections.ts          # Drizzle init + migrateDatabase(); registers ONLY movie + auth schema
+│   ├── connections.ts          # Drizzle init + migrateDatabase(); registers movie + auth + community schema
 │   ├── schema/                 # Drizzle table definitions (drizzle-kit reads ./schema/**/*.ts)
 │   │   ├── movie.ts            # movies + movieBechdel + umSource + movieUnconsenting + movieTriggerTags
-│   │   └── auth.ts             # user (matches the Hanko-era `user` table)
+│   │   ├── auth.ts             # user (Hanko-sub PK, role enum, username/avatarKey, lower(username) idx)
+│   │   └── community.ts        # communityMetricSubmissions + comments (empty, indexes ready)
 │   ├── scripts/
 │   │   ├── migrate.ts          # `bun run db:migrate` → calls migrateDatabase()
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → movies spine + movie_bechdel
 │   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + movie_unconsenting (matched)
+│   │   ├── seedAdmin.ts        # `db:seed:admin <email>` — case-insensitive promote to administrator
 │   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id via TMDB /find
 │   │   └── lib/                # normalizeTitle.ts + stripTrailingYear + checkCsvColumns.ts
 │   ├── seeds/
@@ -82,7 +84,7 @@ MIDB/
 │   └── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots
 │
 ├── src/
-│   ├── hooks.server.ts         # Runs migrateDatabase() once at boot + auth gate (verifies `hanko` JWT cookie, protects /user/*)
+│   ├── hooks.server.ts         # Auth gate: module-level JWKS, verifies `hanko` JWT, JIT-provisions user row, populates locals.user, protects /user/*
 │   ├── app.css                 # Tailwind v4 entry + design tokens + @layer components
 │   ├── app.html / app.d.ts     # SvelteKit shell + ambient types
 │   ├── __tests__/              # index.test.ts (smoke)
@@ -94,7 +96,8 @@ MIDB/
 │       ├── server/             # SvelteKit-ENFORCED server-only boundary (no client import)
 │       │   ├── data/           # Postgres / Drizzle access (+ __tests__/)
 │       │   │   ├── media-queries.ts  # identity resolution (getDbMovie/getDbMedia/getOrCreate*) + metric fetches (getBechdel/getUnconsenting)
-│       │   │   └── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates + toCandidate helper
+│       │   │   ├── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates + toCandidate helper
+│       │   │   └── user-queries.ts   # JIT provision + profile update (validated) + username availability + history queries
 │       │   ├── integrations/   # External API clients (hold secrets) (+ __tests__/)
 │       │   │   ├── tmdb.ts           # shared TMDB client + aggregateGender
 │       │   │   ├── ddd.ts            # DDD client; uses $lib/server/cache; re-exports TriggerTag/DddResult from ddd-types
@@ -102,7 +105,8 @@ MIDB/
 │       │   └── cache/          # getCached(key, ttlMs, fetcher): in-memory LRU default, Redis if REDIS_URL set
 │       ├── media/              # Shared, client-safe media domain (movies + series)
 │       │   ├── types/          # media.ts (MediaDetail/GenderBreakdown), movie.ts, series.ts,
-│       │   │                   #   ddd.ts (type-only re-export from integrations/ddd-types)
+│       │   │                   #   ddd.ts (type-only re-export from integrations/ddd-types),
+│       │   │                   #   user.ts (type-only UserRole re-export from server/data/user-queries)
 │       │   └── utils/          # format.ts (Intl), metrics.ts (BECHDEL_TIERS/UM_FLAGS/UmCandidate/dddUrl/umFlagCount),
 │       │                       #   dddStream.svelte.ts (createDddState rune factory) (+ __tests__/)
 │       ├── components/         # Reusable UI: ui/* primitives + domain folders (see Component library)
@@ -162,11 +166,13 @@ User-facing copy follows a small house style. Apply it when writing or editing a
 | `/` | `+page.svelte`, `+page.server.ts` | **Working** | Landing: italic brand eyebrow, large serif headline, one-sentence subhead, `HeroSearch` (live inline search), "Rate a film yourself →" CTA to `/auth`, 3-up metrics band (Bechdel / UM / DDD, one sentence each), closing note on the dual-source model that cross-links the `/resources#verdict` explainer, then a **"How MIDB is built" principles band** (privacy-first / open-source / community-funded, surfaced as bordered cards with a brand-tinted round icon badge reusing `metricArticle`'s icon vocabulary) closing with a GitHub link. Copy keeps **second person** — the only page that does (see *Copy & voice*). The privacy claims are code-backed: no analytics/trackers/ad pixels, only functional API + auth tokens (`TMDB_API_TOKEN`/`DDD_API_KEY`/`UM_KEY`/`HANKO`), no app-set tracking cookies. `+page.server.ts` returns `{}`. `heroSearch.svelte` applies landing-specific sizing and a 2px brand focus ring to the search box. |
 | `/resources` | `+page.svelte` | **Working** | Static explainer for the four metrics (verdict cards, Bechdel, UM, DDD). No server load / no DB — pure content. Sticky in-page nav (`resourceNav`, IntersectionObserver active-section highlight; vertical on desktop, sticky horizontal chip row below md) + always-open `metricArticle` sections (`#verdict`/`#bechdel`/`#unconsenting`/`#ddd`). Reuses the surface + `1.375rem` marker vocabulary via `resources/*` components. In-page anchor jumps smooth-scroll via a route-scoped `:global(html:has(.resources)) { scroll-behavior: smooth }` (only active while the page is mounted, not site-wide; disabled under `prefers-reduced-motion`; sections carry `scroll-margin-top` to clear the sticky bar). Linked from the navbar, the landing "What we check" cards, and every detail-page metric (see cross-links below). |
 | `/api/search` | `+server.ts`, `datasource.server.ts` | **Working** | `GET ?q=…` proxy to TMDB **`search/multi`**. Empty/whitespace `q` short-circuits to `{ results: [] }`. Returns slim `SearchResult[]` (movies + tv only, each tagged `mediaType`). No `/search` page exists. |
-| `/auth` | `+page.svelte`, `+page.ts`, `+layout.svelte` | Working | Renders Hanko `<hanko-auth>`. On success redirects to `/user/dashboard`. `ssr=false`. |
+| `/auth` | `+page.svelte`, `+page.ts`, `+layout.svelte` | Working | Renders Hanko `<hanko-auth>`. On success redirects to `/user/profile`. `ssr=false`. |
 | `/movie/[movieId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts` | **Working** | Core page — see **Detail pages** below. Shared DB/DDD logic imported from `$lib/server/*`; types from `$lib/media/types/*`. |
 | `/tv/[seriesId]` | `+page.svelte`, `+page.server.ts`, `datasource.server.ts` | **Working** | TV-series detail page. Same metric model as movies minus Bechdel; uses `getDbMedia(series, 'tv')` and `getTriggerTagsForSeries`. |
-| `/user/dashboard` | `+page.svelte`, `+page.ts` | Working (minimal) | Hanko `<hanko-profile>`. Auth-gated by `hooks.server.ts`. `ssr=false`. |
-| _(error boundary)_ | `+error.svelte` | **Working** | Root error page rendered inside the layout's `<main>` (navbar/footer stay). Reads `$page.status`/`$page.error`: bespoke copy for 404, framework message as fallback. Centered status code + heading + detail + solid brand "Back to home" CTA (matches `ui/form/button`). |
+| `/user/profile` | `+page.svelte`, `+page.server.ts`, `availability/+server.ts` | **Working** | Profile view/edit: avatar picker, username (debounced availability check), role badge. `?/updateProfile` form action. Auth-gated. |
+| `/user/dashboard` | `+page.svelte`, `+page.ts` | Working | Hanko `<hanko-profile>` (account settings). Linked from profile. Auth-gated. `ssr=false`. |
+| `/user/comments` | `+page.svelte`, `+page.server.ts` | Working (empty) | Comment history — empty state today; `(userId,createdAt)` query ready. Auth-gated. |
+| `/user/metrics` | `+page.svelte`, `+page.server.ts` | Working (empty) | Rating submission history — empty state today; joins `movies` for title. Auth-gated. |
 
 > **Route folders are thin:** `db.server.ts`, `ddd.server.ts`, and the route `types.ts` files that used to live under `/movie/[movieId]/` were moved to `$lib/server/data/media-queries.ts`, `$lib/server/integrations/ddd.ts`, and `$lib/media/types/{movie,series}.ts` respectively.
 >
@@ -174,9 +180,21 @@ User-facing copy follows a small house style. Apply it when writing or editing a
 
 ---
 
+## User & roles
+
+Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored as `text`). On every authenticated request, `hooks.server.ts` JIT-provisions the user row via `getOrCreateUser` (single upsert, idempotent) and populates `event.locals.user`. The root `+layout.server.ts` propagates `locals.user` to `PageData` so all pages and the navbar receive it without refetching.
+
+**Role enum (`user_role`):** `user` | `moderator` | `administrator`. Default `user`. Authorization always reads `locals.user.role` (DB-sourced) — Hanko has no concept of MIDB roles. Promote via `bun run db:seed:admin <email>`.
+
+**Profile fields:** `username` (varchar 32, case-insensitive unique via `lower(username)` index, validated `^[a-z0-9_]{3,32}$` + reserved-name blocklist), `avatar_key` (varchar 48, validated against avatar registry), `email` (nullable — Hanko's claim shape varies by tenant version; `emailFromClaims` handles both string and `{ address }` object forms).
+
+**`getOrCreateUser`** does NOT bump `updated_at` — that column is only set in `updateProfile` for real edits. `COALESCE` on `email` lets a later non-null claim backfill a null without clobbering.
+
+---
+
 ## Database schema
 
-The **active schema is entirely in `db/schema/movie.ts`** (+ `auth.ts` for `user`). `connections.ts` registers only `movieSchema` + `authSchema`.
+The active schema spans `db/schema/movie.ts`, `auth.ts`, and `community.ts`. `connections.ts` registers all three.
 
 > The old user-evaluation model (`metrics`, `metric_options`, `evaluations`, `evaluation_results`) is gone: `db/schema/metric.ts` has been **deleted** and the migrations were **squashed** (2026-06-05), so the current `0000` baseline simply never creates those tables. (Historically they were dropped in the old migration `0006`, which no longer exists on disk.)
 
@@ -199,9 +217,17 @@ The **active schema is entirely in `db/schema/movie.ts`** (+ `auth.ts` for `user
 - Matched by `clean_title` at seed time using a year-aware policy (see Seeding). No `match_source` column — user choices are never persisted (see UM Disambiguation below).
 
 **`movie_trigger_tags`** — DDD, **defined now, NOT written yet**.
-- `id` serial PK, `movie_id` uuid, `topic_id` integer, `does_name` varchar, `yes_sum`/`no_sum` integer, `comment` text, `created_by` text → `user.id` (future), `created_at`. Unique index on (`movie_id`, `topic_id`). DDD tags are live-only today.
+- `id` serial PK, `movie_id` uuid, `topic_id` integer, `does_name` varchar, `yes_sum`/`no_sum` integer, `comment` text, `created_by` text → `user.id` (**`onDelete: 'set null'`**), `created_at`. Unique index on (`movie_id`, `topic_id`). DDD tags are live-only today.
 
-**`user`** (`auth.ts`) — `id` text PK, `name`, `email`, `emailVerified`, `image`. Carried over from the Auth.js era; retained for Hanko + the future `movie_trigger_tags.created_by` FK.
+**`user`** (`auth.ts`) — Hanko-sub PK. `id` text (Hanko `sub`), `email` nullable, `role` enum `user_role` default `user`, `username` varchar(32) nullable, `avatar_key` varchar(48) nullable, `created_at`, `updated_at`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide). Index on `role`.
+
+**`community_metric_submissions`** (`community.ts`) — empty, ready for write path.
+- `id` uuid PK, `movie_id` → `movies.id` (cascade), `user_id` → `user.id` (cascade), `metric` enum `metric_kind` (`bechdel`|`unconsenting`|`ddd`), `value` smallint, `created_at`, `updated_at`.
+- Unique on `(user_id, movie_id, metric)` — resubmit = upsert. Indexes: `(movie_id, metric)` for aggregate queries, `(user_id, created_at)` for history.
+
+**`comments`** (`community.ts`) — empty, ready for write path.
+- `id` uuid PK, `movie_id` → `movies.id` (cascade), `user_id` → `user.id` (cascade), `body` text, `created_at`, `updated_at`.
+- Indexes: `(movie_id, created_at)` for title thread, `(user_id, created_at)` for history.
 
 ### Migrations
 
@@ -209,9 +235,11 @@ The **active schema is entirely in `db/schema/movie.ts`** (+ `auth.ts` for `user
 
 - **`0000_jazzy_tag`** — the full current schema: `movies`, `movie_bechdel`, `um_source` (incl. `um_source_clean_title_key_idx`), `movie_unconsenting`, `movie_trigger_tags`, `user`.
 
-Future schema changes append `0001`, `0002`, … from here.
+**`0001_*`** — pending generation (`bun run db:generate` TTY). Adds: `user_role` + `metric_kind` enums, rewrites `user` table (Hanko-sub PK, new cols, `lower(username)` unique idx, drops Auth.js cols), adds `onDelete: 'set null'` to `movie_trigger_tags.created_by`, creates `community_metric_submissions` + `comments` tables with all indexes.
 
-**Migrations now auto-run at startup.** `src/hooks.server.ts` calls `migrateDatabase()` once at module load (server boot) and `handle()` awaits that promise before serving the first requests. Drizzle's `migrate()` is idempotent (skips already-applied migrations tracked in `drizzle.__drizzle_migrations`), so it's safe on every boot — expect benign Postgres `NOTICE … already exists, skipping` lines in the log. `bun run db:migrate` still works for applying migrations manually (e.g. from a script).
+Future schema changes append `0002`, `0003`, … from here.
+
+**Boot does NOT auto-migrate** (commit `742c612`). Run `bun run db:migrate` explicitly after `bun run db:generate`.
 
 ---
 
@@ -332,9 +360,10 @@ Split into **`ui/` generic primitives** (reusable, title-agnostic) and **domain 
 | `ui/tile/` | tile, tileGrid, processTileGrid | Generic tile primitives. `processTileGrid` powered the deleted evaluation form — **orphaned**. |
 | `ui/feedback/` | skeleton | Shimmer block. Used by `movies/sections/sectionSkeleton` (itself orphaned). |
 | `ui/text/` | block, tooltip | Collapsible HTML block, tooltip. |
-| `ui/visualization/` | progressbar, backToTop | `progressbar`: horizontal/vertical progress bar. `backToTop`: mobile-only (`max-width: 767px`) fixed scroll-to-top button used on both detail pages — fades in past ~360px scroll, smooth-scrolls (instant under reduced motion), `display:none` on desktop. |
-| `theme/` | themeToggle | Light/dark switch; reads localStorage, writes `document.documentElement.dataset.theme`, and re-sets the `<meta name="theme-color">` brand tint so the mobile chrome follows in-app switches. |
-| `layout/` | navbar, **navbarSearch**, **navbarMenu**, **navProgress**, footer | Global chrome, mounted in root `+layout.svelte`. `navProgress` is a global top-of-viewport navigation progress bar driven by `$navigating` (`$app/stores`): a thin brand bar that eases to ~90% while a route's blocking `load` runs, snaps to 100%, then unmounts on settle. Covers every navigation source (nav links, search, browser back/forward) from one place — the fix for the "feels stuck" gap on slow detail-page loads. `position: fixed` + width/opacity only (zero layout shift); `role="progressbar"`/`aria-busy`; transition disabled under `prefers-reduced-motion`. `navbar` renders `navbarSearch` in its actions row on all routes except `/`. Below the md breakpoint (`max-width: 767px`) the text nav-links + Sign-in collapse into `navbarMenu` (a `display: contents` wrapper hides them inline); the search trigger and theme toggle stay in the bar at all widths. `navbarMenu` is a mobile-only (`min-width: 768px` → `display:none`) hamburger that opens a dropdown surface panel of those links — reusing `navbarSearch`'s collapse-by-default interaction (`$state` open flag, close on outside-pointerdown/Escape, focus the first link on open) and the `collapsibleSection` surface styling + `backToTop` soft shadow; absolutely positioned so opening causes zero layout shift, entrance animation gated on `prefers-reduced-motion`. (This replaces the old 479px `.signin` hide, which left Sign-in unreachable on phones.) `navbarSearch` is a minimalistic, collapse-by-default search: a quiet search-icon trigger (matching `themeToggle` density) that expands inline into a compact borderless field. It owns its own `MovieSearchState` and reuses `search/searchResults`, but provides its own compact input (no `searchInput` submit button), so it does **not** wrap `search/movieSearch`. Collapses back to the icon on click-outside/Escape when the query is empty. When a result is selected, the field stays expanded with its input spinner for the duration of the navigation (feedback while the destination loads), then folds back to the icon once navigation completes. |
+| `user/avatars/` | Avatar, AvatarPicker, avatars.ts, *Icon.svelte | Avatar system. `avatars.ts` registry (key→name→component). Six SVG icon components (Wollstonecraft, Pankhurst, Truth, de Beauvoir, Davis, Kahlo). `Avatar.svelte` renders by key; null/unknown → neutral default. `AvatarPicker.svelte` selectable grid (hidden radio + sibling CSS, reuses `radioTile` pattern). Registry `AVATAR_KEYS` set is imported by `user-queries.ts` for server-side write validation. `@reference` depth: `../../../../app.css` (4 levels). |
+| `ui/visualization/` | progressbar | Horizontal/vertical progress bar. |
+| `theme/` | themeToggle | Light/dark switch; reads localStorage, writes `document.documentElement.dataset.theme`. |
+| `layout/` | navbar, navbarSearch, navbarMenu, navProgress, footer | Global chrome, mounted in root `+layout.svelte`. `navbar` mounts search off `/` and, below `md`, folds Resources/Blog/About into `navbarMenu`. A signed-in session replaces Sign in with the avatar, profile link, and logout; Moderation shows for moderator/administrator. |
 | `landing/` | topBar, heroSearch | `heroSearch` wraps `search/movieSearch`. `topBar` is **orphaned** (superseded by `layout/navbar`). |
 | `resources/` | resourceNav, metricArticle, subBlock, bechdelLadderExample, umFlagsExample, verdictTierExample | Building blocks for the static `/resources` explainer. `metricArticle` is an always-open section card (icon + `.display` title with a muted subtitle under it + body, optional external "More info" link) reusing `collapsibleSection`'s surface. `subBlock` is a labelled prose block (What it is / How it works / …). `resourceNav` is the sticky in-page nav with IntersectionObserver active-section highlight. The `*Example` components are static illustrations that **reuse the live marker CSS** — `bechdelLadderExample` copies the `.criterion` ladder, `umFlagsExample` copies the `.um-flag` grid, `verdictTierExample` renders the safety/representation tier legend tinted via `toneTokens`. Two folders deep → `@reference "../../../app.css"` (three `../`). |
 | `auth/` | hankoAuth, hankoProfile, logoutButton | Hanko web-component wrappers. |
@@ -394,11 +423,13 @@ A single swappable cache fronts every external call so repeat detail-page visits
 
 ## Auth flow (Hanko)
 
-1. `/auth` renders `<hanko-auth>` → success event → `goto("/user/dashboard")`.
+1. `/auth` renders `<hanko-auth>` → success event → `goto("/user/profile")`.
 2. Hanko sets a `hanko` JWT cookie.
-3. `hooks.server.ts` verifies it via remote JWKS (`jose`); any `/user/*` with invalid/absent token → `redirect(303, "/auth")`.
-4. `/user/dashboard` renders `<hanko-profile>`.
-5. `logoutButton.svelte` calls the Hanko client's logout then redirects.
+3. `hooks.server.ts` verifies it via **module-level** `createRemoteJWKSet` (created once; `jose` caches JWKS on the instance). On success: decodes payload, extracts email via `emailFromClaims` (handles `string` or `{ address }` object shapes), calls `getOrCreateUser({ sub, email })`, sets `event.locals.user`. On failure: `locals.user = null`.
+4. Any `/user/*` request with `locals.user === null` → `redirect(303, "/auth")`. `/user/moderation` additionally checks `role === 'moderator' | 'administrator'`, throws `error(403)` otherwise.
+5. Root `+layout.server.ts` returns `{ user: locals.user }` → `PageData` → all pages + navbar receive user without a second DB round-trip.
+6. `/user/profile` — profile view/edit (avatar + username). `/user/dashboard` — Hanko `<hanko-profile>` (account settings). `/user/comments`, `/user/metrics` — history views.
+7. `logoutButton.svelte` calls the Hanko client's logout then redirects to `/auth`.
 
 ---
 
@@ -427,23 +458,25 @@ bun run dev
 ```
 
 ### npm scripts
-`dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb`.
+`dev` / `build` / `preview` · `check` · `test` = `test:integration` + `test:unit` · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin <email>` (case-insensitive promote to administrator).
 
 ---
 
 ## Known gaps / TODO
 
-1. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
-2. **Community ratings + comments not yet built** — the next major milestone. Each metric will show the original source score alongside a MIDB community score; titles will also have a comments section. Schema will need new tables (community metric scores keyed by `movie_id` + metric + `user_id`, and a `comments` table). The retained `user` table and `movie_trigger_tags.created_by` FK are the hooks. `/user/dashboard` is currently the Hanko profile only and will need to expand.
-3. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
-4. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
-5. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
-6. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
-7. **`db:generate` requires a TTY** — drizzle-kit's interactive conflict-resolution prompts require a real terminal. Run it from the terminal, not from a CI/non-interactive shell.
+1. **`bun run db:generate` + `bun run db:migrate` pending** — schema changes (user rewrite + community tables) are in code but migration `0001_*` has not been generated or applied yet. Run `bun run db:generate` in a real terminal (may prompt for rename vs drop on the `user` rewrite — dev DB is disposable), then `bun run db:migrate`.
+2. **DDD persistence not built** — `movie_trigger_tags` exists but is never written; DDD tags are live-only. Deferred to a future user-interaction phase.
+3. **Community write path not built** — `community_metric_submissions` and `comments` tables exist and are index-ready but have no write endpoints. Empty-state history views are wired at `/user/metrics` and `/user/comments`. The write path (rating submission + comment posting on title detail pages) is the next milestone.
+4. **Orphaned UI** — `ui/tile/processTileGrid`, `movies/metrics/metricsFrame`, `movies/sections/sectionSkeleton`, and `landing/topBar` are no longer rendered anywhere; candidates for removal.
+5. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
+6. **No Storybook stories** for detail-page components (`collapsibleSection`, `dddTags`, `genderDistribution`, `factGrid`, `seriesFactGrid`, `detailHeader`, `umCandidates`).
+7. **`movie.tagline`/`overview` mapped but unused** — the header dropped the plot summary in favour of metric chips; both fields stay in the `Movie` shape for potential later use.
+8. **`db:generate` requires a TTY** — drizzle-kit's interactive conflict-resolution prompts require a real terminal. Run it from the terminal, not from a CI/non-interactive shell.
 
 > Verification baseline after the `$lib` reorg: `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the detail-page refactor (server splits + shared components): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean.
 > Verification baseline after the cache layer + startup-migrations + migration squash + dead-seeder removal (2026-06-05): same — `bun run check` → 0 errors, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Removed deps: `@loom-io/fs`, `marked` (orphaned with `seed.ts`).
+> Verification baseline after user schema + auth flow (2026-06-21): same — `bun run check` → 0 errors/warnings, `bun run test:unit` → 50/50 (7 files), `bun run build` → clean. Migration `0001_*` pending `bun run db:generate` + `bun run db:migrate`.
 
 ---
 
@@ -453,4 +486,5 @@ bun run dev
 - `.CLAUDE/plans/major-version-upgrade.md` — phased dep-upgrade plan.
 - `.CLAUDE/plans/plan-a-landing-page.md`, `.CLAUDE/plans/plan-landing-page-search.md` — landing-page and search design notes.
 - `.CLAUDE/plans/plan-movie-detail-sections-1-2.md` — **superseded** earlier §1–2 detail-page design; kept for history.
+- `.CLAUDE/plans/plan-user-schema-auth-flow.md` — the plan that drove the user schema + auth flow (Hanko-sub PK, JIT provision, roles, avatar system, profile/history routes). Implemented 2026-06-21.
 - `README.md` (repo root) — original setup notes (contains stale Auth.js-era env vars).
