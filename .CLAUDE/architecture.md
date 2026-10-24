@@ -481,6 +481,7 @@ bun run dev
 ---
 
 ## Related docs
+- `.CLAUDE/plans/plan-architecture-review.md` — architecture review (2026-10-24): P0 fixes (committed secret, CDN-cached personalised HTML, migration drift), proposed `titles` spine + per-metric community tables, and a suggested ordering before the community write path.
 - `.CLAUDE/plans/plan-um-matching-fix.md` — the plan that drove the UM matching overhaul (year-aware seeder, `um_source` table, runtime disambiguation picker, `noRape` inversion). Implemented and closed.
 - `.CLAUDE/plans/plan-movie-schema-multi-source.md` — the plan that drove the multi-source schema (Bechdel + UM seeding, streamed DDD, page redesign).
 - `.CLAUDE/plans/major-version-upgrade.md` — phased dep-upgrade plan.
