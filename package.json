@@ -20,7 +20,8 @@
 		"db:migrate": "bun ./db/scripts/migrate.ts",
 		"db:seed:movies": "bun ./db/scripts/seedMovies.ts",
 		"db:seed:um": "bun ./db/scripts/seedUnconsenting.ts",
-		"db:backfill:tmdb": "bun ./db/scripts/backfillTmdb.ts"
+		"db:backfill:tmdb": "bun ./db/scripts/backfillTmdb.ts",
+		"db:seed:admin": "bun ./db/scripts/seedAdmin.ts"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.4.0",

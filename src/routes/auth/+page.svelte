@@ -3,7 +3,7 @@
     import HankoAuth from '$lib/components/auth/hankoAuth.svelte';
 
   const redirectAfterLogin = () => {
-    goto("/user/dashboard");
+    goto("/user/profile");
   };
 </script>
 

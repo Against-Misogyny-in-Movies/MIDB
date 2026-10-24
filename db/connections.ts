@@ -3,6 +3,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import * as authSchema from './schema/auth';
 import * as movieSchema from './schema/movie';
+import * as communitySchema from './schema/community';
 
 const DB_CONNECTION = process.env.DB_CONNECTION || 'postgres://postgres:postgres@localhost:5432/postgres';
 
@@ -22,5 +23,6 @@ export async function migrateDatabase () {
 const queryClient = postgres(DB_CONNECTION);
 export default drizzle(queryClient, { schema: {
     ...movieSchema,
-    ...authSchema
+    ...authSchema,
+    ...communitySchema
 }});
