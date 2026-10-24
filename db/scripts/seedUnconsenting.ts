@@ -1,8 +1,9 @@
 import { createReadStream, createWriteStream } from 'fs';
 import { parse } from 'csv-parse';
-import { sql } from 'drizzle-orm';
-import { db, closeDb } from './lib/db';
-import { movies, movieUnconsenting, umSource } from '../schema/movie';
+import { eq, sql } from 'drizzle-orm';
+import type { Db } from '../client';
+import { titles } from '../schema/titles';
+import { titleUm, umSource } from '../schema/sources';
 import { normalizeTitle, stripTrailingYear } from './lib/normalizeTitle';
 import { checkCsvColumns } from './lib/checkCsvColumns';
 
@@ -52,12 +53,15 @@ function parseBool(val: string): boolean {
 	return val?.toLowerCase() === 'true';
 }
 
-// Map from cleanTitle → Array of { id, year }
-async function buildCleanTitleIndex(): Promise<Map<string, Array<{ id: string; year: number }>>> {
+type Candidate = { id: string; year: number | null };
+
+// Map from cleanTitle → movie titles with that key
+async function buildCleanTitleIndex(db: Db): Promise<Map<string, Candidate[]>> {
 	const rows = await db
-		.select({ id: movies.id, cleanTitle: movies.cleanTitle, year: movies.year })
-		.from(movies);
-	const index = new Map<string, Array<{ id: string; year: number }>>();
+		.select({ id: titles.id, cleanTitle: titles.cleanTitle, year: titles.year })
+		.from(titles)
+		.where(eq(titles.kind, 'movie'));
+	const index = new Map<string, Candidate[]>();
 	for (const r of rows) {
 		const existing = index.get(r.cleanTitle);
 		if (existing) {
@@ -69,18 +73,22 @@ async function buildCleanTitleIndex(): Promise<Map<string, Array<{ id: string; y
 	return index;
 }
 
-async function main() {
-	console.log('Checking columns for', CSV_PATH);
-	await checkCsvColumns(CSV_PATH, REQUIRED_COLUMNS);
-	console.log('Building clean title index from movies...');
-	const titleIndex = await buildCleanTitleIndex();
+/**
+ * Upsert the UM catalogue (`um_source`) from a UM CSV, then bind each unambiguous movie match
+ * as a `(title_id, um_id)` row in `title_um`. Unmatched and ambiguous rows go to `reportPath`.
+ */
+export async function seedUnconsenting(db: Db, csvPath: string, reportPath = UNMATCHED_REPORT) {
+	console.log('Checking columns for', csvPath);
+	await checkCsvColumns(csvPath, REQUIRED_COLUMNS);
+	console.log('Building clean title index from movie titles...');
+	const titleIndex = await buildCleanTitleIndex(db);
 	console.log(`  index size: ${titleIndex.size}`);
 
-	const report = createWriteStream(UNMATCHED_REPORT);
+	const report = createWriteStream(reportPath);
 	report.write('id\tname\tcleanNameArticles\tyearOfRelease\treason\tcandidateYears\n');
 
 	const sourceBatch: (typeof umSource.$inferInsert)[] = [];
-	const bindingBatch: (typeof movieUnconsenting.$inferInsert)[] = [];
+	const bindingBatch: (typeof titleUm.$inferInsert)[] = [];
 	let matched = 0;
 	let unmatched = 0;
 	let ambiguous = 0;
@@ -116,32 +124,15 @@ async function main() {
 
 	const flushBindings = async () => {
 		if (bindingBatch.length === 0) return;
-		const deduped = [...new Map(bindingBatch.map((r) => [r.movieId, r])).values()];
+		const deduped = [...new Map(bindingBatch.map((r) => [r.titleId, r])).values()];
 		await db
-			.insert(movieUnconsenting)
+			.insert(titleUm)
 			.values(deduped)
-			.onConflictDoUpdate({
-				target: movieUnconsenting.movieId,
-				set: {
-					umId: sql`excluded.um_id`,
-					cleanName: sql`excluded.clean_name`,
-					itemType: sql`excluded.item_type`,
-					comment: sql`excluded.comment`,
-					noRape: sql`excluded.no_rape`,
-					rapeMenDisImp: sql`excluded.rape_men_dis_imp`,
-					sexHarOnScrn: sql`excluded.sex_har_on_scrn`,
-					sexAdultTeen: sql`excluded.sex_adult_teen`,
-					childSexAbuse: sql`excluded.child_sex_abuse`,
-					incest: sql`excluded.incest`,
-					attemptedRape: sql`excluded.attempted_rape`,
-					rapeOffScrn: sql`excluded.rape_off_scrn`,
-					rapeOnScreen: sql`excluded.rape_on_screen`
-				}
-			});
+			.onConflictDoUpdate({ target: titleUm.titleId, set: { umId: sql`excluded.um_id` } });
 		bindingBatch.length = 0;
 	};
 
-	const parser = createReadStream(CSV_PATH).pipe(
+	const parser = createReadStream(csvPath).pipe(
 		parse({ columns: true, skip_empty_lines: true, trim: true, relax_column_count: true })
 	);
 
@@ -197,27 +188,27 @@ async function main() {
 			comment: record.comment?.trim() || null
 		});
 
-		// TV shows have no movies spine row — only populate um_source, skip binding
+		// TV shows are bound at runtime by the candidate picker; only populate um_source
 		if (itemTypeLower === 'tv show') continue;
 
-		// Resolve a binding to a movies row
+		// Resolve a binding to a movie title
 		const candidates = titleIndex.get(titleKey) ?? [];
 
-		let movieId: string | undefined;
+		let titleId: string | undefined;
 		if (candidates.length === 1) {
 			// Unambiguous: only one movie with this title
-			movieId = candidates[0].id;
+			titleId = candidates[0].id;
 		} else if (candidates.length > 1 && umYear !== null) {
 			// Try exact year match
 			const byYear = candidates.find((c) => c.year === umYear);
-			movieId = byYear?.id;
+			titleId = byYear?.id;
 		}
 		// else: ambiguous (multiple same-title, no year hit) — leave unmatched
 
-		if (!movieId) {
+		if (!titleId) {
 			if (candidates.length > 1) {
 				ambiguous++;
-				const candidateYears = candidates.map((c) => c.year).join(',');
+				const candidateYears = candidates.map((c) => c.year ?? '').join(',');
 				report.write(
 					`${record.id}\t${record.name}\t${record.cleanNameArticles}\t${record.yearOfRelease}\tambiguous\t${candidateYears}\n`
 				);
@@ -229,14 +220,7 @@ async function main() {
 			}
 		} else {
 			matched++;
-			bindingBatch.push({
-				movieId,
-				umId,
-				cleanName: displayName,
-				itemType: record.itemType?.trim() || null,
-				comment: record.comment?.trim() || null,
-				...flags
-			});
+			bindingBatch.push({ titleId, umId });
 		}
 
 		if (sourceBatch.length >= BATCH_SIZE) {
@@ -248,7 +232,10 @@ async function main() {
 
 	await flushSource();
 	await flushBindings();
-	report.end();
+	await new Promise((resolve, reject) => {
+		report.on('error', reject);
+		report.end(resolve);
+	});
 
 	console.log(`Done.`);
 	console.log(`  Total rows: ${total}`);
@@ -256,11 +243,15 @@ async function main() {
 	console.log(`  Ambiguous (skipped): ${ambiguous}`);
 	console.log(`  No match: ${unmatched}`);
 	console.log(`  Skipped (non-movie/invalid): ${skipped}`);
-	console.log(`  Unmatched report: ${UNMATCHED_REPORT}`);
+	console.log(`  Unmatched report: ${reportPath}`);
+	return { total, matched, ambiguous, unmatched, skipped };
 }
 
-try {
-	await main();
-} finally {
-	await closeDb();
+if (import.meta.main) {
+	const { db, closeDb } = await import('./lib/db');
+	try {
+		await seedUnconsenting(db, CSV_PATH);
+	} finally {
+		await closeDb();
+	}
 }

@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { PUBLIC_PAGE } from '$lib/server/http/cache';
 import { getSeries } from './datasource.server';
-import { getDbMedia, getUnconsenting } from '$lib/server/data/media-queries';
+import { getTitleRow } from '$lib/server/data/title-queries';
+import { getUmEntry } from '$lib/server/data/sources';
 import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
 import { getTriggerTagsForSeries } from '$lib/server/integrations/ddd';
 
@@ -11,14 +12,14 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	setHeaders({ 'cache-control': PUBLIC_PAGE });
 
 	const series = await getSeries(params.seriesId);
-	const dbMedia = await getDbMedia(series, 'tv');
+	const title = await getTitleRow('tv', series);
 
-	const unconsenting = dbMedia ? await getUnconsenting(dbMedia.id) : null;
-	const umCandidates = unconsenting === null ? await getUnconsentingCandidates(series) : [];
+	const umEntry = title ? await getUmEntry(title.id) : null;
+	const umCandidates = umEntry === null ? await getUnconsentingCandidates(series) : [];
 
 	return {
 		series,
-		unconsenting,
+		umEntry,
 		umCandidates,
 		triggerTags: getTriggerTagsForSeries(series) // un-awaited: streamed
 	};

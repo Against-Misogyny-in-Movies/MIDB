@@ -2,16 +2,15 @@
 	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
 	import UmCandidates from './umCandidates.svelte';
 	import { UM_FLAGS } from '$lib/media/utils/metrics';
-	import type { UmCandidate } from '$lib/media/utils/metrics';
-	import type { UnconsentingData } from '$lib/server/data/media-queries';
+	import type { UmEntry } from '$lib/media/types/um';
 
 	interface Props {
-		umData: UnconsentingData | UmCandidate | null;
-		umCandidates: UmCandidate[];
+		umData: UmEntry | null;
+		umCandidates: UmEntry[];
 		umFlagCount: number;
 		hasUmCandidates: boolean;
 		mediaNoun: 'movie' | 'series';
-		onselect: (candidate: UmCandidate) => void;
+		onselect: (candidate: UmEntry) => void;
 	}
 
 	let { umData, umCandidates, umFlagCount, hasUmCandidates, mediaNoun, onselect }: Props = $props();

@@ -15,6 +15,13 @@
       "when": 1792873182378,
       "tag": "0001_swift_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792876831568,
+      "tag": "0002_titles_spine",
+      "breakpoints": true
     }
   ]
 }

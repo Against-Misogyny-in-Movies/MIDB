@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { UmCandidate } from '$lib/media/utils/metrics';
+	import { umFlagCount } from '$lib/media/utils/metrics';
+	import type { UmEntry } from '$lib/media/types/um';
 
 	interface Props {
-		candidates: UmCandidate[];
-		onselect: (candidate: UmCandidate) => void;
+		candidates: UmEntry[];
+		onselect: (candidate: UmEntry) => void;
 	}
 
 	let { candidates, onselect }: Props = $props();
@@ -16,6 +17,7 @@
 	</p>
 	<ul role="list" class="candidate-list">
 		{#each candidates as candidate (candidate.umId)}
+			{@const concerns = umFlagCount(candidate)}
 			<li class="candidate-row">
 				<button
 					type="button"
@@ -37,11 +39,8 @@
 							</span>
 						{/if}
 					</span>
-					<span
-						class="flag-pill"
-						aria-label="{candidate.flagCount} concern{candidate.flagCount === 1 ? '' : 's'}"
-					>
-						{candidate.flagCount} concern{candidate.flagCount === 1 ? '' : 's'}
+					<span class="flag-pill" aria-label="{concerns} concern{concerns === 1 ? '' : 's'}">
+						{concerns} concern{concerns === 1 ? '' : 's'}
 					</span>
 				</button>
 			</li>

@@ -17,14 +17,14 @@
 	import { umFlagCount } from '$lib/media/utils/metrics';
 	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
 	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
-	import type { UmCandidate } from '$lib/media/utils/metrics';
+	import type { UmEntry } from '$lib/media/types/um';
 
 	let { data }: { data: PageData } = $props();
 	const series = $derived(data.series);
-	const unconsenting = $derived(data.unconsenting);
+	const umEntry = $derived(data.umEntry);
 	const umCandidates = $derived(data.umCandidates ?? []);
 
-	let selectedUm = $state<UmCandidate | null>(null);
+	let selectedUm = $state<UmEntry | null>(null);
 	let selectedSeason = $state<number | null>(null);
 	let selectedEpisode = $state<number | null>(null);
 	$effect(() => {
@@ -35,7 +35,7 @@
 	});
 
 	const autoUm = $derived(umCandidates.length === 1 ? umCandidates[0] : null);
-	const umData = $derived(unconsenting ?? autoUm ?? selectedUm);
+	const umData = $derived(umEntry ?? autoUm ?? selectedUm);
 	const hasUmCandidates = $derived(umData === null && umCandidates.length > 1);
 	const flagCount = $derived(umFlagCount(umData));
 

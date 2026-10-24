@@ -1,4 +1,3 @@
-export type { UmCandidate } from '$lib/media/utils/metrics';
 export type { GenderBreakdown } from '$lib/media/types/media';
 
 import type { MediaDetail } from '$lib/media/types/media';

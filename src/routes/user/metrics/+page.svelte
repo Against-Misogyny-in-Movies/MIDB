@@ -1,11 +1,13 @@
 <script lang="ts">
-	let { data } = $props();
+	import type { PageData } from './$types';
+	import { titleHref } from '$lib/media/utils/titleHref';
 
-	function metricLabel(metric: string) {
-		return (
-			{ bechdel: 'Bechdel', unconsenting: 'Unconsenting Media', ddd: 'Does the Dog Die' }[metric] ??
-			metric
-		);
+	let { data }: { data: PageData } = $props();
+
+	function ratingLabel(row: PageData['ratings'][number]) {
+		return row.metric === 'bechdel'
+			? `Bechdel · ${row.value}/3`
+			: `Unconsenting Media · ${row.value} concern${row.value === 1 ? '' : 's'}`;
 	}
 </script>
 
@@ -15,19 +17,17 @@
 		<h1 class="display">Rating history</h1>
 	</header>
 
-	{#if data.submissions.length === 0}
+	{#if data.ratings.length === 0}
 		<p class="empty-state label">No ratings yet.</p>
 	{:else}
 		<ul class="submission-list">
-			{#each data.submissions as row (row.submission.id)}
+			{#each data.ratings as row (`${row.metric}:${row.titleId}`)}
 				<li class="submission-row">
-					<a href="/movie/{row.submission.movieId}" class="submission-link">
-						<span class="movie-title">{row.movieTitle ?? 'Unknown title'}</span>
-						<span class="submission-meta label">
-							{metricLabel(row.submission.metric)} · {row.submission.value}
-						</span>
-						<time class="submission-date label" datetime={row.submission.createdAt.toISOString()}>
-							{row.submission.createdAt.toLocaleDateString()}
+					<a href={titleHref(row.kind, row.tmdbId)} class="submission-link">
+						<span class="movie-title">{row.title}</span>
+						<span class="submission-meta label">{ratingLabel(row)}</span>
+						<time class="submission-date label" datetime={row.updatedAt.toISOString()}>
+							{row.updatedAt.toLocaleDateString()}
 						</time>
 					</a>
 				</li>

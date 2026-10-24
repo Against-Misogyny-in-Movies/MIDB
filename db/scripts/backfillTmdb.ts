@@ -1,7 +1,6 @@
-import { isNull } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db, closeDb } from './lib/db';
-import { movies } from '../schema/movie';
+import { titles } from '../schema/titles';
 
 const TMDB_BASE = process.env.PUBLIC_TMDB_API_URL || 'https://api.themoviedb.org';
 const TMDB_TOKEN = process.env.TMDB_API_TOKEN;
@@ -25,9 +24,9 @@ async function resolveTmdbId(imdbId: string): Promise<number | null> {
 
 async function main() {
 	const toBackfill = await db
-		.select({ id: movies.id, imdbId: movies.imdbId })
-		.from(movies)
-		.where(isNull(movies.tmdbId));
+		.select({ id: titles.id, imdbId: titles.imdbId })
+		.from(titles)
+		.where(and(eq(titles.kind, 'movie'), isNull(titles.tmdbId), isNotNull(titles.imdbId)));
 
 	console.log(`Backfilling TMDB ids for ${toBackfill.length} movies...`);
 
@@ -37,12 +36,9 @@ async function main() {
 	for (let i = 0; i < toBackfill.length; i += BATCH_SIZE) {
 		const batch = toBackfill.slice(i, i + BATCH_SIZE);
 		for (const row of batch) {
-			const tmdbId = await resolveTmdbId(row.imdbId);
+			const tmdbId = await resolveTmdbId(row.imdbId!);
 			if (tmdbId) {
-				await db
-					.update(movies)
-					.set({ tmdbId, updatedAt: new Date() })
-					.where(sql`id = ${row.id}`);
+				await db.update(titles).set({ tmdbId }).where(eq(titles.id, row.id));
 				updated++;
 			} else {
 				notFound++;

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { titleHref } from '$lib/media/utils/titleHref';
+
 	let { data } = $props();
 </script>
 
@@ -14,7 +16,7 @@
 		<ul class="comment-list">
 			{#each data.comments as comment (comment.id)}
 				<li class="comment-row">
-					<a href="/movie/{comment.movieId}" class="comment-link">
+					<a href={titleHref(comment.kind, comment.tmdbId)} class="comment-link">
 						<span class="comment-body">{comment.body}</span>
 						<time class="comment-date label" datetime={comment.createdAt.toISOString()}>
 							{comment.createdAt.toLocaleDateString()}
