@@ -3,6 +3,7 @@
 	import { navigating } from '$app/stores';
 	import SearchResults from '$lib/components/search/searchResults.svelte';
 	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
+	import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
 
 	// Own MovieSearchState instance — the navbar search is fully independent of the
 	// landing hero search. Reuses the search lifecycle/keyboard model and the
@@ -73,6 +74,7 @@
 				type="text"
 				name="query"
 				placeholder="Search movies & TV…"
+				maxlength={SEARCH_QUERY_MAX_LENGTH}
 				value={search.query}
 				oninput={(e) => search.search(e.currentTarget.value)}
 				onkeydown={onKeydown}

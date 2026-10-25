@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/form/button.svelte';
+	import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
 
 	interface Props {
 		value: string;
@@ -29,6 +30,7 @@
 		type="text"
 		name="query"
 		placeholder="Search movies & TV…"
+		maxlength={SEARCH_QUERY_MAX_LENGTH}
 		{value}
 		oninput={(e) => oninput(e.currentTarget.value)}
 		{onkeydown}

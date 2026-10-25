@@ -6,7 +6,7 @@ import searchFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/sear
 vi.mock('$env/static/public', () => ({ PUBLIC_TMDB_API_URL: 'https://tmdb.test' }));
 vi.mock('$env/static/private', () => ({ TMDB_API_TOKEN: 'test-token' }));
 
-import { tmdbFetch } from '$lib/server/integrations/tmdb/client';
+import { TMDB_SEARCH_TTL_MS, tmdbFetch } from '$lib/server/integrations/tmdb/client';
 import { getMovie, searchTitles } from '$lib/server/integrations/tmdb';
 
 const fetchMock = vi.fn();
@@ -70,11 +70,47 @@ describe('searchTitles', () => {
 		expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get('query')).toBe('matrix');
 	});
 
-	test('returns [] on a TMDB error response', async () => {
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+	test('caches per case-insensitive query, so a repeat does not hit TMDB', async () => {
+		respond(searchFixture);
+		const first = await searchTitles('Matrix');
+		const second = await searchTitles('matrix');
+		const third = await searchTitles('MATRIX');
+		expect(second).toEqual(first);
+		expect(third).toEqual(first);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	test('keeps distinct queries apart', async () => {
+		respond(searchFixture);
+		respond({ results: [] });
+		expect(await searchTitles('matrix')).toHaveLength(4);
+		expect(await searchTitles('zzz')).toEqual([]);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	test('throws on a TMDB error response and caches nothing, so the next call retries', async () => {
 		respond({}, 503, 'Service Unavailable');
-		expect(await searchTitles('matrix')).toEqual([]);
-		expect(warn).toHaveBeenCalled();
-		warn.mockRestore();
+		await expect(searchTitles('matrix')).rejects.toMatchObject({ status: 503 });
+
+		respond(searchFixture);
+		expect(await searchTitles('matrix')).toHaveLength(4);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	test('expires after 10 minutes', async () => {
+		vi.useFakeTimers();
+		try {
+			respond(searchFixture);
+			respond(searchFixture);
+			await searchTitles('matrix');
+			vi.advanceTimersByTime(TMDB_SEARCH_TTL_MS - 1);
+			await searchTitles('matrix');
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			vi.advanceTimersByTime(1);
+			await searchTitles('matrix');
+			expect(fetchMock).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
