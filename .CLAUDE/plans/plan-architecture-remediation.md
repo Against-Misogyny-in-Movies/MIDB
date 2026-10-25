@@ -1,5 +1,7 @@
 # Plan: Architecture remediation
 
+> **Implemented 2026-10-25.** All 7 PRs are merged (PRs 1–5 on 2026-10-24, PRs 6–7 on 2026-10-25); each section below records its status and deviations.
+
 Implements every finding in `plan-architecture-review.md`. All the choices are already made. Where the review offered options, this plan picks one and gives the reason. The work ships as **7 PRs in order**, each independently green (`check` 0 errors, `test:unit` pass, `build` clean, plus CI from PR 1 on). Each PR updates `.CLAUDE/architecture.md` for the files it touches, as AGENTS.md requires.
 
 | PR  | Theme                                                                                   | Fixes (review §)                           | Risk                                   |
@@ -10,7 +12,7 @@ Implements every finding in `plan-architecture-review.md`. All the choices are a
 | 4   | `titles` spine, sources by reference, community tables (**done 2026-10-24**)            | 2.4, 3.1–3.4                               | **High** (data migration)              |
 | 5   | Module consolidation (TMDB, loader, page state, shared constants) (**done 2026-10-24**) | 4.2, 4.3                                   | Medium (refactor, no behaviour change) |
 | 6   | Dependencies, search caching, rate limit, dead code (**done 2026-10-25**)               | 4.4 (deps), 4.5, 4.6, 5.5                  | Low                                    |
-| 7   | Docs sweep (AGENTS.md, architecture.md)                                                 | 4.6 (doc drift)                            | None                                   |
+| 7   | Docs sweep (AGENTS.md, architecture.md) (**done 2026-10-25**)                           | 4.6 (doc drift)                            | None                                   |
 
 Out of scope: the community **feature** itself (rating and comment UI and actions). This plan builds the schema, guards, validation choice and test harness it needs. The feature gets its own plan afterwards (step 9 of the review's ordering).
 
@@ -448,6 +450,13 @@ Rename instead of drop/create because the `movies` and `movie_bechdel` data incl
   - **Testing:** `*.db.spec.ts` for anything touching Postgres; `bun run test:db` joins the verification baseline (with `docker compose up -d db`).
   - Data-layer split names: `title-queries.ts`, `sources.ts`, `um-candidates.ts`.
 - Mark `plan-architecture-review.md` and this plan as implemented, with dates.
+
+**Status: done 2026-10-25.** Docs only. PRs 1–6 had already rewritten most sections as they went (Database schema, Migrations, Auth flow, Configuration & environment, Directory layout, Server cache, Caching policy, the route-folder, `UserRow`/`PUBLIC_PAGE`, migration-per-PR, `getTitleRow`, `*.db.spec.ts` and data-layer rules in AGENTS.md), so this PR audited the doc against the code and closed what was left. Deviations and notes:
+
+- **Known gaps 1, 2 and 4** used the numbering of the time (pending migration `0001`, DDD persistence via `movie_trigger_tags`, orphaned UI). PRs 3, 4 and 6 closed them; this PR drops the last closed entry and renumbers. Two gaps found in PR 6 are added: the stale `landing.spec.ts` placeholder assertion and the unused `ui/` primitives.
+- **Caching policy** becomes a top-level section (it was a subsection of Auth flow) and **Testing** is new: the unit / db / e2e layers, Storybook, and one current **Verification baseline** that replaces the per-change log (git history keeps the old numbers).
+- **Stale claims fixed:** the data-flow diagram's "hooks.server.ts runs migrateDatabase() once at server boot"; the detail-page `cache-control` value (now a pointer to `PUBLIC_PAGE`); `tailwind.config.js` (the file is gone); the landing row's `UM_KEY` (no such token: the functional tokens are `TMDB_API_TOKEN`, `DDD_API_KEY` and the Hanko session cookie); the "Hanko profile stub" wording for `/user/*`; the `/api/search` and `/user/profile` route rows (PR 6 caching, cap and rate limits). `/user/moderation*` is documented as gated in the hook but without a page yet. Snapshot date bumped.
+- **AGENTS.md** gains the one plan item still missing, the `timestamps()` / `umFlagColumns()` schema helpers (with the `updatedAt` pinning pattern), plus a `rateLimit` keying rule from PR 6 (`userId` only after `requireUser`, never read the user on a public route, call it outside a swallowing `try`).
 
 ---
 

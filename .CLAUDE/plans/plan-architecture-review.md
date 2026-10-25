@@ -1,5 +1,7 @@
 # Architecture review (2026-10-24)
 
+> **Implemented 2026-10-25** by `plan-architecture-remediation.md` (7 PRs, #11–#16 plus the PR 7 docs sweep). Kept as the record of the findings; the current state is in `.CLAUDE/architecture.md`.
+
 Review of `main` at `cc36c50` ("implement user authentication and community features"). Scope: everything under `src/`, `db/`, the config files, and the agent docs. The project is a WIP, so the question is which decisions will hold up once community writes, comments and real traffic arrive, and which ones need correcting now while they are still cheap to change.
 
 Baseline measured during the review: `bun run test:unit` → 116/116 pass (8 files). `bun run check` → 9 errors, all from missing `$env/static/*` vars (the container has no `.env`, and the repo has no `.env.example`).
