@@ -4,8 +4,10 @@ import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
 
 const searchTitles = vi.fn();
 vi.mock('$lib/server/integrations/tmdb', () => ({ searchTitles }));
+vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
 const { GET } = await import('../routes/api/search/+server');
+const { clearCache } = await import('$lib/server/cache');
 
 const HIT = {
 	id: 603,
@@ -15,14 +17,15 @@ const HIT = {
 	mediaType: 'movie'
 };
 
-function call(q: string | null) {
+function call(q: string | null, ip = '203.0.113.7') {
 	const url = new URL('http://localhost/api/search');
 	if (q !== null) url.searchParams.set('q', q);
-	const event = { url } as unknown as RequestEvent;
+	const event = { url, getClientAddress: () => ip } as unknown as RequestEvent;
 	return GET(event as Parameters<typeof GET>[0]);
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+	await clearCache();
 	searchTitles.mockReset();
 	searchTitles.mockResolvedValue([HIT]);
 });
@@ -69,5 +72,17 @@ describe('GET /api/search', () => {
 		await expect(res2.json()).resolves.toEqual({ results: [] });
 		expect(warn).toHaveBeenCalledTimes(2);
 		warn.mockRestore();
+	});
+
+	it('returns 429 after 60 searches a minute from one IP; other IPs are unaffected', async () => {
+		for (let i = 0; i < 60; i++) expect((await call(`q${i}`)).status).toBe(200);
+		await expect(call('one more')).rejects.toMatchObject({ status: 429 });
+		expect(searchTitles).toHaveBeenCalledTimes(60);
+		expect((await call('matrix', '198.51.100.2')).status).toBe(200);
+	});
+
+	it('does not count empty queries against the limit', async () => {
+		for (let i = 0; i < 70; i++) await call('  ');
+		expect((await call('matrix')).status).toBe(200);
 	});
 });
