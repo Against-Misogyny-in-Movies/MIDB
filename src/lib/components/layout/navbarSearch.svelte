@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { nanoid } from 'nanoid';
 	import { navigating } from '$app/stores';
 	import SearchResults from '$lib/components/search/searchResults.svelte';
 	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
@@ -10,7 +9,7 @@
 	// SearchResults dropdown, but renders a compact, collapse-by-default input
 	// instead of the full searchInput box (which carries a heavy submit button).
 	const search = new MovieSearchState();
-	const listboxId = nanoid();
+	const listboxId = $props.id();
 
 	let root = $state<HTMLElement | null>(null);
 	let input = $state<HTMLInputElement | null>(null);

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { nanoid } from 'nanoid';
 	import Tile from '$lib/components/ui/tile/tile.svelte';
 
 	interface Props {
@@ -14,7 +13,7 @@
 
 	let { title, description, icon, name, icon_snippet, onchange }: Props = $props();
 
-	const formId = nanoid();
+	const formId = $props.id();
 </script>
 
 <input type="checkbox" id={formId} {name} {onchange} hidden />

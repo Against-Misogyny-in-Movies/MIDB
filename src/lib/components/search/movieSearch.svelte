@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { nanoid } from 'nanoid';
 	import SearchInput from './searchInput.svelte';
 	import SearchResults from './searchResults.svelte';
 	import { MovieSearchState } from './movieSearch.svelte.js';
 
 	const search = new MovieSearchState();
-	const listboxId = nanoid();
+	const listboxId = $props.id();
 
 	let root = $state<HTMLElement | null>(null);
 

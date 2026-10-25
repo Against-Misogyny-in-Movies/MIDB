@@ -33,4 +33,32 @@ describe('Component/AvatarPicker', () => {
 		expect(container.querySelectorAll('label svg')).toHaveLength(AVATAR_DEFS.length);
 		expect(screen.getByDisplayValue('truth')).toBeChecked();
 	});
+
+	test('ids stay unique across two pickers and every label points at its own input', () => {
+		const first = render(AvatarPicker, { value: 'truth' }).container;
+		const second = render(AvatarPicker, { value: null }).container;
+		const inputs = [...document.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+		expect(inputs).toHaveLength(AVATAR_DEFS.length * 2);
+		expect(new Set(inputs.map((i) => i.id)).size).toBe(inputs.length);
+
+		// Each picker is its own radio group.
+		const groupOf = (c: HTMLElement) => c.querySelector('input')!.name;
+		expect(groupOf(first)).not.toBe(groupOf(second));
+
+		for (const container of [first, second]) {
+			for (const label of container.querySelectorAll('label')) {
+				const input = container.querySelector(`#${CSS.escape(label.htmlFor)}`);
+				expect(input).toBeInstanceOf(HTMLInputElement);
+				expect((input as HTMLInputElement).labels?.[0]).toBe(label);
+			}
+		}
+
+		// Clicking a label in the second picker checks its input and leaves the first alone.
+		const [secondKahlo] = [...second.querySelectorAll('label')].filter((l) =>
+			l.htmlFor.endsWith('-kahlo')
+		);
+		secondKahlo.click();
+		expect(second.querySelector<HTMLInputElement>('input[value="kahlo"]')).toBeChecked();
+		expect(first.querySelector<HTMLInputElement>('input[value="truth"]')).toBeChecked();
+	});
 });

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { nanoid } from 'nanoid';
 	import { session } from '$lib/media/utils/session.svelte.js';
 
 	// Mobile-only hamburger: collapses the text nav-links into a dropdown surface
@@ -16,7 +15,7 @@
 	let open = $state(false);
 	let root = $state<HTMLElement | null>(null);
 	let firstLink = $state<HTMLAnchorElement | null>(null);
-	const menuId = nanoid();
+	const menuId = $props.id();
 
 	async function toggle() {
 		open = !open;

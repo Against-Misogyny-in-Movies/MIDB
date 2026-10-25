@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { nanoid } from 'nanoid';
 	import Tile from '$lib/components/ui/tile/tile.svelte';
 
 	interface Props {
@@ -16,7 +15,7 @@
 
 	let { title, short, description, icon, name, value, icon_snippet, onchange }: Props = $props();
 
-	const formId = nanoid();
+	const formId = $props.id();
 </script>
 
 <input type="radio" id={formId} {name} {value} {onchange} hidden />

@@ -40,4 +40,17 @@ describe('Component/RadioTile', () => {
 		labelElement!.click();
 		expect(radioElement).toBeChecked();
 	});
+
+	test('two tiles get distinct ids, each label pointing at its own input', () => {
+		const props = createRadioTileProps();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		render(RadioTile as any, { ...props, value: 'a' });
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		render(RadioTile as any, { ...props, value: 'b' });
+		const inputs = [...document.querySelectorAll('input')];
+		const labels = [...document.querySelectorAll('label')];
+		expect(inputs).toHaveLength(2);
+		expect(inputs[0].id).not.toBe(inputs[1].id);
+		expect(labels.map((l) => l.htmlFor)).toEqual(inputs.map((i) => i.id));
+	});
 });
