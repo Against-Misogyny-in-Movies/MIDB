@@ -8,9 +8,7 @@ const config = {
 	// a separate PostCSS pass that resolves tailwindcss from bun cache.
 	preprocess: vitePreprocess({ style: false }),
 	kit: {
-		// adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
-		// If your environment is not supported or you settled on a specific environment, switch out the adapter.
-		// See https://kit.svelte.dev/docs/adapters for more information about adapters.
+		// Deployed on Vercel. See https://svelte.dev/docs/kit/adapter-vercel for its options.
 		adapter: adapter(),
 		alias: {
 			'$db/*': './db/*'

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { AVATAR_DEFS } from '$lib/media/utils/avatars';
 	import { AVATAR_COMPONENTS } from './avatars';
-	import { nanoid } from 'nanoid';
 
 	interface Props {
 		value?: string | null;
@@ -10,7 +9,7 @@
 
 	let { value = null, onselect }: Props = $props();
 
-	const groupName = nanoid();
+	const groupName = $props.id();
 </script>
 
 <div class="picker" role="radiogroup" aria-label="Choose avatar">

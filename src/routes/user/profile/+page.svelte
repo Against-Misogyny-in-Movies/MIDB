@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Avatar from '$lib/components/user/avatars/Avatar.svelte';
 	import AvatarPicker from '$lib/components/user/avatars/AvatarPicker.svelte';
+	import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
 
 	let { data, form } = $props();
 
@@ -14,21 +15,32 @@
 		selectedAvatar = user?.avatarKey ?? null;
 		usernameInput = user?.username ?? '';
 	});
-	let availability: 'idle' | 'checking' | 'available' | 'taken' = $state('idle');
-	let availabilityTimer: ReturnType<typeof setTimeout> | null = null;
+	type Availability = 'idle' | 'checking' | 'available' | 'taken';
+	let availability: Availability = $state('idle');
+
+	// A newer keystroke aborts the in-flight check, so a slow answer for an older
+	// value never overwrites the current one. An error response (e.g. a 429) shows nothing.
+	const availabilityCheck = new DebouncedQuery<Availability>(
+		async (value, signal) => {
+			const res = await fetch(`/user/profile/availability?username=${encodeURIComponent(value)}`, {
+				signal
+			});
+			if (!res.ok) return 'idle';
+			const { available } = await res.json();
+			return available ? 'available' : 'taken';
+		},
+		(result) => (availability = result),
+		{ empty: 'idle', delayMs: 400 }
+	);
 
 	function checkAvailability(value: string) {
-		if (availabilityTimer) clearTimeout(availabilityTimer);
 		if (!value || value === user?.username) {
+			availabilityCheck.cancel();
 			availability = 'idle';
 			return;
 		}
 		availability = 'checking';
-		availabilityTimer = setTimeout(async () => {
-			const res = await fetch(`/user/profile/availability?username=${encodeURIComponent(value)}`);
-			const { available } = await res.json();
-			availability = available ? 'available' : 'taken';
-		}, 400);
+		availabilityCheck.push(value);
 	}
 
 	function roleLabel(role: string) {

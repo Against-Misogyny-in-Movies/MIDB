@@ -12,20 +12,20 @@
 </script>
 
 <script lang="ts">
-	import { createDebouncedSearchStore } from '$lib/stores/debounced';
+	import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
 
-	const ref: { queries: string[] } = { queries: [] };
-	const apiFunction = (query: string) => Promise.resolve([query, ...ref.queries]);
-	const search = createDebouncedSearchStore(apiFunction, 750);
-	search.subscribe((value) => {
-		ref.queries = value;
-	});
+	let queries = $state<string[]>([]);
+	const search = new DebouncedQuery(
+		(query: string) => Promise.resolve([query, ...queries]),
+		(value) => (queries = value),
+		{ empty: [], delayMs: 750 }
+	);
 </script>
 
 <Story name="Search">
 	{#snippet children()}
-		<SearchForm action="#" onaction={(q) => search.search(q)} />
-		{#each $search as res, i (i)}
+		<SearchForm action="#" onaction={(q) => search.push(q)} />
+		{#each queries as res, i (i)}
 			<p>{res}</p>
 		{/each}
 	{/snippet}

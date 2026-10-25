@@ -9,3 +9,9 @@ export const PUBLIC_PAGE = 'public, max-age=0, s-maxage=3600, stale-while-revali
 
 /** Personalised responses (/api/me, /user/*): never stored by a browser or shared cache. */
 export const PRIVATE_NO_STORE = 'private, no-store';
+
+/**
+ * /api/search: user-agnostic, so browsers keep a result for a minute and the CDN for ten,
+ * matching the server-side TMDB search cache. Repeated queries never reach the function.
+ */
+export const PUBLIC_SEARCH = 'public, max-age=60, s-maxage=600';

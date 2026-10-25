@@ -1,26 +1,27 @@
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { createDebouncedSearchStore } from '$lib/stores/debounced';
+import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
 import type { SearchResult } from './types';
 import { navigating } from '$app/stores';
 
 /**
- * Calls the `/api/search` endpoint and returns parsed search results.
- * Returns an empty array for blank queries without making a network request.
+ * Calls the `/api/search` endpoint and returns parsed search results. `DebouncedQuery`
+ * never calls it for a blank query.
  *
  * @param query - The user's search string.
- * @returns Array of `SearchResult` items (may be empty).
+ * @param signal - Aborts the request once a newer query supersedes it.
+ * @returns Array of `SearchResult` items (empty on an error response, e.g. a 429).
  */
-async function fetchResults(query: string): Promise<SearchResult[]> {
-	if (!query.trim()) return [];
-	const res = await fetch('/api/search?q=' + encodeURIComponent(query));
+async function fetchResults(query: string, signal: AbortSignal): Promise<SearchResult[]> {
+	const res = await fetch('/api/search?q=' + encodeURIComponent(query), { signal });
+	if (!res.ok) return [];
 	const data = await res.json();
 	return data.results as SearchResult[];
 }
 
 /**
- * Owns the live-search lifecycle for the movie search box: the debounced TMDB
- * query store plus the keyboard-navigation/selection state. Built as a Svelte 5
+ * Owns the live-search lifecycle for the movie search box: the debounced, cancellable
+ * `/api/search` query plus the keyboard-navigation/selection state. Built as a Svelte 5
  * rune class so a component can `bind` to its reactive fields directly.
  */
 export class MovieSearchState {
@@ -31,7 +32,15 @@ export class MovieSearchState {
 	open = $state(false);
 	navigatingTo = $state<SearchResult | null>(null);
 
-	#store = createDebouncedSearchStore(fetchResults, 500);
+	#query = new DebouncedQuery(
+		fetchResults,
+		(results) => {
+			this.results = results;
+			this.activeIndex = -1;
+			this.loading = false;
+		},
+		{ empty: [], delayMs: 500 }
+	);
 
 	/** Whether the dropdown panel should be shown. */
 	get isOpen() {
@@ -44,13 +53,8 @@ export class MovieSearchState {
 		return item ? optionId(item.id, item.mediaType) : undefined;
 	}
 
-	/** Subscribe to the debounced result stream and SvelteKit navigation. Returns an unsubscribe fn for `$effect`. */
+	/** Subscribe to SvelteKit navigation. Returns a teardown fn for `$effect` that also drops any pending query. */
 	connect() {
-		const sub = this.#store.subscribe((r) => {
-			this.results = r as SearchResult[];
-			this.activeIndex = -1;
-			this.loading = false;
-		});
 		// Clear pending navigation indicator once SvelteKit finishes (or aborts) navigation.
 		// If we initiated the navigation (a result was selected), also reset the box so the
 		// query/results don't linger on the destination page (e.g. the navbar search).
@@ -61,7 +65,7 @@ export class MovieSearchState {
 			}
 		});
 		return () => {
-			sub.unsubscribe();
+			this.#query.cancel();
 			navUnsub();
 		};
 	}
@@ -79,7 +83,7 @@ export class MovieSearchState {
 		} else {
 			this.close();
 		}
-		this.#store.search(query);
+		this.#query.push(query);
 	}
 
 	/** Re-open the panel (e.g. on input focus) if there's a query to show results for. */
@@ -99,8 +103,7 @@ export class MovieSearchState {
 	/** Fully clear the box — query, results and panel state — e.g. after navigating to a result. */
 	reset() {
 		this.query = '';
-		this.results = [];
-		this.#store.search('');
+		this.#query.push('');
 		this.close();
 	}
 

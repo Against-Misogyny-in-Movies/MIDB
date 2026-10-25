@@ -5,6 +5,9 @@ import { getCached } from '$lib/server/cache';
 
 // TMDB title metadata is near-static; cache it for a day so repeat visits skip the round-trip.
 export const TMDB_TTL_MS = 24 * 60 * 60 * 1000;
+// Search results change more often (new titles, popularity order); 10 minutes absorbs
+// repeated keystrokes and popular queries without serving a stale list for long.
+export const TMDB_SEARCH_TTL_MS = 10 * 60 * 1000;
 
 /**
  * GETs a TMDB v3 path (e.g. `/3/movie/603`) with the bearer token and `params` as the query.
