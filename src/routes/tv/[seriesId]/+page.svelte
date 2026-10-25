@@ -14,64 +14,21 @@
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
 	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
 	import BackToTop from '$lib/components/ui/visualization/backToTop.svelte';
-	import { umFlagCount } from '$lib/media/utils/metrics';
-	import { scoreSafety, scoreRepresentation } from '$lib/media/utils/verdict';
-	import { createDddState } from '$lib/media/utils/dddStream.svelte.js';
-	import type { UmEntry } from '$lib/media/types/um';
+	import { TitleView } from '$lib/media/utils/titleView.svelte.js';
 
 	let { data }: { data: PageData } = $props();
-	const series = $derived(data.series);
-	const umEntry = $derived(data.umEntry);
-	const umCandidates = $derived(data.umCandidates ?? []);
-
-	let selectedUm = $state<UmEntry | null>(null);
-	let selectedSeason = $state<number | null>(null);
-	let selectedEpisode = $state<number | null>(null);
-	$effect(() => {
-		void series.id; // track
-		selectedUm = null;
-		selectedSeason = null;
-		selectedEpisode = null;
-	});
-
-	const autoUm = $derived(umCandidates.length === 1 ? umCandidates[0] : null);
-	const umData = $derived(umEntry ?? autoUm ?? selectedUm);
-	const hasUmCandidates = $derived(umData === null && umCandidates.length > 1);
-	const flagCount = $derived(umFlagCount(umData));
-
-	const dddState = createDddState(() => data.triggerTags, true);
-	const ddd = $derived(dddState.current);
-
-	const visibleTags = $derived.by(() => {
-		if (!ddd) return [];
-		if (selectedSeason === null)
-			return ddd.tags.filter((t) => t.season === -1 || t.season === null);
-		if (selectedEpisode === null)
-			return ddd.tags.filter((t) => t.season === selectedSeason || t.season === -1);
-		return ddd.tags.filter(
-			(t) => (t.season === selectedSeason && t.episode === selectedEpisode) || t.season === -1
-		);
-	});
-
-	const dddForVerdict = $derived(ddd ? { ...ddd, tags: visibleTags } : null);
-	const safety = $derived(scoreSafety(umData, dddForVerdict));
-	const representation = $derived(
-		scoreRepresentation({
-			cast: series.cast,
-			crew: series.crew,
-			castMembers: series.castMembers,
-			crewDepartments: series.crewDepartments,
-			bechdel: null,
-			isSeries: true
-		})
-	);
+	const view = new TitleView(() => data, 'tv');
+	const episodes = view.episodes!;
+	const series = $derived(view.media);
+	const ddd = $derived(view.ddd);
+	const visibleTags = $derived(view.visibleTags);
 </script>
 
 <div class="series-page">
 	<section id="details">
 		<DetailHeader media={series}>
 			{#snippet verdict()}
-				<VerdictPanel {safety} {representation} />
+				<VerdictPanel safety={view.safety} representation={view.representation} />
 			{/snippet}
 			<div class="summary-chips">
 				<!-- Bechdel N/A for series — no href = renders as static div -->
@@ -83,12 +40,14 @@
 					href="#unconsenting"
 					icon="ri-shield-cross-line"
 					label="Unconsenting Media"
-					empty={umData === null}
-					badgeCount={hasUmCandidates ? umCandidates.length : 0}
+					empty={view.umData === null}
+					badgeCount={view.hasUmCandidates ? view.umCandidates.length : 0}
 				>
-					{#if umData}
+					{#if view.umData}
 						<span class="chip-value"
-							>{flagCount}<span class="chip-unit"> concern{flagCount === 1 ? '' : 's'}</span></span
+							>{view.flagCount}<span class="chip-unit">
+								concern{view.flagCount === 1 ? '' : 's'}</span
+							></span
 						>
 					{:else}
 						<span class="chip-empty">No data</span>
@@ -153,12 +112,12 @@
 		</div>
 
 		<UmMetricSection
-			{umData}
-			{umCandidates}
-			umFlagCount={flagCount}
-			{hasUmCandidates}
+			umData={view.umData}
+			umCandidates={view.umCandidates}
+			umFlagCount={view.flagCount}
+			hasUmCandidates={view.hasUmCandidates}
 			mediaNoun="series"
-			onselect={(c) => (selectedUm = c)}
+			onselect={(c) => view.selectUm(c)}
 		/>
 
 		<DddMetricSection {ddd} {visibleTags} mediaNoun="series">
@@ -167,12 +126,10 @@
 					<DddEpisodeSelector
 						seasons={series.seasons}
 						tags={ddd.tags}
-						{selectedSeason}
-						{selectedEpisode}
-						onchange={(season: number | null, episode: number | null) => {
-							selectedSeason = season;
-							selectedEpisode = episode;
-						}}
+						selectedSeason={episodes.season}
+						selectedEpisode={episodes.episode}
+						onchange={(season: number | null, episode: number | null) =>
+							episodes.select(season, episode)}
 					/>
 				{/if}
 			{/snippet}

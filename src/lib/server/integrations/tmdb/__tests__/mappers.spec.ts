@@ -1,17 +1,24 @@
-import { describe, expect, test, vi } from 'vitest';
-
-// Mock SvelteKit env before importing the server module
-vi.mock('$env/static/public', () => ({ PUBLIC_TMDB_API_URL: 'https://api.themoviedb.org' }));
-vi.mock('$env/static/private', () => ({ TMDB_API_TOKEN: 'test-token' }));
-vi.mock('@sveltejs/kit', () => ({
-	error: (status: number, msg: string) => new Error(`${status}: ${msg}`)
-}));
+import { describe, expect, test } from 'vitest';
 
 import {
 	aggregateGender,
 	buildCastMembers,
-	buildCrewDepartments
-} from '$lib/server/integrations/tmdb';
+	buildCrewDepartments,
+	mapMediaDetail,
+	mapMovie,
+	mapSearchResults,
+	mapSeries,
+	type TmdbMovieResponse,
+	type TmdbSearchResponse,
+	type TmdbSeriesResponse
+} from '$lib/server/integrations/tmdb/mappers';
+import movieFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/movie-603.json';
+import seriesFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/tv-1399.json';
+import searchFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/search-matrix.json';
+
+const movieJson = movieFixture as TmdbMovieResponse;
+const seriesJson = seriesFixture as TmdbSeriesResponse;
+const searchJson = searchFixture as TmdbSearchResponse;
 
 describe('aggregateGender', () => {
 	test('counts mixed genders', () => {
@@ -143,5 +150,135 @@ describe('buildCrewDepartments', () => {
 		expect(writing.breakdown.total).toBe(2);
 		expect(writing.breakdown.female).toBe(2);
 		expect(writing.jobs).toHaveLength(2);
+	});
+});
+
+describe('mapMovie (recorded /3/movie/603 fixture)', () => {
+	const movie = mapMovie(movieJson);
+
+	test('maps identity, dates and movie-only fields', () => {
+		expect(movie).toMatchObject({
+			id: '603',
+			tmdbId: '603',
+			title: 'The Matrix',
+			imdbId: 'tt0133093',
+			releaseDate: '1999-03-31',
+			tagline: 'Believe the unbelievable.',
+			runtime: 136,
+			budget: 63000000,
+			revenue: 463517383,
+			originalLanguage: 'en',
+			spokenLanguages: [{ iso: 'en', englishName: 'English' }]
+		});
+	});
+
+	test('aggregates credits and puts priority departments first', () => {
+		expect(movie.cast).toEqual({ female: 4, male: 5, nonBinary: 0, unknown: 1, total: 10 });
+		expect(movie.castMembers.map((m) => m.order)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+		expect(movie.crewDepartments.slice(0, 5).map((d) => d.department)).toEqual([
+			'Directing',
+			'Writing',
+			'Production',
+			'Editing',
+			'Camera'
+		]);
+	});
+
+	test('full mapped shape', () => {
+		expect(movie).toMatchSnapshot();
+	});
+
+	test('falls back to top-level imdb_id and defaults missing fields', () => {
+		const sparse = mapMovie({ id: 1, title: 'Bare', imdb_id: 'tt1' });
+		expect(sparse).toMatchObject({
+			imdbId: 'tt1',
+			posterPath: null,
+			overview: '',
+			releaseDate: '',
+			tagline: '',
+			runtime: 0,
+			genres: [],
+			castMembers: [],
+			crewDepartments: []
+		});
+	});
+});
+
+describe('mapSeries (recorded /3/tv/1399 fixture)', () => {
+	const series = mapSeries(seriesJson);
+
+	test('maps name and first-air date onto the shared fields', () => {
+		expect(series).toMatchObject({
+			id: '1399',
+			title: 'Game of Thrones',
+			imdbId: 'tt0944947',
+			releaseDate: '2011-04-17',
+			firstAirDate: '2011-04-17',
+			lastAirDate: '2019-05-19',
+			numberOfSeasons: 8,
+			numberOfEpisodes: 73,
+			networks: [{ id: 49, name: 'HBO' }]
+		});
+		expect(series.seasons[1]).toEqual({
+			seasonNumber: 1,
+			episodeCount: 10,
+			name: 'Season 1',
+			airDate: '2011-04-17'
+		});
+	});
+
+	test('full mapped shape', () => {
+		expect(series).toMatchSnapshot();
+	});
+
+	test('a series never reads a top-level imdb_id', () => {
+		const bare = { id: 2, name: 'Show', imdb_id: 'tt9' } as TmdbSeriesResponse;
+		expect(mapSeries(bare).imdbId).toBeNull();
+	});
+});
+
+describe('mapMediaDetail', () => {
+	test('movie and series share one mapping of the common fields', () => {
+		const { tagline, runtime, budget, revenue, ...movieCommon } = mapMovie(movieJson);
+		void [tagline, runtime, budget, revenue];
+		expect(mapMediaDetail(movieJson, 'movie')).toEqual(movieCommon);
+		expect(Object.keys(mapMediaDetail(seriesJson, 'tv')).sort()).toEqual(
+			Object.keys(movieCommon).sort()
+		);
+	});
+});
+
+describe('mapSearchResults (recorded /3/search/multi fixture)', () => {
+	test('keeps movie and tv hits only, in TMDB order', () => {
+		expect(mapSearchResults(searchJson)).toEqual([
+			{
+				id: 603,
+				title: 'The Matrix',
+				posterPath: '/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg',
+				releaseYear: '1999',
+				mediaType: 'movie'
+			},
+			{
+				id: 604,
+				title: 'The Matrix Reloaded',
+				posterPath: '/9TGHDvWrqKBzwDxDodHYXEmOE6J.jpg',
+				releaseYear: '2003',
+				mediaType: 'movie'
+			},
+			{
+				id: 87299,
+				title: 'The Matrix Hackers',
+				posterPath: null,
+				releaseYear: '',
+				mediaType: 'tv'
+			},
+			{
+				id: 624860,
+				title: 'The Matrix Resurrections',
+				posterPath: null,
+				releaseYear: '',
+				mediaType: 'movie'
+			}
+		]);
 	});
 });

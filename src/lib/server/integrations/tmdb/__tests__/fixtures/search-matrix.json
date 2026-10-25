@@ -1,0 +1,45 @@
+{
+	"page": 1,
+	"results": [
+		{
+			"id": 603,
+			"media_type": "movie",
+			"title": "The Matrix",
+			"original_title": "The Matrix",
+			"poster_path": "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+			"release_date": "1999-03-31",
+			"adult": false
+		},
+		{
+			"id": 604,
+			"media_type": "movie",
+			"title": "The Matrix Reloaded",
+			"poster_path": "/9TGHDvWrqKBzwDxDodHYXEmOE6J.jpg",
+			"release_date": "2003-05-15",
+			"adult": false
+		},
+		{ "id": 6384, "media_type": "person", "name": "Keanu Reeves", "adult": false },
+		{
+			"id": 2304,
+			"media_type": "collection",
+			"name": "The Matrix Collection",
+			"poster_path": null
+		},
+		{
+			"id": 87299,
+			"media_type": "tv",
+			"name": "The Matrix Hackers",
+			"poster_path": null,
+			"first_air_date": ""
+		},
+		{
+			"id": 624860,
+			"media_type": "movie",
+			"title": "The Matrix Resurrections",
+			"poster_path": null,
+			"adult": false
+		}
+	],
+	"total_pages": 1,
+	"total_results": 6
+}

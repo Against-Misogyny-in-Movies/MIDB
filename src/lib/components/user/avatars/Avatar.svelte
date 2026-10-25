@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AVATARS } from './avatars';
+	import { AVATAR_COMPONENTS } from './avatars';
 
 	interface Props {
 		avatarKey?: string | null;
@@ -8,11 +8,11 @@
 
 	let { avatarKey = null, size = 40 }: Props = $props();
 
-	const avatar = $derived(avatarKey ? (AVATARS.find((a) => a.key === avatarKey) ?? null) : null);
+	const AvatarIcon = $derived(avatarKey ? (AVATAR_COMPONENTS[avatarKey] ?? null) : null);
 </script>
 
-{#if avatar}
-	<avatar.component {size} />
+{#if AvatarIcon}
+	<AvatarIcon {size} />
 {:else}
 	<svg
 		width={size}

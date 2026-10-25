@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { AVATARS } from './avatars';
+	import { AVATAR_DEFS } from '$lib/media/utils/avatars';
+	import { AVATAR_COMPONENTS } from './avatars';
 	import { nanoid } from 'nanoid';
 
 	interface Props {
@@ -13,7 +14,8 @@
 </script>
 
 <div class="picker" role="radiogroup" aria-label="Choose avatar">
-	{#each AVATARS as avatar (avatar.key)}
+	{#each AVATAR_DEFS as avatar (avatar.key)}
+		{@const AvatarIcon = AVATAR_COMPONENTS[avatar.key]}
 		<input
 			type="radio"
 			id="{groupName}-{avatar.key}"
@@ -24,7 +26,7 @@
 			hidden
 		/>
 		<label for="{groupName}-{avatar.key}" class="avatar-tile">
-			<avatar.component size={48} />
+			<AvatarIcon size={48} />
 			<span class="avatar-name">{avatar.name}</span>
 		</label>
 	{/each}

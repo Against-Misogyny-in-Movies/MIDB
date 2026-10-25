@@ -25,7 +25,7 @@
 
 ## Route folders are thin
 
-- Route folders (`src/routes/*/`) hold only `+page.svelte`, `+page.server.ts`, and a route-specific `datasource.server.ts`.
+- Route folders (`src/routes/*/`) hold only `+page.svelte` / `+page.server.ts` / `+server.ts`. No `datasource.server.ts`: external clients live in `$lib/server/integrations/` (TMDB: `integrations/tmdb/`), and the movie and TV pages share `loadTitle` (`$lib/server/titles/load-title.ts`) and `TitleView` (`$lib/media/utils/titleView.svelte.js`).
 - Logic shared by two or more routes goes in `$lib/server/` (server) or `$lib/media/` (client-safe). Never put shared logic inside a route folder.
 
 ---
@@ -37,6 +37,7 @@
   - Identity resolution → `server/data/title-queries.ts`; trivial seeded-metric fetches → `server/data/sources.ts`
   - Domain-specific query algorithms (e.g. UM disambiguation) → their own file (`um-candidates.ts`)
   - Public domain types with no runtime → `integrations/*-types.ts`, re-exported via `media/types/`
+- **Define a constant once.** Shared plain data lives in `$lib/media/utils/` (`departments.ts` `PRIORITY_DEPARTMENTS`, `avatars.ts` `AVATAR_DEFS`/`AVATAR_KEYS`) so server and client import the same value; a `components/` module may hold only what needs components (the avatar key → component map). Code shared by seeders and the app lives in `db/lib/` (`normalizeTitle.ts`), never in `db/scripts/`.
 - **Rune modules** (`.svelte.ts`) must be imported with an explicit `.js` extension or Vite resolves the Svelte component instead of the module. Pattern: `import { x } from './foo.svelte.js'`.
 
 ---
