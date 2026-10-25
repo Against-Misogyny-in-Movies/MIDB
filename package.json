@@ -31,7 +31,6 @@
 		"@storybook/addon-svelte-csf": "^5.1.5",
 		"@storybook/svelte": "^10.6.3",
 		"@storybook/sveltekit": "^10.6.3",
-		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/adapter-vercel": "^6.3.3",
 		"@sveltejs/kit": "^2.21.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
@@ -46,7 +45,6 @@
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
-		"jest-dom": "^4.0.0",
 		"jsdom": "^29.1.1",
 		"postcss": "^8.4.31",
 		"prettier": "^3.8.3",
@@ -66,10 +64,7 @@
 		"csv-parse": "^6.2.1",
 		"drizzle-orm": "^0.45.2",
 		"jose": "^6.2.3",
-		"nanoid": "^5.0.3",
-		"nodemailer": "^8.0.10",
 		"postgres": "^3.4.3",
-		"remixicon": "^4.9.1",
-		"rxjs": "^7.8.1"
+		"remixicon": "^4.9.1"
 	}
 }
