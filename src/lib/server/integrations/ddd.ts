@@ -1,5 +1,5 @@
 import { DDD_API_KEY } from '$env/static/private';
-import { getCached, clearCache } from '$lib/server/cache';
+import { getCached } from '$lib/server/cache';
 import type { TriggerTag, DddResult } from './ddd-types';
 
 export type { TriggerTag, DddResult } from './ddd-types';
@@ -136,14 +136,4 @@ export async function getTriggerTagsForSeries(series: {
 		const { tags, isSeries } = await fetchMediaTags(match.id);
 		return { itemId: match.id, tags, isSeries: isSeries || true };
 	});
-}
-
-/**
- * Exposes internal module state for unit tests only.
- * Allows tests to clear the shared cache between test cases.
- *
- * @returns A `cache` handle with a synchronous `clear()` and the TTL constant.
- */
-export function _testExports() {
-	return { cache: { clear: () => void clearCache() }, CACHE_TTL_MS };
 }
