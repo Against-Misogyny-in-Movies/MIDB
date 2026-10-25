@@ -20,6 +20,7 @@
 - `data/` = Postgres/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.** The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout; the email reaches the client on `/user/profile` alone. Public pages (`PUBLIC_PAGE` from `$lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()` or read `locals.claims`. The navbar reads the client session (`session.svelte.js`).
 - **Authorize with the guards.** Every load, action and endpoint that needs a user calls `requireUser` / `requireRole` from `$lib/server/auth/guards.ts` (redirect for pages, 401/403 otherwise). The hook's `/user` gate is claims-only and does not cover form actions on public pages.
+- **Rate-limit with `rateLimit`** (`$lib/server/http/rate-limit.ts`): pass `{ userId }` only when the route already ran `requireUser`; otherwise it keys on the client IP. Never read the user just to key a limit on a public or CDN-cached route. Call it outside any `try` that would swallow the 429.
 
 ---
 
@@ -79,6 +80,7 @@ Applies to all **user-facing** text (page copy, taglines, labels, notes) — not
 - **App code gets `db` from `$lib/server/db` only.** It connects lazily from `DB_CONNECTION` in `$env/dynamic/private` and throws if unset. Never read the connection string at build time (no Vite `define`, no `$env/static/private`) and never add a localhost fallback. Scripts use `db/scripts/lib/db.ts` and close the pool when done.
 - GET routes use the **read-only** resolver `getTitleRow(kind, ref)` — page visits must never mutate the DB.
 - The write path `getOrCreateTitleRow(kind, ref)` is reserved for future write endpoints (community ratings, comments).
+- **Schema helpers:** timestamps are `timestamptz` via `timestamps()` from `db/schema/columns.ts` (its `$onUpdate` bumps `updated_at` on every Drizzle update; pin it with ``updatedAt: sql`${col}` `` when a write is not an edit). The nine UM flag columns come from `umFlagColumns()`; never redeclare them per table.
 - Titles are keyed by `(kind, tmdb_id)`, `imdb_id` is optional; never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
 - Migration order matters: `db:seed:movies` before `db:seed:um`.
 - **Every schema change ships its generated migration** (SQL + snapshot + journal from `bun run db:generate`) in the same PR; CI's `migrations` job fails on drift. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts need a TTY; without one, run `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
