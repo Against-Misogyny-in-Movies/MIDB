@@ -27,7 +27,7 @@
 		sourceLabel="TMDB"
 		sourceHref="https://www.themoviedb.org"
 		learnHref="/resources#verdict"
-		learnLabel="How representation is scored"
+		learnLabel="Methodology"
 	>
 		<div class="group">
 			<h3>Cast</h3>

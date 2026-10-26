@@ -37,7 +37,7 @@
 					</li>
 				{/each}
 			</ul>
-			<a class="link how" href="/resources#verdict">How verdicts work</a>
+			<a class="link how" href="/resources#verdict">Methodology</a>
 		</details>
 	{:else}
 		<p class="basis-text" aria-busy={verdict.pending ? 'true' : undefined}>{basis}</p>

@@ -15,16 +15,16 @@
 </script>
 
 <svelte:head>
-	<title>How it works · MIDB</title>
+	<title>Methodology · MIDB</title>
 	<meta
 		name="description"
-		content="How MIDB scores content safety and representation, and what the Bechdel Test, Unconsenting Media and Does the Dog Die measure."
+		content="MIDB scoring rules for content safety and representation, and what the Bechdel Test, Unconsenting Media and Does the Dog Die measure."
 	/>
 </svelte:head>
 
 <div class="resources">
 	<header class="page-head">
-		<h1 class="display">How it works</h1>
+		<h1 class="display">Methodology</h1>
 		<p class="lede">
 			Each title page shows two verdicts, content safety and representation, built from the sources
 			below.
@@ -39,9 +39,9 @@
 		<div class="content">
 			<MetricArticle id="verdict" title="Verdicts">
 				<p>
-					Each verdict has three tiers, or Not enough data. The line under a verdict shows how many
-					metrics it used; opening it lists them. Verdicts are calculated from the data on the page
-					and are not stored.
+					Each verdict has three tiers, or Not enough data. The line under a verdict shows the
+					number of metrics it used; opening it lists them. Verdicts are calculated from the data on
+					the page and are not stored.
 				</p>
 				<VerdictTierExample />
 

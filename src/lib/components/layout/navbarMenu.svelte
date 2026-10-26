@@ -57,7 +57,7 @@
 	{#if open}
 		<div class="panel" id={menuId} role="menu">
 			<a bind:this={firstLink} href="/resources" class="item" role="menuitem" onclick={close}>
-				How it works
+				Methodology
 			</a>
 			{#if canModerate}
 				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>

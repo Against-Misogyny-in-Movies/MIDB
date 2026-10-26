@@ -60,7 +60,7 @@
 					<dd>
 						<p>{item.body}</p>
 						<p class="source-links">
-							<a class="link" href="/resources#{item.id}">How it is used</a>
+							<a class="link" href="/resources#{item.id}">Methodology</a>
 							<a class="link" href={item.href} target="_blank" rel="noopener noreferrer"
 								>{item.source}</a
 							>

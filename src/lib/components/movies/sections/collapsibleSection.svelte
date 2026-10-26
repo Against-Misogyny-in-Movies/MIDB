@@ -25,7 +25,7 @@
 		sourceLabel,
 		sourceHref,
 		learnHref,
-		learnLabel = 'How this works',
+		learnLabel = 'Methodology',
 		open = true,
 		children
 	}: Props = $props();

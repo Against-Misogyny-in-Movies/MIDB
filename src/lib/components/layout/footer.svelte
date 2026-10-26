@@ -2,7 +2,7 @@
 	<div class="inner">
 		<p class="line">
 			<a href="/" class="display wordmark">MIDB</a>
-			<a href="/resources">How it works</a>
+			<a href="/resources">Methodology</a>
 			<a
 				href="https://github.com/Against-Misogyny-in-Movies/MIDB"
 				target="_blank"

@@ -24,7 +24,7 @@
 		{#if showSearch}
 			<NavbarSearch />
 		{/if}
-		<a href="/resources" class="nav-link wide-only">How it works</a>
+		<a href="/resources" class="nav-link wide-only">Methodology</a>
 		<ThemeToggle />
 		<!-- SSR is user-agnostic (CDN-cached), so this slot renders empty and resolves on the
 		     client. Its fixed size means every state fits without moving its siblings. -->
