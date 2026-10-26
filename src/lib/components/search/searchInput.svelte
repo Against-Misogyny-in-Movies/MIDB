@@ -115,7 +115,7 @@
 		border-radius: 8px;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: var(--l-on-action);
+		color: var(--on-brand);
 		background-color: var(--brand);
 		transition:
 			background-color 0.15s ease,
@@ -124,7 +124,7 @@
 
 	button:hover {
 		background-color: var(--brand-strong);
-		box-shadow: var(--l-shadow-action);
+		box-shadow: var(--shadow-brand);
 	}
 
 	.spinner {

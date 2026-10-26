@@ -37,7 +37,7 @@
 		</aside>
 
 		<div class="content">
-			<MetricArticle id="verdict" title="Verdicts">
+			<MetricArticle id="verdict" title="Verdicts" icon="ri-scales-3-fill" hue="var(--brand)">
 				<p>
 					Each verdict has three tiers, or Not enough data. The line under a verdict shows the
 					number of metrics it used; opening it lists them. Verdicts are calculated from the data on
@@ -81,6 +81,8 @@
 			<MetricArticle
 				id="bechdel"
 				title="Bechdel Test"
+				icon="ri-chat-3-fill"
+				hue="var(--src-bechdel)"
 				sourceLabel="bechdeltest.com"
 				sourceHref="https://bechdeltest.com"
 			>
@@ -98,6 +100,8 @@
 			<MetricArticle
 				id="unconsenting"
 				title="Unconsenting Media"
+				icon="ri-flag-2-fill"
+				hue="var(--src-um)"
 				sourceLabel="unconsentingmedia.org"
 				sourceHref="https://www.unconsentingmedia.org"
 			>
@@ -116,6 +120,8 @@
 			<MetricArticle
 				id="ddd"
 				title="Does the Dog Die"
+				icon="ri-alarm-warning-fill"
+				hue="var(--src-ddd)"
 				sourceLabel="doesthedogdie.com"
 				sourceHref="https://www.doesthedogdie.com"
 			>
@@ -151,7 +157,7 @@
 	.resources {
 		@apply flex flex-col;
 		gap: var(--spacing-xl);
-		padding-top: var(--spacing-xl);
+		padding-top: clamp(2.5rem, 7vw, 4rem);
 	}
 
 	.page-head {
@@ -159,8 +165,9 @@
 	}
 
 	h1 {
-		font-size: clamp(2.5rem, 7vw, 4rem);
-		font-weight: 800;
+		font-size: clamp(2.25rem, 6vw, 3.75rem);
+		line-height: 1;
+		letter-spacing: -0.011em;
 	}
 
 	.lede {
@@ -182,11 +189,12 @@
 		/* The grid cell is only as tall as the nav (items: start), so the cell itself pins. */
 		.nav-col {
 			@apply sticky;
-			top: var(--spacing-lg);
+			top: 5rem;
 		}
 	}
 
 	.content {
 		@apply flex flex-col min-w-0;
+		gap: 16px;
 	}
 </style>

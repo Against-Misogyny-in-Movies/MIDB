@@ -98,15 +98,16 @@
 
 	/* Absolutely positioned, so opening causes no layout shift. */
 	.panel {
-		@apply absolute right-0 flex flex-col py-xs rounded-md border border-border bg-surface-raised;
+		@apply absolute right-0 flex flex-col py-xs border border-border bg-surface-raised;
+		border-radius: 12px;
 		top: calc(100% + var(--spacing-sm));
 		z-index: 50;
 		min-width: 11rem;
-		box-shadow: 0 8px 24px -12px color-mix(in oklab, var(--ink) 35%, transparent);
+		box-shadow: var(--shadow-md);
 	}
 
 	.item {
-		@apply block no-underline text-ink px-md py-sm;
+		@apply block no-underline text-sm font-medium text-ink px-md py-sm;
 	}
 
 	.item:hover {

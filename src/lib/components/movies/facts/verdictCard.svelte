@@ -48,20 +48,23 @@
 	@reference "../../../../app.css";
 
 	.verdict {
-		@apply flex flex-col rounded-md p-md;
+		@apply flex flex-col;
+		padding: 20px;
+		border-radius: 12px;
 		background-color: var(--tone-soft);
 		transition: background-color 0.15s ease;
 	}
 
 	.axis {
-		@apply text-sm;
+		@apply text-sm font-medium;
 		color: color-mix(in oklab, var(--tone) 70%, var(--ink));
 	}
 
 	.tier {
-		@apply text-2xl;
+		font-size: 1.5rem;
+		line-height: 1.33;
 		color: var(--tone);
-		margin-top: 0.125rem;
+		margin-top: 2px;
 	}
 
 	/* Two lines reserved and clamped: the summary can change when DDD streams in. */

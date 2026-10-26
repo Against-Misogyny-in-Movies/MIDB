@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Badge from '$lib/components/ui/badge.svelte';
 	import { displayTitle } from '$lib/media/utils/format';
+	import { bechdelTone, safetyTierTone } from '$lib/media/utils/tones';
 	import type { RatedFilm } from '$lib/media/types/catalogue';
 
 	interface Props {
@@ -11,19 +13,6 @@
 
 	let { films, onsearch }: Props = $props();
 
-	type Tone = 'pos' | 'mid' | 'neg' | 'none';
-
-	// Same mapping as the representation verdict's Bechdel signal: 3/3 → 2, 2/3 → 1, lower → 0.
-	function bechdelTone(rating: number): Tone {
-		return rating === 3 ? 'pos' : rating === 2 ? 'mid' : 'neg';
-	}
-
-	// The UM-only safety tier: harmful flags → negative, caution flags → amber, none → positive.
-	function umTone(film: RatedFilm): Tone {
-		if (film.umTier === null) return 'none';
-		return film.umTier === 'harmful' ? 'neg' : film.umTier === 'caution' ? 'mid' : 'pos';
-	}
-
 	function umLabel(film: RatedFilm): string {
 		if (film.umConcerns === null) return 'No entry';
 		if (film.umConcerns === 0) return 'No concerns';
@@ -31,7 +20,7 @@
 	}
 </script>
 
-<section class="card" aria-labelledby="rated-films-title">
+<section class="card rated-films" aria-labelledby="rated-films-title">
 	<header class="card-head">
 		<h2 id="rated-films-title">Popular films</h2>
 		<p>Most IMDb votes among films with a Bechdel Test rating</p>
@@ -68,12 +57,10 @@
 						{/if}
 					</th>
 					<td class="col-badge">
-						<span class="badge badge--{bechdelTone(film.bechdelRating)}"
-							>{film.bechdelRating}/3</span
-						>
+						<Badge tone={bechdelTone(film.bechdelRating)}>{film.bechdelRating}/3</Badge>
 					</td>
 					<td class="col-badge">
-						<span class="badge badge--{umTone(film)}">{umLabel(film)}</span>
+						<Badge tone={safetyTierTone(film.umTier)}>{umLabel(film)}</Badge>
 					</td>
 				</tr>
 			{/each}
@@ -84,11 +71,8 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.card {
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		background-color: var(--surface-raised);
-		box-shadow: var(--l-shadow-float);
+	.rated-films {
+		box-shadow: var(--shadow-float);
 		padding: 8px 16px 12px;
 	}
 
@@ -150,9 +134,9 @@
 		width: 2.75rem;
 		height: 2rem;
 		border-radius: 8px;
-		background-color: var(--l-wash);
+		background-color: var(--brand-wash);
 		color: var(--brand);
-		font-family: var(--l-font-mono);
+		font-family: var(--font-mono);
 		font-size: 0.75rem;
 		letter-spacing: -0.033em;
 	}
@@ -165,35 +149,6 @@
 
 	.film:hover .name {
 		color: var(--brand);
-	}
-
-	.badge {
-		@apply inline-block font-medium;
-		padding: 2px 10px;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		line-height: 1.33;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.badge--pos {
-		background-color: var(--success-soft);
-		color: var(--success);
-	}
-
-	.badge--mid {
-		background-color: var(--warn-soft);
-		color: var(--warn);
-	}
-
-	.badge--neg {
-		background-color: var(--danger-soft);
-		color: var(--danger);
-	}
-
-	.badge--none {
-		background-color: var(--surface-sunken);
-		color: var(--ink-muted);
 	}
 
 	@media (max-width: 559px) {

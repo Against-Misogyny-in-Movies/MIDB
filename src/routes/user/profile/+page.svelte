@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Avatar from '$lib/components/user/avatars/Avatar.svelte';
 	import LogoutButton from '$lib/components/auth/logoutButton.svelte';
+	import Badge from '$lib/components/ui/badge.svelte';
 	import AvatarPicker from '$lib/components/user/avatars/AvatarPicker.svelte';
 	import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
 
@@ -62,7 +63,9 @@
 			</h1>
 			<p class="details">
 				{#if data.email}<span>{data.email}</span>{/if}
-				{#if user?.role}<span class="role role-{user.role}">{roleLabel(user.role)}</span>{/if}
+				{#if user?.role}<Badge tone={user.role === 'user' ? 'neutral' : 'brand'}
+						>{roleLabel(user.role)}</Badge
+					>{/if}
 			</p>
 		</div>
 	</header>
@@ -83,7 +86,7 @@
 		<p class="notice notice--success" role="status">Profile saved.</p>
 	{/if}
 
-	<form method="POST" action="?/updateProfile" use:enhance class="profile-form">
+	<form method="POST" action="?/updateProfile" use:enhance class="card profile-form">
 		<input type="hidden" name="avatarKey" value={selectedAvatar ?? ''} />
 
 		<div class="field">
@@ -121,10 +124,10 @@
 			/>
 		</fieldset>
 
-		<button type="submit" class="save">Save profile</button>
+		<button type="submit" class="btn btn--brand save">Save profile</button>
 	</form>
 
-	<nav class="account-nav" aria-label="Account">
+	<nav class="card account-nav" aria-label="Account">
 		<a href="/user/dashboard"
 			>Account settings <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
@@ -158,7 +161,8 @@
 	}
 
 	h1 {
-		@apply text-4xl truncate;
+		@apply truncate;
+		font-size: 1.875rem;
 	}
 
 	.prompt {
@@ -169,21 +173,10 @@
 		@apply flex flex-wrap items-center gap-x-md gap-y-xs text-sm text-ink-muted;
 	}
 
-	.role {
-		@apply font-medium;
-	}
-
-	.role-moderator {
-		color: var(--info);
-	}
-
-	.role-administrator {
-		color: var(--brand);
-	}
-
 	.notice {
-		@apply text-sm rounded-md;
-		padding: var(--spacing-sm) var(--spacing-md);
+		@apply text-sm;
+		padding: 12px 16px;
+		border-radius: 12px;
 	}
 
 	.notice--error {
@@ -199,6 +192,7 @@
 	.profile-form {
 		@apply flex flex-col;
 		gap: var(--spacing-lg);
+		padding: 24px;
 	}
 
 	.field {
@@ -212,9 +206,10 @@
 	}
 
 	input[type='text'] {
-		@apply w-full rounded-md text-ink bg-surface-raised;
+		@apply w-full text-ink bg-surface-raised;
 		height: 2.75rem;
-		padding-inline: var(--spacing-md);
+		padding-inline: 16px;
+		border-radius: 12px;
 		border: 1px solid var(--border-strong);
 		transition: border-color 0.15s ease;
 	}
@@ -242,25 +237,21 @@
 	}
 
 	.save {
-		@apply self-start rounded-md font-semibold border-0 cursor-pointer;
-		padding: var(--spacing-sm) var(--spacing-md);
-		background-color: var(--brand);
-		color: var(--surface-raised);
-		transition: background-color 0.15s ease;
-	}
-
-	.save:hover {
-		background-color: var(--brand-strong);
+		@apply self-start;
 	}
 
 	.account-nav {
-		@apply flex flex-col border-t border-border;
+		@apply flex flex-col overflow-hidden;
 	}
 
 	.account-nav a {
-		@apply flex items-center justify-between no-underline text-ink border-b border-border;
-		padding-block: var(--spacing-sm);
+		@apply flex items-center justify-between no-underline text-ink font-medium;
+		padding: 14px 20px;
 		transition: color 0.15s ease;
+	}
+
+	.account-nav a + a {
+		border-top: 1px solid var(--border);
 	}
 
 	.account-nav a:hover {

@@ -1,5 +1,7 @@
 <script lang="ts">
+	import Badge from '$lib/components/ui/badge.svelte';
 	import { umFlagCount } from '$lib/media/utils/metrics';
+	import { umTone } from '$lib/media/utils/tones';
 	import type { UmEntry } from '$lib/media/types/um';
 
 	interface Props {
@@ -26,13 +28,9 @@
 						? ` (${candidate.year})`
 						: ''}"
 				>
+					<span class="year">{candidate.year ?? '—'}</span>
 					<span class="candidate-title">{candidate.cleanName}</span>
-					{#if candidate.year}
-						<span class="candidate-year tabular-nums">{candidate.year}</span>
-					{/if}
-					<span class="candidate-concerns tabular-nums">
-						{concerns} concern{concerns === 1 ? '' : 's'}
-					</span>
+					<Badge tone={umTone(candidate)}>{concerns} concern{concerns === 1 ? '' : 's'}</Badge>
 				</button>
 			</li>
 		{/each}
@@ -52,12 +50,19 @@
 	}
 
 	.candidate-list {
-		@apply flex flex-col list-none m-0 p-0 border-t border-border;
+		@apply flex flex-col list-none m-0 p-0 overflow-hidden;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+	}
+
+	.candidate-list li + li {
+		border-top: 1px solid var(--border);
 	}
 
 	.candidate {
-		@apply flex items-baseline gap-md w-full text-left bg-transparent border-0 border-b border-border cursor-pointer text-ink;
-		padding: var(--spacing-sm) var(--spacing-xs);
+		@apply flex items-center w-full text-left bg-transparent border-0 cursor-pointer text-ink;
+		gap: 12px;
+		padding: 10px 12px;
 		font: inherit;
 		transition: background-color 0.15s ease;
 	}
@@ -66,12 +71,22 @@
 		background-color: var(--surface-sunken);
 	}
 
-	.candidate-title {
-		@apply font-medium flex-1 min-w-0 truncate;
+	.candidate:focus-visible {
+		outline-offset: -2px;
 	}
 
-	.candidate-year,
-	.candidate-concerns {
-		@apply text-sm text-ink-muted shrink-0;
+	.year {
+		@apply flex items-center justify-center shrink-0;
+		width: 2.75rem;
+		height: 2rem;
+		border-radius: 8px;
+		background-color: var(--brand-wash);
+		color: var(--brand);
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+	}
+
+	.candidate-title {
+		@apply font-medium flex-1 min-w-0 truncate;
 	}
 </style>

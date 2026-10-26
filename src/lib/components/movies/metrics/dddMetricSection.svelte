@@ -32,12 +32,14 @@
 <div id="ddd">
 	<CollapsibleSection
 		title="Does the Dog Die"
+		icon="ri-alarm-warning-fill"
+		hue="var(--src-ddd)"
 		status={ddd === null
 			? 'Loading…'
 			: visibleTags.length > 0
 				? `${visibleTags.length} warning${visibleTags.length === 1 ? '' : 's'}`
 				: 'No data'}
-		tone={ddd === null ? 'loading' : visibleTags.length > 0 ? 'data' : 'empty'}
+		busy={ddd === null}
 		open={ddd === null || visibleTags.length > 0}
 		sourceLabel="DoesTheDogDie.com"
 		sourceHref={dddUrl(ddd?.itemId ?? null)}

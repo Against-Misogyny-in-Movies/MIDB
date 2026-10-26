@@ -36,6 +36,17 @@
 		padding-block: var(--spacing-sm);
 	}
 
+	/* No rule under the last row (the last two in two columns): the card edge closes the list. */
+	.fact:last-child {
+		border-bottom: 0;
+	}
+
+	@media (min-width: 768px) {
+		.fact:nth-last-child(2):nth-child(odd) {
+			border-bottom: 0;
+		}
+	}
+
 	dt {
 		@apply text-ink-muted;
 	}

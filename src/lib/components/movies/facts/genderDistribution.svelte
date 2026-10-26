@@ -62,7 +62,7 @@
 	}
 
 	.bar {
-		@apply flex overflow-hidden rounded-sm;
+		@apply flex overflow-hidden rounded-full;
 		height: 0.75rem;
 		gap: 2px;
 		background-color: var(--surface-sunken);
@@ -83,7 +83,7 @@
 	}
 
 	.swatch {
-		@apply inline-block rounded-xs shrink-0;
+		@apply inline-block rounded-full shrink-0;
 		width: 0.625rem;
 		height: 0.625rem;
 		background-color: var(--seg);

@@ -19,7 +19,7 @@
 </script>
 
 <nav>
-	<a href="/" class="display wordmark">MIDB</a>
+	<a href="/" class="logo">MIDB</a>
 	<div class="actions">
 		{#if showSearch}
 			<NavbarSearch />
@@ -45,7 +45,7 @@
 					<span class="username">{session.user.displayName}</span>
 				</a>
 			{:else if session.status === 'anon' || session.hint === 'anon'}
-				<a href="/auth" class="nav-link">Sign in</a>
+				<a href="/auth" class="btn btn--ink btn--pill sign-in">Sign in</a>
 			{:else if session.hint === 'user'}
 				<span class="avatar-placeholder" aria-hidden="true"></span>
 			{/if}
@@ -59,13 +59,21 @@
 
 	nav {
 		@apply flex items-center justify-between gap-md max-w-5xl mx-auto px-md;
-		height: 3.5rem;
+		height: 4rem;
 	}
 
-	.wordmark {
-		@apply text-2xl text-ink no-underline shrink-0;
-		font-weight: 800;
-		letter-spacing: 0;
+	/* The logo: the wordmark in an ink pill. */
+	.logo {
+		@apply shrink-0 no-underline;
+		padding: 6px 14px;
+		border-radius: 9999px;
+		background-color: var(--ink);
+		color: var(--on-ink);
+		font-family: var(--font-display);
+		font-size: 1rem;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		line-height: 1.25;
 	}
 
 	.actions {
@@ -73,8 +81,12 @@
 	}
 
 	.nav-link {
-		@apply text-sm text-ink-muted no-underline shrink-0 whitespace-nowrap;
+		@apply text-sm font-medium text-ink-muted no-underline shrink-0 whitespace-nowrap;
 		transition: color 0.15s ease;
+	}
+
+	.sign-in {
+		height: 2rem;
 	}
 
 	.nav-link:hover {
@@ -87,7 +99,7 @@
 	.auth-slot {
 		@apply flex items-center justify-end gap-md shrink-0 overflow-hidden;
 		width: 8rem;
-		height: 1.75rem;
+		height: 2rem;
 	}
 
 	.user-link {
@@ -128,9 +140,9 @@
 			display: none;
 		}
 
-		/* Fits "Sign in" or the avatar alone. */
+		/* Fits the "Sign in" pill or the avatar alone. */
 		.auth-slot {
-			width: 3.25rem;
+			width: 5.25rem;
 		}
 
 		.username {

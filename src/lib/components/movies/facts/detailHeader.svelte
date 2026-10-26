@@ -75,10 +75,13 @@
 
 	.poster {
 		grid-area: poster;
-		@apply overflow-hidden rounded-md;
+		@apply overflow-hidden;
+		border-radius: 12px;
 		aspect-ratio: 2 / 3;
 		background-color: var(--surface-sunken);
-		box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 8%, transparent);
+		box-shadow:
+			0 0 0 1px color-mix(in oklab, var(--ink) 8%, transparent),
+			var(--shadow-md);
 	}
 
 	.poster :global(img) {
@@ -101,8 +104,9 @@
 	}
 
 	h1 {
-		font-size: clamp(1.75rem, 6vw, 3.25rem);
-		font-weight: 800;
+		font-size: clamp(1.75rem, 5vw, 3rem);
+		line-height: 1.05;
+		letter-spacing: -0.015em;
 	}
 
 	.meta {

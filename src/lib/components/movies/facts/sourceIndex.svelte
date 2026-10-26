@@ -6,28 +6,29 @@
 	}
 
 	let { items }: Props = $props();
+
+	const ICON = {
+		bechdel: { icon: 'ri-chat-3-fill', hue: 'var(--src-bechdel)' },
+		um: { icon: 'ri-flag-2-fill', hue: 'var(--src-um)' },
+		ddd: { icon: 'ri-alarm-warning-fill', hue: 'var(--src-ddd)' }
+	} as const;
 </script>
 
-<!-- Fixed three-column (one row each on phones) list, so the DDD value streaming in replaces
+<!-- Fixed three columns (one row each on phones), so the DDD value streaming in replaces
      "Loading…" in place without moving anything. -->
 <ul class="source-index" aria-label="Sources">
 	{#each items as item (item.label)}
+		{@const meta = ICON[item.source]}
 		<li>
-			{#if item.href}
-				<a class="item" href={item.href}>
-					<span class="label">{item.label}</span>
-					<span
-						class="value num"
-						class:value--empty={!item.hasData}
-						aria-busy={item.busy || undefined}>{item.value}</span
+			<svelte:element this={item.href ? 'a' : 'span'} class="item" href={item.href ?? undefined}>
+				<i class={meta.icon} style="--hue: {meta.hue}" aria-hidden="true"></i>
+				<span class="text">
+					<span class="name">{item.label}</span>
+					<span class="value" class:value--empty={!item.hasData} aria-busy={item.busy || undefined}
+						>{item.value}</span
 					>
-				</a>
-			{:else}
-				<span class="item">
-					<span class="label">{item.label}</span>
-					<span class="value value--empty">{item.value}</span>
 				</span>
-			{/if}
+			</svelte:element>
 		</li>
 	{/each}
 </ul>
@@ -36,8 +37,9 @@
 	@reference "../../../../app.css";
 
 	.source-index {
-		@apply grid list-none m-0 p-0 border-t border-border;
+		@apply grid list-none m-0 p-0;
 		grid-template-columns: 1fr;
+		gap: 12px;
 	}
 
 	@media (min-width: 560px) {
@@ -47,29 +49,50 @@
 	}
 
 	.item {
-		@apply flex justify-between gap-md no-underline py-sm;
-		border-bottom: 1px solid var(--border);
+		@apply flex items-center no-underline;
+		gap: 10px;
 	}
 
-	@media (min-width: 560px) {
-		.item {
-			@apply flex-col justify-start gap-0 border-b-0;
-		}
+	i {
+		@apply shrink-0;
+		font-size: 1rem;
+		color: var(--hue);
 	}
 
-	a.item .value {
+	.text {
+		@apply flex flex-col min-w-0;
+	}
+
+	.name {
+		font-size: 0.75rem;
+		line-height: 1.33;
+		color: var(--ink-muted);
+	}
+
+	.value {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
 		transition: color 0.15s ease;
+	}
+
+	.value--empty {
+		font-weight: 400;
+		color: var(--ink-muted);
 	}
 
 	a.item:hover .value {
 		color: var(--brand);
 	}
 
-	.value {
-		@apply font-medium text-ink;
-	}
+	@media (max-width: 559px) {
+		.text {
+			@apply flex-row flex-1 justify-between items-baseline gap-md;
+		}
 
-	.value--empty {
-		@apply font-normal text-ink-muted;
+		.name {
+			font-size: 0.875rem;
+		}
 	}
 </style>

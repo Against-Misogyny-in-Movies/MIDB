@@ -34,8 +34,12 @@
 		@apply flex flex-col min-h-screen;
 	}
 
+	/* Sticky bar: the page scrolls under it. Anchored sections use scroll-margin-top: 5rem. */
 	header {
-		@apply border-b border-border;
+		@apply sticky top-0 border-b border-border;
+		z-index: 40;
+		background-color: var(--surface-raised);
+		box-shadow: var(--shadow-subtle);
 	}
 
 	main {

@@ -40,7 +40,8 @@
 	}
 
 	.avatar-tile {
-		@apply flex flex-col items-center gap-xs rounded-md p-sm cursor-pointer text-center;
+		@apply flex flex-col items-center gap-xs p-sm cursor-pointer text-center;
+		border-radius: 12px;
 		border: 1px solid var(--border);
 		transition:
 			border-color 0.15s ease,

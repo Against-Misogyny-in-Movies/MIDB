@@ -5,18 +5,18 @@
 	import { session } from '$lib/media/utils/session.svelte.js';
 
 	interface Props {
-		/** `inline` sits in the navbar; `menu` fills a row of the mobile menu. */
-		variant?: 'inline' | 'menu';
+		/** `button` is a ghost button (the profile page); `menu` fills a row of the mobile menu. */
+		variant?: 'button' | 'menu';
 	}
 
-	let { variant = 'inline' }: Props = $props();
-
-	const hanko = new Hanko(PUBLIC_HANKO_API_URL);
+	let { variant = 'button' }: Props = $props();
 
 	// Order matters: the cookie must be gone before /auth and any re-run load sees the request.
+	// The client is created on click, not with the component: Hanko needs `document`, and this
+	// button is server-rendered on /user/profile.
 	const logout = async () => {
 		try {
-			await hanko.logout();
+			await new Hanko(PUBLIC_HANKO_API_URL).logout();
 		} catch {
 			// Already signed out or Hanko unreachable: still drop the local session below.
 		}
@@ -26,7 +26,7 @@
 </script>
 
 <button
-	class="logout logout--{variant}"
+	class={variant === 'button' ? 'btn btn--ghost' : 'logout'}
 	role={variant === 'menu' ? 'menuitem' : undefined}
 	onclick={logout}
 >
@@ -36,29 +36,19 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
+	/* A row of the mobile menu. */
 	.logout {
-		@apply bg-transparent border-0 p-0 shrink-0 cursor-pointer whitespace-nowrap text-left;
-		font: inherit;
-		transition: color 0.15s ease;
+		@apply block w-full bg-transparent border-0 cursor-pointer whitespace-nowrap text-left;
+		@apply text-sm font-medium text-ink px-md py-sm;
+		font-family: inherit;
+		letter-spacing: inherit;
 	}
 
-	.logout--inline {
-		@apply text-sm text-ink-muted;
-	}
-
-	.logout--inline:hover {
-		@apply text-ink;
-	}
-
-	.logout--menu {
-		@apply block w-full text-ink px-md py-sm;
-	}
-
-	.logout--menu:hover {
+	.logout:hover {
 		background-color: var(--surface-sunken);
 	}
 
-	.logout--menu:focus-visible {
+	.logout:focus-visible {
 		outline-offset: -2px;
 	}
 </style>

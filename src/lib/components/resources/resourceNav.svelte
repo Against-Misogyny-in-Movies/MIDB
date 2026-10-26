@@ -69,7 +69,15 @@
 	@reference "../../../app.css";
 
 	.heading {
+		@apply text-xs font-medium;
 		margin-bottom: var(--spacing-sm);
+		padding-inline: 12px;
+	}
+
+	@media (max-width: 767px) {
+		.heading {
+			padding-inline: 0;
+		}
 	}
 
 	ul {
@@ -77,9 +85,12 @@
 	}
 
 	a {
-		@apply block text-ink-muted no-underline;
-		padding-block: var(--spacing-xs);
-		transition: color 0.15s ease;
+		@apply block text-sm font-medium text-ink-muted no-underline;
+		padding: 6px 12px;
+		border-radius: 8px;
+		transition:
+			color 0.15s ease,
+			background-color 0.15s ease;
 	}
 
 	a:hover {
@@ -87,7 +98,8 @@
 	}
 
 	a.active {
-		@apply text-ink font-medium;
+		color: var(--brand);
+		background-color: var(--brand-wash);
 	}
 
 	/* Phones: a plain list of the four sections under the intro; nothing pins. */
@@ -96,8 +108,13 @@
 			@apply flex-row flex-wrap gap-x-md;
 		}
 
+		a {
+			padding-inline: 0;
+		}
+
 		a.active {
-			@apply text-ink-muted font-normal;
+			color: var(--ink-muted);
+			background-color: transparent;
 		}
 	}
 </style>

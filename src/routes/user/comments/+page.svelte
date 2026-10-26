@@ -15,7 +15,7 @@
 	{#if data.comments.length === 0}
 		<p class="empty">No comments yet.</p>
 	{:else}
-		<ul class="history">
+		<ul class="card history">
 			{#each data.comments as comment (comment.id)}
 				<li>
 					<a href={titleHref(comment.kind, comment.tmdbId)}>
@@ -50,7 +50,7 @@
 	}
 
 	h1 {
-		@apply text-4xl;
+		font-size: 1.875rem;
 	}
 
 	.empty {
@@ -58,12 +58,16 @@
 	}
 
 	.history {
-		@apply flex flex-col list-none p-0 m-0 border-t border-border;
+		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
+	}
+
+	.history li + li {
+		border-top: 1px solid var(--border);
 	}
 
 	.history a {
-		@apply flex flex-col gap-xs no-underline text-ink border-b border-border;
-		padding-block: var(--spacing-sm);
+		@apply flex flex-col gap-xs no-underline text-ink;
+		padding: 14px 20px;
 	}
 
 	.history a:hover .body {

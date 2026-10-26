@@ -20,8 +20,9 @@
 	@reference "../../../app.css";
 
 	.example {
-		@apply m-0 rounded-md p-md;
-		background-color: var(--surface-sunken);
+		@apply m-0 p-md;
+		border-radius: 12px;
+		background-color: var(--brand-wash);
 	}
 	ol {
 		@apply flex flex-col list-none m-0 p-0;

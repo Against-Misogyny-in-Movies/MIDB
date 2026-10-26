@@ -1,5 +1,6 @@
 /** One entry in a title page's source index: a metric, its headline value, and its section. */
 export interface SourceIndexItem {
+	source: 'bechdel' | 'um' | 'ddd';
 	label: string;
 	value: string;
 	/** In-page anchor of the metric's section; null when the metric does not apply. */
@@ -29,8 +30,16 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 
 	const bechdel: SourceIndexItem =
 		kind === 'tv'
-			? { label: 'Bechdel Test', value: 'Not applicable', href: null, hasData: false, busy: false }
+			? {
+					source: 'bechdel',
+					label: 'Bechdel Test',
+					value: 'Not applicable',
+					href: null,
+					hasData: false,
+					busy: false
+				}
 			: {
+					source: 'bechdel',
 					label: 'Bechdel Test',
 					value: bechdelRating === null ? 'No data' : `${bechdelRating}/3`,
 					href: '#bechdel',
@@ -39,6 +48,7 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 				};
 
 	const um: SourceIndexItem = {
+		source: 'um',
 		label: 'Unconsenting Media',
 		value:
 			umConcerns !== null
@@ -52,6 +62,7 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 	};
 
 	const ddd: SourceIndexItem = {
+		source: 'ddd',
 		label: 'Does the Dog Die',
 		value:
 			dddTagCount === null

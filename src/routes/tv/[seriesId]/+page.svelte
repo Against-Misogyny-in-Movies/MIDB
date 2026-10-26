@@ -56,7 +56,7 @@
 
 		<CastAndCrew media={series} />
 
-		<CollapsibleSection title="Details">
+		<CollapsibleSection title="Details" icon="ri-tv-2-fill" hue="var(--src-tmdb)">
 			<SeriesFactGrid {series} />
 		</CollapsibleSection>
 	</div>
@@ -73,5 +73,6 @@
 
 	.sections {
 		@apply flex flex-col;
+		gap: 16px;
 	}
 </style>

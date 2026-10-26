@@ -52,6 +52,25 @@
 	--info-soft: light-dark(#e3ebf7, #1c2639);
 	--secondary-soft: light-dark(#eeebf1, #26232b);
 
+	/* Text on a filled --brand or --ink surface (buttons, the logo pill). */
+	--on-brand: light-dark(#ffffff, #141217);
+	--on-ink: light-dark(#ffffff, #141217);
+	/* Lilac wash for tinted plates and tiles. */
+	--brand-wash: color-mix(in oklab, var(--brand) 8%, var(--surface-raised));
+	/* One shade of the violet per source: icon disks and stat icons. */
+	--src-bechdel: var(--brand);
+	--src-um: light-dark(#4a0080, #e2c4f8);
+	--src-ddd: light-dark(#a030d8, #a56ae0);
+	--src-tmdb: light-dark(#2d0050, #d4aef4);
+
+	/* Elevation: hairlines do the separation; shadows are for floating things. */
+	--shadow-subtle: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.4));
+	--shadow-md:
+		0 10px 15px -3px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.5)),
+		0 4px 6px -4px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.5));
+	--shadow-float: 0 25px 50px -12px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.7));
+	--shadow-brand: 0 10px 15px -3px color-mix(in oklab, var(--brand) 25%, transparent);
+
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -61,30 +80,6 @@
 
 :root[data-theme='dark'] {
 	color-scheme: dark;
-}
-
-/* ─── Landing page ───
-   The landing keeps the layout of its pinned style reference (DESIGN.md › Landing page) on the
-   site's violet palette above. These are the only landing-specific tokens: fonts, two shadows,
-   the text colour on filled violet surfaces, a lilac wash, and one violet shade per source.
-   Scoped to `.landing`. */
-.landing {
-	--l-on-action: light-dark(#ffffff, #141217);
-	/* One shade of the project violet per source. */
-	--l-bechdel: var(--brand);
-	--l-um: light-dark(#4a0080, #e2c4f8);
-	--l-ddd: light-dark(#a030d8, #a56ae0);
-	--l-tmdb: light-dark(#2d0050, #d4aef4);
-	/* Lilac wash for tinted plates and tiles. */
-	--l-wash: color-mix(in oklab, var(--brand) 8%, var(--surface-raised));
-
-	--l-shadow-float: 0 25px 50px -12px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.7));
-	--l-shadow-action: 0 10px 15px -3px color-mix(in oklab, var(--brand) 25%, transparent);
-
-	--l-font-display: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
-	--l-font-ui:
-		ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-	--l-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* ─── Semantic tokens exposed to Tailwind (inline = re-cascades on theme change) ─── */
@@ -111,8 +106,12 @@
 	--color-info-soft: var(--info-soft);
 	--color-secondary-soft: var(--secondary-soft);
 
-	--font-body: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+	/* Inter Tight for titles; the system UI stack for everything else. */
+	--font-display: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+	--font-body:
+		ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	--font-sans: var(--font-body);
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @layer base {
@@ -124,7 +123,9 @@
 	body {
 		@apply bg-surface text-ink;
 		font-family: var(--font-body);
-		line-height: 1.55;
+		line-height: 1.5;
+		/* Tight tracking at every size keeps text reading as data, not editorial prose. */
+		letter-spacing: -0.02em;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		caret-color: var(--brand);
@@ -165,15 +166,15 @@
 		--background-color: transparent;
 		--error-color: var(--danger);
 		--link-color: var(--brand);
-		--border-radius: 0.375rem;
+		--border-radius: 8px;
 		--container-padding: 0;
-		--headline1-font-size: 2rem;
-		--headline1-font-weight: 800;
+		--headline1-font-size: 1.875rem;
+		--headline1-font-weight: 700;
 	}
 
 	select {
-		@apply text-sm text-ink rounded-md cursor-pointer;
-		padding: 0.375rem 0.625rem;
+		@apply text-sm text-ink rounded-lg cursor-pointer;
+		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--border-strong);
 		background-color: var(--surface-raised);
 		transition: border-color 0.15s ease;
@@ -191,12 +192,12 @@
 }
 
 @layer components {
-	/* Condensed heavy Archivo: titles and the wordmark. */
+	/* Inter Tight: titles and the wordmark. */
 	.display {
-		font-stretch: 72%;
-		font-weight: 760;
-		letter-spacing: -0.01em;
-		line-height: 1.05;
+		font-family: var(--font-display);
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
 	}
 
 	/* A field name in a data list: small, muted, sentence case. */
@@ -220,5 +221,90 @@
 
 	.num {
 		font-variant-numeric: tabular-nums;
+	}
+
+	/* A hairline card: the one container shape (12px radius). */
+	.card {
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background-color: var(--surface-raised);
+	}
+
+	/* Buttons: 8px radius, 14px semibold. One --brand button per view for the main action;
+	   --ink for a secondary filled action; ghost beside a filled one. */
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		height: 2.5rem;
+		padding-inline: 1.25rem;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		line-height: 1;
+		white-space: nowrap;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			background-color 0.15s ease,
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.btn--brand {
+		background-color: var(--brand);
+		color: var(--on-brand);
+	}
+
+	.btn--brand:hover {
+		background-color: var(--brand-strong);
+		box-shadow: var(--shadow-brand);
+	}
+
+	.btn--ink {
+		background-color: var(--ink);
+		color: var(--on-ink);
+	}
+
+	.btn--ink:hover {
+		background-color: color-mix(in oklab, var(--ink) 85%, var(--surface));
+	}
+
+	.btn--ghost {
+		background-color: var(--surface-raised);
+		border-color: var(--border);
+		color: var(--ink);
+	}
+
+	.btn--ghost:hover {
+		border-color: var(--border-strong);
+	}
+
+	.btn--pill {
+		height: 2.25rem;
+		padding-inline: 1rem;
+		border-radius: 9999px;
+	}
+
+	/* A round icon disk in a source's violet shade: set --hue (and --disk for the size). */
+	.disk {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: var(--disk, 2.5rem);
+		height: var(--disk, 2.5rem);
+		border-radius: 9999px;
+		background-color: var(--hue, var(--brand));
+		color: var(--on-brand);
+		font-size: calc(var(--disk, 2.5rem) * 0.5);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.btn {
+			transition: none;
+		}
 	}
 }

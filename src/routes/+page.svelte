@@ -3,6 +3,8 @@
 	import MovieSearch from '$lib/components/search/movieSearch.svelte';
 	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
 	import RatedFilms from '$lib/components/landing/ratedFilms.svelte';
+	import Badge from '$lib/components/ui/badge.svelte';
+	import type { BadgeTone } from '$lib/media/utils/tones';
 
 	let { data }: { data: PageData } = $props();
 
@@ -23,7 +25,7 @@
 			name: 'Bechdel Test',
 			body: 'Whether two named women talk to each other about something other than a man. Scored 0–3, films only.',
 			icon: 'ri-chat-3-fill',
-			color: 'var(--l-bechdel)',
+			color: 'var(--src-bechdel)',
 			domain: 'bechdeltest.com',
 			href: 'https://bechdeltest.com'
 		},
@@ -32,7 +34,7 @@
 			name: 'Unconsenting Media',
 			body: 'Nine flags for depictions of sexual violence, from a community database.',
 			icon: 'ri-flag-2-fill',
-			color: 'var(--l-um)',
+			color: 'var(--src-um)',
 			domain: 'unconsentingmedia.org',
 			href: 'https://www.unconsentingmedia.org'
 		},
@@ -41,7 +43,7 @@
 			name: 'Does the Dog Die',
 			body: 'Community-voted trigger warnings on hundreds of topics, fetched when a title page opens.',
 			icon: 'ri-alarm-warning-fill',
-			color: 'var(--l-ddd)',
+			color: 'var(--src-ddd)',
 			domain: 'doesthedogdie.com',
 			href: 'https://www.doesthedogdie.com'
 		},
@@ -50,14 +52,14 @@
 			name: 'TMDB',
 			body: 'Title details and credits, including the gender recorded for each cast and crew member.',
 			icon: 'ri-film-fill',
-			color: 'var(--l-tmdb)',
+			color: 'var(--src-tmdb)',
 			domain: 'themoviedb.org',
 			href: 'https://www.themoviedb.org'
 		}
 	];
 
 	// The six tiers from verdict.ts, toned like the data card's badges.
-	const verdicts = [
+	const verdicts: { axis: string; tiers: { label: string; tone: BadgeTone }[] }[] = [
 		{
 			axis: 'Content safety',
 			tiers: [
@@ -83,10 +85,6 @@
 		name="description"
 		content="Sexual violence warnings and representation of women in films and series, from the Bechdel Test, Unconsenting Media, Does the Dog Die and TMDB."
 	/>
-	<link
-		href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&display=swap"
-		rel="stylesheet"
-	/>
 </svelte:head>
 
 <div class="landing">
@@ -102,15 +100,15 @@
 		{#if data.counts}
 			<ul class="stats">
 				<li>
-					<i class="ri-chat-3-fill" style="--hue: var(--l-bechdel)" aria-hidden="true"></i>
+					<i class="ri-chat-3-fill" style="--hue: var(--src-bechdel)" aria-hidden="true"></i>
 					<strong>{fmt(data.counts.bechdelRatings)}</strong> Bechdel Test ratings
 				</li>
 				<li>
-					<i class="ri-flag-2-fill" style="--hue: var(--l-um)" aria-hidden="true"></i>
+					<i class="ri-flag-2-fill" style="--hue: var(--src-um)" aria-hidden="true"></i>
 					<strong>{fmt(data.counts.umEntries)}</strong> Unconsenting Media entries
 				</li>
 				<li>
-					<i class="ri-alarm-warning-fill" style="--hue: var(--l-ddd)" aria-hidden="true"></i>
+					<i class="ri-alarm-warning-fill" style="--hue: var(--src-ddd)" aria-hidden="true"></i>
 					<strong>Live</strong> Does the Dog Die warnings
 				</li>
 			</ul>
@@ -127,8 +125,8 @@
 		<h2 id="sources-heading" class="section-title">Sources</h2>
 		<ul class="sources">
 			{#each sources as source (source.name)}
-				<li class="source">
-					<span class="disk" style="--disk: {source.color}" aria-hidden="true">
+				<li class="card source">
+					<span class="disk" style="--hue: {source.color}" aria-hidden="true">
 						<i class={source.icon}></i>
 					</span>
 					<h3>{source.name}</h3>
@@ -151,7 +149,7 @@
 				<p>
 					Each title page combines the sources into a content safety and a representation verdict.
 				</p>
-				<a class="ghost-button" href="/resources#verdict">Methodology</a>
+				<a class="btn btn--ghost methodology" href="/resources#verdict">Methodology</a>
 			</div>
 			<dl class="tiers">
 				{#each verdicts as group (group.axis)}
@@ -159,7 +157,7 @@
 						<dt>{group.axis}</dt>
 						<dd>
 							{#each group.tiers as tier (tier.label)}
-								<span class="tier tier--{tier.tone}">{tier.label}</span>
+								<Badge tone={tier.tone} size="md">{tier.label}</Badge>
 							{/each}
 						</dd>
 					</div>
@@ -183,7 +181,7 @@
 	@reference "../app.css";
 
 	.landing {
-		font-family: var(--l-font-ui);
+		font-family: var(--font-body);
 		color: var(--ink);
 		letter-spacing: -0.025em;
 	}
@@ -195,7 +193,7 @@
 	}
 
 	h1 {
-		font-family: var(--l-font-display);
+		font-family: var(--font-display);
 		font-weight: 700;
 		font-size: clamp(2.25rem, 7vw, 3.75rem);
 		line-height: 1;
@@ -247,7 +245,7 @@
 
 	.section-title {
 		@apply text-center;
-		font-family: var(--l-font-display);
+		font-family: var(--font-display);
 		font-weight: 700;
 		font-size: clamp(1.875rem, 4vw, 2.25rem);
 		line-height: 1.11;
@@ -276,18 +274,6 @@
 	.source {
 		@apply flex flex-col items-center text-center;
 		padding: 32px 24px;
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		background-color: var(--surface-raised);
-	}
-
-	.disk {
-		@apply flex items-center justify-center rounded-full;
-		width: 2.5rem;
-		height: 2.5rem;
-		font-size: 1.25rem;
-		color: var(--l-on-action);
-		background-color: var(--disk);
 	}
 
 	.source h3 {
@@ -340,7 +326,7 @@
 		gap: 24px 48px;
 		padding: 32px;
 		border-radius: 12px;
-		background-color: var(--l-wash);
+		background-color: var(--brand-wash);
 	}
 
 	@media (min-width: 768px) {
@@ -350,7 +336,7 @@
 	}
 
 	.verdicts h2 {
-		font-family: var(--l-font-display);
+		font-family: var(--font-display);
 		font-weight: 600;
 		font-size: 1.5rem;
 		line-height: 1.33;
@@ -362,21 +348,8 @@
 		margin-top: 8px;
 	}
 
-	.ghost-button {
-		@apply inline-flex items-center no-underline;
+	.methodology {
 		margin-top: 20px;
-		padding: 10px 20px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background-color: var(--surface-raised);
-		color: var(--ink);
-		font-size: 0.875rem;
-		font-weight: 600;
-		transition: border-color 0.15s ease;
-	}
-
-	.ghost-button:hover {
-		border-color: var(--border-strong);
 	}
 
 	.tiers {
@@ -396,28 +369,6 @@
 		gap: 6px;
 	}
 
-	.tier {
-		padding: 4px 12px;
-		border-radius: 9999px;
-		font-size: 0.875rem;
-		font-weight: 500;
-	}
-
-	.tier--pos {
-		background-color: var(--success-soft);
-		color: var(--success);
-	}
-
-	.tier--mid {
-		background-color: var(--warn-soft);
-		color: var(--warn);
-	}
-
-	.tier--neg {
-		background-color: var(--danger-soft);
-		color: var(--danger);
-	}
-
 	/* ── About ── */
 	.about {
 		@apply text-center;
@@ -427,8 +378,7 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.quiet-link,
-		.ghost-button {
+		.quiet-link {
 			transition: none;
 		}
 	}

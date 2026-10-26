@@ -1,7 +1,7 @@
 <footer>
 	<div class="inner">
 		<p class="line">
-			<a href="/" class="display wordmark">MIDB</a>
+			<a href="/" class="wordmark">MIDB</a>
 			<a href="/resources">Methodology</a>
 			<a
 				href="https://github.com/Against-Misogyny-in-Movies/MIDB"
@@ -35,13 +35,18 @@
 		transition: color 0.15s ease;
 	}
 
-	.line a:hover {
+	.line a:not(.wordmark):hover {
 		@apply text-ink;
 	}
 
 	.wordmark {
-		@apply text-lg text-ink;
-		font-weight: 800;
+		padding: 2px 10px;
+		border-radius: 9999px;
+		background-color: var(--ink);
+		color: var(--on-ink);
+		font-family: var(--font-display);
+		font-size: 0.875rem;
+		font-weight: 700;
 	}
 
 	.credit {

@@ -50,9 +50,10 @@
 	@reference "../../../app.css";
 
 	.panel {
-		@apply absolute z-50 w-full rounded-md border border-border bg-surface-raised;
+		@apply absolute z-50 w-full border border-border bg-surface-raised;
 		margin-top: var(--spacing-xs);
-		box-shadow: 0 12px 32px -16px color-mix(in oklab, var(--ink) 40%, transparent);
+		border-radius: 12px;
+		box-shadow: var(--shadow-md);
 	}
 
 	ul.panel {

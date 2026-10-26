@@ -4,6 +4,7 @@
 	import CastRepresentation from './castRepresentation.svelte';
 	import CrewRepresentation from './crewRepresentation.svelte';
 	import RepresentationDisclosure from './representationDisclosure.svelte';
+	import { shareTone } from '$lib/media/utils/tones';
 	import type { MediaDetail } from '$lib/media/types/media';
 
 	interface Props {
@@ -22,12 +23,13 @@
 <div id="gender">
 	<CollapsibleSection
 		title="Cast and crew"
+		icon="ri-group-fill"
+		hue="var(--src-tmdb)"
 		{status}
-		tone={castShare === null ? 'empty' : 'data'}
+		tone={shareTone(castShare)}
 		sourceLabel="TMDB"
 		sourceHref="https://www.themoviedb.org"
 		learnHref="/resources#verdict"
-		learnLabel="Methodology"
 	>
 		<div class="group">
 			<h3>Cast</h3>

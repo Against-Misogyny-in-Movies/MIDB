@@ -1,45 +1,39 @@
 <script lang="ts">
-	import { toneTokens, type VerdictTone } from '$lib/media/utils/verdict';
-
-	type Tier = { label: string; tone: VerdictTone };
+	import Badge from '$lib/components/ui/badge.svelte';
+	import type { BadgeTone } from '$lib/media/utils/tones';
 
 	// Mirrors SAFETY_META / REP_META in verdict.ts (kept in sync by hand).
-	const groups: { axis: string; tiers: Tier[] }[] = [
+	const groups: { axis: string; tiers: { label: string; tone: BadgeTone }[] }[] = [
 		{
 			axis: 'Content safety',
 			tiers: [
-				{ label: 'Safer to watch', tone: 'success' },
-				{ label: 'Watch with caution', tone: 'warn' },
-				{ label: 'Harmful content', tone: 'danger' },
+				{ label: 'Safer to watch', tone: 'pos' },
+				{ label: 'Watch with caution', tone: 'mid' },
+				{ label: 'Harmful content', tone: 'neg' },
 				{ label: 'Not enough data', tone: 'neutral' }
 			]
 		},
 		{
 			axis: 'Representation',
 			tiers: [
-				{ label: 'Strong representation', tone: 'success' },
-				{ label: 'Mixed representation', tone: 'warn' },
-				{ label: 'Poor representation', tone: 'danger' },
+				{ label: 'Strong representation', tone: 'pos' },
+				{ label: 'Mixed representation', tone: 'mid' },
+				{ label: 'Poor representation', tone: 'neg' },
 				{ label: 'Not enough data', tone: 'neutral' }
 			]
 		}
 	];
-
-	function style(tone: VerdictTone): string {
-		const t = toneTokens(tone);
-		return `--tone: var(${t.fg}); --tone-soft: var(${t.soft});`;
-	}
 </script>
 
 <div class="legend">
 	{#each groups as group (group.axis)}
 		<div class="group">
-			<p class="label">{group.axis}</p>
-			<ul>
+			<p class="axis">{group.axis}</p>
+			<div class="tiers">
 				{#each group.tiers as tier (tier.label)}
-					<li style={style(tier.tone)}>{tier.label}</li>
+					<Badge tone={tier.tone} size="md">{tier.label}</Badge>
 				{/each}
-			</ul>
+			</div>
 		</div>
 	{/each}
 </div>
@@ -48,29 +42,19 @@
 	@reference "../../../app.css";
 
 	.legend {
-		@apply grid gap-lg;
-		grid-template-columns: 1fr;
+		@apply flex flex-col gap-md;
+		padding: 16px;
+		border-radius: 12px;
+		background-color: var(--brand-wash);
 	}
 
-	@media (min-width: 480px) {
-		.legend {
-			grid-template-columns: 1fr 1fr;
-		}
+	.axis {
+		@apply text-xs font-medium text-ink-muted;
+		margin-bottom: 6px;
 	}
 
-	.group {
-		@apply flex flex-col gap-sm;
-	}
-
-	ul {
-		@apply flex flex-col gap-xs list-none m-0 p-0;
-	}
-
-	/* A miniature of the verdict block: the tier in its tone on its tinted fill. */
-	li {
-		@apply self-start rounded-md text-sm font-semibold;
-		padding: var(--spacing-xs) var(--spacing-sm);
-		background-color: var(--tone-soft);
-		color: var(--tone);
+	.tiers {
+		@apply flex flex-wrap;
+		gap: 6px;
 	}
 </style>

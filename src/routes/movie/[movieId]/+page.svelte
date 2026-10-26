@@ -9,6 +9,7 @@
 	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
 	import { BECHDEL_TIERS } from '$lib/media/utils/metrics';
+	import { bechdelTone } from '$lib/media/utils/tones';
 	import { TitleView } from '$lib/media/utils/titleView.svelte.js';
 
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
@@ -35,8 +36,10 @@
 		<div id="bechdel">
 			<CollapsibleSection
 				title="Bechdel Test"
+				icon="ri-chat-3-fill"
+				hue="var(--src-bechdel)"
 				status={bechdel ? `${bechdel.rating}/3` : 'No data'}
-				tone={bechdel ? 'data' : 'empty'}
+				tone={bechdel ? bechdelTone(bechdel.rating) : 'neutral'}
 				open={bechdel !== null}
 				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
@@ -73,7 +76,7 @@
 
 		<CastAndCrew media={movie} />
 
-		<CollapsibleSection title="Details">
+		<CollapsibleSection title="Details" icon="ri-film-fill" hue="var(--src-tmdb)">
 			<FactGrid {movie} />
 		</CollapsibleSection>
 	</div>
@@ -90,6 +93,7 @@
 
 	.sections {
 		@apply flex flex-col;
+		gap: 16px;
 	}
 
 	.no-data {

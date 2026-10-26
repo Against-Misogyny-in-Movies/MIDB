@@ -69,3 +69,15 @@ The landing now follows a pinned style reference (Podscan.fm, supplied by the us
 - Palette scoped to `.landing` (`--l-*`), with dark values. Button fill `#047857` instead of `#059669` for AA contrast.
 - Found while checking the data: `title_bechdel.num_votes` is IMDb's vote count, so the Bechdel section's "Based on N votes." mislabelled it. Line removed.
 - Follow-up from the user: "use the purple colour palette". The landing keeps the reference's layout and type but now uses the site tokens: violet Search button, links and stat icons, four violet shades for the source disks, a lilac wash for the verdict plate and year tiles. The emerald, zinc and pure-white canvas are gone. Verdict and data badges keep the status colours (green / amber / red) because they carry meaning, as on the title pages.
+
+## Site-wide system (follow-up)
+
+The user asked to carry the landing's system to every page, keeping the purple palette. Done:
+
+- Global tokens and classes in `app.css`: Inter Tight replaces Archivo for `.display`, system UI text tracked -0.02em, `.card`, `.btn` variants, `.disk`, `--src-*` shades, `--brand-wash`, shadows. The `.landing`-scoped tokens are gone.
+- `ui/badge.svelte` + `$lib/media/utils/tones.ts` (tested): one badge and one value → tone mapping, mirroring `verdict.ts`.
+- Sticky 64px header with an ink logo pill and an ink "Sign in" pill; anchored sections and sticky columns offset by 5rem.
+- Title pages: section cards with source icon disks and toned status badges; the source index becomes a stat line; verdicts, poster and tables on 12px radii and pill bars; DDD categories and UM candidates as badges.
+- Methodology: one card per topic with its icon disk; tier legend as badges on a lilac plate.
+- Error, sign-in (floating card), profile (form card, account list card, ghost Sign out), history and settings pages.
+- Bug fixed: `LogoutButton` created its Hanko client at render, which needs `document`; since Sign out moved onto the server-rendered `/user/profile`, that page would have returned a 500. The client is now created on click.

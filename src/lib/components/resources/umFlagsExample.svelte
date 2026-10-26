@@ -21,8 +21,9 @@
 	@reference "../../../app.css";
 
 	.example {
-		@apply flex flex-col gap-sm m-0 rounded-md p-md;
-		background-color: var(--surface-sunken);
+		@apply flex flex-col gap-sm m-0 p-md;
+		border-radius: 12px;
+		background-color: var(--brand-wash);
 	}
 
 	figcaption {

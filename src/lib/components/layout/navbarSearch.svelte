@@ -130,12 +130,12 @@
 
 	/* Below md the theme toggle and menu sit right of the field, so `.root`'s right edge is
 	   mid-bar and a 22rem panel anchored there overhangs the viewport's left edge. Pin it to the
-	   viewport padding instead (the bar is `px-md`). The navbar is not sticky, so a fixed `top`
-	   just below the 3.5rem bar tracks the field. */
+	   viewport padding instead (the bar is `px-md`). The bar is sticky at the top, so a fixed `top`
+	   just below its 4rem height tracks the field. */
 	@media (max-width: 767px) {
 		.root.is-expanded :global(.panel) {
 			position: fixed;
-			top: 3.5rem;
+			top: 4rem;
 			left: var(--spacing-md);
 			right: var(--spacing-md);
 			width: auto;
@@ -153,8 +153,8 @@
 	}
 
 	.field {
-		@apply flex items-center gap-sm px-sm rounded-md;
-		height: 2rem;
+		@apply flex items-center gap-sm px-sm rounded-lg;
+		height: 2.25rem;
 		border: 1px solid var(--border-strong);
 		background-color: var(--surface-raised);
 		transition: border-color 0.15s ease;
@@ -162,6 +162,7 @@
 
 	.field:focus-within {
 		border-color: var(--brand);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
 	}
 
 	.lead,

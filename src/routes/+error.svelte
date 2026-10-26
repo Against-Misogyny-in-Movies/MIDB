@@ -17,38 +17,37 @@
 </svelte:head>
 
 <section class="error">
-	<p class="code display tabular-nums">{$page.status}</p>
+	<p class="code display">{$page.status}</p>
 	<h1 class="display">{heading}</h1>
 	<p class="detail">{detail}</p>
-	<p class="actions"><a class="link" href="/">Search for a title</a></p>
+	<a class="btn btn--brand" href="/">Search for a title</a>
 </section>
 
 <style lang="postcss">
 	@reference "../app.css";
 
 	.error {
+		@apply flex flex-col items-center text-center mx-auto;
 		max-width: 32rem;
-		padding-block: clamp(3rem, 10vw, 6rem);
+		padding-block: clamp(4rem, 12vw, 7rem);
 	}
 
 	.code {
-		@apply text-ink-muted;
-		font-size: clamp(4rem, 18vw, 6rem);
-		font-weight: 800;
+		color: var(--brand);
+		font-size: clamp(3.75rem, 16vw, 6rem);
 		line-height: 1;
+		font-variant-numeric: tabular-nums;
 	}
 
 	h1 {
-		@apply text-3xl;
-		margin-top: var(--spacing-sm);
+		font-size: 1.875rem;
+		line-height: 1.2;
+		margin-top: 12px;
 	}
 
 	.detail {
 		@apply text-ink-muted;
-		margin-top: var(--spacing-sm);
-	}
-
-	.actions {
-		margin-top: var(--spacing-lg);
+		margin-top: 8px;
+		margin-bottom: 32px;
 	}
 </style>

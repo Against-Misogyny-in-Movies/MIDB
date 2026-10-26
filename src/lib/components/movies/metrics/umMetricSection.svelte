@@ -3,6 +3,7 @@
 	import UmCandidates from './umCandidates.svelte';
 	import UmComment from './umComment.svelte';
 	import { UM_FLAGS } from '$lib/media/utils/metrics';
+	import { umTone } from '$lib/media/utils/tones';
 	import type { UmEntry } from '$lib/media/types/um';
 
 	interface Props {
@@ -19,8 +20,14 @@
 <div id="unconsenting">
 	<CollapsibleSection
 		title="Unconsenting Media"
-		status={umData ? `${umFlagCount} concern${umFlagCount === 1 ? '' : 's'}` : 'No data'}
-		tone={umData ? 'data' : 'empty'}
+		icon="ri-flag-2-fill"
+		hue="var(--src-um)"
+		status={umData
+			? `${umFlagCount} concern${umFlagCount === 1 ? '' : 's'}`
+			: hasUmCandidates
+				? `${umCandidates.length} possible matches`
+				: 'No data'}
+		tone={umData ? umTone(umData) : hasUmCandidates ? 'brand' : 'neutral'}
 		open={umData !== null || hasUmCandidates}
 		sourceLabel={umData ? 'UnconsentingMedia.org' : undefined}
 		sourceHref={umData ? `https://www.unconsentingmedia.org/items/${umData.umId}` : undefined}

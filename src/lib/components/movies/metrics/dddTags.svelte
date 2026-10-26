@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Badge from '$lib/components/ui/badge.svelte';
 	import type { TriggerTag } from '$lib/media/types/ddd';
 
 	interface Props {
@@ -52,7 +53,9 @@
 					<span class="tag-name">{tag.doesName}</span>
 				{/if}
 
-				<span class="category">{tag.category ?? ''}</span>
+				<span class="category">
+					{#if tag.category}<Badge>{tag.category}</Badge>{/if}
+				</span>
 
 				<span class="meter">
 					<span class="bar" role="img" aria-label="{yes}% voted yes">
@@ -120,7 +123,7 @@
 	}
 
 	.category {
-		@apply text-ink-muted truncate;
+		@apply min-w-0 overflow-hidden;
 	}
 
 	.meter {

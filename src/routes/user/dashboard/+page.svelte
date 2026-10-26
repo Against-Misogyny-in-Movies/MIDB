@@ -10,7 +10,7 @@
 		<h1 class="display">Account settings</h1>
 	</header>
 
-	<HankoProfile />
+	<div class="card settings"><HankoProfile /></div>
 </div>
 
 <style lang="postcss">
@@ -33,6 +33,10 @@
 	}
 
 	h1 {
-		@apply text-4xl;
+		font-size: 1.875rem;
+	}
+
+	.settings {
+		padding: 24px;
 	}
 </style>
