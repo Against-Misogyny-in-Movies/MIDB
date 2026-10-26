@@ -81,3 +81,16 @@ The user asked to carry the landing's system to every page, keeping the purple p
 - Methodology: one card per topic with its icon disk; tier legend as badges on a lilac plate.
 - Error, sign-in (floating card), profile (form card, account list card, ghost Sign out), history and settings pages.
 - Bug fixed: `LogoutButton` created its Hanko client at render, which needs `document`; since Sign out moved onto the server-rendered `/user/profile`, that page would have returned a 500. The client is now created on click.
+
+## Landing hero: live sentence (follow-up)
+
+The user asked for a better motto, phrase or visual. Eight directions were rendered with real data (phrases, logo, verdicts, oversized search, live sentence, content-advice card, Bechdel chart); the user picked the live sentence and asked to improve it:
+
+- Only films with both a Bechdel rating and an Unconsenting Media entry (`requireUmEntry`), so no sentence ends in "no entry".
+- `filmSentence()` (tested) builds the clauses and picks "and" / "but".
+- The film title links to its page (or searches when it has no TMDB id).
+- Clauses as coloured text with a highlighter stroke in their badge tone, instead of filled blocks.
+- All sentences stacked in one grid cell: zero layout shift.
+- Title chips as the pager; the active chip's fill is the timer. Pauses on hover, focus and a pause button (WCAG 2.2.2); no rotation under reduced motion.
+- A visually hidden `h1` keeps the site's name for assistive tech and search; it shows when the database is down.
+- The "Popular films" data card is retired: it listed the same films the hero now cycles through.

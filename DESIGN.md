@@ -31,7 +31,7 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 ## Shapes and elevation
 
 - Radius: 8px buttons, 12px cards and inputs, 9999px pills, badges and the logo.
-- Hairline borders do the separation. `--shadow-subtle` under the sticky header, `--shadow-md` for dropdowns and the poster, `--shadow-float` for one floating surface (the landing data card, the sign-in card), `--shadow-brand` on the brand button's hover.
+- Hairline borders do the separation. `--shadow-subtle` under the sticky header, `--shadow-md` for dropdowns and the poster, `--shadow-float` for one floating surface (the sign-in card), `--shadow-brand` on the brand button's hover.
 
 ## Components
 
@@ -46,14 +46,14 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 
 ## Pages
 
-- **Landing:** centred hero (headline, search bar, stat line of real counts), the floating data card of popular films, four source cards, a lilac plate with the six verdict tiers, a one-line About. The data shown is real (`$lib/server/data/catalogue.ts`).
+- **Landing:** the hero is a sentence about a real film ("Inception passes the Bechdel Test and has no Unconsenting Media concerns."), its clauses in their badge tones with a highlighter stroke, cycling through popular films with the titles as chips that double as the timer; then the search bar, the stat line of real counts, four source cards, a lilac plate with the six verdict tiers, a one-line About. Everything shown is real (`$lib/server/data/catalogue.ts`).
 - **Title page:** poster beside the title, overview, the two verdicts, the source stat line, then section cards: Bechdel Test, Unconsenting Media, Does the Dog Die, Cast and crew, Details.
 - **Methodology:** title and lede, a sticky "On this page" list, then one card per topic with its icon disk.
 - **Account, sign-in, errors:** centred columns of cards; the sign-in card floats.
 
 ## Motion
 
-`0.15s ease` on colour, border and chevron changes, a 2px brand navigation bar, a pulsing skeleton while Does the Dog Die streams. All gated on `prefers-reduced-motion`. No entrances, lifts or glows.
+One authored moment: the landing hero's sentence change (a 0.5s fade with a slight rise and blur, timed by the active chip's fill). Otherwise `0.15s ease` on colour, border and chevron changes, a 2px brand navigation bar, a pulsing skeleton while Does the Dog Die streams. All gated on `prefers-reduced-motion`. No entrances, lifts or glows.
 
 ## Browser surfaces
 

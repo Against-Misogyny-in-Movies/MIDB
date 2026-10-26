@@ -2,7 +2,7 @@
 	import type { PageData } from './$types';
 	import MovieSearch from '$lib/components/search/movieSearch.svelte';
 	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
-	import RatedFilms from '$lib/components/landing/ratedFilms.svelte';
+	import FilmSentences from '$lib/components/landing/filmSentences.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import type { BadgeTone } from '$lib/media/utils/tones';
 
@@ -11,7 +11,7 @@
 	const search = new MovieSearchState();
 	let hero = $state<HTMLElement | null>(null);
 
-	// A data-card row without a TMDB id runs its title through the search field instead.
+	// A hero film without a TMDB id runs its title through the search field instead.
 	function searchFor(title: string) {
 		search.search(title);
 		hero?.querySelector('input')?.focus();
@@ -89,9 +89,17 @@
 
 <div class="landing">
 	<section class="hero" bind:this={hero}>
-		<h1 data-testid="hero-headline">
+		<!-- The hero shows what MIDB does with real records; the heading names it for assistive
+		     tech and search engines, and is the visible fallback when the database is unreachable. -->
+		<h1
+			class:sr-only={data.films.length > 0}
+			data-testid={data.films.length > 0 ? undefined : 'hero-headline'}
+		>
 			Sexual violence warnings and representation of women in films and series
 		</h1>
+		{#if data.films.length > 0}
+			<FilmSentences films={data.films} onsearch={searchFor} />
+		{/if}
 
 		<div class="search">
 			<MovieSearch {search} />
@@ -114,12 +122,6 @@
 			</ul>
 		{/if}
 	</section>
-
-	{#if data.films.length > 0}
-		<div class="preview">
-			<RatedFilms films={data.films} onsearch={searchFor} />
-		</div>
-	{/if}
 
 	<section class="section" aria-labelledby="sources-heading">
 		<h2 id="sources-heading" class="section-title">Sources</h2>
@@ -189,7 +191,7 @@
 	/* ── Hero: centred stack ── */
 	.hero {
 		@apply flex flex-col items-center text-center;
-		padding-block: clamp(3rem, 9vw, 5rem) 3rem;
+		padding-block: clamp(3rem, 8vw, 4.5rem) 1rem;
 	}
 
 	h1 {
@@ -230,12 +232,6 @@
 		font-weight: 600;
 		color: var(--ink);
 		font-variant-numeric: tabular-nums;
-	}
-
-	/* ── Floating data card ── */
-	.preview {
-		@apply mx-auto;
-		max-width: 52rem;
 	}
 
 	/* ── Sections ── */

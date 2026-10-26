@@ -7,7 +7,10 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	// Seeded data only: user-agnostic, and the page still renders (search and sources) when the
 	// database is unreachable, without the counts and the data card.
 	try {
-		const [counts, films] = await Promise.all([getCatalogueCounts(), getMostVotedRatedFilms(6)]);
+		const [counts, films] = await Promise.all([
+			getCatalogueCounts(),
+			getMostVotedRatedFilms(6, { requireUmEntry: true })
+		]);
 		return { counts, films };
 	} catch (error) {
 		console.error('landing: catalogue query failed', error);

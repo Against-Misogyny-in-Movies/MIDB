@@ -20,10 +20,14 @@ export async function getCatalogueCounts(): Promise<CatalogueCounts> {
 
 /**
  * The films with a Bechdel Test rating and the most IMDb votes (the seeded `num_votes` column
- * is IMDb's count), with their Unconsenting Media entry when one is bound.
+ * is IMDb's count), with their Unconsenting Media entry when one is bound. With
+ * `requireUmEntry`, only films that have one.
  */
-export async function getMostVotedRatedFilms(limit = 6): Promise<RatedFilm[]> {
-	const rows = await db
+export async function getMostVotedRatedFilms(
+	limit = 6,
+	{ requireUmEntry = false }: { requireUmEntry?: boolean } = {}
+): Promise<RatedFilm[]> {
+	const base = db
 		.select({
 			title: titles.title,
 			year: titles.year,
@@ -32,9 +36,15 @@ export async function getMostVotedRatedFilms(limit = 6): Promise<RatedFilm[]> {
 			um: umSource
 		})
 		.from(titles)
-		.innerJoin(titleBechdel, eq(titleBechdel.titleId, titles.id))
-		.leftJoin(titleUm, eq(titleUm.titleId, titles.id))
-		.leftJoin(umSource, eq(umSource.umId, titleUm.umId))
+		.innerJoin(titleBechdel, eq(titleBechdel.titleId, titles.id));
+	const joined = requireUmEntry
+		? base
+				.innerJoin(titleUm, eq(titleUm.titleId, titles.id))
+				.innerJoin(umSource, eq(umSource.umId, titleUm.umId))
+		: base
+				.leftJoin(titleUm, eq(titleUm.titleId, titles.id))
+				.leftJoin(umSource, eq(umSource.umId, titleUm.umId));
+	const rows = await joined
 		.where(eq(titles.kind, 'movie'))
 		.orderBy(desc(titleBechdel.numVotes))
 		.limit(limit);

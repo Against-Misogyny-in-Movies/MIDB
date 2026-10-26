@@ -89,4 +89,16 @@ describe('getMostVotedRatedFilms', () => {
 			['Clear', 0, 'safe']
 		]);
 	});
+
+	it('requireUmEntry keeps only films with an Unconsenting Media entry', async () => {
+		await film('Unbound', 99, 3, 1);
+		const bound = await film('Bound', 10, 2, 2);
+		await db.insert(umSource).values({ umId: 5, cleanName: 'b', cleanTitleKey: 'b', ...FLAGS });
+		await db.insert(titleUm).values({ titleId: bound.id, umId: 5 });
+
+		expect((await getMostVotedRatedFilms(5)).map((f) => f.title)).toEqual(['Unbound', 'Bound']);
+		expect((await getMostVotedRatedFilms(5, { requireUmEntry: true })).map((f) => f.title)).toEqual(
+			['Bound']
+		);
+	});
 });
