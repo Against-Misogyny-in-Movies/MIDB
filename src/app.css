@@ -63,46 +63,28 @@
 	color-scheme: dark;
 }
 
-/* ─── Landing page palette ───
-   The landing follows its own pinned style reference (DESIGN.md › Landing page): white canvas,
-   zinc greys, one emerald action colour, categorical hues for the four sources. Scoped to
-   `.landing` so it never reaches the rest of the site. Emerald fills use #047857, one step
-   darker than the reference's #059669, so white button text passes 4.5:1. */
+/* ─── Landing page ───
+   The landing keeps the layout of its pinned style reference (DESIGN.md › Landing page) on the
+   site's violet palette above. These are the only landing-specific tokens: fonts, two shadows,
+   the text colour on filled violet surfaces, a lilac wash, and one violet shade per source.
+   Scoped to `.landing`. */
 .landing {
-	--l-canvas: light-dark(#ffffff, #09090b);
-	--l-fog: light-dark(#f4f4f5, #18181b);
-	--l-ink: light-dark(#18181b, #fafafa);
-	--l-graphite: light-dark(#52525b, #a1a1aa);
-	--l-slate: light-dark(#71717a, #a1a1aa);
-	--l-border: light-dark(#e5e7eb, #27272a);
-	--l-border-strong: light-dark(#d4d4d8, #3f3f46);
+	--l-on-action: light-dark(#ffffff, #141217);
+	/* One shade of the project violet per source. */
+	--l-bechdel: var(--brand);
+	--l-um: light-dark(#4a0080, #e2c4f8);
+	--l-ddd: light-dark(#a030d8, #a56ae0);
+	--l-tmdb: light-dark(#2d0050, #d4aef4);
+	/* Lilac wash for tinted plates and tiles. */
+	--l-wash: color-mix(in oklab, var(--brand) 8%, var(--surface-raised));
 
-	--l-emerald: #059669;
-	--l-action: #047857;
-	--l-action-hover: #065f46;
-	--l-emerald-text: light-dark(#047857, #34d399);
-	--l-violet: #9333ea;
-	--l-cobalt: #2563eb;
-	--l-pink: #db2777;
-
-	--l-pos-bg: light-dark(#d1fae5, #064e3b);
-	--l-pos-fg: light-dark(#065f46, #a7f3d0);
-	--l-mid-bg: light-dark(#fef3c7, #422006);
-	--l-mid-fg: light-dark(#92400e, #fde68a);
-	--l-neg-bg: light-dark(#fee2e2, #450a0a);
-	--l-neg-fg: light-dark(#b91c1c, #fecaca);
-
-	--l-shadow-float: 0 25px 50px -12px light-dark(rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.7));
-	--l-shadow-action: 0 10px 15px -3px rgb(5 150 105 / 0.2), 0 4px 6px -4px rgb(5 150 105 / 0.2);
+	--l-shadow-float: 0 25px 50px -12px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.7));
+	--l-shadow-action: 0 10px 15px -3px color-mix(in oklab, var(--brand) 25%, transparent);
 
 	--l-font-display: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
 	--l-font-ui:
 		ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	--l-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-body:has(.landing) {
-	background-color: light-dark(#ffffff, #09090b);
 }
 
 /* ─── Semantic tokens exposed to Tailwind (inline = re-cascades on theme change) ─── */

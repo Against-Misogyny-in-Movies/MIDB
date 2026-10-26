@@ -67,9 +67,9 @@
 	form {
 		@apply flex items-center gap-sm;
 		padding: 4px 4px 4px 16px;
-		border: 1px solid var(--l-border);
+		border: 1px solid var(--border);
 		border-radius: 12px;
-		background-color: var(--l-canvas);
+		background-color: var(--surface-raised);
 		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 		transition:
 			border-color 0.15s ease,
@@ -77,30 +77,30 @@
 	}
 
 	form:hover {
-		border-color: var(--l-border-strong);
+		border-color: var(--border-strong);
 	}
 
 	form:focus-within {
-		border-color: var(--l-emerald);
-		box-shadow: 0 0 0 3px rgb(5 150 105 / 0.15);
+		border-color: var(--brand);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
 	}
 
 	.lead,
 	.spinner {
 		@apply shrink-0;
 		font-size: 1rem;
-		color: var(--l-slate);
+		color: var(--ink-muted);
 	}
 
 	input {
 		@apply flex-1 min-w-0 bg-transparent;
 		height: 2.5rem;
 		font-size: 1rem;
-		color: var(--l-ink);
+		color: var(--ink);
 	}
 
 	input::placeholder {
-		color: var(--l-slate);
+		color: var(--ink-muted);
 	}
 
 	input:focus-visible {
@@ -115,15 +115,15 @@
 		border-radius: 8px;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #ffffff;
-		background-color: var(--l-action);
+		color: var(--l-on-action);
+		background-color: var(--brand);
 		transition:
 			background-color 0.15s ease,
 			box-shadow 0.15s ease;
 	}
 
 	button:hover {
-		background-color: var(--l-action-hover);
+		background-color: var(--brand-strong);
 		box-shadow: var(--l-shadow-action);
 	}
 

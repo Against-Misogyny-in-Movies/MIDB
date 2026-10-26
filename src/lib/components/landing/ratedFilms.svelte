@@ -85,28 +85,28 @@
 	@reference "../../../app.css";
 
 	.card {
-		border: 1px solid var(--l-border);
+		border: 1px solid var(--border);
 		border-radius: 12px;
-		background-color: var(--l-canvas);
+		background-color: var(--surface-raised);
 		box-shadow: var(--l-shadow-float);
 		padding: 8px 16px 12px;
 	}
 
 	.card-head {
 		padding: 12px 0;
-		border-bottom: 2px solid var(--l-fog);
+		border-bottom: 2px solid var(--surface-sunken);
 	}
 
 	h2 {
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: var(--l-ink);
+		color: var(--ink);
 	}
 
 	.card-head p {
 		font-size: 0.75rem;
 		line-height: 1.33;
-		color: var(--l-slate);
+		color: var(--ink-muted);
 		margin-top: 2px;
 	}
 
@@ -118,12 +118,12 @@
 	thead th {
 		@apply text-left font-medium;
 		font-size: 0.75rem;
-		color: var(--l-slate);
+		color: var(--ink-muted);
 		padding: 10px 0 6px;
 	}
 
 	tbody tr + tr {
-		border-top: 1px solid var(--l-fog);
+		border-top: 1px solid var(--surface-sunken);
 	}
 
 	tbody th,
@@ -142,7 +142,7 @@
 		@apply flex items-center w-full text-left bg-transparent border-0 p-0 cursor-pointer no-underline;
 		gap: 12px;
 		font: inherit;
-		color: var(--l-ink);
+		color: var(--ink);
 	}
 
 	.year {
@@ -150,8 +150,8 @@
 		width: 2.75rem;
 		height: 2rem;
 		border-radius: 8px;
-		background-color: var(--l-fog);
-		color: var(--l-graphite);
+		background-color: var(--l-wash);
+		color: var(--brand);
 		font-family: var(--l-font-mono);
 		font-size: 0.75rem;
 		letter-spacing: -0.033em;
@@ -164,7 +164,7 @@
 	}
 
 	.film:hover .name {
-		color: var(--l-emerald-text);
+		color: var(--brand);
 	}
 
 	.badge {
@@ -177,23 +177,23 @@
 	}
 
 	.badge--pos {
-		background-color: var(--l-pos-bg);
-		color: var(--l-pos-fg);
+		background-color: var(--success-soft);
+		color: var(--success);
 	}
 
 	.badge--mid {
-		background-color: var(--l-mid-bg);
-		color: var(--l-mid-fg);
+		background-color: var(--warn-soft);
+		color: var(--warn);
 	}
 
 	.badge--neg {
-		background-color: var(--l-neg-bg);
-		color: var(--l-neg-fg);
+		background-color: var(--danger-soft);
+		color: var(--danger);
 	}
 
 	.badge--none {
-		background-color: var(--l-fog);
-		color: var(--l-graphite);
+		background-color: var(--surface-sunken);
+		color: var(--ink-muted);
 	}
 
 	@media (max-width: 559px) {

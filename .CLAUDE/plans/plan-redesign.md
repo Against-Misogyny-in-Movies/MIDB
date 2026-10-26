@@ -68,3 +68,4 @@ The landing now follows a pinned style reference (Podscan.fm, supplied by the us
 - Four source cards with categorical icon disks; a fog plate with the six verdict tiers; one-line About.
 - Palette scoped to `.landing` (`--l-*`), with dark values. Button fill `#047857` instead of `#059669` for AA contrast.
 - Found while checking the data: `title_bechdel.num_votes` is IMDb's vote count, so the Bechdel section's "Based on N votes." mislabelled it. Line removed.
+- Follow-up from the user: "use the purple colour palette". The landing keeps the reference's layout and type but now uses the site tokens: violet Search button, links and stat icons, four violet shades for the source disks, a lilac wash for the verdict plate and year tiles. The emerald, zinc and pure-white canvas are gone. Verdict and data badges keep the status colours (green / amber / red) because they carry meaning, as on the title pages.

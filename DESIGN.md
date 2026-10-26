@@ -56,11 +56,11 @@ Kickers above headings, uppercase tracked labels, icons in tinted circles, colou
 
 ## Landing page
 
-The landing page (`/`) follows a pinned style reference (Podscan.fm): a quiet data console on a white canvas, zinc greys, one emerald action colour, and four categorical hues. Its tokens are the `--l-*` custom properties scoped to `.landing` in `app.css`, with dark values via `light-dark()`. Nothing outside `.landing` uses them.
+The landing page (`/`) takes its layout and type from a pinned style reference (Podscan.fm), on the site's violet palette: a quiet data console where the violet action carries the page. It uses the site tokens directly; the only extra tokens are the `--l-*` custom properties scoped to `.landing` in `app.css` (fonts, two shadows, the text colour on violet fills, a lilac wash, one violet shade per source).
 
 - **Type.** Inter Tight 700 for the hero (60px, line-height 1) and section titles (36px), 600 for card headings; system UI stack for everything else, tracked tight (-0.025em). Monospace only for the year tiles.
-- **Colour.** Canvas `#ffffff` / `#09090b`, fog `#f4f4f5`, ink `#18181b`, graphite `#52525b`, slate `#71717a`, hairline `#e5e7eb`. Emerald `#059669` for icons and focus; filled buttons use `#047857` so white text passes 4.5:1 (the reference's `#059669` gives 3.77:1). Source hues: Bechdel Test emerald, Unconsenting Media violet `#9333ea`, Does the Dog Die blue `#2563eb`, TMDB pink `#db2777`.
-- **Badges.** Pills (radius 9999px): positive green, amber, negative rose, grey for no data. The same three tones mark the six verdict tiers.
+- **Colour.** The site palette: `--surface` ground, `--surface-raised` cards and search bar, `--ink` / `--ink-muted` text, `--border` hairlines. `--brand` violet for the Search button, links, focus and stat icons. Sources get four violet shades: Bechdel Test `--brand`, Unconsenting Media `#4a0080`, Does the Dog Die `#a030d8`, TMDB `#2d0050` (lighter shades in dark mode, with dark glyphs). The verdict plate and year tiles use a lilac wash (8% brand).
+- **Badges.** Pills (radius 9999px) keep the status colours because they carry meaning: `--success`, `--warn`, `--danger` on their soft fills, `--secondary-soft` for no data. The same tones mark the six verdict tiers, as on the title pages.
 - **Shapes.** Buttons 8px, cards and inputs 12px, pills 9999px. Hairline borders do the separation; the one large shadow (`0 25px 50px -12px`) lifts the data card.
-- **Layout.** Centred hero stack, then the floating data card, a 4-up source grid (2-up, then 1-up on smaller screens), a fog plate, a one-line About. 64px between sections.
+- **Layout.** Centred hero stack, then the floating data card, a 4-up source grid (2-up, then 1-up on smaller screens), a lilac plate, a one-line About. 64px between sections.
 - **Data first.** The hero's stat line and the data card show real seeded values (`$lib/server/data/catalogue.ts`). No invented numbers, no decorative imagery.

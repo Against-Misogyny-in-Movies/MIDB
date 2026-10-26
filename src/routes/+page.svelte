@@ -23,7 +23,7 @@
 			name: 'Bechdel Test',
 			body: 'Whether two named women talk to each other about something other than a man. Scored 0–3, films only.',
 			icon: 'ri-chat-3-fill',
-			color: 'var(--l-emerald)',
+			color: 'var(--l-bechdel)',
 			domain: 'bechdeltest.com',
 			href: 'https://bechdeltest.com'
 		},
@@ -32,7 +32,7 @@
 			name: 'Unconsenting Media',
 			body: 'Nine flags for depictions of sexual violence, from a community database.',
 			icon: 'ri-flag-2-fill',
-			color: 'var(--l-violet)',
+			color: 'var(--l-um)',
 			domain: 'unconsentingmedia.org',
 			href: 'https://www.unconsentingmedia.org'
 		},
@@ -41,7 +41,7 @@
 			name: 'Does the Dog Die',
 			body: 'Community-voted trigger warnings on hundreds of topics, fetched when a title page opens.',
 			icon: 'ri-alarm-warning-fill',
-			color: 'var(--l-cobalt)',
+			color: 'var(--l-ddd)',
 			domain: 'doesthedogdie.com',
 			href: 'https://www.doesthedogdie.com'
 		},
@@ -50,7 +50,7 @@
 			name: 'TMDB',
 			body: 'Title details and credits, including the gender recorded for each cast and crew member.',
 			icon: 'ri-film-fill',
-			color: 'var(--l-pink)',
+			color: 'var(--l-tmdb)',
 			domain: 'themoviedb.org',
 			href: 'https://www.themoviedb.org'
 		}
@@ -102,15 +102,15 @@
 		{#if data.counts}
 			<ul class="stats">
 				<li>
-					<i class="ri-chat-3-fill" aria-hidden="true"></i>
+					<i class="ri-chat-3-fill" style="--hue: var(--l-bechdel)" aria-hidden="true"></i>
 					<strong>{fmt(data.counts.bechdelRatings)}</strong> Bechdel Test ratings
 				</li>
 				<li>
-					<i class="ri-flag-2-fill" aria-hidden="true"></i>
+					<i class="ri-flag-2-fill" style="--hue: var(--l-um)" aria-hidden="true"></i>
 					<strong>{fmt(data.counts.umEntries)}</strong> Unconsenting Media entries
 				</li>
 				<li>
-					<i class="ri-alarm-warning-fill" aria-hidden="true"></i>
+					<i class="ri-alarm-warning-fill" style="--hue: var(--l-ddd)" aria-hidden="true"></i>
 					<strong>Live</strong> Does the Dog Die warnings
 				</li>
 			</ul>
@@ -184,7 +184,7 @@
 
 	.landing {
 		font-family: var(--l-font-ui);
-		color: var(--l-ink);
+		color: var(--ink);
 		letter-spacing: -0.025em;
 	}
 
@@ -215,7 +215,7 @@
 		gap: 12px 32px;
 		margin-top: 1.5rem;
 		font-size: 0.875rem;
-		color: var(--l-graphite);
+		color: var(--ink-muted);
 	}
 
 	.stats li {
@@ -225,12 +225,12 @@
 
 	.stats i {
 		font-size: 1rem;
-		color: var(--l-emerald);
+		color: var(--hue);
 	}
 
 	.stats strong {
 		font-weight: 600;
-		color: var(--l-ink);
+		color: var(--ink);
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -276,9 +276,9 @@
 	.source {
 		@apply flex flex-col items-center text-center;
 		padding: 32px 24px;
-		border: 1px solid var(--l-border);
+		border: 1px solid var(--border);
 		border-radius: 12px;
-		background-color: var(--l-canvas);
+		background-color: var(--surface-raised);
 	}
 
 	.disk {
@@ -286,7 +286,7 @@
 		width: 2.5rem;
 		height: 2.5rem;
 		font-size: 1.25rem;
-		color: #ffffff;
+		color: var(--l-on-action);
 		background-color: var(--disk);
 	}
 
@@ -300,7 +300,7 @@
 	.source p {
 		font-size: 0.875rem;
 		line-height: 1.43;
-		color: var(--l-graphite);
+		color: var(--ink-muted);
 		margin-top: 6px;
 	}
 
@@ -313,7 +313,7 @@
 
 	.action-link {
 		font-weight: 600;
-		color: var(--l-emerald-text);
+		color: var(--brand);
 		text-decoration: none;
 	}
 
@@ -323,15 +323,15 @@
 	}
 
 	.quiet-link {
-		color: var(--l-slate);
+		color: var(--ink-muted);
 		text-decoration: underline;
-		text-decoration-color: var(--l-border-strong);
+		text-decoration-color: var(--border-strong);
 		text-underline-offset: 3px;
 		transition: color 0.15s ease;
 	}
 
 	.quiet-link:hover {
-		color: var(--l-ink);
+		color: var(--ink);
 	}
 
 	/* ── Verdicts: a fog plate with the real tier names ── */
@@ -340,7 +340,7 @@
 		gap: 24px 48px;
 		padding: 32px;
 		border-radius: 12px;
-		background-color: var(--l-fog);
+		background-color: var(--l-wash);
 	}
 
 	@media (min-width: 768px) {
@@ -358,7 +358,7 @@
 	}
 
 	.verdicts-text p {
-		color: var(--l-graphite);
+		color: var(--ink-muted);
 		margin-top: 8px;
 	}
 
@@ -366,17 +366,17 @@
 		@apply inline-flex items-center no-underline;
 		margin-top: 20px;
 		padding: 10px 20px;
-		border: 1px solid var(--l-border);
+		border: 1px solid var(--border);
 		border-radius: 8px;
-		background-color: var(--l-canvas);
-		color: var(--l-ink);
+		background-color: var(--surface-raised);
+		color: var(--ink);
 		font-size: 0.875rem;
 		font-weight: 600;
 		transition: border-color 0.15s ease;
 	}
 
 	.ghost-button:hover {
-		border-color: var(--l-border-strong);
+		border-color: var(--border-strong);
 	}
 
 	.tiers {
@@ -387,7 +387,7 @@
 	.tier-group dt {
 		font-size: 0.75rem;
 		font-weight: 500;
-		color: var(--l-slate);
+		color: var(--ink-muted);
 		margin-bottom: 6px;
 	}
 
@@ -404,18 +404,18 @@
 	}
 
 	.tier--pos {
-		background-color: var(--l-pos-bg);
-		color: var(--l-pos-fg);
+		background-color: var(--success-soft);
+		color: var(--success);
 	}
 
 	.tier--mid {
-		background-color: var(--l-mid-bg);
-		color: var(--l-mid-fg);
+		background-color: var(--warn-soft);
+		color: var(--warn);
 	}
 
 	.tier--neg {
-		background-color: var(--l-neg-bg);
-		color: var(--l-neg-fg);
+		background-color: var(--danger-soft);
+		color: var(--danger);
 	}
 
 	/* ── About ── */
@@ -423,7 +423,7 @@
 		@apply text-center;
 		margin-top: 4rem;
 		font-size: 0.875rem;
-		color: var(--l-graphite);
+		color: var(--ink-muted);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
