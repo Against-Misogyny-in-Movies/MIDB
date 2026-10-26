@@ -130,6 +130,21 @@ describe('MovieSearchState', () => {
 		expect(firstSignal.aborted).toBe(true);
 	});
 
+	it('submit() opens the highlighted result, else the first, else nothing', async () => {
+		const s = connected();
+		s.submit();
+		expect(goto).not.toHaveBeenCalled();
+
+		s.search('matrix');
+		await vi.advanceTimersByTimeAsync(500);
+		s.submit();
+		expect(goto).toHaveBeenLastCalledWith('/movie/603');
+
+		s.highlight(1);
+		s.submit();
+		expect(goto).toHaveBeenLastCalledWith('/tv/1399');
+	});
+
 	it('close() keeps query and results so reopen() re-shows them without a refetch', async () => {
 		const s = connected();
 		s.search('matrix');

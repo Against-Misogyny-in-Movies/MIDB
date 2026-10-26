@@ -89,3 +89,15 @@ export function formatDate(iso: string): string {
 	const date = new Date(iso);
 	return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
 }
+
+/**
+ * Moves a trailing English article to the front: the Bechdel Test data stores titles in
+ * library order (`"Matrix, The"`, `"Lord of the Rings: The Return of the King, The"`).
+ *
+ * @param title - A title as stored.
+ * @returns The title in reading order (`"The Matrix"`); other titles unchanged.
+ */
+export function displayTitle(title: string): string {
+	const m = /^(.+), (The|A|An)$/.exec(title.trim());
+	return m ? `${m[2]} ${m[1]}` : title;
+}

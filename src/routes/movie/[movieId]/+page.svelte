@@ -55,7 +55,6 @@
 							</li>
 						{/each}
 					</ol>
-					<p class="meta-note tabular-nums">Based on {bechdel.numVotes.toLocaleString()} votes.</p>
 				{:else}
 					<p class="no-data">Not in the BechdelTest.com database.</p>
 				{/if}
@@ -95,10 +94,6 @@
 
 	.no-data {
 		@apply text-ink-muted;
-	}
-
-	.meta-note {
-		@apply text-sm text-ink-muted;
 	}
 
 	/* Shared marker pattern: see .CLAUDE/architecture.md. Brand, not green/red: pass or fail

@@ -58,3 +58,13 @@ Same skill, `clarify` reference. Every user-facing string rewritten to essential
 - `AGENTS.md` copy rules: third person on the landing page too, no slogans, essentials only, terminology list.
 
 - No "How …" phrasing anywhere: the nav item, page title and every "How it works / How this works / How verdicts work / How it is used" link are now "Methodology".
+
+## Landing page redesign (follow-up)
+
+The landing now follows a pinned style reference (Podscan.fm, supplied by the user): white canvas, zinc greys, one emerald action, Inter Tight display. Mapped onto MIDB without inventing claims:
+
+- Hero: headline, search bar with a working emerald Search button (`MovieSearchState.submit()`), stat line of real counts (`getCatalogueCounts`).
+- Floating data card (the reference's live feed): most IMDb-voted rated films with Bechdel and UM badges (`getMostVotedRatedFilms`). Rows without a TMDB id run their title through search, so the card works before `db:backfill:tmdb`.
+- Four source cards with categorical icon disks; a fog plate with the six verdict tiers; one-line About.
+- Palette scoped to `.landing` (`--l-*`), with dark values. Button fill `#047857` instead of `#059669` for AA contrast.
+- Found while checking the data: `title_bechdel.num_votes` is IMDb's vote count, so the Bechdel section's "Based on N votes." mislabelled it. Line removed.

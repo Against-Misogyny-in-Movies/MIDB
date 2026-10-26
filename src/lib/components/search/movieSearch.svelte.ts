@@ -137,6 +137,12 @@ export class MovieSearchState {
 		}
 	}
 
+	/** The search button and Enter with no highlighted row: open the highlighted or first result. */
+	submit() {
+		const item = this.results[this.activeIndex] ?? this.results[0];
+		if (item) this.select(item);
+	}
+
 	select(item: SearchResult) {
 		this.navigatingTo = item;
 		if (item.mediaType === 'tv') {
