@@ -16,7 +16,7 @@
 <NavProgress />
 
 <div class="shell">
-	<header class="header-wrap">
+	<header>
 		<Navbar />
 	</header>
 
@@ -34,8 +34,8 @@
 		@apply flex flex-col min-h-screen;
 	}
 
-	.header-wrap {
-		@apply max-w-5xl w-full mx-auto px-md;
+	header {
+		@apply border-b border-border;
 	}
 
 	main {

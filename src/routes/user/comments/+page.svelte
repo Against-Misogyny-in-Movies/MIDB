@@ -4,21 +4,23 @@
 	let { data } = $props();
 </script>
 
-<div class="history-page">
-	<header class="history-header">
-		<a href="/user/profile" class="back-link label">← Profile</a>
+<div class="account-page">
+	<header>
+		<a href="/user/profile" class="back"
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
+		>
 		<h1 class="display">Comment history</h1>
 	</header>
 
 	{#if data.comments.length === 0}
-		<p class="empty-state label">No comments yet.</p>
+		<p class="empty">No comments yet.</p>
 	{:else}
-		<ul class="comment-list">
+		<ul class="history">
 			{#each data.comments as comment (comment.id)}
-				<li class="comment-row">
-					<a href={titleHref(comment.kind, comment.tmdbId)} class="comment-link">
-						<span class="comment-body">{comment.body}</span>
-						<time class="comment-date label" datetime={comment.createdAt.toISOString()}>
+				<li>
+					<a href={titleHref(comment.kind, comment.tmdbId)}>
+						<span class="body">{comment.body}</span>
+						<time class="date" datetime={comment.createdAt.toISOString()}>
 							{comment.createdAt.toLocaleDateString()}
 						</time>
 					</a>
@@ -31,39 +33,48 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.history-page {
-		@apply max-w-lg mx-auto py-lg flex flex-col gap-lg;
+	.account-page {
+		@apply flex flex-col mx-auto;
+		max-width: 36rem;
+		gap: var(--spacing-lg);
+		padding-block: var(--spacing-xl);
 	}
 
-	.history-header {
-		@apply flex flex-col gap-sm;
+	.back {
+		@apply inline-flex items-center text-sm text-ink-muted no-underline;
+		margin-bottom: var(--spacing-sm);
 	}
 
-	.back-link {
-		@apply text-ink-muted no-underline text-sm hover:text-brand;
+	.back:hover {
+		@apply text-ink;
 	}
 
-	.empty-state {
+	h1 {
+		@apply text-4xl;
+	}
+
+	.empty {
 		@apply text-ink-muted;
 	}
 
-	.comment-list {
-		@apply flex flex-col gap-sm list-none p-0 m-0;
+	.history {
+		@apply flex flex-col list-none p-0 m-0 border-t border-border;
 	}
 
-	.comment-row {
-		@apply border border-border rounded-lg;
+	.history a {
+		@apply flex flex-col gap-xs no-underline text-ink border-b border-border;
+		padding-block: var(--spacing-sm);
 	}
 
-	.comment-link {
-		@apply flex flex-col gap-xs p-md no-underline text-ink hover:bg-surface-raised rounded-lg;
+	.history a:hover .body {
+		color: var(--brand);
 	}
 
-	.comment-body {
-		@apply text-sm line-clamp-2;
+	.body {
+		@apply line-clamp-2;
 	}
 
-	.comment-date {
-		@apply text-xs text-ink-muted;
+	.date {
+		@apply text-sm text-ink-muted;
 	}
 </style>

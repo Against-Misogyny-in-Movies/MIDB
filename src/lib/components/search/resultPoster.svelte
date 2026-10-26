@@ -35,7 +35,8 @@
 	@reference "../../../app.css";
 
 	.poster {
-		@apply block flex-shrink-0 overflow-hidden rounded-sm bg-surface;
+		@apply block flex-shrink-0 overflow-hidden rounded-sm;
+		background-color: var(--surface-sunken);
 		width: 2.5rem;
 		height: 3.75rem;
 	}

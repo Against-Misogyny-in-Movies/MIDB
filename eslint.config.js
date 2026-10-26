@@ -24,6 +24,7 @@ export default [
 			'.vercel/**',
 			'node_modules/**',
 			'package/**',
+			'.claude/skills/impeccable/**',
 			'.env',
 			'.env.*',
 			'!.env.example',

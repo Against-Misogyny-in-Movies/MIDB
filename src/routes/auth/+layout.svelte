@@ -8,13 +8,17 @@
 	let { children }: Props = $props();
 </script>
 
-<main>
+<!-- Hanko's element renders its own heading and form; this only places it. -->
+<div class="auth">
 	{@render children()}
-</main>
+</div>
 
 <style lang="postcss">
 	@reference "../../app.css";
-	main {
-		@apply flex flex-col items-center justify-center h-screen;
+
+	.auth {
+		@apply mx-auto;
+		max-width: 26rem;
+		padding-block: var(--spacing-xl);
 	}
 </style>

@@ -69,3 +69,23 @@ export function formatRuntime(min: number): string {
 	if (m === 0) return `${h}h`;
 	return `${h}h ${m}m`;
 }
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+	year: 'numeric',
+	month: 'long',
+	day: 'numeric',
+	timeZone: 'UTC'
+});
+
+/**
+ * Formats a TMDB `YYYY-MM-DD` date as `May 13, 2015`. Read in UTC, so the server and every
+ * browser render the same day. Returns an em-dash for an empty or unparseable value.
+ *
+ * @param iso - A `YYYY-MM-DD` date string, or `''`.
+ * @returns The long-form date, or `"—"`.
+ */
+export function formatDate(iso: string): string {
+	if (!iso) return '—';
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+}

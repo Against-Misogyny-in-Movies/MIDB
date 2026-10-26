@@ -20,42 +20,21 @@
 </script>
 
 {#if categories.length > 1}
-	<div class="category-filter">
-		<label class="select-wrap">
-			<span class="select-label label">Category</span>
-			<select class="select" value={selectedCategory ?? ''} onchange={handleChange}>
-				<option value="">All categories</option>
-				{#each categories as cat (cat)}
-					<option value={cat}>{cat}</option>
-				{/each}
-			</select>
-		</label>
-	</div>
+	<label class="filter">
+		<span class="label">Category</span>
+		<select value={selectedCategory ?? ''} onchange={handleChange}>
+			<option value="">All categories</option>
+			{#each categories as cat (cat)}
+				<option value={cat}>{cat}</option>
+			{/each}
+		</select>
+	</label>
 {/if}
 
 <style lang="postcss">
 	@reference "../../../../app.css";
 
-	.category-filter {
-		@apply flex flex-col gap-xs mb-md;
-	}
-
-	.select-wrap {
-		@apply flex flex-col gap-xs;
-	}
-
-	.select-label {
-		@apply text-xs text-ink-muted uppercase tracking-wide;
-		font-variant-caps: all-small-caps;
-	}
-
-	.select {
-		@apply px-sm py-xs rounded-md border border-border bg-surface text-sm text-ink cursor-pointer;
-		transition: border-color 0.15s ease;
-	}
-
-	.select:focus {
-		@apply outline-none;
-		border-color: var(--brand);
+	.filter {
+		@apply inline-flex items-center gap-sm self-start;
 	}
 </style>

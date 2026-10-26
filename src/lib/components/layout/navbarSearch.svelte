@@ -127,13 +127,10 @@
 		right: 0;
 	}
 
-	/* Below md the bar still holds the theme toggle + hamburger to the right of the
-	   field, so `.root`'s right edge sits mid-bar — anchoring the panel there with
-	   `right: 0` lets a 22rem panel overhang the viewport's left edge. Pin it to the
-	   viewport padding instead (the navbar container is `px-md` = 1rem) so it can't
-	   overflow either side. `fixed` anchors to the viewport, not the mid-bar `.root`;
-	   the search field is only reachable at the top of the page (the navbar isn't
-	   sticky), so a fixed `top` just below the bar tracks the field. */
+	/* Below md the theme toggle and menu sit right of the field, so `.root`'s right edge is
+	   mid-bar and a 22rem panel anchored there overhangs the viewport's left edge. Pin it to the
+	   viewport padding instead (the bar is `px-md`). The navbar is not sticky, so a fixed `top`
+	   just below the 3.5rem bar tracks the field. */
 	@media (max-width: 767px) {
 		.root.is-expanded :global(.panel) {
 			position: fixed;
@@ -145,48 +142,45 @@
 		}
 	}
 
-	/* Collapsed trigger — borderless icon, matches the text nav-links. */
 	.trigger {
-		@apply text-ink-muted bg-transparent border-0 p-0 leading-none;
-		@apply hover:text-brand transition-colors cursor-pointer;
+		@apply flex text-ink-muted bg-transparent border-0 p-0 leading-none cursor-pointer text-lg;
+		transition: color 0.15s ease;
 	}
 
-	.trigger:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
+	.trigger:hover {
+		@apply text-ink;
 	}
 
-	/* Expanded field — minimal underline only (no left/right/top borders),
-	   transparent background, to fit the rest of the app's quiet chrome. */
 	.field {
-		@apply flex items-center gap-xs;
-		@apply bg-transparent;
-		border-bottom: 1px solid var(--border);
+		@apply flex items-center gap-sm px-sm rounded-md;
+		height: 2rem;
+		border: 1px solid var(--border-strong);
+		background-color: var(--surface-raised);
 		transition: border-color 0.15s ease;
 	}
 
 	.field:focus-within {
-		border-bottom-color: var(--brand);
+		border-color: var(--brand);
 	}
 
-	.lead {
+	.lead,
+	.spinner {
 		@apply text-ink-muted text-sm shrink-0;
 	}
 
 	input {
-		@apply flex-1 min-w-0 bg-transparent text-sm py-xs;
+		@apply flex-1 min-w-0 bg-transparent text-sm;
 	}
 
 	input::placeholder {
 		@apply text-ink-muted;
 	}
 
-	input:focus {
+	input:focus-visible {
 		@apply outline-none;
 	}
 
 	.spinner {
-		@apply text-ink-muted text-sm shrink-0;
 		animation: spin 0.7s linear infinite;
 	}
 

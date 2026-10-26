@@ -165,24 +165,16 @@ describe('directorOrCrewShare', () => {
 
 describe('toneTokens', () => {
 	test('success maps to --success tokens', () => {
-		expect(toneTokens('success')).toEqual({
-			fg: '--success',
-			soft: '--success-soft',
-			on: '--success-fg'
-		});
+		expect(toneTokens('success')).toEqual({ fg: '--success', soft: '--success-soft' });
 	});
 	test('warn', () => {
-		expect(toneTokens('warn')).toEqual({ fg: '--warn', soft: '--warn-soft', on: '--warn-fg' });
+		expect(toneTokens('warn')).toEqual({ fg: '--warn', soft: '--warn-soft' });
 	});
 	test('danger', () => {
-		expect(toneTokens('danger')).toEqual({
-			fg: '--danger',
-			soft: '--danger-soft',
-			on: '--danger-fg'
-		});
+		expect(toneTokens('danger')).toEqual({ fg: '--danger', soft: '--danger-soft' });
 	});
-	test('neutral maps to --info tokens', () => {
-		expect(toneTokens('neutral')).toEqual({ fg: '--info', soft: '--info-soft', on: '--info-fg' });
+	test('neutral maps to the muted ink tokens', () => {
+		expect(toneTokens('neutral')).toEqual({ fg: '--ink-muted', soft: '--secondary-soft' });
 	});
 });
 

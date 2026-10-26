@@ -11,7 +11,7 @@
 </script>
 
 <div class="sub-block">
-	<p class="label sub-label">{label}</p>
+	<h3>{label}</h3>
 	<div class="sub-body">
 		{@render children()}
 	</div>
@@ -24,20 +24,11 @@
 		@apply flex flex-col gap-xs;
 	}
 
-	.sub-label {
-		@apply text-ink-muted;
+	h3 {
+		@apply font-semibold text-ink;
 	}
 
 	.sub-body {
-		@apply text-sm text-ink leading-relaxed;
-	}
-
-	/* Prose written as plain paragraphs inside the slot */
-	.sub-body :global(p) {
-		@apply m-0;
-	}
-
-	.sub-body :global(p + p) {
-		@apply mt-sm;
+		@apply flex flex-col gap-sm text-ink-muted;
 	}
 </style>

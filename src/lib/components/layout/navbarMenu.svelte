@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { tick } from 'svelte';
+	import LogoutButton from '$lib/components/auth/logoutButton.svelte';
 	import { session } from '$lib/media/utils/session.svelte.js';
 
-	// Mobile-only hamburger: collapses the text nav-links into a dropdown surface
-	// panel below the md breakpoint. Reuses the collapse-by-default model from
-	// navbarSearch (a $state boolean, closed on outside-pointerdown/Escape). The search
-	// trigger, account chip, and theme toggle stay in the bar. Account links read the
-	// client session (the navbar starts it); the Moderation link is a convenience only,
-	// authorization stays server-side.
+	// Below md the bar keeps only search, the account slot and the theme toggle; this menu
+	// carries the rest. Closes on outside pointerdown and Escape. Account links read the client
+	// session (the navbar starts it); the Moderation link is a convenience only, authorization
+	// stays server-side.
 	const canModerate = $derived(
 		session.user?.role === 'moderator' || session.user?.role === 'administrator'
 	);
@@ -58,15 +57,16 @@
 	{#if open}
 		<div class="panel" id={menuId} role="menu">
 			<a bind:this={firstLink} href="/resources" class="item" role="menuitem" onclick={close}>
-				Resources
+				How it works
 			</a>
-			<a href="/blog" class="item" role="menuitem" onclick={close}>Blog</a>
-			<a href="/about" class="item" role="menuitem" onclick={close}>About us</a>
 			{#if canModerate}
 				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>
 			{/if}
 			{#if session.likelyUser}
 				<a href="/user/profile" class="item" role="menuitem" onclick={close}>Profile</a>
+				{#if session.status === 'user'}
+					<LogoutButton variant="menu" />
+				{/if}
 			{:else}
 				<a href="/auth" class="item" role="menuitem" onclick={close}>Sign in</a>
 			{/if}
@@ -77,7 +77,6 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	/* Mobile-only — desktop keeps the inline links, so the whole control hides. */
 	.root {
 		@apply relative shrink-0;
 	}
@@ -88,70 +87,33 @@
 		}
 	}
 
-	/* Collapsed trigger — borderless icon, matches navbarSearch's trigger and the
-	   theme-toggle density. */
 	.trigger {
-		@apply text-brand bg-transparent border-0 p-0 leading-none;
-		@apply hover:text-brand transition-colors cursor-pointer;
-		font-size: 1.375rem;
+		@apply flex text-ink-muted bg-transparent border-0 p-0 leading-none cursor-pointer text-xl;
+		transition: color 0.15s ease;
 	}
 
-	.trigger:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
+	.trigger:hover {
+		@apply text-ink;
 	}
 
-	/* Dropdown surface — the app's card vocabulary (collapsibleSection border/hover
-	   tint) with the soft brand-washed shadow from backToTop. Absolutely positioned
-	   so opening causes zero layout shift. */
+	/* Absolutely positioned, so opening causes no layout shift. */
 	.panel {
-		@apply absolute right-0 flex flex-col p-xs;
-		top: calc(100% + var(--spacing-xs));
+		@apply absolute right-0 flex flex-col py-xs rounded-md border border-border bg-surface-raised;
+		top: calc(100% + var(--spacing-sm));
 		z-index: 50;
 		min-width: 11rem;
-		@apply rounded-md border border-border bg-surface-raised;
-		border-color: color-mix(in oklab, var(--brand) 35%, var(--border));
-		box-shadow:
-			0 4px 12px color-mix(in oklab, var(--brand) 14%, transparent),
-			0 1px 2px color-mix(in oklab, var(--ink) 8%, transparent);
-		transform-origin: top right;
-		animation: panel-in 0.15s ease;
+		box-shadow: 0 8px 24px -12px color-mix(in oklab, var(--ink) 35%, transparent);
 	}
 
 	.item {
-		@apply block no-underline text-ink-muted px-sm py-xs rounded-md;
-		transition:
-			color 0.15s ease,
-			background-color 0.15s ease;
+		@apply block no-underline text-ink px-md py-sm;
 	}
 
 	.item:hover {
-		@apply text-brand;
-		background-color: color-mix(in oklab, var(--brand) 8%, transparent);
+		background-color: var(--surface-sunken);
 	}
 
 	.item:focus-visible {
-		@apply outline-none text-brand;
-		box-shadow: inset 0 0 0 2px var(--brand);
-	}
-
-	@keyframes panel-in {
-		from {
-			opacity: 0;
-			transform: translateY(-0.25rem);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.panel {
-			animation: none;
-		}
-		.item {
-			transition: none;
-		}
+		outline-offset: -2px;
 	}
 </style>

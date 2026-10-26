@@ -5,18 +5,17 @@
 	import BechdelLadderExample from '$lib/components/resources/bechdelLadderExample.svelte';
 	import UmFlagsExample from '$lib/components/resources/umFlagsExample.svelte';
 	import VerdictTierExample from '$lib/components/resources/verdictTierExample.svelte';
-	import BackToTop from '$lib/components/ui/visualization/backToTop.svelte';
 
 	const navItems = [
-		{ id: 'verdict', label: 'Verdict cards', icon: 'ri-compass-3-line' },
-		{ id: 'bechdel', label: 'Bechdel Test', icon: 'ri-scales-3-line' },
-		{ id: 'unconsenting', label: 'Unconsenting Media', icon: 'ri-shield-cross-line' },
-		{ id: 'ddd', label: 'Does the Dog Die', icon: 'ri-alarm-warning-line' }
+		{ id: 'verdict', label: 'Verdict cards' },
+		{ id: 'bechdel', label: 'Bechdel Test' },
+		{ id: 'unconsenting', label: 'Unconsenting Media' },
+		{ id: 'ddd', label: 'Does the Dog Die' }
 	];
 </script>
 
 <svelte:head>
-	<title>How our metrics work — MIDB</title>
+	<title>How our metrics work · MIDB</title>
 	<meta
 		name="description"
 		content="What the MIDB verdict cards, Bechdel Test, Unconsenting Media, and Does the Dog Die metrics mean, where the data comes from, and how we use it."
@@ -25,7 +24,6 @@
 
 <div class="resources">
 	<header class="page-head">
-		<p class="eyebrow display">Resources</p>
 		<h1 class="display">How our metrics work</h1>
 		<p class="lede">
 			MIDB combines several sources to flag misogyny and violence against women in film and
@@ -42,7 +40,6 @@
 		<div class="content">
 			<MetricArticle
 				id="verdict"
-				icon="ri-compass-3-line"
 				title="Verdict cards"
 				tagline="The summary at the top of every title"
 			>
@@ -57,8 +54,8 @@
 				<SubBlock label="How it works">
 					<p>
 						Each card resolves to one of three tiers, plus a fourth "not enough data" state when too
-						few metrics are available. The count shown next to the label is how many signals went
-						into the rating.
+						few metrics are available. The line under the summary shows how many metrics went into
+						the rating; opening it lists each one.
 					</p>
 					<VerdictTierExample />
 				</SubBlock>
@@ -108,7 +105,6 @@
 
 			<MetricArticle
 				id="bechdel"
-				icon="ri-scales-3-line"
 				title="Bechdel Test"
 				tagline="Do two women talk about something other than a man?"
 				sourceLabel="bechdeltest.com"
@@ -133,15 +129,14 @@
 				</SubBlock>
 				<SubBlock label="How we work it out">
 					<p>
-						The rating is used as published. The card shows which criteria a film passed, and the
-						score feeds into the representation verdict.
+						The rating is used as published. The title page shows which criteria a film passed, and
+						the score feeds into the representation verdict.
 					</p>
 				</SubBlock>
 			</MetricArticle>
 
 			<MetricArticle
 				id="unconsenting"
-				icon="ri-shield-cross-line"
 				title="Unconsenting Media"
 				tagline="Flags for sexual violence on screen"
 				sourceLabel="unconsentingmedia.org"
@@ -177,7 +172,6 @@
 
 			<MetricArticle
 				id="ddd"
-				icon="ri-alarm-warning-line"
 				title="Does the Dog Die"
 				tagline="Community trigger warnings"
 				sourceLabel="doesthedogdie.com"
@@ -212,17 +206,13 @@
 			</MetricArticle>
 		</div>
 	</div>
-
-	<BackToTop />
 </div>
 
 <style lang="postcss">
 	@reference "../../app.css";
 
-	/* Smooth-scroll the in-page section anchors. Scoped to this route via the
-     component's <style> lifecycle (the rule mounts/unmounts with the page), so
-     it doesn't change scroll behaviour site-wide. Sections already carry
-     scroll-margin-top to clear the sticky bar. */
+	/* Smooth-scroll the in-page anchors on this route only: the rule mounts and unmounts with
+	   the page. */
 	:global(html:has(.resources)) {
 		scroll-behavior: smooth;
 	}
@@ -234,76 +224,44 @@
 	}
 
 	.resources {
-		@apply flex flex-col py-xl;
+		@apply flex flex-col;
 		gap: var(--spacing-xl);
+		padding-top: var(--spacing-xl);
 	}
 
 	.page-head {
-		max-width: 46rem;
-	}
-
-	.eyebrow {
-		@apply text-brand text-lg;
-		font-style: italic;
+		max-width: 42rem;
 	}
 
 	h1 {
-		@apply text-4xl font-semibold text-ink mt-xs mb-md;
-		letter-spacing: -0.01em;
-		line-height: 1.05;
-	}
-
-	@media (min-width: 480px) {
-		h1 {
-			@apply text-5xl;
-		}
+		font-size: clamp(2.5rem, 7vw, 4rem);
+		font-weight: 800;
 	}
 
 	.lede {
-		@apply text-ink-muted text-lg leading-relaxed;
-		max-width: 40rem;
+		@apply text-lg text-ink-muted;
+		margin-top: var(--spacing-md);
 	}
 
 	.layout {
 		@apply grid gap-lg items-start;
-		grid-template-columns: 1fr;
-		/* Let the single-column track shrink so the chip row can scroll inside it
-       instead of widening the page. */
-		min-width: 0;
+		grid-template-columns: minmax(0, 1fr);
 	}
 
 	@media (min-width: 768px) {
 		.layout {
-			grid-template-columns: 14rem minmax(0, 1fr);
+			grid-template-columns: 12rem minmax(0, 42rem);
 			gap: var(--spacing-xl);
 		}
-	}
 
-	.nav-col,
-	.content {
-		min-width: 0;
-	}
-
-	.content {
-		@apply flex flex-col gap-md;
-	}
-
-	/* The grid item itself is the sticky element (the grid uses items: start, so
-     the cell is only as tall as the nav and an inner sticky child would have no
-     room to pin). Desktop pins below the navbar; mobile pins at the top. */
-	.nav-col {
-		@apply sticky;
-		top: 5rem;
-		z-index: 5;
-	}
-
-	@media (max-width: 767px) {
+		/* The grid cell is only as tall as the nav (items: start), so the cell itself pins. */
 		.nav-col {
-			/* Pin a little below the top so the chip bar keeps breathing room above
-         it while scrolling. The container stays transparent — the page shows
-         through the gaps between chips; the chips themselves are opaque. */
-			position: sticky;
-			top: var(--spacing-md);
+			@apply sticky;
+			top: var(--spacing-lg);
 		}
+	}
+
+	.content {
+		@apply flex flex-col min-w-0;
 	}
 </style>

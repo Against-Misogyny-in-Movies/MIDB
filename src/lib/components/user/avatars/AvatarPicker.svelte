@@ -22,7 +22,7 @@
 			value={avatar.key}
 			checked={value === avatar.key}
 			onchange={() => onselect?.(avatar.key)}
-			hidden
+			class="sr-only"
 		/>
 		<label for="{groupName}-{avatar.key}" class="avatar-tile">
 			<AvatarIcon size={48} />
@@ -36,21 +36,30 @@
 
 	.picker {
 		@apply grid gap-sm;
-		grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
 	}
 
 	.avatar-tile {
-		@apply flex flex-col items-center gap-xs;
-		@apply border-2 border-border rounded-lg p-sm cursor-pointer text-center;
-		transition: border-color 0.1s;
+		@apply flex flex-col items-center gap-xs rounded-md p-sm cursor-pointer text-center;
+		border: 1px solid var(--border);
+		transition:
+			border-color 0.15s ease,
+			background-color 0.15s ease;
 	}
 
 	.avatar-tile:hover {
-		@apply border-ink-muted!;
+		border-color: var(--ink-muted);
 	}
 
 	input:checked + .avatar-tile {
-		@apply border-brand;
+		border-color: var(--brand);
+		background-color: color-mix(in oklab, var(--brand) 8%, transparent);
+		box-shadow: inset 0 0 0 1px var(--brand);
+	}
+
+	input:focus-visible + .avatar-tile {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
 	}
 
 	.avatar-name {

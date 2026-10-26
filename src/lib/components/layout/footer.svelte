@@ -1,16 +1,18 @@
 <footer>
 	<div class="inner">
-		<div class="brand">
-			<span class="display wordmark">MIDB</span>
-			<span class="label">Media Information Database</span>
-		</div>
-		<nav class="links label" aria-label="Footer">
-			<a href="/">Home</a>
-			<a href="/resources">Resources</a>
-			<a href="/blog">Blog</a>
-			<a href="/about">About us</a>
-			<a href="/auth">Sign in</a>
-		</nav>
+		<p class="line">
+			<a href="/" class="display wordmark">MIDB</a>
+			<a href="/resources">How it works</a>
+			<a
+				href="https://github.com/Against-Misogyny-in-Movies/MIDB"
+				target="_blank"
+				rel="noopener noreferrer">Source code</a
+			>
+		</p>
+		<p class="credit">
+			Title data and images from TMDB. This product uses the TMDB API but is not endorsed or
+			certified by TMDB.
+		</p>
 	</div>
 </footer>
 
@@ -18,31 +20,35 @@
 	@reference "../../../app.css";
 
 	footer {
-		@apply border-t border-border mt-xl;
+		@apply border-t border-border;
+		margin-top: 5rem;
 	}
 
 	.inner {
-		@apply flex items-center justify-between flex-wrap gap-md;
-		@apply max-w-5xl mx-auto py-lg px-md;
+		@apply flex flex-col gap-sm max-w-5xl mx-auto px-md text-sm text-ink-muted;
+		padding-block: var(--spacing-lg);
 	}
 
-	.brand {
-		@apply flex items-center gap-sm;
+	.line {
+		@apply flex flex-wrap items-baseline gap-x-md gap-y-xs;
+	}
+
+	.line a {
+		@apply no-underline;
+		transition: color 0.15s ease;
+	}
+
+	.line a:hover {
+		@apply text-ink;
 	}
 
 	.wordmark {
-		@apply text-brand font-semibold;
+		@apply text-lg text-ink;
+		font-weight: 800;
 	}
 
-	.links {
-		@apply flex flex-wrap gap-md;
-	}
-
-	.links a {
-		@apply text-ink-muted no-underline;
-	}
-
-	.links a:hover {
-		@apply text-brand;
+	.credit {
+		@apply text-xs;
+		max-width: 40rem;
 	}
 </style>

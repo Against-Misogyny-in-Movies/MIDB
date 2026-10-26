@@ -50,23 +50,23 @@
 	@reference "../../../app.css";
 
 	.panel {
-		@apply absolute z-50 w-full mt-1;
-		@apply bg-surface-raised border border-border rounded-md shadow-md;
+		@apply absolute z-50 w-full rounded-md border border-border bg-surface-raised;
+		margin-top: var(--spacing-xs);
+		box-shadow: 0 12px 32px -16px color-mix(in oklab, var(--ink) 40%, transparent);
 	}
 
 	ul.panel {
-		@apply list-none p-xs m-0 flex flex-col gap-0;
-		max-height: 20rem;
+		@apply list-none py-xs m-0 flex flex-col;
+		max-height: 22rem;
 		overflow-y: auto;
-		scrollbar-color: var(--color-brand) transparent;
+		overscroll-behavior: contain;
 	}
 
 	.status {
-		@apply flex flex-row items-center gap-xs p-sm text-sm text-ink-muted;
+		@apply flex items-center gap-sm px-md py-sm text-sm text-ink-muted;
 	}
 
 	.spinner {
-		@apply text-base;
 		animation: spin 0.7s linear infinite;
 	}
 

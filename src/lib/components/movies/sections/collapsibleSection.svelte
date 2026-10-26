@@ -3,17 +3,17 @@
 
 	interface Props {
 		title: string;
-		/** Short status shown on the right of the summary row (e.g. "Rating 3/3", "No data"). */
+		/** Short status at the end of the heading row (e.g. "Rating 3/3", "No data"). */
 		status?: string;
-		/** Tone of the status pill. */
+		/** `data` reads as a value; `empty` and `loading` stay muted. */
 		tone?: 'data' | 'empty' | 'loading';
-		/** External source link rendered in the body header. */
+		/** External source, linked under the body. */
 		sourceLabel?: string;
 		sourceHref?: string;
 		/** Internal link to the matching /resources explainer section. */
 		learnHref?: string;
 		learnLabel?: string;
-		/** Start expanded. Defaults to open when there is data. */
+		/** Start expanded. */
 		open?: boolean;
 		children: Snippet;
 	}
@@ -32,32 +32,29 @@
 </script>
 
 <details class="section" {open}>
-	<summary class="summary">
-		<span class="summary-main">
-			<i class="chevron ri-arrow-right-s-line" aria-hidden="true"></i>
-			<span class="title display">{title}</span>
-		</span>
+	<summary>
+		<h2 class="display title">{title}</h2>
 		{#if status}
-			<span class="status status--{tone}">{status}</span>
+			<span class="status status--{tone}" aria-busy={tone === 'loading' || undefined}>{status}</span
+			>
 		{/if}
+		<i class="chevron ri-arrow-down-s-line" aria-hidden="true"></i>
 	</summary>
 
 	<div class="body">
+		{@render children()}
 		{#if (sourceHref && sourceLabel) || learnHref}
-			<div class="body-links">
+			<p class="links">
 				{#if sourceHref && sourceLabel}
-					<a class="source-link" href={sourceHref} target="_blank" rel="noopener noreferrer">
-						{sourceLabel} <i class="ri-external-link-line" aria-hidden="true"></i>
+					<a class="link" href={sourceHref} target="_blank" rel="noopener noreferrer">
+						Source: {sourceLabel}
 					</a>
 				{/if}
 				{#if learnHref}
-					<a class="source-link" href={learnHref}>
-						{learnLabel} <i class="ri-arrow-right-line" aria-hidden="true"></i>
-					</a>
+					<a class="link" href={learnHref}>{learnLabel}</a>
 				{/if}
-			</div>
+			</p>
 		{/if}
-		{@render children()}
 	</div>
 </details>
 
@@ -65,78 +62,62 @@
 	@reference "../../../../app.css";
 
 	.section {
-		@apply rounded-md border border-border bg-surface-raised overflow-hidden;
-		transition: border-color 0.15s ease;
+		@apply border-t border-border;
+		scroll-margin-top: var(--spacing-md);
 	}
 
-	.section:hover {
-		border-color: color-mix(in oklab, var(--brand) 35%, var(--border));
-	}
-
-	.summary {
-		@apply flex items-center justify-between gap-md p-md cursor-pointer select-none;
+	summary {
+		@apply flex items-center gap-md cursor-pointer select-none;
+		padding-block: var(--spacing-md);
 		list-style: none;
 	}
 
-	/* Hide the native disclosure triangle across engines */
-	.summary::-webkit-details-marker {
+	summary::-webkit-details-marker {
 		display: none;
 	}
 
-	.summary:focus-visible {
-		@apply outline-none;
-		box-shadow: inset 0 0 0 2px var(--brand);
-	}
-
-	.summary-main {
-		@apply flex items-center gap-sm min-w-0;
-	}
-
-	.chevron {
-		@apply text-ink-muted text-xl shrink-0;
-		transition: transform 0.18s ease;
-	}
-
-	.section[open] .chevron {
-		transform: rotate(90deg);
-	}
-
 	.title {
-		@apply text-lg font-semibold text-ink truncate;
+		@apply text-2xl flex-1 min-w-0;
 	}
 
 	.status {
-		@apply text-xs font-semibold px-sm py-xs rounded-full shrink-0 whitespace-nowrap;
+		@apply text-sm shrink-0 whitespace-nowrap tabular-nums;
 	}
 
 	.status--data {
-		background-color: color-mix(in oklab, var(--brand) 16%, transparent);
-		color: var(--brand);
+		@apply text-ink font-medium;
 	}
 
-	.status--empty {
-		background-color: var(--secondary-soft);
-		color: var(--ink-muted);
-	}
-
+	.status--empty,
 	.status--loading {
-		background-color: var(--secondary-soft);
-		color: var(--ink-muted);
+		@apply text-ink-muted;
+	}
+
+	.chevron {
+		@apply text-xl text-ink-muted shrink-0;
+		transition: transform 0.15s ease;
+	}
+
+	summary:hover .chevron {
+		@apply text-ink;
+	}
+
+	.section[open] .chevron {
+		transform: rotate(180deg);
 	}
 
 	.body {
-		@apply flex flex-col gap-md px-md pb-md pt-0;
+		@apply flex flex-col gap-md;
+		padding-bottom: var(--spacing-lg);
 	}
 
-	.body-links {
-		@apply flex flex-wrap items-center gap-md;
+	.links {
+		@apply flex flex-wrap gap-x-md gap-y-xs text-sm;
 	}
 
-	.source-link {
-		@apply self-start inline-flex items-center gap-xs text-xs text-ink-muted no-underline transition-colors;
-	}
-
-	.source-link:hover {
-		@apply text-brand;
+	@media (prefers-reduced-motion: reduce) {
+		.chevron {
+			transition: none;
+		}
 	}
 </style>

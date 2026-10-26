@@ -14,3 +14,6 @@ yarn.lock
 
 # drizzle-kit output: keep its own formatting so regenerated files do not fail lint
 /db/migrations
+
+# Vendored Impeccable design skill: keep upstream formatting so `npx impeccable update` diffs cleanly
+/.claude/skills/impeccable

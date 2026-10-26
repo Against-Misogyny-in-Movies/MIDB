@@ -53,10 +53,9 @@
 
 	.nav-progress {
 		@apply fixed top-0 left-0;
-		height: 3px;
+		height: 2px;
 		z-index: 100;
 		background-color: var(--brand);
-		box-shadow: 0 0 8px color-mix(in oklab, var(--brand) 60%, transparent);
 		/* Width eases toward the loading plateau / completion; opacity isn't
 		   animated here — the bar is removed from the DOM after the settle. */
 		transition: width 0.3s ease;

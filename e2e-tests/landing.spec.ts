@@ -3,16 +3,10 @@ import { expect, test } from '@playwright/test';
 test('hero headline and search input are visible', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByTestId('hero-headline')).toBeVisible();
-	const search = page.getByPlaceholder('Search...');
+	const search = page.getByPlaceholder('Search movies & TV…');
 	await expect(search).toBeVisible();
 	await search.focus();
 	await expect(search).toBeFocused();
-});
-
-test('contribute link points to /auth', async ({ page }) => {
-	await page.goto('/');
-	const link = page.getByTestId('contribute-link');
-	await expect(link).toHaveAttribute('href', '/auth');
 });
 
 test('theme toggle switches between light and dark and persists across reload', async ({

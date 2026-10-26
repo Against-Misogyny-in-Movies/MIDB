@@ -23,7 +23,6 @@ export interface AxisVerdict<Tier extends string> {
 	signalsPresent: number;
 	signalsTotal: number;
 	tone: VerdictTone;
-	icon: string;
 	pending?: boolean;
 }
 
@@ -34,10 +33,10 @@ export interface BechdelLike {
 	rating: number;
 }
 
+/** CSS custom-property names for a tone: `fg` is text-safe on `soft`, `soft` is the fill. */
 export interface ToneTokens {
 	fg: string;
 	soft: string;
-	on: string;
 }
 
 const UM_LABELS: Record<UmFlagKey, string> = Object.fromEntries(
@@ -120,13 +119,13 @@ function scoreShare(
 export function toneTokens(tone: VerdictTone): ToneTokens {
 	switch (tone) {
 		case 'success':
-			return { fg: '--success', soft: '--success-soft', on: '--success-fg' };
+			return { fg: '--success', soft: '--success-soft' };
 		case 'warn':
-			return { fg: '--warn', soft: '--warn-soft', on: '--warn-fg' };
+			return { fg: '--warn', soft: '--warn-soft' };
 		case 'danger':
-			return { fg: '--danger', soft: '--danger-soft', on: '--danger-fg' };
+			return { fg: '--danger', soft: '--danger-soft' };
 		case 'neutral':
-			return { fg: '--info', soft: '--info-soft', on: '--info-fg' };
+			return { fg: '--ink-muted', soft: '--secondary-soft' };
 	}
 }
 
@@ -152,7 +151,6 @@ export function scoreSafety(
 			signalsPresent: 0,
 			signalsTotal,
 			tone: 'neutral',
-			icon: 'ri-question-line',
 			pending
 		};
 	}
@@ -227,27 +225,21 @@ export function scoreSafety(
 		});
 	}
 
-	const SAFETY_META: Record<
-		Tier,
-		{ label: string; summary: string; tone: VerdictTone; icon: string }
-	> = {
+	const SAFETY_META: Record<Tier, { label: string; summary: string; tone: VerdictTone }> = {
 		safe: {
 			label: 'Safer to watch',
 			summary: 'No sexual violence flagged in our sources.',
-			tone: 'success',
-			icon: 'ri-shield-check-line'
+			tone: 'success'
 		},
 		caution: {
 			label: 'Watch with caution',
 			summary: 'Contains sexual harassment or coercion themes.',
-			tone: 'warn',
-			icon: 'ri-error-warning-line'
+			tone: 'warn'
 		},
 		harmful: {
 			label: 'Harmful content',
 			summary: 'Depicts sexual assault or abuse.',
-			tone: 'danger',
-			icon: 'ri-alert-line'
+			tone: 'danger'
 		}
 	};
 
@@ -261,7 +253,6 @@ export function scoreSafety(
 		signalsPresent,
 		signalsTotal,
 		tone: meta.tone,
-		icon: meta.icon,
 		pending
 	};
 }
@@ -339,8 +330,7 @@ export function scoreRepresentation(input: {
 			signals,
 			signalsPresent,
 			signalsTotal,
-			tone: 'neutral',
-			icon: 'ri-question-line'
+			tone: 'neutral'
 		};
 	}
 
@@ -349,27 +339,21 @@ export function scoreRepresentation(input: {
 	type RepTierKnown = 'strong' | 'mixed' | 'poor';
 	const tier: RepTierKnown = avg >= 1.75 ? 'strong' : avg >= 1.0 ? 'mixed' : 'poor';
 
-	const REP_META: Record<
-		RepTierKnown,
-		{ label: string; summary: string; tone: VerdictTone; icon: string }
-	> = {
+	const REP_META: Record<RepTierKnown, { label: string; summary: string; tone: VerdictTone }> = {
 		strong: {
 			label: 'Strong representation',
 			summary: 'Women are well represented on and off screen.',
-			tone: 'success',
-			icon: 'ri-women-line'
+			tone: 'success'
 		},
 		mixed: {
 			label: 'Mixed representation',
 			summary: 'Some female presence, but uneven across cast and crew.',
-			tone: 'warn',
-			icon: 'ri-scales-3-line'
+			tone: 'warn'
 		},
 		poor: {
 			label: 'Poor representation',
 			summary: 'Few women in cast, crew, or story.',
-			tone: 'danger',
-			icon: 'ri-user-unfollow-line'
+			tone: 'danger'
 		}
 	};
 
@@ -382,7 +366,6 @@ export function scoreRepresentation(input: {
 		signals,
 		signalsPresent,
 		signalsTotal,
-		tone: meta.tone,
-		icon: meta.icon
+		tone: meta.tone
 	};
 }
