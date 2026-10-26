@@ -28,7 +28,7 @@ test('navbar search results stay within the viewport on mobile', async ({ page }
 	await page.goto('/resources');
 
 	await page.getByRole('button', { name: 'Search' }).click();
-	const input = page.getByPlaceholder('Search movies & TV…');
+	const input = page.getByPlaceholder('Search films and series');
 	await input.fill('lord');
 
 	const panel = page.getByRole('listbox', { name: 'Search results' });

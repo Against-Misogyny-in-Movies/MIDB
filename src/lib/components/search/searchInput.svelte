@@ -31,8 +31,8 @@
 	<input
 		type="text"
 		name="query"
-		placeholder="Search movies & TV…"
-		aria-label="Search movies and TV"
+		placeholder="Search films and series"
+		aria-label="Search films and series"
 		maxlength={SEARCH_QUERY_MAX_LENGTH}
 		{value}
 		oninput={(e) => oninput(e.currentTarget.value)}

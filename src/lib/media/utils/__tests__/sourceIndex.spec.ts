@@ -19,7 +19,7 @@ describe('sourceIndex', () => {
 		});
 		expect(bechdel).toMatchObject({ value: '3/3', href: '#bechdel', hasData: true });
 		expect(um).toMatchObject({ value: '1 concern', href: '#unconsenting', hasData: true });
-		expect(ddd).toMatchObject({ value: '4 tags', href: '#ddd', hasData: true, busy: false });
+		expect(ddd).toMatchObject({ value: '4 warnings', href: '#ddd', hasData: true, busy: false });
 	});
 
 	test('missing sources read "No data"', () => {

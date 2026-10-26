@@ -39,7 +39,7 @@
 </script>
 
 {#if castMembers.length === 0}
-	<p class="empty">No cast data available.</p>
+	<p class="empty">No cast data.</p>
 {:else}
 	<table class="rep-table">
 		<thead>

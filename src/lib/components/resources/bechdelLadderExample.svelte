@@ -5,8 +5,7 @@
 	const criteria = BECHDEL_TIERS.slice(0, 3);
 </script>
 
-<figure class="example">
-	<figcaption>A film earns one point for each step it clears:</figcaption>
+<figure class="example" aria-label="Bechdel Test steps">
 	<ol>
 		{#each criteria as criterion (criterion.level)}
 			<li>
@@ -21,14 +20,9 @@
 	@reference "../../../app.css";
 
 	.example {
-		@apply flex flex-col gap-sm m-0 rounded-md p-md;
+		@apply m-0 rounded-md p-md;
 		background-color: var(--surface-sunken);
 	}
-
-	figcaption {
-		@apply text-sm text-ink-muted;
-	}
-
 	ol {
 		@apply flex flex-col list-none m-0 p-0;
 	}

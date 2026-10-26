@@ -9,11 +9,10 @@
 	interface Props {
 		ddd: DddResult | null;
 		visibleTags: TriggerTag[];
-		mediaNoun: 'movie' | 'series';
 		selector?: Snippet;
 	}
 
-	let { ddd, visibleTags, mediaNoun, selector }: Props = $props();
+	let { ddd, visibleTags, selector }: Props = $props();
 
 	let selectedCategory = $state<string | null>(null);
 
@@ -36,7 +35,7 @@
 		status={ddd === null
 			? 'Loading…'
 			: visibleTags.length > 0
-				? `${visibleTags.length} trigger tag${visibleTags.length === 1 ? '' : 's'}`
+				? `${visibleTags.length} warning${visibleTags.length === 1 ? '' : 's'}`
 				: 'No data'}
 		tone={ddd === null ? 'loading' : visibleTags.length > 0 ? 'data' : 'empty'}
 		open={ddd === null || visibleTags.length > 0}
@@ -45,7 +44,7 @@
 		learnHref="/resources#ddd"
 	>
 		{#if ddd === null}
-			<div class="skeleton" aria-busy="true" aria-label="Loading trigger tags">
+			<div class="skeleton" aria-busy="true" aria-label="Loading warnings">
 				<div class="skeleton-row"></div>
 				<div class="skeleton-row"></div>
 				<div class="skeleton-row"></div>
@@ -66,7 +65,7 @@
 			{#if visibleTags.length > 0}
 				<DddTags tags={filteredTags} />
 			{:else}
-				<p class="no-data">No trigger tags found for this {mediaNoun}.</p>
+				<p class="no-data">No warnings on Does the Dog Die.</p>
 			{/if}
 		{/if}
 	</CollapsibleSection>

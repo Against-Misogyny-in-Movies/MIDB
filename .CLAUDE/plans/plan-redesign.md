@@ -45,3 +45,14 @@ Mode: the title pages are **Read/Operate** (a reference checked before pressing 
 6. Error, auth, user pages.
 7. Delete dead code; update tests, e2e specs, `architecture.md`, `AGENTS.md` styling rules.
 8. Verify: check, lint, unit, db, build; screenshots light/dark, desktop/mobile.
+
+## Copy pass (follow-up)
+
+Same skill, `clarify` reference. Every user-facing string rewritten to essentials, third person, one term per concept (film / series, verdict, warning, flag, concern, source).
+
+- Landing: the motto "Know before you watch." and its subhead are replaced by one plain headline stating what the site covers ("Sexual violence warnings and representation of women in films and series"). "What we check" becomes "Sources" (adds TMDB, which feeds the representation verdict); "How MIDB is built" becomes a one-sentence "About".
+- `/resources` ("How it works"): taglines and the four template subheadings per source removed; each source is two or three plain paragraphs; the verdict tier rules are stated directly from `verdict.ts`.
+- Removed claims the code does not back: "ratings submitted by the MIDB community" (no rating UI) and DDD warnings "sorted by margin of the vote and grouped by category" (the client does neither).
+- Verdict summaries and signal labels shortened; em dashes removed from signal labels ("Women in cast", "Women in top 5 billed", "Women in key crew").
+- Title pages: DDD "trigger tags" → "warnings"; no-data lines shortened; `<title>` added to film and series pages.
+- `AGENTS.md` copy rules: third person on the landing page too, no slogans, essentials only, terminology list.

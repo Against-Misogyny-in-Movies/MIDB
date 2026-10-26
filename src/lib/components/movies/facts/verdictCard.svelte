@@ -11,7 +11,7 @@
 	const tokens = $derived(toneTokens(verdict.tone));
 	const axisLabel = $derived(verdict.axis === 'safety' ? 'Content safety' : 'Representation');
 	const basis = $derived(
-		`Based on ${verdict.signalsPresent} of ${verdict.signalsTotal} metrics${verdict.pending ? ', updating…' : ''}`
+		`Based on ${verdict.signalsPresent} of ${verdict.signalsTotal} metrics${verdict.pending ? ', loading…' : ''}`
 	);
 </script>
 

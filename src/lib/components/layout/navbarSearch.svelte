@@ -73,7 +73,8 @@
 				bind:this={input}
 				type="text"
 				name="query"
-				placeholder="Search movies & TV…"
+				placeholder="Search films and series"
+				aria-label="Search films and series"
 				maxlength={SEARCH_QUERY_MAX_LENGTH}
 				value={search.query}
 				oninput={(e) => search.search(e.currentTarget.value)}

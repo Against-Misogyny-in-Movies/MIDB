@@ -302,25 +302,25 @@ describe('scoreSafety', () => {
 		expect(harIdx).toBeLessThan(rapeIdx); // sexHarOnScrn declared before rapeOnScreen
 	});
 
-	test('affirmed DDD SV tag → Community trigger warnings signal with danger tone', () => {
+	test('affirmed DDD SV tag → Does the Dog Die warnings signal with danger tone', () => {
 		const r = scoreSafety(null, mkDdd([mkTag('Rape', 10, 2)]));
-		const sig = r.signals.find((s) => s.label === 'Community trigger warnings');
+		const sig = r.signals.find((s) => s.label === 'Does the Dog Die warnings');
 		expect(sig).toBeDefined();
-		expect(sig?.detail).toBe('1 warning');
+		expect(sig?.detail).toBe('1');
 		expect(sig?.tone).toBe('danger');
 	});
 
-	test('non-escalating DDD tag → Community trigger warnings signal with neutral tone', () => {
+	test('non-escalating DDD tag → Does the Dog Die warnings signal with neutral tone', () => {
 		const r = scoreSafety(null, mkDdd([mkTag('Rape', 5, 5)]));
-		const sig = r.signals.find((s) => s.label === 'Community trigger warnings');
+		const sig = r.signals.find((s) => s.label === 'Does the Dog Die warnings');
 		expect(sig).toBeDefined();
 		expect(sig?.tone).toBe('neutral');
 	});
 
-	test('two DDD tags → plural "2 warnings"', () => {
+	test('two DDD tags → detail is the count', () => {
 		const r = scoreSafety(null, mkDdd([mkTag('Animal dies', 5, 1), mkTag('Rape', 10, 2)]));
-		const sig = r.signals.find((s) => s.label === 'Community trigger warnings');
-		expect(sig?.detail).toBe('2 warnings');
+		const sig = r.signals.find((s) => s.label === 'Does the Dog Die warnings');
+		expect(sig?.detail).toBe('2');
 	});
 
 	test('safe sentinel when nothing flagged', () => {
@@ -328,7 +328,7 @@ describe('scoreSafety', () => {
 		expect(r.signals).toHaveLength(1);
 		expect(r.signals[0]).toMatchObject({
 			label: 'No sexual violence flagged',
-			detail: 'Clear',
+			detail: 'None',
 			present: false,
 			tone: 'success'
 		});
@@ -521,23 +521,23 @@ describe('scoreRepresentation', () => {
 	test('strong: signals include all four in order', () => {
 		const r = scoreRepresentation(baseInput);
 		expect(r.signals.map((s) => s.label)).toEqual([
-			'Cast — women',
-			'Leads — women',
-			'Crew — women',
-			'Bechdel'
+			'Women in cast',
+			'Women in top 5 billed',
+			'Women in key crew',
+			'Bechdel Test'
 		]);
-		expect(r.signals.find((s) => s.label === 'Bechdel')?.detail).toBe('3/3');
-		expect(r.signals.find((s) => s.label === 'Bechdel')?.tone).toBe('success');
+		expect(r.signals.find((s) => s.label === 'Bechdel Test')?.detail).toBe('3/3');
+		expect(r.signals.find((s) => s.label === 'Bechdel Test')?.tone).toBe('success');
 	});
 
 	test('series: no Bechdel signal', () => {
 		const r = scoreRepresentation({ ...baseInput, bechdel: null, isSeries: true });
-		expect(r.signals.some((s) => s.label === 'Bechdel')).toBe(false);
+		expect(r.signals.some((s) => s.label === 'Bechdel Test')).toBe(false);
 		expect(r.signals.length).toBeLessThanOrEqual(3);
 	});
 
-	test('leads detail formatted as "N/5 women"', () => {
-		// 1 female in top 5 → "1/5 women"
+	test('leads detail formatted as "N of 5"', () => {
+		// 1 female in top 5 → "1 of 5"
 		const r = scoreRepresentation({
 			cast: mkBreakdown({ female: 3, male: 7, total: 10 }),
 			crew: mkBreakdown({ female: 3, male: 7, total: 10 }),
@@ -552,8 +552,8 @@ describe('scoreRepresentation', () => {
 			bechdel: { rating: 2 },
 			isSeries: false
 		});
-		const sig = r.signals.find((s) => s.label === 'Leads — women');
-		expect(sig?.detail).toBe('1/5 women');
+		const sig = r.signals.find((s) => s.label === 'Women in top 5 billed');
+		expect(sig?.detail).toBe('1 of 5');
 	});
 
 	test('sub-tone: score 0 → danger, 1 → warn, 2 → success', () => {
@@ -584,6 +584,6 @@ describe('scoreRepresentation', () => {
 			isSeries: false
 		});
 		expect(r.tier).toBe('unknown');
-		expect(r.signals.some((s) => s.label === 'Cast — women')).toBe(true);
+		expect(r.signals.some((s) => s.label === 'Women in cast')).toBe(true);
 	});
 });

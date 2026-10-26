@@ -5,22 +5,18 @@
 		/** Anchor id used by the in-page nav and deep links. */
 		id: string;
 		title: string;
-		/** One-line summary under the title. */
-		tagline: string;
+
 		/** External source link. */
 		sourceLabel?: string;
 		sourceHref?: string;
 		children: Snippet;
 	}
 
-	let { id, title, tagline, sourceLabel, sourceHref, children }: Props = $props();
+	let { id, title, sourceLabel, sourceHref, children }: Props = $props();
 </script>
 
 <section {id} class="article" aria-labelledby="{id}-title">
-	<header>
-		<h2 id="{id}-title" class="display title">{title}</h2>
-		<p class="tagline">{tagline}</p>
-	</header>
+	<h2 id="{id}-title" class="display title">{title}</h2>
 
 	{@render children()}
 
@@ -37,7 +33,7 @@
 	@reference "../../../app.css";
 
 	.article {
-		@apply flex flex-col gap-lg border-t border-border;
+		@apply flex flex-col gap-md text-ink-muted border-t border-border;
 		padding-block: var(--spacing-xl);
 		scroll-margin-top: var(--spacing-md);
 	}
@@ -47,12 +43,11 @@
 	}
 
 	.title {
-		@apply text-3xl;
+		@apply text-3xl text-ink;
 	}
 
-	.tagline {
-		@apply text-lg text-ink-muted;
-		margin-top: var(--spacing-xs);
+	.article :global(strong) {
+		@apply font-semibold text-ink;
 	}
 
 	.source {

@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		/** Short heading, e.g. "What it is", "How it works". */
+		/** Short heading, e.g. "Content safety". */
 		label: string;
 		children: Snippet;
 	}
@@ -22,6 +22,7 @@
 
 	.sub-block {
 		@apply flex flex-col gap-xs;
+		margin-top: var(--spacing-sm);
 	}
 
 	h3 {

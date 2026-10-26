@@ -17,6 +17,6 @@ People deciding whether to watch something, often right before watching, often o
 
 - Privacy first: no trackers, analytics or ad pixels.
 - Open source, community funded.
-- Copy is matter-of-fact, third person except on the landing page, no em dashes (see `AGENTS.md`).
+- Copy is matter-of-fact, third person, essentials only, no slogans, no em dashes (see `AGENTS.md`).
 - Claims are code-backed: copy that describes scoring mirrors `verdict.ts`.
 - The brand colour is the existing violet.

@@ -23,7 +23,7 @@
 </script>
 
 {#if breakdown.total === 0}
-	<p class="empty">No {label.toLowerCase()} data available.</p>
+	<p class="empty">No {label.toLowerCase()} data.</p>
 {:else}
 	<div class="distribution">
 		<div class="bar" role="img" aria-label="{label} gender distribution">

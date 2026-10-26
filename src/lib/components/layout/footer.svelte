@@ -9,10 +9,7 @@
 				rel="noopener noreferrer">Source code</a
 			>
 		</p>
-		<p class="credit">
-			Title data and images from TMDB. This product uses the TMDB API but is not endorsed or
-			certified by TMDB.
-		</p>
+		<p class="credit">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
 	</div>
 </footer>
 

@@ -12,8 +12,7 @@
 
 <div class="um-candidates">
 	<p class="intro">
-		The Unconsenting Media dataset has {candidates.length} entries that could match this title. Choosing
-		one shows its flags.
+		{candidates.length} Unconsenting Media entries could match this title. Select one to show its flags.
 	</p>
 	<ul role="list" class="candidate-list">
 		{#each candidates as candidate (candidate.umId)}

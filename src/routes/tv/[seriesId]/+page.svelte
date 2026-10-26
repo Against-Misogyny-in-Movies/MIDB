@@ -18,6 +18,10 @@
 	const ddd = $derived(view.ddd);
 </script>
 
+<svelte:head>
+	<title>{series.title} · MIDB</title>
+</svelte:head>
+
 <article class="title-page">
 	<DetailHeader media={series}>
 		{#snippet verdict()}
@@ -32,11 +36,10 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
-			mediaNoun="series"
 			onselect={(c) => view.selectUm(c)}
 		/>
 
-		<DddMetricSection {ddd} visibleTags={view.visibleTags} mediaNoun="series">
+		<DddMetricSection {ddd} visibleTags={view.visibleTags}>
 			{#snippet selector()}
 				{#if ddd?.isSeries && series.seasons.length > 0}
 					<DddEpisodeSelector

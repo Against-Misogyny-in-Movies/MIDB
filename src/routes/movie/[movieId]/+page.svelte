@@ -19,6 +19,10 @@
 	const bechdel = $derived(data.bechdel);
 </script>
 
+<svelte:head>
+	<title>{movie.title} · MIDB</title>
+</svelte:head>
+
 <article class="title-page">
 	<DetailHeader media={movie}>
 		{#snippet verdict()}
@@ -53,7 +57,7 @@
 					</ol>
 					<p class="meta-note tabular-nums">Based on {bechdel.numVotes.toLocaleString()} votes.</p>
 				{:else}
-					<p class="no-data">This movie is not in the Bechdel Test database.</p>
+					<p class="no-data">Not in the BechdelTest.com database.</p>
 				{/if}
 			</CollapsibleSection>
 		</div>
@@ -63,11 +67,10 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
-			mediaNoun="movie"
 			onselect={(c) => view.selectUm(c)}
 		/>
 
-		<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} mediaNoun="movie" />
+		<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} />
 
 		<CastAndCrew media={movie} />
 

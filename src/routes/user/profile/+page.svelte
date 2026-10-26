@@ -97,7 +97,6 @@
 					usernameInput = (e.target as HTMLInputElement).value;
 					checkAvailability(usernameInput);
 				}}
-				placeholder="choose a username"
 				maxlength="32"
 				autocomplete="off"
 				spellcheck="false"

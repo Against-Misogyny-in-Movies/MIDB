@@ -3,7 +3,7 @@
 </script>
 
 <figure class="example">
-	<figcaption>The nine flags, with how each one reads on a title when present:</figcaption>
+	<figcaption>Each flag as it appears when present:</figcaption>
 	<ul>
 		{#each UM_FLAGS as flag (flag.key)}
 			{@const reassurance = flag.key === 'noRape'}

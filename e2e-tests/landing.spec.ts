@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('hero headline and search input are visible', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByTestId('hero-headline')).toBeVisible();
-	const search = page.getByPlaceholder('Search movies & TV…');
+	const search = page.getByPlaceholder('Search films and series');
 	await expect(search).toBeVisible();
 	await search.focus();
 	await expect(search).toBeFocused();

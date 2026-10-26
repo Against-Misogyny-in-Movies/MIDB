@@ -10,11 +10,10 @@
 		umCandidates: UmEntry[];
 		umFlagCount: number;
 		hasUmCandidates: boolean;
-		mediaNoun: 'movie' | 'series';
 		onselect: (candidate: UmEntry) => void;
 	}
 
-	let { umData, umCandidates, umFlagCount, hasUmCandidates, mediaNoun, onselect }: Props = $props();
+	let { umData, umCandidates, umFlagCount, hasUmCandidates, onselect }: Props = $props();
 </script>
 
 <div id="unconsenting">
@@ -59,7 +58,7 @@
 		{:else if hasUmCandidates}
 			<UmCandidates candidates={umCandidates} {onselect} />
 		{:else}
-			<p class="no-data">This {mediaNoun} is not in the Unconsenting Media database.</p>
+			<p class="no-data">Not in the Unconsenting Media database.</p>
 		{/if}
 	</CollapsibleSection>
 </div>

@@ -1,70 +1,68 @@
 <script lang="ts">
 	import MovieSearch from '$lib/components/search/movieSearch.svelte';
 
-	const checks = [
+	const sources = [
 		{
 			id: 'bechdel',
 			name: 'Bechdel Test',
-			body: 'Do two named women in the film talk to each other about something other than a man? The result is a 0–3 score and applies to films only.',
+			body: 'Whether two named women talk to each other about something other than a man. Scored 0–3, films only.',
 			source: 'bechdeltest.com',
 			href: 'https://bechdeltest.com'
 		},
 		{
 			id: 'unconsenting',
 			name: 'Unconsenting Media',
-			body: 'Flags depictions of sexual violence in film. Nine fixed flags per title, drawn from a community dataset.',
+			body: 'Nine flags for depictions of sexual violence, from a community database.',
 			source: 'unconsentingmedia.org',
 			href: 'https://www.unconsentingmedia.org'
 		},
 		{
 			id: 'ddd',
 			name: 'Does the Dog Die',
-			body: 'Community trigger warnings across hundreds of categories, including animal deaths, self-harm, and eating disorders. Each one is decided by yes/no votes and fetched live per title.',
+			body: 'Community-voted trigger warnings on hundreds of topics, fetched when a title page opens.',
 			source: 'doesthedogdie.com',
 			href: 'https://www.doesthedogdie.com'
-		}
-	];
-
-	const principles = [
-		{
-			title: 'Privacy first.',
-			body: 'No trackers, no analytics, no ad pixels. The only tokens MIDB uses are the ones that fetch film data and run sign-in. Browsing activity is never recorded.'
 		},
 		{
-			title: 'Open source.',
-			body: 'The full source is public. Anyone can read it, fork it, or open a pull request.'
-		},
-		{
-			title: 'Community funded.',
-			body: 'MIDB takes no investment and sells nothing. It runs on contributions from the people who use it.'
+			id: 'verdict',
+			name: 'TMDB',
+			body: 'Title details and credits, including the gender recorded for each cast and crew member.',
+			source: 'themoviedb.org',
+			href: 'https://www.themoviedb.org'
 		}
 	];
 </script>
 
+<svelte:head>
+	<title>MIDB</title>
+	<meta
+		name="description"
+		content="Sexual violence warnings and representation of women in films and series, from the Bechdel Test, Unconsenting Media, Does the Dog Die and TMDB."
+	/>
+</svelte:head>
+
 <section class="hero">
-	<h1 class="display" data-testid="hero-headline">Know before you&nbsp;watch.</h1>
-	<p class="subhead">
-		MIDB flags misogyny and violence against women in film and television, so you decide what's safe
-		to watch.
-	</p>
+	<h1 class="display" data-testid="hero-headline">
+		Sexual violence warnings and representation of women in films and series
+	</h1>
 	<div class="search">
 		<MovieSearch />
 	</div>
 </section>
 
-<section class="band" aria-labelledby="checks-heading">
-	<h2 id="checks-heading" class="display band-heading">What we check</h2>
+<section class="band" aria-labelledby="sources-heading">
+	<h2 id="sources-heading" class="display band-heading">Sources</h2>
 	<div class="band-body">
-		<dl class="checks">
-			{#each checks as check (check.id)}
-				<div class="check">
-					<dt class="display check-name">{check.name}</dt>
+		<dl class="sources">
+			{#each sources as item (item.name)}
+				<div class="source">
+					<dt class="display source-name">{item.name}</dt>
 					<dd>
-						<p>{check.body}</p>
-						<p class="check-links">
-							<a class="link" href="/resources#{check.id}">How we use it</a>
-							<a class="link" href={check.href} target="_blank" rel="noopener noreferrer"
-								>{check.source}</a
+						<p>{item.body}</p>
+						<p class="source-links">
+							<a class="link" href="/resources#{item.id}">How it is used</a>
+							<a class="link" href={item.href} target="_blank" rel="noopener noreferrer"
+								>{item.source}</a
 							>
 						</p>
 					</dd>
@@ -72,23 +70,16 @@
 			{/each}
 		</dl>
 		<p class="note">
-			We pull from established sources and combine them with ratings submitted by the MIDB
-			community. Every title opens with a <a class="link" href="/resources#verdict">verdict</a> summarising
-			safety and representation.
+			Each title page combines them into two verdicts: content safety and representation.
 		</p>
 	</div>
 </section>
 
-<section class="band" aria-labelledby="built-heading">
-	<h2 id="built-heading" class="display band-heading">How MIDB is built</h2>
+<section class="band" aria-labelledby="about-heading">
+	<h2 id="about-heading" class="display band-heading">About</h2>
 	<div class="band-body">
-		<ul class="principles">
-			{#each principles as p (p.title)}
-				<li><strong>{p.title}</strong> {p.body}</li>
-			{/each}
-		</ul>
-		<p class="note">
-			The source lives on
+		<p class="note about">
+			MIDB has no trackers, analytics or ads, and takes no investment. The source code is on
 			<a
 				class="link"
 				href="https://github.com/Against-Misogyny-in-Movies/MIDB"
@@ -107,23 +98,11 @@
 	}
 
 	h1 {
-		font-size: clamp(3rem, 10vw, 5.75rem);
+		font-size: clamp(2.25rem, 6vw, 4rem);
 		font-weight: 800;
-		line-height: 0.95;
-		letter-spacing: -0.015em;
-		max-width: 12ch;
-	}
-
-	.subhead {
-		@apply text-lg text-ink-muted;
-		margin-top: var(--spacing-md);
-		max-width: 36rem;
-	}
-
-	@media (min-width: 480px) {
-		.subhead {
-			@apply text-xl;
-		}
+		line-height: 1;
+		letter-spacing: -0.01em;
+		max-width: 22ch;
 	}
 
 	.search {
@@ -152,28 +131,28 @@
 		max-width: 42rem;
 	}
 
-	.checks {
+	.sources {
 		@apply flex flex-col;
 	}
 
-	.check {
+	.source {
 		@apply flex flex-col gap-xs border-b border-border;
 		padding-block: var(--spacing-md);
 	}
 
-	.check:first-child {
+	.source:first-child {
 		padding-top: 0;
 	}
 
-	.check-name {
+	.source-name {
 		@apply text-xl;
 	}
 
-	.check dd {
+	.source dd {
 		@apply text-ink-muted;
 	}
 
-	.check-links {
+	.source-links {
 		@apply flex flex-wrap gap-x-md text-sm;
 		margin-top: var(--spacing-xs);
 	}
@@ -183,11 +162,7 @@
 		margin-top: var(--spacing-md);
 	}
 
-	.principles {
-		@apply flex flex-col gap-md list-none m-0 p-0 text-ink-muted;
-	}
-
-	.principles strong {
-		@apply text-ink font-semibold;
+	.about {
+		margin-top: 0;
 	}
 </style>

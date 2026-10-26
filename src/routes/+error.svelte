@@ -7,8 +7,8 @@
 	const heading = $derived(is404 ? 'Page not found' : 'Something went wrong');
 	const detail = $derived(
 		is404
-			? 'That title or page could not be found. It may have moved, or the link may be mistyped.'
-			: ($page.error?.message ?? 'An unexpected error occurred. Try again in a moment.')
+			? 'No title or page at this address.'
+			: ($page.error?.message ?? 'The page could not be loaded. Try again.')
 	);
 </script>
 

@@ -54,7 +54,11 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 	const ddd: SourceIndexItem = {
 		label: 'Does the Dog Die',
 		value:
-			dddTagCount === null ? 'Loading…' : dddTagCount > 0 ? plural(dddTagCount, 'tag') : 'No data',
+			dddTagCount === null
+				? 'Loading…'
+				: dddTagCount > 0
+					? plural(dddTagCount, 'warning')
+					: 'No data',
 		href: '#ddd',
 		hasData: dddTagCount !== null && dddTagCount > 0,
 		busy: dddTagCount === null

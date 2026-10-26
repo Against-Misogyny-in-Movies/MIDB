@@ -48,7 +48,7 @@
 {/snippet}
 
 {#if crewDepartments.length === 0}
-	<p class="empty">No crew data available.</p>
+	<p class="empty">No crew data.</p>
 {:else}
 	<table class="rep-table">
 		<thead>
