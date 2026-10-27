@@ -2,27 +2,41 @@
 	import HankoProfile from '$lib/components/auth/hankoProfile.svelte';
 </script>
 
-<div class="dashboard-page">
-	<header class="dashboard-header">
-		<a href="/user/profile" class="back-link label">← Profile</a>
+<div class="account-page">
+	<header>
+		<a href="/user/profile" class="back"
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
+		>
 		<h1 class="display">Account settings</h1>
 	</header>
 
-	<HankoProfile />
+	<div class="card settings"><HankoProfile /></div>
 </div>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.dashboard-page {
-		@apply max-w-lg mx-auto py-lg flex flex-col gap-lg;
+	.account-page {
+		@apply flex flex-col mx-auto;
+		max-width: 36rem;
+		gap: var(--spacing-lg);
+		padding-block: var(--spacing-xl);
 	}
 
-	.dashboard-header {
-		@apply flex flex-col gap-sm;
+	.back {
+		@apply inline-flex items-center text-sm text-ink-muted no-underline;
+		margin-bottom: var(--spacing-sm);
 	}
 
-	.back-link {
-		@apply text-ink-muted no-underline text-sm hover:text-brand;
+	.back:hover {
+		@apply text-ink;
+	}
+
+	h1 {
+		font-size: 1.875rem;
+	}
+
+	.settings {
+		padding: 24px;
 	}
 </style>

@@ -1,284 +1,295 @@
 <script lang="ts">
-	import HeroSearch from '$lib/components/landing/heroSearch.svelte';
+	import type { PageData } from './$types';
+	import MovieSearch from '$lib/components/search/movieSearch.svelte';
+	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
+	import FilmSentences from '$lib/components/landing/filmSentences.svelte';
 
-	const principles = [
+	let { data }: { data: PageData } = $props();
+
+	const search = new MovieSearchState();
+	let hero = $state<HTMLElement | null>(null);
+
+	// A hero film without a TMDB id runs its title through the search field instead.
+	function searchFor(title: string) {
+		search.search(title);
+		hero?.querySelector('input')?.focus();
+	}
+
+	const fmt = (n: number) => n.toLocaleString('en-US');
+	const bechdelCount = $derived(data.counts ? `${fmt(data.counts.bechdelRatings)} films` : 'films');
+	const umCount = $derived(
+		data.counts ? `${fmt(data.counts.umEntries)} films and series` : 'films and series'
+	);
+
+	// One card per source: its name highlighted in its violet shade, then the rest of the sentence.
+	const sources = $derived([
 		{
-			icon: 'ri-shield-keyhole-line',
-			title: 'Privacy first',
-			body: 'No trackers, no analytics, no ad pixels. The only tokens MIDB uses are the ones that fetch film data and run sign-in. Browsing activity is never recorded.'
+			id: 'bechdel',
+			name: 'Bechdel Test',
+			rest: `rates ${bechdelCount} on whether two named women talk to each other about something other than a man.`,
+			icon: 'ri-chat-3-fill',
+			domain: 'bechdeltest.com',
+			href: 'https://bechdeltest.com'
 		},
 		{
-			icon: 'ri-git-repository-line',
-			title: 'Open source',
-			body: 'The full source is public. Anyone can read it, fork it, or open a pull request.'
+			id: 'um',
+			anchor: 'unconsenting',
+			name: 'Unconsenting Media',
+			rest: `records nine sexual violence flags for ${umCount}.`,
+			icon: 'ri-flag-2-fill',
+			domain: 'unconsentingmedia.org',
+			href: 'https://www.unconsentingmedia.org'
 		},
 		{
-			icon: 'ri-hand-heart-line',
-			title: 'Community funded',
-			body: 'MIDB takes no investment and sells nothing. It runs on contributions from the people who use it.'
+			id: 'ddd',
+			name: 'Does the Dog Die',
+			rest: 'collects yes or no votes on hundreds of trigger warnings, fetched when a title page opens.',
+			icon: 'ri-alarm-warning-fill',
+			domain: 'doesthedogdie.com',
+			href: 'https://www.doesthedogdie.com'
+		},
+		{
+			id: 'tmdb',
+			anchor: 'verdict',
+			name: 'TMDB',
+			rest: 'supplies title details and credits, including the gender recorded for each cast and crew member.',
+			icon: 'ri-film-fill',
+			domain: 'themoviedb.org',
+			href: 'https://www.themoviedb.org'
 		}
-	];
+	]);
 </script>
 
-<section class="hero">
-	<p class="eyebrow display">A film &amp; TV safety reference</p>
-	<h1 class="display" data-testid="hero-headline">Know before you&nbsp;watch.</h1>
-	<p class="subhead">
-		MIDB flags <strong>misogyny and violence against women</strong> in film and television, so you decide
-		what's safe to watch.
-	</p>
-	<div class="search-wrap">
-		<HeroSearch />
-	</div>
-	<p class="contribute">
-		<a href="/auth" data-testid="contribute-link">Rate a film yourself →</a>
-	</p>
-</section>
+<svelte:head>
+	<title>MIDB</title>
+	<meta
+		name="description"
+		content="Sexual violence warnings and representation of women in films and series, from the Bechdel Test, Unconsenting Media, Does the Dog Die and TMDB."
+	/>
+</svelte:head>
 
-<section class="metrics">
-	<p class="metrics-label label">What we check</p>
-	<div class="metrics-grid">
-		<div>
-			<h3 class="display">Bechdel Test</h3>
-			<p>
-				Do two named women in the film talk to each other about something other than a man? The
-				result is a 0–3 score and applies to films only.
-			</p>
-			<div class="card-links">
-				<a class="learn-link" href="/resources#bechdel">How we use it →</a>
-				<a
-					class="source-link"
-					href="https://bechdeltest.com"
-					target="_blank"
-					rel="noopener noreferrer">bechdeltest.com ↗</a
-				>
-			</div>
-		</div>
-		<div>
-			<h3 class="display">Unconsenting Media</h3>
-			<p>
-				Flags depictions of sexual violence in film. Nine fixed flags per title, drawn from a
-				community dataset.
-			</p>
-			<div class="card-links">
-				<a class="learn-link" href="/resources#unconsenting">How we use it →</a>
-				<a
-					class="source-link"
-					href="https://www.unconsentingmedia.org"
-					target="_blank"
-					rel="noopener noreferrer">unconsentingmedia.org ↗</a
-				>
-			</div>
-		</div>
-		<div>
-			<h3 class="display">Does The Dog Die</h3>
-			<p>
-				Community trigger warnings across hundreds of categories, including animal deaths,
-				self-harm, and eating disorders. Each one is decided by yes/no votes and fetched live per
-				title.
-			</p>
-			<div class="card-links">
-				<a class="learn-link" href="/resources#ddd">How we use it →</a>
-				<a
-					class="source-link"
-					href="https://www.doesthedogdie.com"
-					target="_blank"
-					rel="noopener noreferrer">doesthedogdie.com ↗</a
-				>
-			</div>
-		</div>
-	</div>
-	<p class="metrics-note">
-		We pull from established sources and combine them with ratings submitted by the MIDB community.
-		Every title opens with a <a href="/resources#verdict">verdict card</a> summarising safety and representation.
-	</p>
-</section>
+<div class="landing">
+	<section class="hero" bind:this={hero}>
+		<!-- The hero shows what MIDB does with real records; the heading names it for assistive
+		     tech and search engines, and is the visible fallback when the database is unreachable. -->
+		<h1
+			class:sr-only={data.films.length > 0}
+			data-testid={data.films.length > 0 ? undefined : 'hero-headline'}
+		>
+			Sexual violence warnings and representation of women in films and series
+		</h1>
+		{#if data.films.length > 0}
+			<FilmSentences films={data.films} onsearch={searchFor} />
+		{/if}
 
-<section class="principles">
-	<p class="principles-label label">How MIDB is built</p>
-	<div class="principles-grid">
-		{#each principles as p (p.title)}
-			<div class="principle">
-				<span class="principle-icon" aria-hidden="true"><i class={p.icon}></i></span>
-				<h3 class="display">{p.title}</h3>
-				<p>{p.body}</p>
+		<div class="search">
+			<MovieSearch {search} />
+		</div>
+	</section>
+
+	<!-- The sections keep their cards and speak in the hero's voice: Inter Tight sentences,
+	     highlighted names, chips for links. -->
+	<section class="section" aria-labelledby="sources-heading">
+		<h2 id="sources-heading" class="section-title">Sources</h2>
+		<ul class="sources">
+			{#each sources as source (source.id)}
+				<li class="card source">
+					<span class="disk" style="--hue: var(--src-{source.id})" aria-hidden="true">
+						<i class={source.icon}></i>
+					</span>
+					<p class="statement">
+						<mark class="highlight tone-{source.id}">{source.name}</mark>
+						{source.rest}
+					</p>
+					<p class="chips">
+						<a class="chip" href="/resources#{source.anchor ?? source.id}">Methodology</a>
+						<a class="chip" href={source.href} target="_blank" rel="noopener noreferrer"
+							>{source.domain} <i class="ri-arrow-right-up-line" aria-hidden="true"></i></a
+						>
+					</p>
+				</li>
+			{/each}
+		</ul>
+	</section>
+
+	<!-- The tier names and tones mirror SAFETY_META / REP_META in verdict.ts and tones.ts. -->
+	<section class="section" aria-labelledby="verdicts-heading">
+		<h2 id="verdicts-heading" class="section-title">Verdicts</h2>
+		<div class="verdicts">
+			<p class="statement statement--lead">
+				Each title page combines the sources into two verdicts.
+			</p>
+			<div class="tiers">
+				<p class="statement">
+					Content safety: <mark class="highlight tone-pos">Safer to watch</mark>,
+					<mark class="highlight tone-mid">Watch with caution</mark> or
+					<mark class="highlight tone-neg">Harmful content</mark>.
+				</p>
+				<p class="statement">
+					Representation: <mark class="highlight tone-pos">Strong</mark>,
+					<mark class="highlight tone-mid">Mixed</mark> or
+					<mark class="highlight tone-neg">Poor</mark>.
+				</p>
+				<p class="statement">
+					Too little data reads <mark class="highlight tone-neutral">Not enough data</mark>.
+				</p>
+				<p class="chips">
+					<a class="chip" href="/resources#verdict">Methodology</a>
+				</p>
 			</div>
-		{/each}
-	</div>
-	<p class="principles-note">
-		The source lives on
-		<a
-			href="https://github.com/Against-Misogyny-in-Movies/MIDB"
-			target="_blank"
-			rel="noopener noreferrer">GitHub ↗</a
-		>.
-	</p>
-</section>
+		</div>
+	</section>
+
+	<section class="section about" aria-label="About">
+		<p class="statement">MIDB has no trackers, analytics or ads, and takes no investment.</p>
+		<p class="chips">
+			<a
+				class="chip"
+				href="https://github.com/Against-Misogyny-in-Movies/MIDB"
+				target="_blank"
+				rel="noopener noreferrer"
+				>Source code <i class="ri-arrow-right-up-line" aria-hidden="true"></i></a
+			>
+		</p>
+	</section>
+</div>
 
 <style lang="postcss">
 	@reference "../app.css";
 
-	.hero {
-		@apply mt-xl;
-		max-width: 46rem;
-		margin-bottom: 5rem;
-		padding-bottom: 3rem;
+	.landing {
+		font-family: var(--font-body);
+		color: var(--ink);
 	}
 
-	.eyebrow {
-		@apply text-brand text-lg;
-		font-style: italic;
+	/* ── Hero: centred stack ── */
+	.hero {
+		@apply flex flex-col items-center text-center;
+		padding-block: clamp(3rem, 8vw, 4.5rem) 1rem;
 	}
 
 	h1 {
-		@apply text-5xl font-semibold text-ink mt-md mb-md;
-		letter-spacing: -0.01em;
-		line-height: 1.05;
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: clamp(2.25rem, 7vw, 3.75rem);
+		line-height: 1;
+		letter-spacing: -0.011em;
+		max-width: 45rem;
+		text-wrap: balance;
 	}
 
-	@media (min-width: 480px) {
-		h1 {
-			@apply text-6xl;
+	.search {
+		@apply w-full text-left;
+		max-width: 40rem;
+		margin-top: 2.5rem;
+	}
+
+	/* ── Sections: a centred title over cards, like the hero ── */
+	.section {
+		margin-top: clamp(3.5rem, 8vw, 5rem);
+	}
+
+	.section-title {
+		@apply text-center;
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: clamp(1.875rem, 4vw, 2.25rem);
+		line-height: 1.11;
+		letter-spacing: -0.013em;
+		margin-bottom: 2rem;
+	}
+
+	/* The hero's voice at card size: Inter Tight sentences with highlighted names. */
+	.statement {
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: 1.1875rem;
+		line-height: 1.35;
+		letter-spacing: -0.015em;
+		text-wrap: pretty;
+	}
+
+	.chips {
+		@apply flex flex-wrap;
+		gap: 6px;
+	}
+
+	.chips i {
+		font-size: 0.875rem;
+	}
+
+	/* Sources: four cards, two on small screens, one on phones. */
+	.sources {
+		@apply grid list-none m-0 p-0;
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+
+	@media (min-width: 560px) {
+		.sources {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 
-	.subhead {
-		@apply text-ink-muted text-lg mb-lg leading-relaxed;
-		max-width: 38rem;
-	}
-
-	@media (min-width: 480px) {
-		.subhead {
-			@apply text-xl;
+	@media (min-width: 976px) {
+		.sources {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
 	}
 
-	.subhead strong {
-		@apply text-ink font-semibold;
+	.source {
+		@apply flex flex-col;
+		gap: 16px;
+		padding: 24px;
 	}
 
-	.search-wrap {
-		@apply w-full;
-		max-width: 34rem;
+	.source .chips {
+		margin-top: auto;
 	}
 
-	.contribute {
-		@apply flex flex-wrap items-center gap-xs text-ink-muted mt-md text-sm;
-	}
-
-	.contribute a {
-		@apply text-brand no-underline;
-	}
-
-	.contribute a:hover {
-		@apply text-brand-strong;
-	}
-
-	.metrics {
-		@apply border-t border-border pt-xl pb-xl;
-	}
-
-	.metrics-label {
-		@apply mb-lg block;
-	}
-
-	.metrics-grid {
-		@apply grid grid-cols-1 gap-lg;
+	/* Verdicts: the lilac plate, the lead sentence beside the tier sentences. */
+	.verdicts {
+		@apply grid;
+		gap: 20px 48px;
+		padding: 32px;
+		border-radius: 12px;
+		background-color: var(--brand-wash);
 	}
 
 	@media (min-width: 768px) {
-		.metrics-grid {
-			@apply grid-cols-3;
+		.verdicts {
+			grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
 		}
 	}
 
-	.metrics h3 {
-		@apply text-brand font-semibold mb-xs text-lg;
+	.statement--lead {
+		font-size: clamp(1.375rem, 2.6vw, 1.75rem);
+		line-height: 1.25;
 	}
 
-	.metrics p {
-		@apply text-ink-muted text-sm;
+	.tiers {
+		@apply flex flex-col;
+		gap: 10px;
 	}
 
-	.metrics-note {
-		@apply text-ink-muted text-sm mt-lg pt-lg border-t border-border;
-		max-width: 42rem;
+	.tiers .chips {
+		margin-top: 10px;
 	}
 
-	.metrics-note a {
-		@apply text-brand no-underline font-medium;
+	/* About: one centred sentence and its link. */
+	.about {
+		@apply flex flex-col items-center text-center;
+		gap: 14px;
 	}
 
-	.metrics-note a:hover {
-		@apply text-brand-strong;
+	.about .statement {
+		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+		max-width: 32rem;
 	}
 
-	.card-links {
-		@apply flex flex-wrap items-center gap-md mt-xs;
-	}
-
-	.source-link,
-	.learn-link {
-		@apply text-brand no-underline text-xs inline-block;
-	}
-
-	.source-link:hover,
-	.learn-link:hover {
-		@apply text-brand-strong;
-	}
-
-	.learn-link {
-		@apply font-medium;
-	}
-
-	.principles {
-		@apply border-t border-border pt-xl pb-xl;
-	}
-
-	.principles-label {
-		@apply mb-lg block;
-	}
-
-	.principles-grid {
-		@apply grid grid-cols-1 gap-lg;
-	}
-
-	@media (min-width: 768px) {
-		.principles-grid {
-			@apply grid-cols-3;
+	@media (max-width: 479px) {
+		.verdicts {
+			padding: 24px 20px;
 		}
-	}
-
-	.principle {
-		@apply rounded-md border border-border bg-surface-raised p-md;
-	}
-
-	.principle-icon {
-		@apply flex items-center justify-center rounded-full text-lg mb-sm;
-		width: 2rem;
-		height: 2rem;
-		background-color: color-mix(in oklab, var(--brand) 16%, transparent);
-		color: var(--brand);
-	}
-
-	.principles h3 {
-		@apply text-ink font-semibold mb-xs text-lg;
-	}
-
-	.principles p {
-		@apply text-ink-muted text-sm leading-relaxed;
-	}
-
-	.principles-note {
-		@apply text-ink-muted text-sm mt-lg pt-lg border-t border-border;
-		max-width: 42rem;
-	}
-
-	.principles-note a {
-		@apply text-brand no-underline font-medium;
-	}
-
-	.principles-note a:hover {
-		@apply text-brand-strong;
 	}
 </style>

@@ -2,18 +2,14 @@
 	import type { PageData } from './$types';
 	import DetailHeader from '$lib/components/movies/facts/detailHeader.svelte';
 	import FactGrid from '$lib/components/movies/facts/factGrid.svelte';
-	import MetricChip from '$lib/components/movies/facts/metricChip.svelte';
-	import GenderDistribution from '$lib/components/movies/facts/genderDistribution.svelte';
-	import CastRepresentation from '$lib/components/movies/facts/castRepresentation.svelte';
-	import CrewRepresentation from '$lib/components/movies/facts/crewRepresentation.svelte';
-	import RepresentationDisclosure from '$lib/components/movies/facts/representationDisclosure.svelte';
+	import SourceIndex from '$lib/components/movies/facts/sourceIndex.svelte';
+	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
+	import CastAndCrew from '$lib/components/movies/facts/castAndCrew.svelte';
 	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
-	import CommentsSkeleton from '$lib/components/movies/sections/commentsSkeleton.svelte';
 	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
-	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
-	import BackToTop from '$lib/components/ui/visualization/backToTop.svelte';
 	import { BECHDEL_TIERS } from '$lib/media/utils/metrics';
+	import { bechdelTone } from '$lib/media/utils/tones';
 	import { TitleView } from '$lib/media/utils/titleView.svelte.js';
 
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
@@ -22,103 +18,28 @@
 	const view = new TitleView(() => data, 'movie');
 	const movie = $derived(view.media);
 	const bechdel = $derived(data.bechdel);
-	const ddd = $derived(view.ddd);
 </script>
 
-<div class="movie-page">
-	<section id="details">
-		<DetailHeader media={movie}>
-			{#snippet verdict()}
-				<VerdictPanel safety={view.safety} representation={view.representation} />
-			{/snippet}
-			<div class="summary-chips">
-				<MetricChip
-					href="#bechdel"
-					icon="ri-scales-3-line"
-					label="Bechdel Test"
-					empty={bechdel === null}
-				>
-					{#if bechdel}
-						<span class="chip-value">{bechdel.rating}<span class="chip-unit">/3</span></span>
-					{:else}
-						<span class="chip-empty">No data</span>
-					{/if}
-				</MetricChip>
+<svelte:head>
+	<title>{movie.title} · MIDB</title>
+</svelte:head>
 
-				<MetricChip
-					href="#unconsenting"
-					icon="ri-shield-cross-line"
-					label="Unconsenting Media"
-					empty={view.umData === null}
-					badgeCount={view.hasUmCandidates ? view.umCandidates.length : 0}
-				>
-					{#if view.umData}
-						<span class="chip-value"
-							>{view.flagCount}<span class="chip-unit">
-								concern{view.flagCount === 1 ? '' : 's'}</span
-							></span
-						>
-					{:else}
-						<span class="chip-empty">No data</span>
-					{/if}
-				</MetricChip>
+<article class="title-page">
+	<DetailHeader media={movie}>
+		{#snippet verdict()}
+			<VerdictPanel safety={view.safety} representation={view.representation} />
+		{/snippet}
+		<SourceIndex items={view.sources} />
+	</DetailHeader>
 
-				<MetricChip
-					href="#ddd"
-					icon="ri-alarm-warning-line"
-					label="Does the Dog Die"
-					empty={ddd !== null && ddd.tags.length === 0}
-				>
-					{#if ddd === null}
-						<span class="chip-loading" aria-busy="true">Loading…</span>
-					{:else if ddd.tags.length > 0}
-						<span class="chip-value"
-							>{ddd.tags.length}<span class="chip-unit">
-								tag{ddd.tags.length === 1 ? '' : 's'}</span
-							></span
-						>
-					{:else}
-						<span class="chip-empty">No data</span>
-					{/if}
-				</MetricChip>
-			</div>
-
-			<div class="facts-wrap">
-				<FactGrid {movie} />
-			</div>
-		</DetailHeader>
-	</section>
-
-	<section id="gender" class="gender-section">
-		<p class="label">Cast &amp; crew representation</p>
-
-		<div class="rep-group">
-			<h3 class="group-label label">Cast</h3>
-			<GenderDistribution label="Cast" breakdown={movie.cast} />
-			{#if movie.castMembers.length > 0}
-				<RepresentationDisclosure label="cast by billing order">
-					<CastRepresentation castMembers={movie.castMembers} />
-				</RepresentationDisclosure>
-			{/if}
-		</div>
-
-		<div class="rep-group">
-			<h3 class="group-label label">Crew</h3>
-			<GenderDistribution label="Crew" breakdown={movie.crew} />
-			{#if movie.crewDepartments.length > 0}
-				<RepresentationDisclosure label="crew by role">
-					<CrewRepresentation crewDepartments={movie.crewDepartments} />
-				</RepresentationDisclosure>
-			{/if}
-		</div>
-	</section>
-
-	<div class="metrics-stack">
+	<div class="sections">
 		<div id="bechdel">
 			<CollapsibleSection
 				title="Bechdel Test"
-				status={bechdel ? `Rating ${bechdel.rating}/3` : 'No data'}
-				tone={bechdel ? 'data' : 'empty'}
+				icon="ri-chat-3-fill"
+				hue="var(--src-bechdel)"
+				status={bechdel ? `${bechdel.rating}/3` : 'No data'}
+				tone={bechdel ? bechdelTone(bechdel.rating) : 'neutral'}
 				open={bechdel !== null}
 				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
@@ -130,15 +51,15 @@
 							{@const met = i < bechdel.rating}
 							<li class="criterion" class:criterion--met={met}>
 								<span class="criterion-marker" aria-hidden="true">
-									{#if met}<i class="ri-check-line"></i>{:else}<i class="ri-close-line"></i>{/if}
+									<i class={met ? 'ri-check-line' : 'ri-close-line'}></i>
 								</span>
-								<span class="criterion-label">{criterion.label}</span>
+								<span>{criterion.label}</span>
+								<span class="sr-only">{met ? '(met)' : '(not met)'}</span>
 							</li>
 						{/each}
 					</ol>
-					<p class="meta-note">Based on {bechdel.numVotes.toLocaleString()} votes</p>
 				{:else}
-					<p class="no-data">This movie is not in the Bechdel Test database.</p>
+					<p class="no-data">Not in the BechdelTest.com database.</p>
 				{/if}
 			</CollapsibleSection>
 		</div>
@@ -148,103 +69,46 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
-			mediaNoun="movie"
 			onselect={(c) => view.selectUm(c)}
 		/>
 
-		<DddMetricSection {ddd} visibleTags={view.visibleTags} mediaNoun="movie" />
+		<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} />
+
+		<CastAndCrew media={movie} />
+
+		<CollapsibleSection title="Details" icon="ri-film-fill" hue="var(--src-tmdb)">
+			<FactGrid {movie} />
+		</CollapsibleSection>
 	</div>
-
-	<CommentsSkeleton />
-
-	<BackToTop />
-</div>
+</article>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.movie-page {
-		@apply flex flex-col py-xl;
+	.title-page {
+		@apply flex flex-col;
 		gap: var(--spacing-xl);
+		padding-top: var(--spacing-lg);
 	}
 
-	#details {
-		@apply flex flex-col gap-lg;
-	}
-
-	.gender-section {
-		@apply flex flex-col gap-lg;
-	}
-
-	.rep-group {
-		@apply flex flex-col gap-sm;
-	}
-
-	.group-label {
-		@apply text-ink-muted mb-xs;
-	}
-
-	.metrics-stack {
-		@apply flex flex-col gap-md;
-		scroll-margin-top: var(--spacing-lg);
-	}
-
-	.metrics-stack > div {
-		scroll-margin-top: var(--spacing-lg);
+	.sections {
+		@apply flex flex-col;
+		gap: 16px;
 	}
 
 	.no-data {
-		@apply text-sm text-ink-muted italic;
+		@apply text-ink-muted;
 	}
 
-	.meta-note {
-		@apply text-xs text-ink-muted;
-	}
-
-	.facts-wrap {
-		@apply border-t border-border pt-md mt-xs;
-	}
-
-	.summary-chips {
-		@apply grid gap-sm mt-xs;
-		grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-	}
-
-	:global(.chip-value) {
-		@apply text-2xl font-semibold text-brand leading-tight;
-		font-family: var(--font-display);
-	}
-
-	:global(.chip-unit) {
-		@apply text-sm font-normal text-ink-muted ml-1;
-	}
-
-	:global(.chip-empty),
-	:global(.chip-loading) {
-		@apply text-sm text-ink-muted italic leading-tight;
-	}
-
+	/* Shared marker pattern: see .CLAUDE/architecture.md. Brand, not a status tone: pass or fail
+	   already reads from the rating in the heading row. */
 	.bechdel-criteria {
 		@apply flex flex-col list-none m-0 p-0;
 	}
 
 	.criterion {
-		@apply relative flex items-center gap-sm text-sm text-ink-muted;
+		@apply flex items-center gap-sm text-sm text-ink-muted;
 		padding-block: var(--spacing-xs);
-	}
-
-	.criterion:not(:last-child)::before {
-		content: '';
-		@apply absolute;
-		left: 0.6875rem; /* centre of the 1.375rem marker */
-		top: calc(50% + 0.6875rem);
-		bottom: calc(50% - 0.6875rem - var(--spacing-xs) * 2);
-		width: 2px;
-		background-color: var(--border);
-	}
-
-	.criterion--met:not(:last-child)::before {
-		background-color: color-mix(in oklab, var(--success) 45%, var(--border));
 	}
 
 	.criterion--met {
@@ -252,19 +116,16 @@
 	}
 
 	.criterion-marker {
-		@apply flex items-center justify-center rounded-full text-xs font-semibold shrink-0 z-10;
+		@apply flex items-center justify-center rounded-full text-xs shrink-0;
 		width: 1.375rem;
 		height: 1.375rem;
-		background-color: var(--secondary-soft);
 		color: var(--ink-muted);
+		box-shadow: inset 0 0 0 1px var(--border);
 	}
 
 	.criterion--met .criterion-marker {
-		background-color: color-mix(in oklab, var(--success) 16%, transparent);
-		color: var(--success);
-	}
-
-	.criterion-label {
-		@apply leading-snug;
+		background-color: color-mix(in oklab, var(--brand) 14%, transparent);
+		color: var(--brand);
+		box-shadow: none;
 	}
 </style>

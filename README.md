@@ -33,3 +33,4 @@ bun run test:db           # data-layer tests against real Postgres
 
 - [`AGENTS.md`](AGENTS.md): working rules for this codebase.
 - [`.CLAUDE/architecture.md`](.CLAUDE/architecture.md): architecture reference.
+- [`DESIGN.md`](DESIGN.md) and [`PRODUCT.md`](PRODUCT.md): visual system and product context, read by the Impeccable design skill in `.claude/skills/impeccable`.

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Avatar from '$lib/components/user/avatars/Avatar.svelte';
+	import LogoutButton from '$lib/components/auth/logoutButton.svelte';
+	import Badge from '$lib/components/ui/badge.svelte';
 	import AvatarPicker from '$lib/components/user/avatars/AvatarPicker.svelte';
 	import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
 
@@ -48,96 +50,106 @@
 	}
 </script>
 
-<div class="profile-page">
+<div class="account-page">
 	<header class="profile-header">
-		<Avatar avatarKey={user?.avatarKey} size={72} />
+		<Avatar avatarKey={user?.avatarKey} size={64} />
 		<div class="profile-meta">
-			<h1 class="display profile-name">
+			<h1 class="display">
 				{#if user?.username}
 					{user.username}
 				{:else}
 					<span class="prompt">Set a username</span>
 				{/if}
 			</h1>
-			{#if data.email}
-				<p class="profile-email label">{data.email}</p>
-			{/if}
-			{#if user?.role}
-				<span class="role-badge role-{user.role}">{roleLabel(user.role)}</span>
-			{/if}
+			<p class="details">
+				{#if data.email}<span>{data.email}</span>{/if}
+				{#if user?.role}<Badge tone={user.role === 'user' ? 'neutral' : 'brand'}
+						>{roleLabel(user.role)}</Badge
+					>{/if}
+			</p>
 		</div>
 	</header>
 
 	{#if form?.error}
-		<div class="form-error" role="alert">
-			{#if form.error === 'username-taken'}Username is already taken.
-			{:else if form.error === 'username-format'}Username must be 3–32 characters: lowercase
-				letters, numbers, underscores only.
+		<p class="notice notice--error" role="alert">
+			{#if form.error === 'username-taken'}That username is already taken.
+			{:else if form.error === 'username-format'}A username is 3–32 characters: lowercase letters,
+				numbers and underscores.
 			{:else if form.error === 'username-reserved'}That username is reserved.
-			{:else if form.error === 'avatar-invalid'}Please choose a valid avatar.
-			{:else}Something went wrong. Please try again.
+			{:else if form.error === 'avatar-invalid'}That avatar is not available. Choose another.
+			{:else}The profile could not be saved. Try again.
 			{/if}
-		</div>
+		</p>
 	{/if}
 
 	{#if form?.success}
-		<div class="form-success" role="status">Profile updated.</div>
+		<p class="notice notice--success" role="status">Profile saved.</p>
 	{/if}
 
-	<form method="POST" action="?/updateProfile" use:enhance class="profile-form">
+	<form method="POST" action="?/updateProfile" use:enhance class="card profile-form">
 		<input type="hidden" name="avatarKey" value={selectedAvatar ?? ''} />
 
-		<section class="form-section">
-			<label for="username" class="field-label">Username</label>
+		<div class="field">
+			<label for="username">Username</label>
 			<input
 				id="username"
 				name="username"
 				type="text"
-				class="field-input"
 				value={usernameInput}
 				oninput={(e) => {
 					usernameInput = (e.target as HTMLInputElement).value;
 					checkAvailability(usernameInput);
 				}}
-				placeholder="choose a username"
 				maxlength="32"
 				autocomplete="off"
 				spellcheck="false"
+				aria-describedby="username-hint"
 			/>
-			{#if availability === 'checking'}
-				<span class="avail-hint checking">Checking…</span>
-			{:else if availability === 'available'}
-				<span class="avail-hint available">Available</span>
-			{:else if availability === 'taken'}
-				<span class="avail-hint taken">Already taken</span>
-			{/if}
-		</section>
+			<p id="username-hint" class="hint hint--{availability}" aria-live="polite">
+				{#if availability === 'checking'}Checking…
+				{:else if availability === 'available'}Available
+				{:else if availability === 'taken'}Already taken
+				{:else}Lowercase letters, numbers and underscores.
+				{/if}
+			</p>
+		</div>
 
-		<section class="form-section">
-			<p class="field-label">Avatar</p>
+		<fieldset class="field">
+			<legend>Avatar</legend>
 			<AvatarPicker
 				value={selectedAvatar}
 				onselect={(key) => {
 					selectedAvatar = key;
 				}}
 			/>
-		</section>
+		</fieldset>
 
-		<button type="submit" class="save-btn label">Save profile</button>
+		<button type="submit" class="btn btn--brand save">Save profile</button>
 	</form>
 
-	<nav class="profile-nav label">
-		<a href="/user/dashboard">Account settings</a>
-		<a href="/user/comments">Comment history</a>
-		<a href="/user/metrics">Rating history</a>
+	<nav class="card account-nav" aria-label="Account">
+		<a href="/user/dashboard"
+			>Account settings <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+		>
+		<a href="/user/comments"
+			>Comment history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+		>
+		<a href="/user/metrics"
+			>Rating history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+		>
 	</nav>
+
+	<p><LogoutButton /></p>
 </div>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.profile-page {
-		@apply max-w-lg mx-auto py-lg flex flex-col gap-lg;
+	.account-page {
+		@apply flex flex-col mx-auto;
+		max-width: 36rem;
+		gap: var(--spacing-lg);
+		padding-block: var(--spacing-xl);
 	}
 
 	.profile-header {
@@ -145,84 +157,108 @@
 	}
 
 	.profile-meta {
-		@apply flex flex-col gap-xs;
+		@apply flex flex-col gap-xs min-w-0;
 	}
 
-	.profile-name {
-		@apply text-2xl font-semibold text-ink;
+	h1 {
+		@apply truncate;
+		font-size: 1.875rem;
 	}
 
 	.prompt {
 		@apply text-ink-muted;
 	}
 
-	.profile-email {
-		@apply text-ink-muted text-sm;
+	.details {
+		@apply flex flex-wrap items-center gap-x-md gap-y-xs text-sm text-ink-muted;
 	}
 
-	.role-badge {
-		@apply text-xs font-medium px-sm py-xs rounded-full w-fit;
+	.notice {
+		@apply text-sm;
+		padding: 12px 16px;
+		border-radius: 12px;
 	}
 
-	.role-user {
-		@apply bg-surface-raised text-ink-muted border border-border;
-	}
-	.role-moderator {
-		@apply bg-info-soft text-info-fg;
-	}
-	.role-administrator {
-		@apply bg-brand text-surface;
+	.notice--error {
+		background-color: var(--danger-soft);
+		color: var(--danger);
 	}
 
-	.form-error {
-		@apply text-sm text-danger border border-danger-soft bg-danger-soft rounded-lg px-md py-sm;
-	}
-
-	.form-success {
-		@apply text-sm text-success border border-success-soft bg-success-soft rounded-lg px-md py-sm;
+	.notice--success {
+		background-color: var(--success-soft);
+		color: var(--success);
 	}
 
 	.profile-form {
-		@apply flex flex-col gap-lg;
+		@apply flex flex-col;
+		gap: var(--spacing-lg);
+		padding: 24px;
 	}
 
-	.form-section {
-		@apply flex flex-col gap-sm;
+	.field {
+		@apply flex flex-col gap-xs border-0 m-0 p-0 min-w-0;
 	}
 
-	.field-label {
-		@apply text-sm font-medium text-ink;
+	label,
+	legend {
+		@apply font-medium text-ink p-0;
+		margin-bottom: var(--spacing-xs);
 	}
 
-	.field-input {
-		@apply w-full border border-border rounded-lg px-md py-sm text-ink bg-surface-raised;
-		@apply focus:outline-none focus:border-brand;
+	input[type='text'] {
+		@apply w-full text-ink bg-surface-raised;
+		height: 2.75rem;
+		padding-inline: 16px;
+		border-radius: 12px;
+		border: 1px solid var(--border-strong);
+		transition: border-color 0.15s ease;
 	}
 
-	.avail-hint {
-		@apply text-xs mt-xs;
+	input[type='text']:hover {
+		border-color: var(--ink-muted);
 	}
 
-	.avail-hint.checking {
-		@apply text-ink-muted;
-	}
-	.avail-hint.available {
-		@apply text-success;
-	}
-	.avail-hint.taken {
-		@apply text-danger;
+	input[type='text']:focus-visible {
+		@apply outline-none;
+		border-color: var(--brand);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
 	}
 
-	.save-btn {
-		@apply self-start px-lg py-sm rounded-lg bg-brand text-surface cursor-pointer border-0;
-		@apply hover:bg-brand-strong transition-colors;
+	.hint {
+		@apply text-sm text-ink-muted;
 	}
 
-	.profile-nav {
-		@apply flex gap-md text-sm border-t border-border pt-md;
+	.hint--available {
+		color: var(--success);
+	}
 
-		a {
-			@apply text-ink-muted no-underline hover:text-brand;
-		}
+	.hint--taken {
+		color: var(--danger);
+	}
+
+	.save {
+		@apply self-start;
+	}
+
+	.account-nav {
+		@apply flex flex-col overflow-hidden;
+	}
+
+	.account-nav a {
+		@apply flex items-center justify-between no-underline text-ink font-medium;
+		padding: 14px 20px;
+		transition: color 0.15s ease;
+	}
+
+	.account-nav a + a {
+		border-top: 1px solid var(--border);
+	}
+
+	.account-nav a:hover {
+		color: var(--brand);
+	}
+
+	.account-nav i {
+		@apply text-ink-muted text-lg;
 	}
 </style>

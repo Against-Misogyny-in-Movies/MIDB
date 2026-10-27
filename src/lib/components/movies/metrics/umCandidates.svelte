@@ -1,5 +1,7 @@
 <script lang="ts">
+	import Badge from '$lib/components/ui/badge.svelte';
 	import { umFlagCount } from '$lib/media/utils/metrics';
+	import { umTone } from '$lib/media/utils/tones';
 	import type { UmEntry } from '$lib/media/types/um';
 
 	interface Props {
@@ -12,36 +14,23 @@
 
 <div class="um-candidates">
 	<p class="intro">
-		We found {candidates.length} possible Unconsenting Media matches for this title — which one is this
-		title?
+		{candidates.length} Unconsenting Media entries could match this title. Select one to show its flags.
 	</p>
 	<ul role="list" class="candidate-list">
 		{#each candidates as candidate (candidate.umId)}
 			{@const concerns = umFlagCount(candidate)}
-			<li class="candidate-row">
+			<li>
 				<button
 					type="button"
-					class="candidate-btn"
+					class="candidate"
 					onclick={() => onselect(candidate)}
 					aria-label="Show Unconsenting Media data for {candidate.cleanName}{candidate.year
 						? ` (${candidate.year})`
 						: ''}"
 				>
-					<span class="candidate-icon" aria-hidden="true">
-						<i class="ri-shield-cross-line"></i>
-					</span>
-					<span class="candidate-info">
-						<span class="candidate-title">{candidate.cleanName}</span>
-						{#if candidate.year}
-							<span class="candidate-meta">
-								<i class="ri-film-line" aria-hidden="true"></i>
-								<span>{candidate.year}</span>
-							</span>
-						{/if}
-					</span>
-					<span class="flag-pill" aria-label="{concerns} concern{concerns === 1 ? '' : 's'}">
-						{concerns} concern{concerns === 1 ? '' : 's'}
-					</span>
+					<span class="year">{candidate.year ?? '—'}</span>
+					<span class="candidate-title">{candidate.cleanName}</span>
+					<Badge tone={umTone(candidate)}>{concerns} concern{concerns === 1 ? '' : 's'}</Badge>
 				</button>
 			</li>
 		{/each}
@@ -56,63 +45,48 @@
 	}
 
 	.intro {
-		@apply text-sm text-ink-muted;
+		@apply text-ink-muted;
+		max-width: 65ch;
 	}
 
 	.candidate-list {
-		@apply flex flex-col gap-xs list-none m-0 p-0;
+		@apply flex flex-col list-none m-0 p-0 overflow-hidden;
+		border: 1px solid var(--border);
+		border-radius: 12px;
 	}
 
-	.candidate-btn {
-		@apply flex flex-row items-center gap-sm p-xs w-full rounded-sm text-left cursor-pointer no-underline text-ink;
-		background: none;
-		border: none;
-		transition: background-color 0.1s ease;
+	.candidate-list li + li {
+		border-top: 1px solid var(--border);
 	}
 
-	.candidate-btn:hover {
-		@apply bg-accent-bg text-accent-ink;
+	.candidate {
+		@apply flex items-center w-full text-left bg-transparent border-0 cursor-pointer text-ink;
+		gap: 12px;
+		padding: 10px 12px;
+		font: inherit;
+		transition: background-color 0.15s ease;
 	}
 
-	.candidate-btn:focus-visible {
-		@apply outline-none;
-		box-shadow: 0 0 0 2px var(--brand);
+	.candidate:hover {
+		background-color: var(--surface-sunken);
 	}
 
-	.candidate-icon {
-		@apply flex items-center justify-center w-8 h-8 rounded-full shrink-0 text-base;
-		background-color: color-mix(in oklab, var(--brand) 14%, transparent);
+	.candidate:focus-visible {
+		outline-offset: -2px;
+	}
+
+	.year {
+		@apply flex items-center justify-center shrink-0;
+		width: 2.75rem;
+		height: 2rem;
+		border-radius: 8px;
+		background-color: var(--brand-wash);
 		color: var(--brand);
-	}
-
-	.candidate-btn:hover .candidate-icon {
-		background-color: color-mix(in oklab, var(--accent) 20%, transparent);
-		color: var(--accent-ink);
-	}
-
-	.candidate-info {
-		@apply flex flex-col min-w-0 flex-1;
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
 	}
 
 	.candidate-title {
-		@apply font-medium text-sm leading-snug truncate;
-	}
-
-	.candidate-meta {
-		@apply flex flex-row items-center gap-xs text-xs text-ink-muted;
-	}
-
-	.candidate-btn:hover .candidate-meta {
-		@apply text-accent-ink opacity-80;
-	}
-
-	.candidate-meta i {
-		@apply text-[0.8rem] leading-none opacity-70;
-	}
-
-	.flag-pill {
-		@apply text-xs font-medium px-xs py-0 rounded-full shrink-0;
-		background-color: color-mix(in oklab, var(--warn) 15%, transparent);
-		color: var(--warn);
+		@apply font-medium flex-1 min-w-0 truncate;
 	}
 </style>

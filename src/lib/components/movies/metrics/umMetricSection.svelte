@@ -1,7 +1,9 @@
 <script lang="ts">
 	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
 	import UmCandidates from './umCandidates.svelte';
+	import UmComment from './umComment.svelte';
 	import { UM_FLAGS } from '$lib/media/utils/metrics';
+	import { umTone } from '$lib/media/utils/tones';
 	import type { UmEntry } from '$lib/media/types/um';
 
 	interface Props {
@@ -9,18 +11,23 @@
 		umCandidates: UmEntry[];
 		umFlagCount: number;
 		hasUmCandidates: boolean;
-		mediaNoun: 'movie' | 'series';
 		onselect: (candidate: UmEntry) => void;
 	}
 
-	let { umData, umCandidates, umFlagCount, hasUmCandidates, mediaNoun, onselect }: Props = $props();
+	let { umData, umCandidates, umFlagCount, hasUmCandidates, onselect }: Props = $props();
 </script>
 
 <div id="unconsenting">
 	<CollapsibleSection
 		title="Unconsenting Media"
-		status={umData ? `${umFlagCount} concern${umFlagCount === 1 ? '' : 's'}` : 'No data'}
-		tone={umData ? 'data' : 'empty'}
+		icon="ri-flag-2-fill"
+		hue="var(--src-um)"
+		status={umData
+			? `${umFlagCount} concern${umFlagCount === 1 ? '' : 's'}`
+			: hasUmCandidates
+				? `${umCandidates.length} possible matches`
+				: 'No data'}
+		tone={umData ? umTone(umData) : hasUmCandidates ? 'brand' : 'neutral'}
 		open={umData !== null || hasUmCandidates}
 		sourceLabel={umData ? 'UnconsentingMedia.org' : undefined}
 		sourceHref={umData ? `https://www.unconsentingmedia.org/items/${umData.umId}` : undefined}
@@ -51,12 +58,14 @@
 				{/each}
 			</ul>
 			{#if umData.comment}
-				<p class="um-comment">{umData.comment}</p>
+				{#key umData.umId}
+					<UmComment comment={umData.comment} />
+				{/key}
 			{/if}
 		{:else if hasUmCandidates}
 			<UmCandidates candidates={umCandidates} {onselect} />
 		{:else}
-			<p class="no-data">This {mediaNoun} is not in the Unconsenting Media database.</p>
+			<p class="no-data">Not in the Unconsenting Media database.</p>
 		{/if}
 	</CollapsibleSection>
 </div>
@@ -65,16 +74,16 @@
 	@reference "../../../../app.css";
 
 	.no-data {
-		@apply text-sm text-ink-muted italic;
+		@apply text-ink-muted;
 	}
 
 	.um-flags {
 		@apply grid list-none m-0 p-0;
-		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
 		gap: 0 var(--spacing-lg);
 	}
 
-	/* Row rhythm mirrors the Bechdel criteria ladder */
+	/* Shared marker pattern: see .CLAUDE/architecture.md. */
 	.um-flag {
 		@apply flex items-center gap-sm text-sm text-ink-muted;
 		padding-block: var(--spacing-xs);
@@ -85,39 +94,27 @@
 		@apply text-ink font-medium;
 	}
 
-	/* Circular marker shared with the Bechdel criteria ladder */
 	.flag-marker {
 		@apply flex items-center justify-center rounded-full text-xs shrink-0;
 		width: 1.375rem;
 		height: 1.375rem;
-		background-color: var(--secondary-soft);
 		color: var(--ink-muted);
-	}
-
-	/* Absent concerns stay quiet so present ones lead the eye */
-	.um-flag:not(.um-flag--present):not(.um-flag--reassurance) .flag-marker {
-		background-color: transparent;
-		color: color-mix(in oklab, var(--ink-muted) 55%, transparent);
 		box-shadow: inset 0 0 0 1px var(--border);
 	}
 
 	.um-flag--present .flag-marker {
-		background-color: color-mix(in oklab, var(--warn) 16%, transparent);
+		background-color: var(--warn-soft);
 		color: var(--warn);
+		box-shadow: none;
 	}
 
 	.um-flag--reassurance .flag-marker {
-		background-color: color-mix(in oklab, var(--success) 16%, transparent);
+		background-color: var(--success-soft);
 		color: var(--success);
+		box-shadow: none;
 	}
 
 	.flag-label {
 		@apply leading-snug;
-	}
-
-	.um-comment {
-		@apply text-sm text-ink-muted mt-xs leading-relaxed border-l-2 pl-md;
-		border-color: var(--border);
-		white-space: pre-wrap;
 	}
 </style>

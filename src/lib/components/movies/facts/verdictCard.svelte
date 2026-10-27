@@ -9,217 +9,136 @@
 	let { verdict }: Props = $props();
 
 	const tokens = $derived(toneTokens(verdict.tone));
-	const hasDetail = $derived(verdict.signals.length > 0);
-
-	let open = $state(false);
-	let hovering = $state(false);
-
-	// Touch: the popover dismisses on scroll (matching dddTags), so a tapped-open
-	// card doesn't linger over content the user has scrolled past. Clear `hovering`
-	// too — a tap can fire focus/mouseenter, and that path has no scroll dismiss.
-	// Use the capture phase so scrolls from any nested scroll container are caught —
-	// the `scroll` event doesn't bubble, so a non-capturing window listener misses
-	// them. Capturing on window is also how dddTags registers its dismiss handler.
-	$effect(() => {
-		if (!open && !hovering) return;
-		const dismiss = () => {
-			open = false;
-			hovering = false;
-		};
-		window.addEventListener('scroll', dismiss, { capture: true, passive: true });
-		return () => window.removeEventListener('scroll', dismiss, { capture: true });
-	});
+	const axisLabel = $derived(verdict.axis === 'safety' ? 'Content safety' : 'Representation');
+	const basis = $derived(
+		`Based on ${verdict.signalsPresent} of ${verdict.signalsTotal} metrics${verdict.pending ? ', loading…' : ''}`
+	);
 </script>
 
-<div
-	class="card-wrap"
-	style="--vt-fg: var({tokens.fg}); --vt-soft: var({tokens.soft}); --vt-on: var({tokens.on});"
->
-	{#if hasDetail}
-		<button
-			class="card"
-			type="button"
-			aria-expanded={open}
-			aria-label="{verdict.label}. {verdict.summary}"
-			onmouseenter={() => (hovering = true)}
-			onmouseleave={() => (hovering = false)}
-			onfocus={() => (hovering = true)}
-			onblur={() => (hovering = false)}
-			onclick={() => (open = !open)}
-		>
-			<span class="icon-chip" aria-hidden="true">
-				<i class={verdict.icon}></i>
-			</span>
-			<div class="content">
-				<span class="label">{verdict.label}</span>
-				<span class="summary">{verdict.summary}</span>
-				<span class="confidence" aria-busy={verdict.pending ? 'true' : undefined}>
-					Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics{verdict.pending
-						? ' · updating…'
-						: ''}
-				</span>
-			</div>
-		</button>
-	{:else}
-		<div class="card card--static">
-			<span class="icon-chip" aria-hidden="true">
-				<i class={verdict.icon}></i>
-			</span>
-			<div class="content">
-				<span class="label">{verdict.label}</span>
-				<span class="summary">{verdict.summary}</span>
-				<span class="confidence" aria-busy={verdict.pending ? 'true' : undefined}>
-					Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics{verdict.pending
-						? ' · updating…'
-						: ''}
-				</span>
-			</div>
-		</div>
-	{/if}
+<!-- Every line is present from first paint and the summary keeps a fixed two-line box, so the DDD
+     stream updating the safety card never moves the page. The signal list is a disclosure the
+     visitor opens, so it works the same with a mouse, a keyboard and on touch. -->
+<div class="verdict" style="--tone: var({tokens.fg}); --tone-soft: var({tokens.soft});">
+	<p class="axis">{axisLabel}</p>
+	<p class="tier display">{verdict.label}</p>
+	<p class="summary">{verdict.summary}</p>
 
-	{#if hasDetail}
-		<!-- Popover: revealed on hover/focus (desktop) or tap (touch). -->
-		<div class="detail-pop" class:detail-pop--visible={hovering || open} role="tooltip">
-			<ul class="sig-list">
+	{#if verdict.signals.length > 0}
+		<details class="basis">
+			<summary aria-busy={verdict.pending ? 'true' : undefined}>
+				{basis}
+				<i class="ri-arrow-down-s-line chevron" aria-hidden="true"></i>
+			</summary>
+			<ul class="signals">
 				{#each verdict.signals as sig (sig.label)}
-					{@const sigTokens = toneTokens(sig.tone ?? verdict.tone)}
-					<li class="sig" style="--sig-fg: var({sigTokens.fg});">
-						<span class="sig-dot" aria-hidden="true"></span>
-						<span class="sig-label">{sig.label}</span>
-						<span class="sig-detail">{sig.detail}</span>
+					<li class="signal" style="--sig: var({toneTokens(sig.tone ?? verdict.tone).fg});">
+						<span class="signal-label">{sig.label}</span>
+						<span class="signal-detail num">{sig.detail}</span>
 					</li>
 				{/each}
-				<li class="sig sig--meta">
-					Based on {verdict.signalsPresent} of {verdict.signalsTotal} metrics
-				</li>
 			</ul>
-		</div>
+			<a class="link how" href="/resources#verdict">Methodology</a>
+		</details>
+	{:else}
+		<p class="basis-text" aria-busy={verdict.pending ? 'true' : undefined}>{basis}</p>
 	{/if}
 </div>
 
 <style lang="postcss">
 	@reference "../../../../app.css";
 
-	.card-wrap {
-		@apply relative flex flex-col;
-	}
-
-	.card {
-		@apply flex items-start gap-sm p-md rounded-md border border-border w-full text-left flex-1;
-		background-color: color-mix(in oklab, var(--vt-fg) 6%, var(--surface-raised));
-		border-left: 3px solid var(--vt-fg);
-		font: inherit;
-		cursor: help;
-		transition:
-			border-color 0.15s ease,
-			background-color 0.15s ease;
-
-		@media (prefers-reduced-motion: reduce) {
-			transition: none;
-		}
-	}
-
-	.card--static {
-		@apply cursor-default;
-	}
-
-	.card:focus-visible {
-		@apply outline-none;
-		box-shadow: 0 0 0 2px var(--brand);
-	}
-
-	.icon-chip {
-		@apply flex items-center justify-center rounded-full shrink-0 text-lg;
-		width: 2.25rem;
-		height: 2.25rem;
-		background-color: color-mix(in oklab, var(--vt-fg) 16%, transparent);
-		color: var(--vt-fg);
+	.verdict {
+		@apply flex flex-col;
+		padding: 20px;
+		border-radius: 12px;
+		background-color: var(--tone-soft);
 		transition: background-color 0.15s ease;
-
-		@media (prefers-reduced-motion: reduce) {
-			transition: none;
-		}
 	}
 
-	.content {
-		@apply flex flex-col gap-xs min-w-0 flex-1;
+	.axis {
+		@apply text-sm font-medium;
+		color: color-mix(in oklab, var(--tone) 70%, var(--ink));
 	}
 
-	.label {
-		@apply text-sm font-semibold text-ink leading-tight;
-		font-family: var(--font-display);
+	.tier {
+		font-size: 1.5rem;
+		line-height: 1.33;
+		color: var(--tone);
+		margin-top: 2px;
 	}
 
+	/* Two lines reserved and clamped: the summary can change when DDD streams in. */
 	.summary {
-		@apply text-xs text-ink-muted leading-snug;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
+		@apply text-sm text-ink line-clamp-2;
+		min-height: 2.5rem;
+		margin-top: var(--spacing-xs);
 	}
 
-	.confidence {
-		@apply text-xs text-ink-muted;
-		opacity: 0.7;
+	.basis,
+	.basis-text {
+		@apply text-sm;
+		margin-top: var(--spacing-sm);
+		color: color-mix(in oklab, var(--tone) 55%, var(--ink));
 	}
 
-	/* ── Desktop popover ── */
-	.detail-pop {
-		@apply absolute left-0 right-0 z-30 rounded-md border border-border p-sm;
-		top: calc(100% - 1px);
-		background-color: color-mix(in oklab, var(--vt-fg) 4%, var(--surface-raised));
-		box-shadow: 0 4px 16px -4px color-mix(in oklab, var(--ink) 20%, transparent);
-		opacity: 0;
-		pointer-events: none;
-		transform: translateY(-4px);
-		transition:
-			opacity 0.14s ease,
-			transform 0.14s ease;
-
-		@media (prefers-reduced-motion: reduce) {
-			transition: opacity 0.14s ease;
-			transform: none;
-		}
+	summary {
+		@apply inline-flex items-center gap-xs cursor-pointer select-none;
+		list-style: none;
 	}
 
-	.detail-pop--visible {
-		opacity: 1;
-		pointer-events: auto;
-		transform: translateY(0);
-
-		@media (prefers-reduced-motion: reduce) {
-			transform: none;
-		}
+	summary::-webkit-details-marker {
+		display: none;
 	}
 
-	/* ── Signal list ── */
-	.sig-list {
-		@apply flex flex-col list-none m-0 p-0 gap-xs;
-	}
-
-	.sig {
-		@apply grid items-center gap-sm text-xs;
-		grid-template-columns: auto 1fr auto;
-	}
-
-	.sig-dot {
-		@apply rounded-full shrink-0;
-		width: 0.375rem;
-		height: 0.375rem;
-		background-color: var(--sig-fg);
-	}
-
-	.sig-label {
+	summary:hover {
 		@apply text-ink;
 	}
 
-	.sig-detail {
-		@apply text-ink-muted tabular-nums;
+	.chevron {
+		transition: transform 0.15s ease;
 	}
 
-	.sig--meta {
-		@apply col-span-3 text-ink-muted mt-xs pt-xs border-t border-border;
-		opacity: 0.7;
-		grid-template-columns: none;
+	.basis[open] .chevron {
+		transform: rotate(180deg);
+	}
+
+	.signals {
+		@apply flex flex-col list-none m-0 p-0;
+		margin-top: var(--spacing-sm);
+		border-top: 1px solid color-mix(in oklab, var(--tone) 20%, transparent);
+	}
+
+	.signal {
+		@apply flex items-baseline justify-between gap-md text-ink;
+		padding-block: var(--spacing-xs);
+		border-bottom: 1px solid color-mix(in oklab, var(--tone) 20%, transparent);
+	}
+
+	.signal-label {
+		@apply flex items-baseline gap-sm;
+	}
+
+	.signal-label::before {
+		content: '';
+		@apply inline-block rounded-full shrink-0;
+		width: 0.5rem;
+		height: 0.5rem;
+		background-color: var(--sig);
+	}
+
+	.signal-detail {
+		@apply text-ink-muted text-right;
+	}
+
+	.how {
+		@apply inline-block;
+		margin-top: var(--spacing-sm);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.verdict,
+		.chevron {
+			transition: none;
+		}
 	}
 </style>

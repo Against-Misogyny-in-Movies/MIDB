@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/form/button.svelte';
 	import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
 
 	interface Props {
@@ -11,6 +10,8 @@
 		oninput: (value: string) => void;
 		onkeydown: (event: KeyboardEvent) => void;
 		onfocus?: () => void;
+		/** The Search button, and Enter with no highlighted row. */
+		onsubmit: () => void;
 	}
 
 	let {
@@ -21,15 +22,25 @@
 		activeDescendant,
 		oninput,
 		onkeydown,
-		onfocus
+		onfocus,
+		onsubmit
 	}: Props = $props();
 </script>
 
-<form onsubmit={(e) => e.preventDefault()}>
+<!-- Landing-page search bar: styled from the `.landing` palette in app.css. -->
+<form
+	role="search"
+	onsubmit={(e) => {
+		e.preventDefault();
+		onsubmit();
+	}}
+>
+	<i class="ri-search-line lead" aria-hidden="true"></i>
 	<input
 		type="text"
 		name="query"
-		placeholder="Search movies & TV…"
+		placeholder="Search films and series"
+		aria-label="Search films and series"
 		maxlength={SEARCH_QUERY_MAX_LENGTH}
 		{value}
 		oninput={(e) => oninput(e.currentTarget.value)}
@@ -42,47 +53,81 @@
 		aria-activedescendant={activeDescendant}
 		autocomplete="off"
 	/>
-	<Button type="submit" aria-label="Search">
-		<span class="btn-label">Search</span>
-		{#if loading}
-			<i class="ri-loader-4-line spinner" aria-hidden="true"></i>
-		{:else}
-			<i class="ri-search-line"></i>
-		{/if}
-	</Button>
+	{#if loading}
+		<i class="ri-loader-4-line spinner" aria-hidden="true"></i>
+	{/if}
+	<button type="submit">
+		Search <i class="ri-arrow-right-line" aria-hidden="true"></i>
+	</button>
 </form>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
 	form {
-		@apply flex flex-row bg-surface-raised rounded-md p-xs border border-border;
+		@apply flex items-center gap-sm;
+		padding: 4px 4px 4px 16px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background-color: var(--surface-raised);
+		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
 	}
 
-	input {
-		@apply flex-1 min-w-0;
-	}
-
-	.btn-label {
-		@apply hidden;
-	}
-
-	@media (min-width: 480px) {
-		.btn-label {
-			@apply inline;
-		}
+	form:hover {
+		border-color: var(--border-strong);
 	}
 
 	form:focus-within {
-		@apply border-brand;
+		border-color: var(--brand);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
 	}
 
-	input:focus {
+	.lead,
+	.spinner {
+		@apply shrink-0;
+		font-size: 1rem;
+		color: var(--ink-muted);
+	}
+
+	input {
+		@apply flex-1 min-w-0 bg-transparent;
+		height: 2.5rem;
+		font-size: 1rem;
+		color: var(--ink);
+	}
+
+	input::placeholder {
+		color: var(--ink-muted);
+	}
+
+	input:focus-visible {
 		@apply outline-none;
 	}
 
+	button {
+		@apply inline-flex items-center shrink-0 border-0 cursor-pointer;
+		gap: 6px;
+		height: 2.5rem;
+		padding-inline: 16px;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--on-brand);
+		background-color: var(--brand);
+		transition:
+			background-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	button:hover {
+		background-color: var(--brand-strong);
+		box-shadow: var(--shadow-brand);
+	}
+
 	.spinner {
-		display: inline-block;
 		animation: spin 0.7s linear infinite;
 	}
 
@@ -95,6 +140,11 @@
 	@media (prefers-reduced-motion: reduce) {
 		.spinner {
 			animation: none;
+		}
+
+		form,
+		button {
+			transition: none;
 		}
 	}
 </style>

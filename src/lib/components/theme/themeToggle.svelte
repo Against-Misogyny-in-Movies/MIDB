@@ -18,14 +18,14 @@
 		apply(theme);
 	});
 
-	// --brand per theme; keep in sync with app.css and app.html's pre-paint script.
-	const BRAND: Record<Theme, string> = { light: '#7400b8', dark: '#c890ee' };
+	// --surface per theme; keep in sync with app.css and app.html's pre-paint script.
+	const CHROME: Record<Theme, string> = { light: '#fbfafc', dark: '#141217' };
 
 	function apply(t: Theme) {
 		document.documentElement.dataset.theme = t;
 		localStorage.setItem('theme', t);
 		// Keep the mobile browser chrome tint in step with the active theme.
-		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BRAND[t]);
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', CHROME[t]);
 	}
 
 	function toggle() {
@@ -36,19 +36,18 @@
 </script>
 
 <button onclick={toggle} aria-label={label} title={label} data-mode={theme}>
-	<i class={icon}></i>
+	<i class={icon} aria-hidden="true"></i>
 </button>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
 	button {
-		@apply bg-surface-raised text-ink border border-border rounded-md p-xs;
-		@apply hover:text-brand transition-colors cursor-pointer;
+		@apply flex bg-transparent border-0 p-0 leading-none text-ink-muted text-lg cursor-pointer;
+		transition: color 0.15s ease;
 	}
 
-	button:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
+	button:hover {
+		@apply text-ink;
 	}
 </style>

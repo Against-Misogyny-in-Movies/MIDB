@@ -9,11 +9,10 @@
 	interface Props {
 		ddd: DddResult | null;
 		visibleTags: TriggerTag[];
-		mediaNoun: 'movie' | 'series';
 		selector?: Snippet;
 	}
 
-	let { ddd, visibleTags, mediaNoun, selector }: Props = $props();
+	let { ddd, visibleTags, selector }: Props = $props();
 
 	let selectedCategory = $state<string | null>(null);
 
@@ -33,34 +32,42 @@
 <div id="ddd">
 	<CollapsibleSection
 		title="Does the Dog Die"
+		icon="ri-alarm-warning-fill"
+		hue="var(--src-ddd)"
 		status={ddd === null
 			? 'Loading…'
 			: visibleTags.length > 0
-				? `${visibleTags.length} trigger tag${visibleTags.length === 1 ? '' : 's'}`
+				? `${visibleTags.length} warning${visibleTags.length === 1 ? '' : 's'}`
 				: 'No data'}
-		tone={ddd === null ? 'loading' : visibleTags.length > 0 ? 'data' : 'empty'}
+		busy={ddd === null}
 		open={ddd === null || visibleTags.length > 0}
 		sourceLabel="DoesTheDogDie.com"
 		sourceHref={dddUrl(ddd?.itemId ?? null)}
 		learnHref="/resources#ddd"
 	>
 		{#if ddd === null}
-			<div class="ddd-skeleton" aria-busy="true">
-				<div class="skeleton-tag"></div>
-				<div class="skeleton-tag"></div>
-				<div class="skeleton-tag"></div>
+			<div class="skeleton" aria-busy="true" aria-label="Loading warnings">
+				<div class="skeleton-row"></div>
+				<div class="skeleton-row"></div>
+				<div class="skeleton-row"></div>
 			</div>
 		{:else}
-			{@render selector?.()}
+			{#if selector || visibleTags.length > 0}
+				<div class="controls">
+					{@render selector?.()}
+					{#if visibleTags.length > 0}
+						<DddCategoryFilter
+							tags={visibleTags}
+							{selectedCategory}
+							onchange={(cat) => (selectedCategory = cat)}
+						/>
+					{/if}
+				</div>
+			{/if}
 			{#if visibleTags.length > 0}
-				<DddCategoryFilter
-					tags={visibleTags}
-					{selectedCategory}
-					onchange={(cat) => (selectedCategory = cat)}
-				/>
 				<DddTags tags={filteredTags} />
 			{:else}
-				<p class="no-data">No trigger tags found for this {mediaNoun}.</p>
+				<p class="no-data">No warnings on Does the Dog Die.</p>
 			{/if}
 		{/if}
 	</CollapsibleSection>
@@ -70,14 +77,38 @@
 	@reference "../../../../app.css";
 
 	.no-data {
-		@apply text-sm text-ink-muted italic;
+		@apply text-ink-muted;
 	}
 
-	.ddd-skeleton {
-		@apply flex flex-col gap-sm;
+	.controls {
+		@apply flex flex-wrap items-center gap-md;
 	}
 
-	.skeleton-tag {
-		@apply h-9 w-full rounded-md bg-surface animate-pulse;
+	.controls:empty {
+		display: none;
+	}
+
+	.skeleton {
+		@apply flex flex-col;
+	}
+
+	.skeleton-row {
+		@apply border-b border-border;
+		height: 2.375rem;
+		background: linear-gradient(var(--surface-sunken), var(--surface-sunken)) left center / 40%
+			0.75rem no-repeat;
+		animation: pulse 1.6s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.5;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.skeleton-row {
+			animation: none;
+		}
 	}
 </style>

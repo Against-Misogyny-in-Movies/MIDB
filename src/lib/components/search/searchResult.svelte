@@ -39,28 +39,17 @@
 			onselect();
 		}}
 	>
-		<ResultPoster posterPath={movie.posterPath} alt={movie.title} />
+		<ResultPoster posterPath={movie.posterPath} alt="" />
 		<span class="info">
 			<span class="title">{movie.title}</span>
-			{#if movie.releaseYear || movie.mediaType}
-				<span class="meta">
-					{#if movie.mediaType === 'tv'}
-						<i class="ri-tv-2-line" aria-hidden="true"></i>
-						<span class="type-badge">TV</span>
-					{:else}
-						<i class="ri-film-line" aria-hidden="true"></i>
-						<span class="type-badge">Film</span>
-					{/if}
-					{#if movie.releaseYear}
-						<span class="year">{movie.releaseYear}</span>
-					{/if}
-				</span>
-			{/if}
+			<span class="meta">
+				{movie.mediaType === 'tv' ? 'Series' : 'Film'}{movie.releaseYear
+					? ` · ${movie.releaseYear}`
+					: ''}
+			</span>
 		</span>
 		{#if pending}
-			<i class="chevron spinner ri-loader-4-line" aria-hidden="true"></i>
-		{:else}
-			<i class="chevron ri-arrow-right-s-line" aria-hidden="true"></i>
+			<i class="spinner ri-loader-4-line" aria-hidden="true"></i>
 		{/if}
 	</a>
 </li>
@@ -69,11 +58,11 @@
 	@reference "../../../app.css";
 
 	.row a {
-		@apply flex flex-row items-center gap-sm p-xs no-underline text-ink cursor-pointer rounded-sm;
+		@apply flex items-center gap-md px-md py-xs no-underline text-ink cursor-pointer;
 	}
 
 	.row.active a {
-		@apply bg-accent-bg text-accent-ink;
+		background-color: var(--surface-sunken);
 	}
 
 	.info {
@@ -81,39 +70,11 @@
 	}
 
 	.title {
-		@apply font-medium text-sm leading-snug truncate;
+		@apply font-medium leading-snug truncate;
 	}
 
 	.meta {
-		@apply flex flex-row items-center gap-xs text-xs text-ink-muted;
-	}
-
-	.row.active .meta {
-		@apply text-accent-ink opacity-80;
-	}
-
-	.meta i {
-		@apply text-[0.8rem] leading-none opacity-70;
-	}
-
-	.type-badge {
-		@apply leading-none;
-	}
-
-	.year {
-		@apply leading-none;
-	}
-
-	.chevron {
-		@apply flex-shrink-0 text-lg text-ink-muted opacity-0;
-	}
-
-	/* Only the active row fades its chevron in. Leaving a row hides it instantly
-	   (no exit transition), so sweeping the highlight down the list doesn't leave a
-	   trail of fading chevrons behind it. No transform — the slide read as a smear. */
-	.row.active .chevron {
-		@apply opacity-100 text-accent-ink;
-		transition: opacity 120ms ease-out;
+		@apply text-sm text-ink-muted;
 	}
 
 	.row.pending a {
@@ -121,6 +82,7 @@
 	}
 
 	.spinner {
+		@apply shrink-0 text-ink-muted;
 		animation: spin 0.7s linear infinite;
 	}
 
@@ -131,9 +93,6 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.row.active .chevron {
-			transition: none;
-		}
 		.spinner {
 			animation: none;
 		}

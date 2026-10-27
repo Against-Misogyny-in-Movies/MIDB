@@ -16,7 +16,7 @@
 <NavProgress />
 
 <div class="shell">
-	<header class="header-wrap">
+	<header>
 		<Navbar />
 	</header>
 
@@ -34,8 +34,12 @@
 		@apply flex flex-col min-h-screen;
 	}
 
-	.header-wrap {
-		@apply max-w-5xl w-full mx-auto px-md;
+	/* Sticky bar: the page scrolls under it. Anchored sections use scroll-margin-top: 5rem. */
+	header {
+		@apply sticky top-0 border-b border-border;
+		z-index: 40;
+		background-color: var(--surface-raised);
+		box-shadow: var(--shadow-subtle);
 	}
 
 	main {

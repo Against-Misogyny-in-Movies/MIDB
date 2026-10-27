@@ -3,7 +3,12 @@
 	import SearchResults from './searchResults.svelte';
 	import { MovieSearchState } from './movieSearch.svelte.js';
 
-	const search = new MovieSearchState();
+	interface Props {
+		/** Pass a state to drive the field from outside (the landing page's data card does). */
+		search?: MovieSearchState;
+	}
+
+	let { search = new MovieSearchState() }: Props = $props();
 	const listboxId = $props.id();
 
 	let root = $state<HTMLElement | null>(null);
@@ -29,6 +34,7 @@
 		oninput={(q) => search.search(q)}
 		onkeydown={(e) => search.handleKeydown(e)}
 		onfocus={() => search.reopen()}
+		onsubmit={() => search.submit()}
 	/>
 
 	{#if search.isOpen}

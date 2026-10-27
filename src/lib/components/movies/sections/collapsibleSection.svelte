@@ -1,63 +1,74 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Badge from '$lib/components/ui/badge.svelte';
+	import type { BadgeTone } from '$lib/media/utils/tones';
 
 	interface Props {
 		title: string;
-		/** Short status shown on the right of the summary row (e.g. "Rating 3/3", "No data"). */
+		/** Remixicon class for the icon disk, e.g. "ri-chat-3-fill". */
+		icon?: string;
+		/** CSS colour for the disk, normally a source shade (`var(--src-bechdel)`). */
+		hue?: string;
+		/** Short status badge at the end of the heading row (e.g. "3/3", "No data"). */
 		status?: string;
-		/** Tone of the status pill. */
-		tone?: 'data' | 'empty' | 'loading';
-		/** External source link rendered in the body header. */
+		tone?: BadgeTone;
+		/** The status is still loading. */
+		busy?: boolean;
+		/** External source, linked under the body. */
 		sourceLabel?: string;
 		sourceHref?: string;
-		/** Internal link to the matching /resources explainer section. */
+		/** Internal link to the matching /resources section. */
 		learnHref?: string;
 		learnLabel?: string;
-		/** Start expanded. Defaults to open when there is data. */
+		/** Start expanded. */
 		open?: boolean;
 		children: Snippet;
 	}
 
 	let {
 		title,
+		icon,
+		hue,
 		status,
-		tone = 'data',
+		tone = 'neutral',
+		busy = false,
 		sourceLabel,
 		sourceHref,
 		learnHref,
-		learnLabel = 'How this works',
+		learnLabel = 'Methodology',
 		open = true,
 		children
 	}: Props = $props();
 </script>
 
-<details class="section" {open}>
-	<summary class="summary">
-		<span class="summary-main">
-			<i class="chevron ri-arrow-right-s-line" aria-hidden="true"></i>
-			<span class="title display">{title}</span>
-		</span>
-		{#if status}
-			<span class="status status--{tone}">{status}</span>
+<details class="card section" {open}>
+	<summary>
+		{#if icon}
+			<span class="disk" style="--disk: 2rem; --hue: {hue ?? 'var(--brand)'}" aria-hidden="true">
+				<i class={icon}></i>
+			</span>
 		{/if}
+		<h2 class="display title">{title}</h2>
+		{#if status}
+			<Badge {tone} {busy}>{status}</Badge>
+		{/if}
+		<i class="chevron ri-arrow-down-s-line" aria-hidden="true"></i>
 	</summary>
 
 	<div class="body">
+		{@render children()}
 		{#if (sourceHref && sourceLabel) || learnHref}
-			<div class="body-links">
+			<p class="links">
 				{#if sourceHref && sourceLabel}
-					<a class="source-link" href={sourceHref} target="_blank" rel="noopener noreferrer">
-						{sourceLabel} <i class="ri-external-link-line" aria-hidden="true"></i>
+					<a class="link" href={sourceHref} target="_blank" rel="noopener noreferrer">
+						Source: {sourceLabel}
 					</a>
 				{/if}
 				{#if learnHref}
-					<a class="source-link" href={learnHref}>
-						{learnLabel} <i class="ri-arrow-right-line" aria-hidden="true"></i>
-					</a>
+					<a class="link" href={learnHref}>{learnLabel}</a>
 				{/if}
-			</div>
+			</p>
 		{/if}
-		{@render children()}
 	</div>
 </details>
 
@@ -65,78 +76,77 @@
 	@reference "../../../../app.css";
 
 	.section {
-		@apply rounded-md border border-border bg-surface-raised overflow-hidden;
+		scroll-margin-top: 5rem;
 		transition: border-color 0.15s ease;
 	}
 
 	.section:hover {
-		border-color: color-mix(in oklab, var(--brand) 35%, var(--border));
+		border-color: var(--border-strong);
 	}
 
-	.summary {
-		@apply flex items-center justify-between gap-md p-md cursor-pointer select-none;
+	summary {
+		@apply flex items-center gap-sm cursor-pointer select-none;
+		padding: 20px 24px;
 		list-style: none;
 	}
 
-	/* Hide the native disclosure triangle across engines */
-	.summary::-webkit-details-marker {
+	summary::-webkit-details-marker {
 		display: none;
 	}
 
-	.summary:focus-visible {
-		@apply outline-none;
-		box-shadow: inset 0 0 0 2px var(--brand);
-	}
-
-	.summary-main {
-		@apply flex items-center gap-sm min-w-0;
-	}
-
-	.chevron {
-		@apply text-ink-muted text-xl shrink-0;
-		transition: transform 0.18s ease;
-	}
-
-	.section[open] .chevron {
-		transform: rotate(90deg);
+	summary:focus-visible {
+		outline-offset: -2px;
+		border-radius: 12px;
 	}
 
 	.title {
-		@apply text-lg font-semibold text-ink truncate;
+		@apply flex-1 min-w-0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		line-height: 1.33;
+		margin-left: 4px;
 	}
 
-	.status {
-		@apply text-xs font-semibold px-sm py-xs rounded-full shrink-0 whitespace-nowrap;
+	.chevron {
+		@apply text-xl text-ink-muted shrink-0;
+		transition: transform 0.15s ease;
 	}
 
-	.status--data {
-		background-color: color-mix(in oklab, var(--brand) 16%, transparent);
-		color: var(--brand);
+	summary:hover .chevron {
+		@apply text-ink;
 	}
 
-	.status--empty {
-		background-color: var(--secondary-soft);
-		color: var(--ink-muted);
+	.section[open] .chevron {
+		transform: rotate(180deg);
 	}
 
-	.status--loading {
-		background-color: var(--secondary-soft);
-		color: var(--ink-muted);
+	.section[open] summary {
+		border-bottom: 1px solid var(--border);
 	}
 
 	.body {
-		@apply flex flex-col gap-md px-md pb-md pt-0;
+		@apply flex flex-col gap-md;
+		padding: 20px 24px 24px;
 	}
 
-	.body-links {
-		@apply flex flex-wrap items-center gap-md;
+	.links {
+		@apply flex flex-wrap gap-x-md gap-y-xs text-sm;
 	}
 
-	.source-link {
-		@apply self-start inline-flex items-center gap-xs text-xs text-ink-muted no-underline transition-colors;
+	@media (max-width: 479px) {
+		summary {
+			padding: 16px;
+		}
+
+		.body {
+			padding: 16px;
+		}
 	}
 
-	.source-link:hover {
-		@apply text-brand;
+	@media (prefers-reduced-motion: reduce) {
+		.section,
+		.chevron {
+			transition: none;
+		}
 	}
 </style>

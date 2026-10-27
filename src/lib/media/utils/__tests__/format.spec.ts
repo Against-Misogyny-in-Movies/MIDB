@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { formatCurrency, formatRuntime, countryName, languageName } from '$lib/media/utils/format';
+import {
+	formatCurrency,
+	formatDate,
+	displayTitle,
+	formatRuntime,
+	countryName,
+	languageName
+} from '$lib/media/utils/format';
 
 describe('formatCurrency', () => {
 	test('returns — for 0', () => {
@@ -56,5 +63,31 @@ describe('languageName', () => {
 		const result = languageName('xx');
 		expect(typeof result).toBe('string');
 		expect(result.length).toBeGreaterThan(0);
+	});
+});
+
+describe('formatDate', () => {
+	test('formats a TMDB date in UTC', () => {
+		expect(formatDate('2015-05-13')).toBe('May 13, 2015');
+	});
+
+	test('returns — for an empty or invalid value', () => {
+		expect(formatDate('')).toBe('—');
+		expect(formatDate('not a date')).toBe('—');
+	});
+});
+
+describe('displayTitle', () => {
+	test('moves a trailing article to the front', () => {
+		expect(displayTitle('Matrix, The')).toBe('The Matrix');
+		expect(displayTitle('Lord of the Rings: The Return of the King, The')).toBe(
+			'The Lord of the Rings: The Return of the King'
+		);
+		expect(displayTitle('Few Good Men, A')).toBe('A Few Good Men');
+	});
+
+	test('leaves other titles alone', () => {
+		expect(displayTitle('Inception')).toBe('Inception');
+		expect(displayTitle('Me, Myself & Irene')).toBe('Me, Myself & Irene');
 	});
 });

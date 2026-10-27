@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		/** Verb-phrase noun shown in the toggle, e.g. "cast by billing order". */
+		/** Noun phrase shown in the toggle, e.g. "cast by billing order". */
 		label: string;
 		children: Snippet;
 	}
@@ -14,14 +14,12 @@
 
 <div class="disclosure">
 	<button class="toggle" type="button" aria-expanded={open} onclick={() => (open = !open)}>
-		<i class="ri-arrow-right-s-line chevron" class:chevron--open={open} aria-hidden="true"></i>
-		{open ? `Hide ${label}` : `See ${label}`}
+		{open ? `Hide ${label}` : `Show ${label}`}
+		<i class="ri-arrow-down-s-line chevron" class:chevron--open={open} aria-hidden="true"></i>
 	</button>
 
 	{#if open}
-		<div class="content">
-			{@render children()}
-		</div>
+		{@render children()}
 	{/if}
 </div>
 
@@ -33,23 +31,20 @@
 	}
 
 	.toggle {
-		@apply flex items-center gap-xs text-xs font-medium text-ink-muted self-start;
-		@apply bg-transparent border-0 p-0 cursor-pointer;
-		transition: color 0.12s ease;
+		@apply inline-flex items-center gap-xs self-start text-sm bg-transparent border-0 p-0 cursor-pointer;
+		color: var(--brand);
 	}
 
-	.toggle:hover,
-	.toggle:focus-visible {
-		@apply text-brand outline-none;
+	.toggle:hover {
+		@apply underline underline-offset-4;
 	}
 
 	.chevron {
-		@apply text-base shrink-0;
-		transition: transform 0.18s ease;
+		transition: transform 0.15s ease;
 	}
 
 	.chevron--open {
-		transform: rotate(90deg);
+		transform: rotate(180deg);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

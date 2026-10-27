@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		/** Short heading, e.g. "What it is", "How it works". */
+		/** Short heading, e.g. "Content safety". */
 		label: string;
 		children: Snippet;
 	}
@@ -11,7 +11,7 @@
 </script>
 
 <div class="sub-block">
-	<p class="label sub-label">{label}</p>
+	<h3>{label}</h3>
 	<div class="sub-body">
 		{@render children()}
 	</div>
@@ -22,22 +22,14 @@
 
 	.sub-block {
 		@apply flex flex-col gap-xs;
+		margin-top: var(--spacing-sm);
 	}
 
-	.sub-label {
-		@apply text-ink-muted;
+	h3 {
+		@apply font-semibold text-ink;
 	}
 
 	.sub-body {
-		@apply text-sm text-ink leading-relaxed;
-	}
-
-	/* Prose written as plain paragraphs inside the slot */
-	.sub-body :global(p) {
-		@apply m-0;
-	}
-
-	.sub-body :global(p + p) {
-		@apply mt-sm;
+		@apply flex flex-col gap-sm text-ink-muted;
 	}
 </style>

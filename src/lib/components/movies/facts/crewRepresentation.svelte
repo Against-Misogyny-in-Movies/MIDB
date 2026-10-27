@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import type { CrewDepartment } from '$lib/media/types/media';
+	import type { CrewDepartment, GenderBreakdown } from '$lib/media/types/media';
 
 	interface Props {
 		crewDepartments: CrewDepartment[];
@@ -15,305 +15,185 @@
 		else openDepts.add(dept);
 	}
 
+	const GENDERS = [
+		{ key: 'female', label: 'Women', short: 'W', color: '--seg-female' },
+		{ key: 'male', label: 'Men', short: 'M', color: '--seg-male' },
+		{ key: 'nonBinary', label: 'Non-binary', short: 'NB', color: '--seg-nonbinary' },
+		{ key: 'unknown', label: 'Unknown', short: '?', color: '--seg-unknown' }
+	] as const;
+
 	function pct(count: number, total: number): number {
-		if (total === 0) return 0;
-		return Math.round((count / total) * 100);
+		return total === 0 ? 0 : Math.round((count / total) * 100);
 	}
 </script>
 
-{#if crewDepartments.length === 0}
-	<p class="empty">No crew data available.</p>
-{:else}
-	<ul class="crew-table">
-		<li class="crew-header" aria-hidden="true">
-			<span class="header-dept">Department</span>
-			<span class="header-bar">Gender split</span>
-			<span class="header-counts">
-				<span class="head-count"><span class="swatch seg-female"></span>W</span>
-				<span class="head-count"><span class="swatch seg-male"></span>M</span>
-				<span class="head-count"><span class="swatch seg-nonbinary"></span>NB</span>
-				<span class="head-count"><span class="swatch seg-unknown"></span>?</span>
-			</span>
-		</li>
-
-		{#each crewDepartments as dept (dept.department)}
-			{@const bd = dept.breakdown}
-			{@const isOpen = openDepts.has(dept.department)}
-			{@const femalePct = pct(bd.female, bd.total)}
-			{@const malePct = pct(bd.male, bd.total)}
-			{@const nbPct = pct(bd.nonBinary, bd.total)}
-			{@const unknownPct = pct(bd.unknown, bd.total)}
-			{@const expandId = `crew-jobs-${dept.department.replace(/\s+/g, '-').toLowerCase()}`}
-
-			<li class="dept-row-wrap">
-				<button
-					class="dept-row"
-					type="button"
-					aria-expanded={isOpen}
-					aria-controls={expandId}
-					onclick={() => toggle(dept.department)}
-				>
-					<span class="dept-name">
-						<i
-							class="ri-arrow-right-s-line dept-chevron"
-							class:dept-chevron--open={isOpen}
-							aria-hidden="true"
-						></i>
-						{dept.department}
-					</span>
-					<span class="bar-cell">
-						<span
-							class="mini-bar"
-							role="img"
-							aria-label="{dept.department}: {femalePct}% women, {malePct}% men"
-						>
-							{#if femalePct > 0}<span class="seg seg-female" style="width: {femalePct}%"
-								></span>{/if}
-							{#if malePct > 0}<span class="seg seg-male" style="width: {malePct}%"></span>{/if}
-							{#if nbPct > 0}<span class="seg seg-nonbinary" style="width: {nbPct}%"></span>{/if}
-							{#if unknownPct > 0}<span class="seg seg-unknown" style="width: {unknownPct}%"
-								></span>{/if}
-						</span>
-					</span>
-					<span class="counts-cell tabular-nums">
-						<span class="c-female">{bd.female}</span>
-						<span class="c-sep">/</span>
-						<span class="c-male">{bd.male}</span>
-						<span class="c-sep">/</span>
-						<span class="c-nb">{bd.nonBinary}</span>
-						<span class="c-sep">/</span>
-						<span class="c-unknown">{bd.unknown}</span>
-					</span>
-				</button>
-
-				{#if isOpen}
-					<ul id={expandId} class="jobs-list">
-						{#each dept.jobs as job (job.job)}
-							{@const jbd = job.breakdown}
-							{@const jFemalePct = pct(jbd.female, jbd.total)}
-							{@const jMalePct = pct(jbd.male, jbd.total)}
-							{@const jNbPct = pct(jbd.nonBinary, jbd.total)}
-							{@const jUnknownPct = pct(jbd.unknown, jbd.total)}
-							<li class="job-row">
-								<span class="job-name">{job.job}</span>
-								<span class="bar-cell">
-									<span
-										class="mini-bar"
-										role="img"
-										aria-label="{job.job}: {jFemalePct}% women, {jMalePct}% men"
-									>
-										{#if jFemalePct > 0}<span class="seg seg-female" style="width: {jFemalePct}%"
-											></span>{/if}
-										{#if jMalePct > 0}<span class="seg seg-male" style="width: {jMalePct}%"
-											></span>{/if}
-										{#if jNbPct > 0}<span class="seg seg-nonbinary" style="width: {jNbPct}%"
-											></span>{/if}
-										{#if jUnknownPct > 0}<span class="seg seg-unknown" style="width: {jUnknownPct}%"
-											></span>{/if}
-									</span>
-								</span>
-								<span class="counts-cell tabular-nums">
-									<span class="c-female">{jbd.female}</span>
-									<span class="c-sep">/</span>
-									<span class="c-male">{jbd.male}</span>
-									<span class="c-sep">/</span>
-									<span class="c-nb">{jbd.nonBinary}</span>
-									<span class="c-sep">/</span>
-									<span class="c-unknown">{jbd.unknown}</span>
-								</span>
-							</li>
-						{/each}
-					</ul>
+{#snippet split(name: string, bd: GenderBreakdown)}
+	<td class="bar-col">
+		<span
+			class="bar"
+			role="img"
+			aria-label="{name}: {pct(bd.female, bd.total)}% women, {pct(bd.male, bd.total)}% men"
+		>
+			{#each GENDERS as g (g.key)}
+				{#if bd[g.key] > 0}
+					<span class="seg" style="width: {(bd[g.key] / bd.total) * 100}%; --seg: var({g.color});"
+					></span>
 				{/if}
-			</li>
+			{/each}
+		</span>
+	</td>
+	{#each GENDERS as g (g.key)}
+		<td class="count-col tabular-nums">{bd[g.key]}</td>
+	{/each}
+{/snippet}
+
+{#if crewDepartments.length === 0}
+	<p class="empty">No crew data.</p>
+{:else}
+	<table class="rep-table">
+		<thead>
+			<tr>
+				<th scope="col">Department</th>
+				<th scope="col" class="bar-col"><span class="sr-only">Gender split</span></th>
+				{#each GENDERS as g (g.key)}
+					<th scope="col" class="count-col">
+						<span class="swatch" style="--seg: var({g.color});" aria-hidden="true"></span>
+						<abbr title={g.label}>{g.short}</abbr>
+					</th>
+				{/each}
+			</tr>
+		</thead>
+		{#each crewDepartments as dept (dept.department)}
+			{@const isOpen = openDepts.has(dept.department)}
+			<tbody class:open={isOpen}>
+				<tr class="dept-row">
+					<th scope="row">
+						<button
+							class="dept-toggle"
+							type="button"
+							aria-expanded={isOpen}
+							onclick={() => toggle(dept.department)}
+						>
+							<i class="ri-arrow-right-s-line chevron" aria-hidden="true"></i>
+							{dept.department}
+						</button>
+					</th>
+					{@render split(dept.department, dept.breakdown)}
+				</tr>
+				{#if isOpen}
+					{#each dept.jobs as job (job.job)}
+						<tr class="job-row">
+							<th scope="row">{job.job}</th>
+							{@render split(job.job, job.breakdown)}
+						</tr>
+					{/each}
+				{/if}
+			</tbody>
 		{/each}
-	</ul>
+	</table>
 {/if}
 
 <style lang="postcss">
 	@reference "../../../../app.css";
 
 	.empty {
-		@apply text-ink-muted text-sm;
+		@apply text-ink-muted;
 	}
 
-	.crew-table {
-		@apply list-none m-0 p-0 overflow-hidden rounded-lg border border-border;
-		background-color: var(--surface-raised);
+	.rep-table {
+		@apply w-full text-sm border-collapse;
 	}
 
-	/* Shared column geometry */
-	.crew-header,
-	.dept-row,
-	.job-row {
-		@apply grid items-center gap-md px-md py-sm;
-		grid-template-columns: minmax(0, 1fr) minmax(5rem, 10rem) 6rem;
-	}
-
-	.crew-header {
-		background-color: color-mix(in oklab, var(--brand) 4%, var(--surface-raised));
+	th,
+	td {
+		@apply text-left font-normal align-middle;
+		padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 0;
 		border-bottom: 1px solid var(--border);
 	}
 
-	.header-dept,
-	.header-bar,
-	.header-counts {
-		@apply text-xs font-semibold text-ink-muted;
-		font-variant-caps: all-small-caps;
-		letter-spacing: 0.04em;
+	thead th {
+		@apply text-ink-muted whitespace-nowrap;
 	}
 
-	.header-counts {
-		@apply flex items-center justify-end gap-2;
+	.dept-row th {
+		@apply font-medium text-ink;
 	}
 
-	.head-count {
-		@apply inline-flex items-center gap-1;
-	}
-
-	.head-count .swatch {
-		@apply inline-block rounded-xs shrink-0;
-		width: 0.5rem;
-		height: 0.5rem;
-	}
-
-	/* Department row */
-	.dept-row-wrap {
-		border-bottom: 1px solid var(--border);
-	}
-
-	.dept-row-wrap:last-child {
-		@apply border-b-0;
-	}
-
-	.dept-row {
-		@apply w-full text-left bg-transparent border-0 cursor-pointer;
-		transition: background-color 0.12s ease;
+	.dept-toggle {
+		@apply inline-flex items-center gap-xs bg-transparent border-0 p-0 cursor-pointer text-left;
 		font: inherit;
 		color: inherit;
 	}
 
-	.dept-row:hover {
-		background-color: color-mix(in oklab, var(--brand) 6%, transparent);
+	.dept-toggle:hover {
+		color: var(--brand);
 	}
 
-	.dept-row:focus-visible {
-		@apply outline-none;
-		box-shadow: inset 0 0 0 2px var(--brand);
-	}
-
-	.dept-name {
-		@apply flex items-center gap-xs text-sm font-semibold text-ink min-w-0 truncate;
-	}
-
-	.dept-chevron {
+	.chevron {
 		@apply text-base text-ink-muted shrink-0;
-		transition: transform 0.18s ease;
+		transition: transform 0.15s ease;
 	}
 
-	.dept-chevron--open {
+	.open .chevron {
 		transform: rotate(90deg);
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.dept-chevron {
-			transition: none;
-		}
+	.job-row th {
+		@apply text-ink-muted;
+		padding-left: 1.25rem;
 	}
 
-	/* Job sublist */
-	.jobs-list {
-		@apply list-none m-0 p-0;
-		border-top: 1px solid var(--border);
-		background-color: color-mix(in oklab, var(--ink) 4%, transparent);
+	.job-row th,
+	.job-row td {
+		background-color: color-mix(in oklab, var(--surface-sunken) 60%, transparent);
 	}
 
-	.job-row {
-		@apply border-b border-border;
-		padding-left: calc(var(--spacing-md) + 1.25rem);
+	.bar-col {
+		width: 100%;
+		min-width: 4rem;
 	}
 
-	.job-row:last-child {
-		@apply border-b-0;
-	}
-
-	.job-name {
-		@apply text-sm text-ink truncate;
-	}
-
-	/* Bar cell */
-	.bar-cell {
-		@apply flex items-center;
-	}
-
-	.mini-bar {
-		@apply relative flex overflow-hidden rounded-sm w-full;
+	.bar {
+		@apply flex overflow-hidden rounded-full;
 		height: 0.625rem;
-		background-color: var(--border);
+		gap: 2px;
+		background-color: var(--surface-sunken);
 	}
 
 	.seg {
 		@apply h-full;
-	}
-	.seg-female {
-		background-color: var(--brand);
-	}
-	.seg-male {
-		background-color: var(--seg-male);
-	}
-	.seg-nonbinary {
-		background-color: var(--accent-bg);
-	}
-	.seg-unknown {
-		background-color: var(--border);
+		background-color: var(--seg);
 	}
 
-	/* Counts */
-	.counts-cell {
-		@apply flex items-center justify-end gap-1 text-sm;
+	.count-col {
+		@apply text-right font-medium text-ink;
+		padding-left: var(--spacing-sm);
+		padding-right: 0;
+		min-width: 2.25rem;
 	}
 
-	.c-sep {
-		@apply text-ink-muted opacity-40;
-	}
-	/* Numbers stay high-contrast for legibility; colour identity lives in the
-	   bar + header swatches, not in the digits themselves. */
-	.c-female,
-	.c-male,
-	.c-nb {
-		@apply font-semibold text-ink tabular-nums;
-	}
-	.c-unknown {
-		@apply text-ink-muted tabular-nums;
+	thead .count-col {
+		@apply font-normal text-ink-muted;
 	}
 
-	/* Mobile */
-	@media (max-width: 767px) {
-		.crew-header {
-			@apply hidden;
-		}
+	.job-row .count-col {
+		@apply font-normal;
+	}
 
-		.dept-row,
-		.job-row {
-			@apply flex flex-wrap gap-x-md gap-y-xs py-md;
-		}
+	abbr {
+		text-decoration: none;
+	}
 
-		.dept-name {
-			@apply w-full;
-		}
+	.swatch {
+		@apply inline-block rounded-full mr-1;
+		width: 0.5rem;
+		height: 0.5rem;
+		background-color: var(--seg);
+	}
 
-		.job-name {
-			@apply w-full whitespace-normal;
-			overflow: visible;
-			text-overflow: clip;
-		}
-
-		.bar-cell {
-			@apply flex-1;
-		}
-
-		.job-row {
-			padding-left: calc(var(--spacing-md) + 1.25rem);
+	@media (prefers-reduced-motion: reduce) {
+		.chevron {
+			transition: none;
 		}
 	}
 </style>

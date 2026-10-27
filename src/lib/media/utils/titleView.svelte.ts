@@ -10,6 +10,7 @@ import {
 	type RepVerdict,
 	type SafetyVerdict
 } from './verdict';
+import { sourceIndex, type SourceIndexItem } from './sourceIndex';
 import { createDddState } from './dddStream.svelte.js';
 import { EpisodeFilter } from './episodeFilter.svelte.js';
 
@@ -49,6 +50,8 @@ export class TitleView<K extends 'movie' | 'tv'> {
 	visibleTags: TriggerTag[];
 	safety: SafetyVerdict;
 	representation: RepVerdict;
+	/** The source index under the verdict. */
+	sources: SourceIndexItem[];
 
 	constructor(data: () => TitleViewData<Media<K>>, kind: K) {
 		this.kind = kind;
@@ -91,6 +94,15 @@ export class TitleView<K extends 'movie' | 'tv'> {
 				crewDepartments: this.media.crewDepartments,
 				bechdel: isSeries ? null : data().bechdel,
 				isSeries
+			})
+		);
+		this.sources = $derived(
+			sourceIndex({
+				kind,
+				bechdelRating: isSeries ? null : (data().bechdel?.rating ?? null),
+				umConcerns: this.umData ? this.flagCount : null,
+				umCandidateCount: this.hasUmCandidates ? this.umCandidates.length : 0,
+				dddTagCount: this.ddd === null ? null : this.visibleTags.length
 			})
 		);
 	}

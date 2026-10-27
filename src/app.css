@@ -15,215 +15,377 @@
 	--spacing-xl: 3rem;
 }
 
-/* ─── Palette ramps + light semantic defaults ─── */
+/* ─── Semantic tokens ───
+   One definition per token: light-dark() picks the value from the active color-scheme, which
+   follows the system unless app.html's pre-paint script (or the theme toggle) pins data-theme. */
 :root {
-	--rv-900: #170025;
-	--rv-800: #2d0050;
-	--rv-700: #4a0080;
-	--rv-600: #6200aa;
-	--rv-500: #7400b8;
-	--rv-400: #a030d8;
-	--rv-300: #c890ee;
-	--rv-200: #e2c4f8;
-	--rv-100: #f4eafd;
+	color-scheme: light dark;
 
-	--aq-600: #006b4f;
-	--aq-500: #008a64;
-	--aq-400: #00b386;
-	--aq-300: #64dfdf;
-	--aq-200: #72efdd;
-	--aq-100: #c4faf8;
+	--surface: light-dark(#fbfafc, #141217);
+	--surface-raised: light-dark(#ffffff, #1c1a20);
+	--surface-sunken: light-dark(#f2f0f4, #221f27);
+	--ink: light-dark(#18141d, #f0edf3);
+	--ink-muted: light-dark(#5c5566, #a9a1b3);
+	--border: light-dark(#e5e1ea, #2d2933);
+	--border-strong: light-dark(#c9c3d1, #49424f);
 
-	--surface: #fbf9fd;
-	--surface-raised: #ffffff;
-	--ink: #1a0b24;
-	--ink-muted: #4a3a57;
-	--brand: #7400b8;
-	--brand-strong: #4a0080;
-	--accent: #008a64;
-	--accent-bg: #64dfdf;
-	--accent-ink: #170025;
-	--border: #e3dceb;
-	--seg-male: #c890ee;
+	/* The project's violet: links, focus, active states and the "women" data series only. */
+	--brand: light-dark(#7400b8, #c49cf2);
+	--brand-strong: light-dark(#4a0080, #dcc6f8);
+	/* Suffragette green: the non-binary data series and avatar accents. */
+	--accent: light-dark(#1f8a66, #4fc79c);
+	/* Gender data series. Men are a neutral, so the chart carries no value judgment by colour;
+	   unknown is a step darker than the bar track so it stays visible on it. */
+	--seg-female: var(--brand);
+	--seg-male: light-dark(#a59cb0, #6e6679);
+	--seg-nonbinary: var(--accent);
+	--seg-unknown: var(--border-strong);
 
-	/* Status — base / hover (soft) / on-color text (fg) */
-	--secondary: #888883;
-	--secondary-soft: #e2e2d5;
-	--secondary-fg: #ffffff;
-	--success: #22c55e;
-	--success-soft: #86efac;
-	--success-fg: #ffffff;
-	--warn: #f59e0b;
-	--warn-soft: #fcd34d;
-	--warn-fg: #170025;
-	--danger: #ef4444;
-	--danger-soft: #fca5a5;
-	--danger-fg: #ffffff;
-	--info: #3b82f6;
-	--info-soft: #93c5fd;
-	--info-fg: #ffffff;
+	/* Status. A good value stays in the palette (--success is the violet); colour leaves it only
+	   to warn: copper for caution, a darker raspberry for harm, so the two differ in lightness as
+	   well as hue for colour-blind readers. Solid tokens pass 4.5:1 on --surface and on their
+	   -soft fill in both themes; -soft are quiet fills. */
+	--success: var(--brand);
+	--success-soft: color-mix(in oklab, var(--brand) 16%, var(--surface-raised));
+	--warn: light-dark(#9e5a1b, #f8b37f);
+	--warn-soft: light-dark(#feece0, #3c291b);
+	--danger: light-dark(#9a1e45, #ed7c94);
+	--danger-soft: light-dark(#fee8eb, #3d2227);
+	--info: light-dark(#2457a8, #84aef0);
+	--info-soft: light-dark(#e3ebf7, #1c2639);
+	--secondary-soft: light-dark(#eeebf1, #26232b);
+
+	/* Text on a filled --brand or --ink surface (buttons, the logo pill). */
+	--on-brand: light-dark(#ffffff, #141217);
+	--on-ink: light-dark(#ffffff, #141217);
+	/* Lilac wash for tinted plates and tiles. */
+	--brand-wash: color-mix(in oklab, var(--brand) 8%, var(--surface-raised));
+	/* One shade of the violet per source: icon disks and stat icons. */
+	--src-bechdel: var(--brand);
+	--src-um: light-dark(#4a0080, #e2c4f8);
+	--src-ddd: light-dark(#a030d8, #a56ae0);
+	--src-tmdb: light-dark(#2d0050, #d4aef4);
+
+	/* Elevation: hairlines do the separation; shadows are for floating things. */
+	--shadow-subtle: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.4));
+	--shadow-md:
+		0 10px 15px -3px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.5)),
+		0 4px 6px -4px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.5));
+	--shadow-float: 0 25px 50px -12px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.7));
+	--shadow-brand: 0 10px 15px -3px color-mix(in oklab, var(--brand) 25%, transparent);
+
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ─── System dark (yields to manual override) ─── */
-@media (prefers-color-scheme: dark) {
-	:root:not([data-theme]) {
-		--surface: #120819;
-		--surface-raised: #1e1029;
-		--ink: #f3ecf8;
-		--ink-muted: #b9a9c8;
-		--brand: #c890ee;
-		--brand-strong: #e2c4f8;
-		--accent: #72efdd;
-		--accent-bg: #72efdd;
-		--accent-ink: #170025;
-		--border: #34234a;
-		--seg-male: #fcd34d;
-
-		--secondary: #888883;
-		--secondary-soft: #55554e;
-		--secondary-fg: #f3ecf8;
-		--success: #22c55e;
-		--success-soft: #15803d;
-		--success-fg: #f3ecf8;
-		--warn: #f59e0b;
-		--warn-soft: #b45309;
-		--warn-fg: #170025;
-		--danger: #ef4444;
-		--danger-soft: #b91c1c;
-		--danger-fg: #f3ecf8;
-		--info: #3b82f6;
-		--info-soft: #1d4ed8;
-		--info-fg: #f3ecf8;
-	}
-}
-
-/* ─── Manual overrides ─── */
 :root[data-theme='light'] {
-	--surface: #fbf9fd;
-	--surface-raised: #ffffff;
-	--ink: #1a0b24;
-	--ink-muted: #4a3a57;
-	--brand: #7400b8;
-	--brand-strong: #4a0080;
-	--accent: #008a64;
-	--accent-bg: #64dfdf;
-	--accent-ink: #170025;
-	--border: #e3dceb;
-	--seg-male: #c890ee;
-
-	--secondary: #888883;
-	--secondary-soft: #e2e2d5;
-	--secondary-fg: #ffffff;
-	--success: #22c55e;
-	--success-soft: #86efac;
-	--success-fg: #ffffff;
-	--warn: #f59e0b;
-	--warn-soft: #fcd34d;
-	--warn-fg: #170025;
-	--danger: #ef4444;
-	--danger-soft: #fca5a5;
-	--danger-fg: #ffffff;
-	--info: #3b82f6;
-	--info-soft: #93c5fd;
-	--info-fg: #ffffff;
+	color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-	--surface: #120819;
-	--surface-raised: #1e1029;
-	--ink: #f3ecf8;
-	--ink-muted: #b9a9c8;
-	--brand: #c890ee;
-	--brand-strong: #e2c4f8;
-	--accent: #72efdd;
-	--accent-bg: #72efdd;
-	--accent-ink: #170025;
-	--border: #34234a;
-	--seg-male: #72efdd;
-
-	--secondary: #888883;
-	--secondary-soft: #55554e;
-	--secondary-fg: #f3ecf8;
-	--success: #22c55e;
-	--success-soft: #15803d;
-	--success-fg: #f3ecf8;
-	--warn: #f59e0b;
-	--warn-soft: #b45309;
-	--warn-fg: #170025;
-	--danger: #ef4444;
-	--danger-soft: #b91c1c;
-	--danger-fg: #f3ecf8;
-	--info: #3b82f6;
-	--info-soft: #1d4ed8;
-	--info-fg: #f3ecf8;
+	color-scheme: dark;
 }
 
 /* ─── Semantic tokens exposed to Tailwind (inline = re-cascades on theme change) ─── */
 @theme inline {
 	--color-surface: var(--surface);
 	--color-surface-raised: var(--surface-raised);
+	--color-surface-sunken: var(--surface-sunken);
 	--color-ink: var(--ink);
 	--color-ink-muted: var(--ink-muted);
+	--color-border: var(--border);
+	--color-border-strong: var(--border-strong);
 	--color-brand: var(--brand);
 	--color-brand-strong: var(--brand-strong);
 	--color-accent: var(--accent);
-	--color-accent-bg: var(--accent-bg);
-	--color-accent-ink: var(--accent-ink);
-	--color-border: var(--border);
 	--color-seg-male: var(--seg-male);
 
-	--color-secondary: var(--secondary);
-	--color-secondary-soft: var(--secondary-soft);
-	--color-secondary-fg: var(--secondary-fg);
 	--color-success: var(--success);
 	--color-success-soft: var(--success-soft);
-	--color-success-fg: var(--success-fg);
 	--color-warn: var(--warn);
 	--color-warn-soft: var(--warn-soft);
-	--color-warn-fg: var(--warn-fg);
 	--color-danger: var(--danger);
 	--color-danger-soft: var(--danger-soft);
-	--color-danger-fg: var(--danger-fg);
 	--color-info: var(--info);
 	--color-info-soft: var(--info-soft);
-	--color-info-fg: var(--info-fg);
+	--color-secondary-soft: var(--secondary-soft);
 
-	--font-display: 'Newsreader', ui-serif, Georgia, serif;
-	--font-body: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+	/* Inter Tight for titles; the system UI stack for everything else. */
+	--font-display: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+	--font-body:
+		ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	--font-sans: var(--font-body);
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-@layer components {
+@layer base {
+	html {
+		scrollbar-color: var(--border-strong) transparent;
+		-webkit-text-size-adjust: 100%;
+	}
+
 	body {
 		@apply bg-surface text-ink;
 		font-family: var(--font-body);
-		color-scheme: light dark;
-		caret-color: var(--accent-bg);
+		line-height: 1.5;
+		/* Tight tracking at every size keeps text reading as data, not editorial prose. */
+		letter-spacing: -0.02em;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		caret-color: var(--brand);
 	}
 
 	::selection {
-		background-color: var(--accent-bg);
-		color: var(--accent-ink);
+		background-color: color-mix(in oklab, var(--brand) 24%, transparent);
+		color: var(--ink);
 	}
 
-	.bg-component {
-		@apply bg-surface-raised;
+	:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
+		border-radius: 2px;
 	}
 
-	h1 {
-		@apply text-3xl;
+	h1,
+	h2,
+	h3 {
+		text-wrap: balance;
 	}
 
-	h2 {
-		@apply text-2xl;
+	p {
+		text-wrap: pretty;
 	}
 
-	.label {
-		@apply text-xs tracking-widest uppercase text-ink-muted;
-		font-variant-caps: all-small-caps;
+	/* Hanko's sign-in and profile elements, themed from the tokens. */
+	hanko-auth,
+	hanko-profile {
+		--font-family: var(--font-body);
+		--font-size: 1rem;
+		--color: var(--ink);
+		--color-shade-1: var(--ink-muted);
+		--color-shade-2: var(--border);
+		--brand-color: var(--brand);
+		--brand-color-shade-1: var(--brand-strong);
+		--brand-contrast-color: var(--surface-raised);
+		--background-color: transparent;
+		--error-color: var(--danger);
+		--link-color: var(--brand);
+		--border-radius: 8px;
+		--container-padding: 0;
+		--headline1-font-size: 1.875rem;
+		--headline1-font-weight: 700;
 	}
 
+	select {
+		@apply text-sm text-ink rounded-lg cursor-pointer;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--border-strong);
+		background-color: var(--surface-raised);
+		transition: border-color 0.15s ease;
+	}
+
+	select:hover:not(:disabled) {
+		border-color: var(--ink-muted);
+	}
+
+	select:disabled {
+		@apply cursor-not-allowed;
+		color: var(--ink-muted);
+		background-color: var(--surface-sunken);
+	}
+}
+
+@layer components {
+	/* Inter Tight: titles and the wordmark. */
 	.display {
 		font-family: var(--font-display);
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+
+	/* A field name in a data list: small, muted, sentence case. */
+	.label {
+		@apply text-sm text-ink-muted;
+	}
+
+	/* An inline link in prose or a quiet action. */
+	.link {
+		color: var(--brand);
+		text-decoration-line: underline;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 0.2em;
+		text-decoration-color: color-mix(in oklab, var(--brand) 40%, transparent);
+		transition: text-decoration-color 0.15s ease;
+	}
+
+	.link:hover {
+		text-decoration-color: var(--brand);
+	}
+
+	.num {
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* A hairline card: the one container shape (12px radius). */
+	.card {
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background-color: var(--surface-raised);
+	}
+
+	/* Buttons: 8px radius, 14px semibold. One --brand button per view for the main action;
+	   --ink for a secondary filled action; ghost beside a filled one. */
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		height: 2.5rem;
+		padding-inline: 1.25rem;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		line-height: 1;
+		white-space: nowrap;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			background-color 0.15s ease,
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.btn--brand {
+		background-color: var(--brand);
+		color: var(--on-brand);
+	}
+
+	.btn--brand:hover {
+		background-color: var(--brand-strong);
+		box-shadow: var(--shadow-brand);
+	}
+
+	.btn--ink {
+		background-color: var(--ink);
+		color: var(--on-ink);
+	}
+
+	.btn--ink:hover {
+		background-color: color-mix(in oklab, var(--ink) 85%, var(--surface));
+	}
+
+	.btn--ghost {
+		background-color: var(--surface-raised);
+		border-color: var(--border);
+		color: var(--ink);
+	}
+
+	.btn--ghost:hover {
+		border-color: var(--border-strong);
+	}
+
+	.btn--pill {
+		height: 2.25rem;
+		padding-inline: 1rem;
+		border-radius: 9999px;
+	}
+
+	/* A highlighter stroke under a phrase, coloured by a tone class below (default: brand). */
+	.highlight {
+		padding-inline: 0.06em;
+		background: none;
+		color: var(--tone, var(--brand));
+		box-shadow: inset 0 -0.34em 0 var(--tone-soft, var(--brand-wash));
+		-webkit-box-decoration-break: clone;
+		box-decoration-break: clone;
+	}
+
+	/* Tones for .highlight: the badge tones, then one per source shade. */
+	.tone-pos {
+		--tone: var(--success);
+		--tone-soft: var(--success-soft);
+	}
+
+	.tone-mid {
+		--tone: var(--warn);
+		--tone-soft: var(--warn-soft);
+	}
+
+	.tone-neg {
+		--tone: var(--danger);
+		--tone-soft: var(--danger-soft);
+	}
+
+	.tone-neutral {
+		--tone: var(--ink-muted);
+		--tone-soft: var(--secondary-soft);
+	}
+
+	.tone-bechdel {
+		--tone: var(--src-bechdel);
+		--tone-soft: color-mix(in oklab, var(--src-bechdel) 16%, transparent);
+	}
+
+	.tone-um {
+		--tone: var(--src-um);
+		--tone-soft: color-mix(in oklab, var(--src-um) 16%, transparent);
+	}
+
+	.tone-ddd {
+		--tone: var(--src-ddd);
+		--tone-soft: color-mix(in oklab, var(--src-ddd) 16%, transparent);
+	}
+
+	.tone-tmdb {
+		--tone: var(--src-tmdb);
+		--tone-soft: color-mix(in oklab, var(--src-tmdb) 16%, transparent);
+	}
+
+	/* A small pill: the hero's film pager and the landing sections' links. */
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 1.875rem;
+		padding-inline: 12px;
+		border: 1px solid var(--border);
+		border-radius: 9999px;
+		background-color: var(--surface-raised);
+		color: var(--ink-muted);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		text-decoration: none;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.chip:hover {
+		border-color: var(--border-strong);
+		color: var(--ink);
+	}
+
+	/* A round icon disk in a source's violet shade: set --hue (and --disk for the size). */
+	.disk {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: var(--disk, 2.5rem);
+		height: var(--disk, 2.5rem);
+		border-radius: 9999px;
+		background-color: var(--hue, var(--brand));
+		color: var(--on-brand);
+		font-size: calc(var(--disk, 2.5rem) * 0.5);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.btn,
+		.chip {
+			transition: none;
+		}
 	}
 }

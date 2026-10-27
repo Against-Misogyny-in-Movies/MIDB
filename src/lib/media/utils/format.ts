@@ -69,3 +69,35 @@ export function formatRuntime(min: number): string {
 	if (m === 0) return `${h}h`;
 	return `${h}h ${m}m`;
 }
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+	year: 'numeric',
+	month: 'long',
+	day: 'numeric',
+	timeZone: 'UTC'
+});
+
+/**
+ * Formats a TMDB `YYYY-MM-DD` date as `May 13, 2015`. Read in UTC, so the server and every
+ * browser render the same day. Returns an em-dash for an empty or unparseable value.
+ *
+ * @param iso - A `YYYY-MM-DD` date string, or `''`.
+ * @returns The long-form date, or `"—"`.
+ */
+export function formatDate(iso: string): string {
+	if (!iso) return '—';
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+}
+
+/**
+ * Moves a trailing English article to the front: the Bechdel Test data stores titles in
+ * library order (`"Matrix, The"`, `"Lord of the Rings: The Return of the King, The"`).
+ *
+ * @param title - A title as stored.
+ * @returns The title in reading order (`"The Matrix"`); other titles unchanged.
+ */
+export function displayTitle(title: string): string {
+	const m = /^(.+), (The|A|An)$/.exec(title.trim());
+	return m ? `${m[2]} ${m[1]}` : title;
+}

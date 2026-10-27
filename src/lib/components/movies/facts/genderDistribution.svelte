@@ -2,7 +2,7 @@
 	import type { GenderBreakdown } from '$lib/media/types/media';
 
 	interface Props {
-		/** "Cast" or "Crew" — labels the group and the empty-state copy. */
+		/** "Cast" or "Crew": labels the bar and the empty-state copy. */
 		label: string;
 		breakdown: GenderBreakdown;
 	}
@@ -14,33 +14,23 @@
 		return Math.round((count / total) * 100);
 	}
 
-	const pcts = $derived({
-		female: pct(breakdown.female, breakdown.total),
-		male: pct(breakdown.male, breakdown.total),
-		nonBinary: pct(breakdown.nonBinary, breakdown.total),
-		unknown: pct(breakdown.unknown, breakdown.total)
-	});
-
 	const segments = [
-		{ key: 'female', label: 'Women', colorClass: 'seg-female' },
-		{ key: 'male', label: 'Men', colorClass: 'seg-male' },
-		{ key: 'nonBinary', label: 'Non-binary', colorClass: 'seg-nonbinary' },
-		{ key: 'unknown', label: 'Unknown', colorClass: 'seg-unknown' }
+		{ key: 'female', label: 'Women', color: '--seg-female' },
+		{ key: 'male', label: 'Men', color: '--seg-male' },
+		{ key: 'nonBinary', label: 'Non-binary', color: '--seg-nonbinary' },
+		{ key: 'unknown', label: 'Unknown', color: '--seg-unknown' }
 	] as const;
 </script>
 
-<div class="group">
-	{#if breakdown.total === 0}
-		<p class="empty">No {label.toLowerCase()} data available.</p>
-	{:else}
+{#if breakdown.total === 0}
+	<p class="empty">No {label.toLowerCase()} data.</p>
+{:else}
+	<div class="distribution">
 		<div class="bar" role="img" aria-label="{label} gender distribution">
 			{#each segments as seg (seg.key)}
-				{#if pcts[seg.key] > 0}
-					<div
-						class="segment {seg.colorClass}"
-						style="--pct: {pcts[seg.key]}%"
-						title="{seg.label}: {pcts[seg.key]}%"
-					></div>
+				{@const p = pct(breakdown[seg.key], breakdown.total)}
+				{#if p > 0}
+					<div class="segment" style="--pct: {p}%; --seg: var({seg.color});"></div>
 				{/if}
 			{/each}
 		</div>
@@ -48,76 +38,62 @@
 		<ul class="legend">
 			{#each segments as seg (seg.key)}
 				<li class="legend-item">
-					<span class="swatch {seg.colorClass}" aria-hidden="true"></span>
-					<span class="legend-label">{seg.label}</span>
-					<span class="legend-count">{breakdown[seg.key]}</span>
-					<span class="legend-pct">({pcts[seg.key]}%)</span>
+					<span class="swatch" style="--seg: var({seg.color});" aria-hidden="true"></span>
+					<span>{seg.label}</span>
+					<span class="count tabular-nums"
+						>{breakdown[seg.key]}
+						<span class="pct">({pct(breakdown[seg.key], breakdown.total)}%)</span></span
+					>
 				</li>
 			{/each}
 		</ul>
-	{/if}
-</div>
+	</div>
+{/if}
 
 <style lang="postcss">
 	@reference "../../../../app.css";
 
-	.group {
+	.distribution {
 		@apply flex flex-col gap-sm;
 	}
 
 	.empty {
-		@apply text-ink-muted text-sm;
+		@apply text-ink-muted;
 	}
 
 	.bar {
-		@apply flex overflow-hidden rounded-sm;
-		height: 1.5rem;
-		background-color: var(--border);
+		@apply flex overflow-hidden rounded-full;
+		height: 0.75rem;
+		gap: 2px;
+		background-color: var(--surface-sunken);
 	}
 
 	.segment {
-		width: var(--pct, 0%);
 		@apply h-full;
-	}
-
-	/* Neutral palette — no value judgments */
-	.seg-female {
-		background-color: var(--brand);
-	}
-	.seg-male {
-		background-color: var(--seg-male);
-	}
-	.seg-nonbinary {
-		background-color: var(--accent-bg);
-	}
-	.seg-unknown {
-		background-color: var(--border);
+		width: var(--pct);
+		background-color: var(--seg);
 	}
 
 	.legend {
-		@apply flex flex-wrap gap-x-md gap-y-xs list-none p-0 m-0;
+		@apply flex flex-wrap gap-x-lg gap-y-xs list-none p-0 m-0 text-sm;
 	}
 
 	.legend-item {
-		@apply flex items-center gap-xs text-sm;
+		@apply flex items-center gap-xs;
 	}
 
 	.swatch {
-		@apply inline-block rounded-xs;
-		width: 0.75rem;
-		height: 0.75rem;
-		flex-shrink: 0;
+		@apply inline-block rounded-full shrink-0;
+		width: 0.625rem;
+		height: 0.625rem;
+		background-color: var(--seg);
 	}
 
-	.legend-label {
-		@apply text-ink;
+	.count {
+		@apply font-medium text-ink;
 	}
 
-	.legend-count {
-		@apply text-ink-muted;
-	}
-
-	.legend-pct {
-		@apply text-ink-muted;
+	.pct {
+		@apply font-normal text-ink-muted;
 	}
 </style>

@@ -6,29 +6,33 @@
 
 	function ratingLabel(row: PageData['ratings'][number]) {
 		return row.metric === 'bechdel'
-			? `Bechdel · ${row.value}/3`
+			? `Bechdel Test · ${row.value}/3`
 			: `Unconsenting Media · ${row.value} concern${row.value === 1 ? '' : 's'}`;
 	}
 </script>
 
-<div class="history-page">
-	<header class="history-header">
-		<a href="/user/profile" class="back-link label">← Profile</a>
+<div class="account-page">
+	<header>
+		<a href="/user/profile" class="back"
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
+		>
 		<h1 class="display">Rating history</h1>
 	</header>
 
 	{#if data.ratings.length === 0}
-		<p class="empty-state label">No ratings yet.</p>
+		<p class="empty">No ratings yet.</p>
 	{:else}
-		<ul class="submission-list">
+		<ul class="card history">
 			{#each data.ratings as row (`${row.metric}:${row.titleId}`)}
-				<li class="submission-row">
-					<a href={titleHref(row.kind, row.tmdbId)} class="submission-link">
-						<span class="movie-title">{row.title}</span>
-						<span class="submission-meta label">{ratingLabel(row)}</span>
-						<time class="submission-date label" datetime={row.updatedAt.toISOString()}>
-							{row.updatedAt.toLocaleDateString()}
-						</time>
+				<li>
+					<a href={titleHref(row.kind, row.tmdbId)}>
+						<span class="title">{row.title}</span>
+						<span class="meta">
+							{ratingLabel(row)} ·
+							<time datetime={row.updatedAt.toISOString()}
+								>{row.updatedAt.toLocaleDateString()}</time
+							>
+						</span>
 					</a>
 				</li>
 			{/each}
@@ -39,43 +43,52 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.history-page {
-		@apply max-w-lg mx-auto py-lg flex flex-col gap-lg;
+	.account-page {
+		@apply flex flex-col mx-auto;
+		max-width: 36rem;
+		gap: var(--spacing-lg);
+		padding-block: var(--spacing-xl);
 	}
 
-	.history-header {
-		@apply flex flex-col gap-sm;
+	.back {
+		@apply inline-flex items-center text-sm text-ink-muted no-underline;
+		margin-bottom: var(--spacing-sm);
 	}
 
-	.back-link {
-		@apply text-ink-muted no-underline text-sm hover:text-brand;
+	.back:hover {
+		@apply text-ink;
 	}
 
-	.empty-state {
+	h1 {
+		font-size: 1.875rem;
+	}
+
+	.empty {
 		@apply text-ink-muted;
 	}
 
-	.submission-list {
-		@apply flex flex-col gap-sm list-none p-0 m-0;
+	.history {
+		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
 	}
 
-	.submission-row {
-		@apply border border-border rounded-lg;
+	.history li + li {
+		border-top: 1px solid var(--border);
 	}
 
-	.submission-link {
-		@apply flex flex-col gap-xs p-md no-underline text-ink hover:bg-surface-raised rounded-lg;
+	.history a {
+		@apply flex flex-col gap-xs no-underline text-ink;
+		padding: 14px 20px;
 	}
 
-	.movie-title {
-		@apply text-sm font-medium;
+	.history a:hover .title {
+		color: var(--brand);
 	}
 
-	.submission-meta {
+	.title {
+		@apply font-medium;
+	}
+
+	.meta {
 		@apply text-sm text-ink-muted;
-	}
-
-	.submission-date {
-		@apply text-xs text-ink-muted;
 	}
 </style>

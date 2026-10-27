@@ -1,96 +1,60 @@
 <script lang="ts">
-	import { toneTokens, type VerdictTone } from '$lib/media/utils/verdict';
-
-	type Tier = { label: string; icon: string; tone: VerdictTone };
+	import Badge from '$lib/components/ui/badge.svelte';
+	import type { BadgeTone } from '$lib/media/utils/tones';
 
 	// Mirrors SAFETY_META / REP_META in verdict.ts (kept in sync by hand).
-	const safety: Tier[] = [
-		{ label: 'Safer to watch', icon: 'ri-shield-check-line', tone: 'success' },
-		{ label: 'Watch with caution', icon: 'ri-error-warning-line', tone: 'warn' },
-		{ label: 'Harmful content', icon: 'ri-alert-line', tone: 'danger' },
-		{ label: 'Not enough data', icon: 'ri-question-line', tone: 'neutral' }
+	const groups: { axis: string; tiers: { label: string; tone: BadgeTone }[] }[] = [
+		{
+			axis: 'Content safety',
+			tiers: [
+				{ label: 'Safer to watch', tone: 'pos' },
+				{ label: 'Watch with caution', tone: 'mid' },
+				{ label: 'Harmful content', tone: 'neg' },
+				{ label: 'Not enough data', tone: 'neutral' }
+			]
+		},
+		{
+			axis: 'Representation',
+			tiers: [
+				{ label: 'Strong representation', tone: 'pos' },
+				{ label: 'Mixed representation', tone: 'mid' },
+				{ label: 'Poor representation', tone: 'neg' },
+				{ label: 'Not enough data', tone: 'neutral' }
+			]
+		}
 	];
-
-	const representation: Tier[] = [
-		{ label: 'Strong representation', icon: 'ri-women-line', tone: 'success' },
-		{ label: 'Mixed representation', icon: 'ri-scales-3-line', tone: 'warn' },
-		{ label: 'Poor representation', icon: 'ri-user-unfollow-line', tone: 'danger' },
-		{ label: 'Not enough data', icon: 'ri-question-line', tone: 'neutral' }
-	];
-
-	function style(tone: VerdictTone): string {
-		const t = toneTokens(tone);
-		return `--tier-fg:var(${t.fg});`;
-	}
 </script>
 
 <div class="legend">
-	<div class="legend-group">
-		<p class="label legend-label">Content safety</p>
-		<ul class="tiers">
-			{#each safety as tier (tier.label)}
-				<li class="tier" style={style(tier.tone)}>
-					<span class="tier-marker" aria-hidden="true"><i class={tier.icon}></i></span>
-					<span class="tier-label">{tier.label}</span>
-				</li>
-			{/each}
-		</ul>
-	</div>
-
-	<div class="legend-group">
-		<p class="label legend-label">Representation</p>
-		<ul class="tiers">
-			{#each representation as tier (tier.label)}
-				<li class="tier" style={style(tier.tone)}>
-					<span class="tier-marker" aria-hidden="true"><i class={tier.icon}></i></span>
-					<span class="tier-label">{tier.label}</span>
-				</li>
-			{/each}
-		</ul>
-	</div>
+	{#each groups as group (group.axis)}
+		<div class="group">
+			<p class="axis">{group.axis}</p>
+			<div class="tiers">
+				{#each group.tiers as tier (tier.label)}
+					<Badge tone={tier.tone} size="md">{tier.label}</Badge>
+				{/each}
+			</div>
+		</div>
+	{/each}
 </div>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
 	.legend {
-		@apply grid gap-lg;
-		grid-template-columns: 1fr;
+		@apply flex flex-col gap-md;
+		padding: 16px;
+		border-radius: 12px;
+		background-color: var(--brand-wash);
 	}
 
-	@media (min-width: 480px) {
-		.legend {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-
-	.legend-group {
-		@apply flex flex-col gap-sm;
-	}
-
-	.legend-label {
-		@apply text-ink-muted;
+	.axis {
+		@apply text-xs font-medium text-ink-muted;
+		margin-bottom: 6px;
 	}
 
 	.tiers {
-		@apply flex flex-col list-none m-0 p-0;
-	}
-
-	.tier {
-		@apply flex items-center gap-sm text-sm text-ink font-medium;
-		padding-block: var(--spacing-xs);
-	}
-
-	/* Marker shares the 1.375rem round-marker language; tinted per tier tone. */
-	.tier-marker {
-		@apply flex items-center justify-center rounded-full text-xs shrink-0;
-		width: 1.375rem;
-		height: 1.375rem;
-		background-color: color-mix(in oklab, var(--tier-fg) 16%, transparent);
-		color: var(--tier-fg);
-	}
-
-	.tier-label {
-		@apply leading-snug;
+		@apply flex flex-wrap;
+		gap: 6px;
 	}
 </style>
