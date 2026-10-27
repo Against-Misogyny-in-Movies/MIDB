@@ -52,7 +52,8 @@ Each metric is designed to show **two scores side by side**: the original author
 
    Auth:  Browser ⇄ Hanko Cloud (web components + JWT cookie)
           hooks.server.ts verifies the `hanko` cookie via remote JWKS
-   Migrations: run explicitly (`bun run db:migrate`); the server never migrates on boot
+   Migrations: `bun run db:migrate` locally; production deploys run them before the build
+               (`migrateOnDeploy.ts`); the server never migrates on boot
 ```
 
 - **Entry point** is the landing page at `/` (hero + search UX). The hero search is a **live, inline TMDB search**: typing queries a server proxy (`/api/search`, TMDB `search/multi`) and renders a results dropdown in place — there is no `/search` page. Results carry a `mediaType` (`movie`/`tv`) and route to the matching detail page.
@@ -78,6 +79,7 @@ MIDB/
 │   │   └── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
 │   ├── scripts/
 │   │   ├── migrate.ts          # `bun run db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
+│   │   ├── migrateOnDeploy.ts  # first step of vercel.json's buildCommand: migrates DB_CONNECTION when VERCEL_ENV=production, skips otherwise; exports deployMigration(env)
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → titles (kind movie) + title_bechdel; exports seedMovies(db, csvPath)
 │   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + title_um bindings (matched); exports seedUnconsenting(db, csvPath, reportPath?)
 │   │   ├── seedAdmin.ts        # `db:seed:admin <email>` — case-insensitive promote to administrator
@@ -155,7 +157,7 @@ MIDB/
 ├── .prettierrc / .prettierignore # tabs, single quotes, width 100; ignores db/migrations (drizzle-kit output)
 ├── playwright.config.ts        # testDir: 'e2e-tests'; webServer `bun run build && bun run preview` on 4173
 ├── svelte.config.js            # adapter-vercel; alias $db/* → ./db/*; vitePreprocess({ style:false })
-├── vercel.json                 # installCommand `npx --yes bun@1.4.4 install --frozen-lockfile`, buildCommand `npx --yes bun@1.4.4 run build`
+├── vercel.json                 # installCommand `npx --yes bun@1.4.4 install --frozen-lockfile`, buildCommand `migrateOnDeploy.ts` then `run build`, both through `npx --yes bun@1.4.4`
 ├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest projects `unit` (jsdom) and `db` (node, real Postgres). No `define`, no build-time env
 ├── README.md                   # short local setup (compose + seeds), points here and at AGENTS.md
 ├── .env.example                # committed template: every var with check/build-safe placeholders
@@ -294,6 +296,8 @@ The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `comm
 Future schema changes append `0003`, `0004`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
 
 **Boot does NOT auto-migrate** (commit `742c612`). Run `bun run db:migrate` explicitly after `bun run db:generate`. A fresh DB migrated from zero matches the schema; the CI `db` job proves it on every run.
+
+**Production deploys migrate before they build.** `vercel.json`'s `buildCommand` runs `db/scripts/migrateOnDeploy.ts` first. On `VERCEL_ENV=production` it applies every pending migration to `DB_CONNECTION` through `migrateDatabase`; previews and builds outside Vercel skip, so an unmerged branch never touches the production schema. Drizzle's migrator runs all pending migrations in one transaction, so a failing statement leaves the database as it was and fails the build: the previous deployment keeps serving. A Production build without `DB_CONNECTION` fails too. Consequence: a migration merged to `main` reaches the production database on the next deploy, so it must be safe against live data. A database created without the migrator (no `drizzle.__drizzle_migrations` rows) fails on `relation "user" already exists`; record the migrations it already has by inserting their `hash` (sha256 of the `.sql` file) and `created_at` (the journal's `when`) into `drizzle.__drizzle_migrations`, then deploy again. The deploy step reads `DB_CONNECTION` from the build environment in its own process; the app bundle still never contains it.
 
 ---
 
@@ -542,7 +546,7 @@ One module, `$lib/server/integrations/tmdb/` (server-only: it holds `TMDB_API_TO
 
 Nothing is inlined at build time: `vite.config.ts` has no `define`, so `build` and `check` need no database and the server bundle contains no connection string. `.env.example` is the committed template (allow-listed in `.gitignore`) and lists every variable above. Its placeholders are valid enough for `bun run check` and `bun run build`, so a fresh clone and CI only need `cp .env.example .env`. Title pages need real `TMDB_API_TOKEN`/`DDD_API_KEY` values, and sign-in needs a real Hanko tenant.
 
-**One package manager.** Bun 1.4.4 locally, in CI and on Vercel: `package.json` declares `"packageManager": "bun@1.4.4"`, and `vercel.json` sets `installCommand: npx --yes bun@1.4.4 install --frozen-lockfile` and `buildCommand: npx --yes bun@1.4.4 run build`, so production installs exactly the `bun.lock` that CI tested. The version is pinned through `npx` because Vercel ignores `packageManager` for Bun and, when `installCommand` is overridden, runs the oldest Bun in its build image: Bun 1.1 cannot parse the text `bun.lock` ("Unknown lockfile version"), ignores it, and `--frozen-lockfile` then fails the install. Keep the version in `vercel.json`, `packageManager` and the CI `bun-version` in step. The old `npm install --legacy-peer-deps` was hiding a real peer conflict (Storybook 9 peers on Vite ≤7 and vite-plugin-svelte ≤6), fixed by moving to Storybook 10.6. `vite` still lists `yaml@^2` as an optional peer while `eslint-plugin-svelte` pulls `yaml@1` via `postcss-load-config`; Bun does not fail on that and nothing loads a YAML config. No dependency is pinned to `latest`.
+**One package manager.** Bun 1.4.4 locally, in CI and on Vercel: `package.json` declares `"packageManager": "bun@1.4.4"`, and `vercel.json` sets `installCommand: npx --yes bun@1.4.4 install --frozen-lockfile` and `buildCommand: npx --yes bun@1.4.4 ./db/scripts/migrateOnDeploy.ts && npx --yes bun@1.4.4 run build`, so production installs exactly the `bun.lock` that CI tested. The version is pinned through `npx` because Vercel ignores `packageManager` for Bun and, when `installCommand` is overridden, runs the oldest Bun in its build image: Bun 1.1 cannot parse the text `bun.lock` ("Unknown lockfile version"), ignores it, and `--frozen-lockfile` then fails the install. Keep the version in `vercel.json`, `packageManager` and the CI `bun-version` in step. The old `npm install --legacy-peer-deps` was hiding a real peer conflict (Storybook 9 peers on Vite ≤7 and vite-plugin-svelte ≤6), fixed by moving to Storybook 10.6. `vite` still lists `yaml@^2` as an optional peer while `eslint-plugin-svelte` pulls `yaml@1` via `postcss-load-config`; Bun does not fail on that and nothing loads a YAML config. No dependency is pinned to `latest`.
 
 ### Local run sequence
 
