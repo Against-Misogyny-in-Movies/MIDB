@@ -41,13 +41,16 @@
 	--seg-nonbinary: var(--accent);
 	--seg-unknown: var(--border-strong);
 
-	/* Status: solid tokens are text-safe on --surface; -soft are quiet fills. */
-	--success: light-dark(#1d7a4a, #5bc38b);
-	--success-soft: light-dark(#e3f1e8, #1b2e24);
-	--warn: light-dark(#94560a, #e0a650);
-	--warn-soft: light-dark(#f8ecd8, #33281a);
-	--danger: light-dark(#b3261e, #f0806f);
-	--danger-soft: light-dark(#f9e4e1, #3a1f1d);
+	/* Status. A good value stays in the palette (--success is the violet); colour leaves it only
+	   to warn: copper for caution, a darker raspberry for harm, so the two differ in lightness as
+	   well as hue for colour-blind readers. Solid tokens pass 4.5:1 on --surface and on their
+	   -soft fill in both themes; -soft are quiet fills. */
+	--success: var(--brand);
+	--success-soft: color-mix(in oklab, var(--brand) 16%, var(--surface-raised));
+	--warn: light-dark(#9e5a1b, #f8b37f);
+	--warn-soft: light-dark(#feece0, #3c291b);
+	--danger: light-dark(#9a1e45, #ed7c94);
+	--danger-soft: light-dark(#fee8eb, #3d2227);
 	--info: light-dark(#2457a8, #84aef0);
 	--info-soft: light-dark(#e3ebf7, #1c2639);
 	--secondary-soft: light-dark(#eeebf1, #26232b);

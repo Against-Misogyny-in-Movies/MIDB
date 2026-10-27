@@ -13,7 +13,7 @@ const film = (over: Partial<RatedFilm>): RatedFilm => ({
 });
 
 describe('filmSentence', () => {
-	test('both good: "and", green clauses', () => {
+	test('both good: "and", pos clauses', () => {
 		expect(filmSentence(film({}))).toEqual({
 			bechdel: { text: 'passes the Bechdel Test', tone: 'pos' },
 			joiner: 'and',

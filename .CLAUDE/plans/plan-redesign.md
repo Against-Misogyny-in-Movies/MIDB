@@ -104,3 +104,13 @@ The user asked to restyle the sections under the hero to match it, then narrowed
 - Verdicts: the lilac plate holds a lead sentence beside three tier sentences, each tier highlighted in its badge tone (mirrors `SAFETY_META` / `REP_META` and `tones.ts`).
 - About: one centred sentence and a Source code chip.
 - The "Popular films" card stays retired: the hero cycles through the same films.
+
+## Status colours on the palette (follow-up)
+
+The user found the green / amber / red break the violet system but kept them because they carry meaning. Three token-only variants were rendered on the landing and a title page: A (jade, copper, raspberry: same meanings, hues pulled toward the violet), B (violet for good, colour only to warn), C (violet to rose, all analogous). Picked B:
+
+- `--success` is `--brand` (soft: brand 16% on `--surface-raised`, the strength of the source highlights, so the pill still reads on a lilac plate). A good value reads in the site's own colour; only caution (`--warn`, copper) and harm (`--danger`, raspberry) leave the palette, so they stand out more than before.
+- C was dropped: caution (orchid) and harm (raspberry) were close to the same pink, and that is the distinction the product cannot blur.
+- Colour-blind check (Machado 2009 simulation, OKLab distance x100): good vs harmful under deuteranopia goes from 5.8 (green / red) to 21.6; caution vs harmful from 1.0 to 11.1, because harm is now darker than caution, not only a different hue.
+- Contrast: every solid token passes 4.5:1 on its soft fill and on `--surface` in both themes (lowest: light copper on its fill, 4.65).
+- No copy names a colour, so no wording changed. Tier names always carry the meaning; colour is never the only signal.

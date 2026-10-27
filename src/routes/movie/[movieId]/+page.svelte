@@ -100,7 +100,7 @@
 		@apply text-ink-muted;
 	}
 
-	/* Shared marker pattern: see .CLAUDE/architecture.md. Brand, not green/red: pass or fail
+	/* Shared marker pattern: see .CLAUDE/architecture.md. Brand, not a status tone: pass or fail
 	   already reads from the rating in the heading row. */
 	.bechdel-criteria {
 		@apply flex flex-col list-none m-0 p-0;
