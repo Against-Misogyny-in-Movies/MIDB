@@ -96,6 +96,7 @@ Applies to all **user-facing** text (page copy, taglines, labels, notes) — not
 - **Schema helpers:** timestamps are `timestamptz` via `timestamps()` from `db/schema/columns.ts` (its `$onUpdate` bumps `updated_at` on every Drizzle update; pin it with ``updatedAt: sql`${col}` `` when a write is not an edit). The nine UM flag columns come from `umFlagColumns()`; never redeclare them per table.
 - Titles are keyed by `(kind, tmdb_id)`, `imdb_id` is optional; never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
 - Migration order matters: `db:seed:movies` before `db:seed:um`.
+- **Production deploys migrate first.** `vercel.json`'s `buildCommand` runs `db/scripts/migrateOnDeploy.ts` before `build`: on `VERCEL_ENV=production` it applies pending migrations to `DB_CONNECTION` in one transaction (a failure fails the deploy and changes nothing); previews skip. A migration merged to `main` therefore reaches the production database on the next deploy: write it to be safe against live data. This deploy step is the one place outside the app that reads the connection string at build time.
 - **Every schema change ships its generated migration** (SQL + snapshot + journal from `bun run db:generate`) in the same PR; CI's `migrations` job fails on drift. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts need a TTY; without one, run `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
 
 ---
