@@ -62,9 +62,9 @@
 				{:else}
 					<button type="button" class="film" onclick={() => onsearch(title)}>{title}</button>
 				{/if}
-				<mark class="tone-{sentence.bechdel.tone}">{sentence.bechdel.text}</mark>
+				<mark class="highlight tone-{sentence.bechdel.tone}">{sentence.bechdel.text}</mark>
 				{sentence.joiner}
-				<mark class="tone-{sentence.um.tone}">{sentence.um.text}</mark>.
+				<mark class="highlight tone-{sentence.um.tone}">{sentence.um.text}</mark>.
 			</p>
 		{/each}
 	</div>
@@ -90,7 +90,7 @@
 			<li>
 				<button
 					type="button"
-					class="toggle"
+					class="chip toggle"
 					aria-label={stopped ? 'Play' : 'Pause'}
 					title={stopped ? 'Play' : 'Pause'}
 					onclick={() => (stopped = !stopped)}
@@ -162,36 +162,6 @@
 		text-decoration-color: var(--brand);
 	}
 
-	/* A highlighter stroke under the lower part of each clause, in its badge tone. */
-	mark {
-		padding-inline: 0.06em;
-		background: none;
-		color: var(--tone);
-		box-shadow: inset 0 -0.34em 0 var(--tone-soft);
-		-webkit-box-decoration-break: clone;
-		box-decoration-break: clone;
-	}
-
-	.tone-pos {
-		--tone: var(--success);
-		--tone-soft: var(--success-soft);
-	}
-
-	.tone-mid {
-		--tone: var(--warn);
-		--tone-soft: var(--warn-soft);
-	}
-
-	.tone-neg {
-		--tone: var(--danger);
-		--tone-soft: var(--danger-soft);
-	}
-
-	.tone-neutral {
-		--tone: var(--ink-muted);
-		--tone-soft: var(--secondary-soft);
-	}
-
 	/* ── Pager: the film titles, the active one filling as its timer ── */
 	.pager {
 		margin-top: 1.75rem;
@@ -204,23 +174,7 @@
 	}
 
 	.chip {
-		@apply relative inline-flex items-center overflow-hidden cursor-pointer;
-		height: 1.875rem;
-		padding-inline: 12px;
-		border: 1px solid var(--border);
-		border-radius: 9999px;
-		background-color: var(--surface-raised);
-		color: var(--ink-muted);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		transition:
-			border-color 0.15s ease,
-			color 0.15s ease;
-	}
-
-	.chip:hover {
-		border-color: var(--border-strong);
-		color: var(--ink);
+		@apply relative overflow-hidden;
 	}
 
 	.chip.active {
@@ -256,18 +210,9 @@
 	}
 
 	.toggle {
-		@apply inline-flex items-center justify-center shrink-0 cursor-pointer;
+		justify-content: center;
 		width: 1.875rem;
-		height: 1.875rem;
-		border: 1px solid var(--border);
-		border-radius: 9999px;
-		background-color: var(--surface-raised);
-		color: var(--ink-muted);
-		transition: color 0.15s ease;
-	}
-
-	.toggle:hover {
-		color: var(--ink);
+		padding: 0;
 	}
 
 	.caption {

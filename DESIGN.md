@@ -40,13 +40,15 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 - **Badge** (`ui/badge.svelte`): pill with a tone from `tones.ts`: green (`pos`), amber (`mid`), rose (`neg`), grey (`neutral`), violet (`brand`). The tones mirror `verdict.ts`, so a badge and the verdict above it never disagree.
 - **Buttons** (`.btn`): brand for the one main action per view, ink for a secondary filled action, ghost beside a filled one.
 - **Verdict:** a soft-tone callout with the axis, the tier in its tone (24px Inter Tight), a two-line summary and a disclosure listing the signals. Fixed height so the DDD stream never shifts the page.
-- **Stat line:** source icon + label + value, used for the landing counts and the title page's source index.
+- **Stat line:** source icon + label + value, used for the title page's source index.
+- **Highlight** (`.highlight` + `.tone-*`): a term in its colour over a soft highlighter stroke. Status tones (`pos`, `mid`, `neg`, `neutral`) for values, source tones (`bechdel`, `um`, `ddd`, `tmdb`) for source names. Used in sentences on the landing; badges stay the form for values in data views.
+- **Chip** (`.chip`): a 30px hairline pill for secondary links (Methodology, a source's domain) and the hero's film pager.
 - **Marker rows:** a 1.375rem round marker, soft tint + solid glyph when active, hairline ring when not (Bechdel ladder in brand, UM flags in warn/success).
 - **Search bar:** 12px input with a leading icon and the brand Search button inside it (landing); a compact field in the header elsewhere.
 
 ## Pages
 
-- **Landing:** the hero is a sentence about a real film ("Inception passes the Bechdel Test and has no Unconsenting Media concerns."), its clauses in their badge tones with a highlighter stroke, cycling through popular films with the titles as chips that double as the timer; then the search bar, the stat line of real counts, four source cards, a lilac plate with the six verdict tiers, a one-line About. Everything shown is real (`$lib/server/data/catalogue.ts`).
+- **Landing:** the hero is a sentence about a real film ("Inception passes the Bechdel Test and has no Unconsenting Media concerns."), its clauses in their badge tones with a highlighter stroke, cycling through popular films with the titles as chips that double as the timer; then the search bar. The sections keep their cards and the hero's voice: Inter Tight sentences with highlighted terms and chip links. Four source cards (icon disk, the source name highlighted in its shade, real counts in the sentence); a lilac Verdicts plate with each tier highlighted in its tone; one centred About sentence. Everything shown is real (`$lib/server/data/catalogue.ts`).
 - **Title page:** poster beside the title, overview, the two verdicts, the source stat line, then section cards: Bechdel Test, Unconsenting Media, Does the Dog Die, Cast and crew, Details.
 - **Methodology:** title and lede, a sticky "On this page" list, then one card per topic with its icon disk.
 - **Account, sign-in, errors:** centred columns of cards; the sign-in card floats.

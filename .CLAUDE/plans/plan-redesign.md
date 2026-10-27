@@ -94,3 +94,13 @@ The user asked for a better motto, phrase or visual. Eight directions were rende
 - Title chips as the pager; the active chip's fill is the timer. Pauses on hover, focus and a pause button (WCAG 2.2.2); no rotation under reduced motion.
 - A visually hidden `h1` keeps the site's name for assistive tech and search; it shows when the database is down.
 - The "Popular films" data card is retired: it listed the same films the hero now cycles through.
+
+## Landing sections in the hero's voice (follow-up)
+
+The user asked to restyle the sections under the hero to match it, then narrowed it: keep the cards and the hero.
+
+- `.highlight` + `.tone-*` and `.chip` move from `filmSentences.svelte` into `app.css`, so the hero and the sections share one highlighter stroke and one pill link.
+- Source cards: icon disk, then one Inter Tight sentence opening with the source name highlighted in its violet shade. The Bechdel and Unconsenting Media sentences carry the real counts, so the separate stat line under the search bar is gone. Methodology and the source's domain are chips.
+- Verdicts: the lilac plate holds a lead sentence beside three tier sentences, each tier highlighted in its badge tone (mirrors `SAFETY_META` / `REP_META` and `tones.ts`).
+- About: one centred sentence and a Source code chip.
+- The "Popular films" card stays retired: the hero cycles through the same films.

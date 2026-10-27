@@ -3,8 +3,6 @@
 	import MovieSearch from '$lib/components/search/movieSearch.svelte';
 	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
 	import FilmSentences from '$lib/components/landing/filmSentences.svelte';
-	import Badge from '$lib/components/ui/badge.svelte';
-	import type { BadgeTone } from '$lib/media/utils/tones';
 
 	let { data }: { data: PageData } = $props();
 
@@ -18,65 +16,48 @@
 	}
 
 	const fmt = (n: number) => n.toLocaleString('en-US');
+	const bechdelCount = $derived(data.counts ? `${fmt(data.counts.bechdelRatings)} films` : 'films');
+	const umCount = $derived(
+		data.counts ? `${fmt(data.counts.umEntries)} films and series` : 'films and series'
+	);
 
-	const sources = [
+	// One card per source: its name highlighted in its violet shade, then the rest of the sentence.
+	const sources = $derived([
 		{
 			id: 'bechdel',
 			name: 'Bechdel Test',
-			body: 'Whether two named women talk to each other about something other than a man. Scored 0–3, films only.',
+			rest: `rates ${bechdelCount} on whether two named women talk to each other about something other than a man.`,
 			icon: 'ri-chat-3-fill',
-			color: 'var(--src-bechdel)',
 			domain: 'bechdeltest.com',
 			href: 'https://bechdeltest.com'
 		},
 		{
-			id: 'unconsenting',
+			id: 'um',
+			anchor: 'unconsenting',
 			name: 'Unconsenting Media',
-			body: 'Nine flags for depictions of sexual violence, from a community database.',
+			rest: `records nine sexual violence flags for ${umCount}.`,
 			icon: 'ri-flag-2-fill',
-			color: 'var(--src-um)',
 			domain: 'unconsentingmedia.org',
 			href: 'https://www.unconsentingmedia.org'
 		},
 		{
 			id: 'ddd',
 			name: 'Does the Dog Die',
-			body: 'Community-voted trigger warnings on hundreds of topics, fetched when a title page opens.',
+			rest: 'collects yes or no votes on hundreds of trigger warnings, fetched when a title page opens.',
 			icon: 'ri-alarm-warning-fill',
-			color: 'var(--src-ddd)',
 			domain: 'doesthedogdie.com',
 			href: 'https://www.doesthedogdie.com'
 		},
 		{
-			id: 'verdict',
+			id: 'tmdb',
+			anchor: 'verdict',
 			name: 'TMDB',
-			body: 'Title details and credits, including the gender recorded for each cast and crew member.',
+			rest: 'supplies title details and credits, including the gender recorded for each cast and crew member.',
 			icon: 'ri-film-fill',
-			color: 'var(--src-tmdb)',
 			domain: 'themoviedb.org',
 			href: 'https://www.themoviedb.org'
 		}
-	];
-
-	// The six tiers from verdict.ts, toned like the data card's badges.
-	const verdicts: { axis: string; tiers: { label: string; tone: BadgeTone }[] }[] = [
-		{
-			axis: 'Content safety',
-			tiers: [
-				{ label: 'Safer to watch', tone: 'pos' },
-				{ label: 'Watch with caution', tone: 'mid' },
-				{ label: 'Harmful content', tone: 'neg' }
-			]
-		},
-		{
-			axis: 'Representation',
-			tiers: [
-				{ label: 'Strong representation', tone: 'pos' },
-				{ label: 'Mixed representation', tone: 'mid' },
-				{ label: 'Poor representation', tone: 'neg' }
-			]
-		}
-	];
+	]);
 </script>
 
 <svelte:head>
@@ -104,39 +85,26 @@
 		<div class="search">
 			<MovieSearch {search} />
 		</div>
-
-		{#if data.counts}
-			<ul class="stats">
-				<li>
-					<i class="ri-chat-3-fill" style="--hue: var(--src-bechdel)" aria-hidden="true"></i>
-					<strong>{fmt(data.counts.bechdelRatings)}</strong> Bechdel Test ratings
-				</li>
-				<li>
-					<i class="ri-flag-2-fill" style="--hue: var(--src-um)" aria-hidden="true"></i>
-					<strong>{fmt(data.counts.umEntries)}</strong> Unconsenting Media entries
-				</li>
-				<li>
-					<i class="ri-alarm-warning-fill" style="--hue: var(--src-ddd)" aria-hidden="true"></i>
-					<strong>Live</strong> Does the Dog Die warnings
-				</li>
-			</ul>
-		{/if}
 	</section>
 
+	<!-- The sections keep their cards and speak in the hero's voice: Inter Tight sentences,
+	     highlighted names, chips for links. -->
 	<section class="section" aria-labelledby="sources-heading">
 		<h2 id="sources-heading" class="section-title">Sources</h2>
 		<ul class="sources">
-			{#each sources as source (source.name)}
+			{#each sources as source (source.id)}
 				<li class="card source">
-					<span class="disk" style="--hue: {source.color}" aria-hidden="true">
+					<span class="disk" style="--hue: var(--src-{source.id})" aria-hidden="true">
 						<i class={source.icon}></i>
 					</span>
-					<h3>{source.name}</h3>
-					<p>{source.body}</p>
-					<p class="source-links">
-						<a class="action-link" href="/resources#{source.id}">Methodology</a>
-						<a class="quiet-link" href={source.href} target="_blank" rel="noopener noreferrer"
-							>{source.domain}</a
+					<p class="statement">
+						<mark class="highlight tone-{source.id}">{source.name}</mark>
+						{source.rest}
+					</p>
+					<p class="chips">
+						<a class="chip" href="/resources#{source.anchor ?? source.id}">Methodology</a>
+						<a class="chip" href={source.href} target="_blank" rel="noopener noreferrer"
+							>{source.domain} <i class="ri-arrow-right-up-line" aria-hidden="true"></i></a
 						>
 					</p>
 				</li>
@@ -144,39 +112,46 @@
 		</ul>
 	</section>
 
+	<!-- The tier names and tones mirror SAFETY_META / REP_META in verdict.ts and tones.ts. -->
 	<section class="section" aria-labelledby="verdicts-heading">
+		<h2 id="verdicts-heading" class="section-title">Verdicts</h2>
 		<div class="verdicts">
-			<div class="verdicts-text">
-				<h2 id="verdicts-heading">Two verdicts per title</h2>
-				<p>
-					Each title page combines the sources into a content safety and a representation verdict.
+			<p class="statement statement--lead">
+				Each title page combines the sources into two verdicts.
+			</p>
+			<div class="tiers">
+				<p class="statement">
+					Content safety: <mark class="highlight tone-pos">Safer to watch</mark>,
+					<mark class="highlight tone-mid">Watch with caution</mark> or
+					<mark class="highlight tone-neg">Harmful content</mark>.
 				</p>
-				<a class="btn btn--ghost methodology" href="/resources#verdict">Methodology</a>
+				<p class="statement">
+					Representation: <mark class="highlight tone-pos">Strong</mark>,
+					<mark class="highlight tone-mid">Mixed</mark> or
+					<mark class="highlight tone-neg">Poor</mark>.
+				</p>
+				<p class="statement">
+					Too little data reads <mark class="highlight tone-neutral">Not enough data</mark>.
+				</p>
+				<p class="chips">
+					<a class="chip" href="/resources#verdict">Methodology</a>
+				</p>
 			</div>
-			<dl class="tiers">
-				{#each verdicts as group (group.axis)}
-					<div class="tier-group">
-						<dt>{group.axis}</dt>
-						<dd>
-							{#each group.tiers as tier (tier.label)}
-								<Badge tone={tier.tone} size="md">{tier.label}</Badge>
-							{/each}
-						</dd>
-					</div>
-				{/each}
-			</dl>
 		</div>
 	</section>
 
-	<p class="about">
-		No trackers, analytics or ads. No investment. The source code is on
-		<a
-			class="quiet-link"
-			href="https://github.com/Against-Misogyny-in-Movies/MIDB"
-			target="_blank"
-			rel="noopener noreferrer">GitHub</a
-		>.
-	</p>
+	<section class="section about" aria-label="About">
+		<p class="statement">MIDB has no trackers, analytics or ads, and takes no investment.</p>
+		<p class="chips">
+			<a
+				class="chip"
+				href="https://github.com/Against-Misogyny-in-Movies/MIDB"
+				target="_blank"
+				rel="noopener noreferrer"
+				>Source code <i class="ri-arrow-right-up-line" aria-hidden="true"></i></a
+			>
+		</p>
+	</section>
 </div>
 
 <style lang="postcss">
@@ -185,7 +160,6 @@
 	.landing {
 		font-family: var(--font-body);
 		color: var(--ink);
-		letter-spacing: -0.025em;
 	}
 
 	/* ── Hero: centred stack ── */
@@ -210,33 +184,9 @@
 		margin-top: 2.5rem;
 	}
 
-	.stats {
-		@apply flex flex-wrap justify-center list-none m-0 p-0;
-		gap: 12px 32px;
-		margin-top: 1.5rem;
-		font-size: 0.875rem;
-		color: var(--ink-muted);
-	}
-
-	.stats li {
-		@apply flex items-center;
-		gap: 6px;
-	}
-
-	.stats i {
-		font-size: 1rem;
-		color: var(--hue);
-	}
-
-	.stats strong {
-		font-weight: 600;
-		color: var(--ink);
-		font-variant-numeric: tabular-nums;
-	}
-
-	/* ── Sections ── */
+	/* ── Sections: a centred title over cards, like the hero ── */
 	.section {
-		margin-top: 4rem;
+		margin-top: clamp(3.5rem, 8vw, 5rem);
 	}
 
 	.section-title {
@@ -249,6 +199,26 @@
 		margin-bottom: 2rem;
 	}
 
+	/* The hero's voice at card size: Inter Tight sentences with highlighted names. */
+	.statement {
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: 1.1875rem;
+		line-height: 1.35;
+		letter-spacing: -0.015em;
+		text-wrap: pretty;
+	}
+
+	.chips {
+		@apply flex flex-wrap;
+		gap: 6px;
+	}
+
+	.chips i {
+		font-size: 0.875rem;
+	}
+
+	/* Sources: four cards, two on small screens, one on phones. */
 	.sources {
 		@apply grid list-none m-0 p-0;
 		grid-template-columns: 1fr;
@@ -268,58 +238,19 @@
 	}
 
 	.source {
-		@apply flex flex-col items-center text-center;
-		padding: 32px 24px;
+		@apply flex flex-col;
+		gap: 16px;
+		padding: 24px;
 	}
 
-	.source h3 {
-		font-size: 1.125rem;
-		font-weight: 600;
-		line-height: 1.33;
-		margin-top: 16px;
-	}
-
-	.source p {
-		font-size: 0.875rem;
-		line-height: 1.43;
-		color: var(--ink-muted);
-		margin-top: 6px;
-	}
-
-	.source .source-links {
-		@apply flex flex-wrap justify-center;
-		gap: 4px 16px;
+	.source .chips {
 		margin-top: auto;
-		padding-top: 16px;
 	}
 
-	.action-link {
-		font-weight: 600;
-		color: var(--brand);
-		text-decoration: none;
-	}
-
-	.action-link:hover {
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
-
-	.quiet-link {
-		color: var(--ink-muted);
-		text-decoration: underline;
-		text-decoration-color: var(--border-strong);
-		text-underline-offset: 3px;
-		transition: color 0.15s ease;
-	}
-
-	.quiet-link:hover {
-		color: var(--ink);
-	}
-
-	/* ── Verdicts: a fog plate with the real tier names ── */
+	/* Verdicts: the lilac plate, the lead sentence beside the tier sentences. */
 	.verdicts {
-		@apply grid items-center;
-		gap: 24px 48px;
+		@apply grid;
+		gap: 20px 48px;
 		padding: 32px;
 		border-radius: 12px;
 		background-color: var(--brand-wash);
@@ -327,55 +258,38 @@
 
 	@media (min-width: 768px) {
 		.verdicts {
-			grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+			grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
 		}
 	}
 
-	.verdicts h2 {
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 1.5rem;
-		line-height: 1.33;
-		letter-spacing: -0.02em;
-	}
-
-	.verdicts-text p {
-		color: var(--ink-muted);
-		margin-top: 8px;
-	}
-
-	.methodology {
-		margin-top: 20px;
+	.statement--lead {
+		font-size: clamp(1.375rem, 2.6vw, 1.75rem);
+		line-height: 1.25;
 	}
 
 	.tiers {
 		@apply flex flex-col;
-		gap: 16px;
+		gap: 10px;
 	}
 
-	.tier-group dt {
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--ink-muted);
-		margin-bottom: 6px;
+	.tiers .chips {
+		margin-top: 10px;
 	}
 
-	.tier-group dd {
-		@apply flex flex-wrap;
-		gap: 6px;
-	}
-
-	/* ── About ── */
+	/* About: one centred sentence and its link. */
 	.about {
-		@apply text-center;
-		margin-top: 4rem;
-		font-size: 0.875rem;
-		color: var(--ink-muted);
+		@apply flex flex-col items-center text-center;
+		gap: 14px;
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.quiet-link {
-			transition: none;
+	.about .statement {
+		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+		max-width: 32rem;
+	}
+
+	@media (max-width: 479px) {
+		.verdicts {
+			padding: 24px 20px;
 		}
 	}
 </style>
