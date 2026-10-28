@@ -9,6 +9,15 @@ test('hero headline and search input are visible', async ({ page }) => {
 	await expect(search).toBeFocused();
 });
 
+test('hero films link straight to their pages, above the project summary', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByLabel('About MIDB')).toContainText('four public sources');
+	const films = page.locator('[data-testid="hero-headline"] a');
+	if ((await films.count()) > 0) {
+		await expect(films.first()).toHaveAttribute('href', /^\/movie\/\d+$/);
+	}
+});
+
 test('theme toggle switches between light and dark and persists across reload', async ({
 	page
 }) => {

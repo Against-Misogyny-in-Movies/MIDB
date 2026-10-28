@@ -1,19 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import MovieSearch from '$lib/components/search/movieSearch.svelte';
-	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
 	import FilmSentences from '$lib/components/landing/filmSentences.svelte';
 
 	let { data }: { data: PageData } = $props();
-
-	const search = new MovieSearchState();
-	let hero = $state<HTMLElement | null>(null);
-
-	// A hero film without a TMDB id runs its title through the search field instead.
-	function searchFor(title: string) {
-		search.search(title);
-		hero?.querySelector('input')?.focus();
-	}
 
 	const fmt = (n: number) => n.toLocaleString('en-US');
 	const bechdelCount = $derived(data.counts ? `${fmt(data.counts.bechdelRatings)} films` : 'films');
@@ -69,7 +59,7 @@
 </svelte:head>
 
 <div class="landing">
-	<section class="hero" bind:this={hero}>
+	<section class="hero">
 		<!-- The hero shows what MIDB does with real records; the heading names it for assistive
 		     tech and search engines, and is the visible fallback when the database is unreachable. -->
 		<h1
@@ -79,12 +69,24 @@
 			Sexual violence warnings and representation of women in films and series
 		</h1>
 		{#if data.films.length > 0}
-			<FilmSentences films={data.films} onsearch={searchFor} />
+			<FilmSentences films={data.films} />
 		{/if}
 
 		<div class="search">
-			<MovieSearch {search} />
+			<MovieSearch />
 		</div>
+	</section>
+
+	<!-- What MIDB is, in two sentences, between the search and the sources. -->
+	<section class="section intro" aria-label="About MIDB">
+		<p class="statement">
+			MIDB shows four public sources on one page for each film or series: sexual violence flags,
+			trigger warnings, the Bechdel Test and the gender of cast and crew. Each page's two verdicts
+			are computed from those records alone.
+		</p>
+		<p class="chips">
+			<a class="chip" href="/resources">Methodology</a>
+		</p>
 	</section>
 
 	<!-- The sections keep their cards and speak in the hero's voice: Inter Tight sentences,
@@ -276,7 +278,8 @@
 		margin-top: 10px;
 	}
 
-	/* About: one centred sentence and its link. */
+	/* Intro and About: centred sentences and their link. */
+	.intro,
 	.about {
 		@apply flex flex-col items-center text-center;
 		gap: 14px;
@@ -285,6 +288,11 @@
 	.about .statement {
 		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
 		max-width: 32rem;
+	}
+
+	.intro .statement {
+		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+		max-width: 40rem;
 	}
 
 	@media (max-width: 479px) {
