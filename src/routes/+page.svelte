@@ -77,16 +77,23 @@
 		</div>
 	</section>
 
-	<!-- What MIDB is, in two sentences, between the search and the sources. -->
-	<section class="section intro" aria-label="About MIDB">
+	<!-- What MIDB is, in one sentence under the search: each record is highlighted in its source's
+	     shade, after that source's disk. -->
+	<section class="intro" aria-label="About MIDB">
+		<span class="intro-disks" aria-hidden="true">
+			{#each sources as source (source.id)}
+				<span class="disk" style="--hue: var(--src-{source.id}); --disk: 2rem">
+					<i class={source.icon}></i>
+				</span>
+			{/each}
+		</span>
 		<p class="statement">
-			MIDB shows four public sources on one page for each film or series: sexual violence flags,
-			trigger warnings, the Bechdel Test and the gender of cast and crew. Each page's two verdicts
-			are computed from those records alone.
+			MIDB puts <mark class="highlight tone-um">sexual violence flags</mark>,
+			<mark class="highlight tone-ddd">trigger warnings</mark>, the
+			<mark class="highlight tone-bechdel">Bechdel Test</mark> and
+			<mark class="highlight tone-tmdb">cast and crew gender</mark> on one page per film or series.
 		</p>
-		<p class="chips">
-			<a class="chip" href="/resources">Methodology</a>
-		</p>
+		<a class="chip" href="/resources">Methodology</a>
 	</section>
 
 	<!-- The sections keep their cards and speak in the hero's voice: Inter Tight sentences,
@@ -278,8 +285,48 @@
 		margin-top: 10px;
 	}
 
-	/* Intro and About: centred sentences and their link. */
-	.intro,
+	/* Intro: one card under the search, the source disks beside the sentence. */
+	.intro {
+		@apply flex flex-col items-center text-center;
+		gap: 16px;
+		max-width: 52rem;
+		margin: 2.5rem auto 0;
+		padding: 24px 28px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background-color: var(--surface-raised);
+	}
+
+	.intro .statement {
+		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+	}
+
+	.intro-disks {
+		@apply flex flex-shrink-0;
+	}
+
+	/* The disks overlap like a stack, each ringed in the card colour. */
+	.intro-disks .disk {
+		box-shadow: 0 0 0 2px var(--surface-raised);
+	}
+
+	.intro-disks .disk + .disk {
+		margin-left: -6px;
+	}
+
+	.intro .chip {
+		flex-shrink: 0;
+	}
+
+	@media (min-width: 768px) {
+		.intro {
+			flex-direction: row;
+			gap: 24px;
+			text-align: left;
+		}
+	}
+
+	/* About: one centred sentence and its link. */
 	.about {
 		@apply flex flex-col items-center text-center;
 		gap: 14px;
@@ -288,11 +335,6 @@
 	.about .statement {
 		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
 		max-width: 32rem;
-	}
-
-	.intro .statement {
-		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
-		max-width: 40rem;
 	}
 
 	@media (max-width: 479px) {
