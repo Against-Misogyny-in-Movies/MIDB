@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { titles } from '$db/schema/titles';
 import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
 import { db } from '$lib/server/db';
-import { getCatalogueCounts, getMostVotedRatedFilms } from '$lib/server/data/catalogue';
+import {
+	getCatalogueCounts,
+	getMostVotedRatedFilms,
+	getRandomRatedFilms
+} from '$lib/server/data/catalogue';
 
 const FLAGS = {
 	noRape: false,
@@ -100,5 +104,32 @@ describe('getMostVotedRatedFilms', () => {
 		expect((await getMostVotedRatedFilms(5, { requireUmEntry: true })).map((f) => f.title)).toEqual(
 			['Bound']
 		);
+	});
+});
+
+describe('getRandomRatedFilms', () => {
+	async function bound(title: string, numVotes: number, tmdbId: number | null, umId: number) {
+		const row = await film(title, numVotes, 3, tmdbId);
+		await db.insert(umSource).values({ umId, cleanName: title, cleanTitleKey: title, ...FLAGS });
+		await db.insert(titleUm).values({ titleId: row.id, umId });
+	}
+
+	it('keeps only films with a TMDB id and a UM entry', async () => {
+		await bound('Linked', 10, 1, 1);
+		await bound('Unlinked', 99, null, 2);
+		await film('No UM', 50, 3, 3);
+		expect((await getRandomRatedFilms(6)).map((f) => f.title)).toEqual(['Linked']);
+	});
+
+	it('draws only from the most-voted pool, up to count', async () => {
+		await bound('Top', 30, 1, 1);
+		await bound('Second', 20, 2, 2);
+		await bound('Third', 10, 3, 3);
+		for (let i = 0; i < 10; i++) {
+			const films = await getRandomRatedFilms(1, 2);
+			expect(films).toHaveLength(1);
+			expect(['Top', 'Second']).toContain(films[0].title);
+		}
+		expect((await getRandomRatedFilms(6, 2)).map((f) => f.title).sort()).toEqual(['Second', 'Top']);
 	});
 });

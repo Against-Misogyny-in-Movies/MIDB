@@ -7,6 +7,13 @@
  */
 export const PUBLIC_PAGE = 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400';
 
+/**
+ * PUBLIC_NO_STORE: user-agnostic, but different on every request (the landing's random films),
+ * so neither a browser nor the CDN keeps it. The PUBLIC_PAGE rule still applies: never read the
+ * request's user in a load that sets it.
+ */
+export const PUBLIC_NO_STORE = 'no-store';
+
 /** Personalised responses (/api/me, /user/*): never stored by a browser or shared cache. */
 export const PRIVATE_NO_STORE = 'private, no-store';
 

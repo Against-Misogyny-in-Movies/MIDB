@@ -2,17 +2,15 @@
 	import { resolve } from '$app/paths';
 	import { displayTitle } from '$lib/media/utils/format';
 	import { filmSentence } from '$lib/media/utils/filmSentence';
-	import type { RatedFilm } from '$lib/media/types/catalogue';
+	import type { LinkedRatedFilm } from '$lib/media/types/catalogue';
 
 	interface Props {
-		films: RatedFilm[];
-		/** A film without a TMDB id can't link to its page; its title runs through search. */
-		onsearch: (title: string) => void;
+		films: LinkedRatedFilm[];
 		/** Seconds each sentence stays before the next. */
 		seconds?: number;
 	}
 
-	let { films, onsearch, seconds = 6 }: Props = $props();
+	let { films, seconds = 6 }: Props = $props();
 
 	let index = $state(0);
 	// Rotation stops while the pointer or focus is inside, and when the visitor presses pause.
@@ -53,15 +51,11 @@
 	<!-- Every sentence sits in the same grid cell, so the cell is as tall as the longest one and
 	     switching never moves the search bar below. -->
 	<div class="stack" aria-live={chosen ? 'polite' : 'off'} data-testid="hero-headline">
-		{#each items as { film, title, sentence }, i (film.title + film.year)}
+		{#each items as { film, title, sentence }, i (film.tmdbId)}
 			<p class="sentence" class:active={i === index} inert={i !== index}>
-				{#if film.tmdbId}
-					<a class="film" href={resolve('/movie/[movieId]', { movieId: String(film.tmdbId) })}
-						>{title}</a
-					>
-				{:else}
-					<button type="button" class="film" onclick={() => onsearch(title)}>{title}</button>
-				{/if}
+				<a class="film" href={resolve('/movie/[movieId]', { movieId: String(film.tmdbId) })}
+					>{title}</a
+				>
 				<mark class="highlight tone-{sentence.bechdel.tone}">{sentence.bechdel.text}</mark>
 				{sentence.joiner}
 				<mark class="highlight tone-{sentence.um.tone}">{sentence.um.text}</mark>.
@@ -71,7 +65,7 @@
 
 	<div class="pager">
 		<ul aria-label="Films">
-			{#each items as { film, title }, i (film.title + film.year)}
+			{#each items as { film, title }, i (film.tmdbId)}
 				<li>
 					<button
 						type="button"
@@ -101,7 +95,7 @@
 		</ul>
 	</div>
 
-	<p class="caption">Examples from the database, by IMDb votes.</p>
+	<p class="caption">Picked at random from the 100 most IMDb-voted films rated by both sources.</p>
 </div>
 
 <style lang="postcss">
@@ -146,10 +140,7 @@
 	}
 
 	.film {
-		@apply bg-transparent border-0 p-0 cursor-pointer;
-		font: inherit;
 		font-weight: 700;
-		letter-spacing: inherit;
 		color: var(--brand);
 		text-decoration: underline;
 		text-decoration-thickness: 0.06em;

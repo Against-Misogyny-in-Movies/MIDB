@@ -1,19 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import MovieSearch from '$lib/components/search/movieSearch.svelte';
-	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
 	import FilmSentences from '$lib/components/landing/filmSentences.svelte';
 
 	let { data }: { data: PageData } = $props();
-
-	const search = new MovieSearchState();
-	let hero = $state<HTMLElement | null>(null);
-
-	// A hero film without a TMDB id runs its title through the search field instead.
-	function searchFor(title: string) {
-		search.search(title);
-		hero?.querySelector('input')?.focus();
-	}
 
 	const fmt = (n: number) => n.toLocaleString('en-US');
 	const bechdelCount = $derived(data.counts ? `${fmt(data.counts.bechdelRatings)} films` : 'films');
@@ -69,7 +59,7 @@
 </svelte:head>
 
 <div class="landing">
-	<section class="hero" bind:this={hero}>
+	<section class="hero">
 		<!-- The hero shows what MIDB does with real records; the heading names it for assistive
 		     tech and search engines, and is the visible fallback when the database is unreachable. -->
 		<h1
@@ -79,12 +69,31 @@
 			Sexual violence warnings and representation of women in films and series
 		</h1>
 		{#if data.films.length > 0}
-			<FilmSentences films={data.films} onsearch={searchFor} />
+			<FilmSentences films={data.films} />
 		{/if}
 
 		<div class="search">
-			<MovieSearch {search} />
+			<MovieSearch />
 		</div>
+	</section>
+
+	<!-- What MIDB is, in one sentence under the search: each record is highlighted in its source's
+	     shade, after that source's disk. -->
+	<section class="intro" aria-label="About MIDB">
+		<span class="intro-disks" aria-hidden="true">
+			{#each sources as source (source.id)}
+				<span class="disk" style="--hue: var(--src-{source.id}); --disk: 2rem">
+					<i class={source.icon}></i>
+				</span>
+			{/each}
+		</span>
+		<p class="statement">
+			MIDB collects <mark class="highlight tone-um">sexual violence flags</mark>,
+			<mark class="highlight tone-ddd">trigger warnings</mark>,
+			<mark class="highlight tone-bechdel">Bechdel Test results</mark> and
+			<mark class="highlight tone-tmdb">cast and crew gender</mark> for films and series.
+		</p>
+		<a class="chip" href="/resources">Methodology</a>
 	</section>
 
 	<!-- The sections keep their cards and speak in the hero's voice: Inter Tight sentences,
@@ -274,6 +283,47 @@
 
 	.tiers .chips {
 		margin-top: 10px;
+	}
+
+	/* Intro: one card under the search, the source disks beside the sentence. */
+	.intro {
+		@apply flex flex-col items-center text-center;
+		gap: 16px;
+		max-width: 52rem;
+		margin: 2.5rem auto 0;
+		padding: 24px 28px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background-color: var(--surface-raised);
+	}
+
+	.intro .statement {
+		font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+	}
+
+	.intro-disks {
+		@apply flex flex-shrink-0;
+	}
+
+	/* The disks overlap like a stack, each ringed in the card colour. */
+	.intro-disks .disk {
+		box-shadow: 0 0 0 2px var(--surface-raised);
+	}
+
+	.intro-disks .disk + .disk {
+		margin-left: -6px;
+	}
+
+	.intro .chip {
+		flex-shrink: 0;
+	}
+
+	@media (min-width: 768px) {
+		.intro {
+			flex-direction: row;
+			gap: 24px;
+			text-align: left;
+		}
 	}
 
 	/* About: one centred sentence and its link. */

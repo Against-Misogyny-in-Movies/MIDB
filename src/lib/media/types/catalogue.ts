@@ -19,3 +19,6 @@ export interface RatedFilm {
 	/** Safety tier from the UM flags alone (the title page also reads Does the Dog Die). */
 	umTier: Exclude<SafetyTier, 'unknown'> | null;
 }
+
+/** A `RatedFilm` with a TMDB id, so it links to its page (the landing hero's films). */
+export type LinkedRatedFilm = RatedFilm & { tmdbId: number };
