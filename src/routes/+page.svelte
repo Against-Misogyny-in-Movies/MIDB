@@ -88,10 +88,10 @@
 			{/each}
 		</span>
 		<p class="statement">
-			MIDB puts <mark class="highlight tone-um">sexual violence flags</mark>,
-			<mark class="highlight tone-ddd">trigger warnings</mark>, the
-			<mark class="highlight tone-bechdel">Bechdel Test</mark> and
-			<mark class="highlight tone-tmdb">cast and crew gender</mark> on one page per film or series.
+			MIDB collects <mark class="highlight tone-um">sexual violence flags</mark>,
+			<mark class="highlight tone-ddd">trigger warnings</mark>,
+			<mark class="highlight tone-bechdel">Bechdel Test results</mark> and
+			<mark class="highlight tone-tmdb">cast and crew gender</mark> for films and series.
 		</p>
 		<a class="chip" href="/resources">Methodology</a>
 	</section>
