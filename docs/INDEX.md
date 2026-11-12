@@ -42,38 +42,38 @@ Read the sections your task touches.
 - `README.md` — MIDB (~660 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~34.5K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~36.2K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
-  - 37–67 High-level data flow (~850)
-  - 68–208 Directory layout (~4.5K)
-    - 199–208 File-organisation conventions (~450)
-  - 209–221 Styling & theming (~830)
-  - 222–234 Copy & voice (~570) ← 1
-  - 235–259 Routes (~6.9K)
-  - 260–273 User & roles (~450)
-  - 274–330 Database schema (~2.4K)
-    - 282–312 Tables (active) (~1.0K)
-    - 313–330 Migrations (~1.1K)
-  - 331–353 Seeding (~720) ← 1
-  - 354–419 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.1K)
-  - 420–439 UM Disambiguation (~630)
-  - 440–448 UM flag rendering (~250)
-  - 449–460 Shared marker pattern (metric row markers) (~410) ← 4
-  - 461–497 Component library (`src/lib/components/`) (~5.0K)
-  - 498–508 Live search (`src/lib/components/search/`) (~710)
-  - 509–522 Server cache (`src/lib/server/cache/`) (~550)
-  - 523–534 TMDB integration (~570)
-  - 535–550 Auth flow (Hanko) (~890)
-  - 551–562 Caching policy (~560) ← 4
-  - 563–613 Configuration & environment (~2.1K)
-    - 581–597 Local run sequence (~140)
-    - 598–601 npm scripts (~130)
-    - 602–613 CI (`.github/workflows/tests.yml`) (~370)
-  - 614–629 Testing (~690)
-    - 624–629 Verification baseline (~80)
-  - 630–640 Known gaps / TODO (~340)
-  - 641–649 Related docs (~160)
+  - 37–67 High-level data flow (~860)
+  - 68–210 Directory layout (~4.7K)
+    - 201–210 File-organisation conventions (~450)
+  - 211–224 Styling & theming (~890)
+  - 225–237 Copy & voice (~570) ← 1
+  - 238–263 Routes (~7.5K)
+  - 264–277 User & roles (~450)
+  - 278–334 Database schema (~2.4K)
+    - 286–316 Tables (active) (~1.0K)
+    - 317–334 Migrations (~1.1K)
+  - 335–357 Seeding (~720) ← 1
+  - 358–423 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.2K)
+  - 424–443 UM Disambiguation (~630)
+  - 444–452 UM flag rendering (~250)
+  - 453–464 Shared marker pattern (metric row markers) (~410) ← 4
+  - 465–501 Component library (`src/lib/components/`) (~5.0K)
+  - 502–512 Live search (`src/lib/components/search/`) (~710)
+  - 513–526 Server cache (`src/lib/server/cache/`) (~580)
+  - 527–542 TMDB integration (~810)
+  - 543–558 Auth flow (Hanko) (~890)
+  - 559–576 Caching policy (~950) ← 5
+  - 577–627 Configuration & environment (~2.1K)
+    - 595–611 Local run sequence (~140)
+    - 612–615 npm scripts (~130)
+    - 616–627 CI (`.github/workflows/tests.yml`) (~370)
+  - 628–643 Testing (~690)
+    - 638–643 Verification baseline (~80)
+  - 644–654 Known gaps / TODO (~340)
+  - 655–663 Related docs (~160)
 
 ## Phases
 
@@ -105,10 +105,10 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~580 tok)
-- `PRIVACY.md` — Privacy (~540 tok)
+- `SECURITY.md` — Security (~680 tok)
+- `PRIVACY.md` — Privacy (~550 tok)
 - `ACCESSIBILITY.md` — Accessibility (~400 tok)
-- `THIRD_PARTY_NOTICES.md` — Third-party notices (~630 tok)
+- `THIRD_PARTY_NOTICES.md` — Third-party notices (~660 tok)
 
 ## Code to docs
 
@@ -117,5 +117,5 @@ The sections each area's comments cite, most cited first. Read these before chan
 - `scripts/checks`: .claude/rules/code-standards.md, File organisation (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
-- `src/lib`: docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Caching policy (1)
+- `src/lib`: docs/architecture.md, Caching policy (2); docs/architecture.md, Shared marker pattern (metric row markers) (2)
 - `src/routes`: docs/architecture.md, Shared marker pattern (metric row markers) (1)

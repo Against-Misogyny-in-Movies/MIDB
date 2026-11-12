@@ -7,12 +7,9 @@ MIDB has no trackers, analytics or advertising, and sells or shares no data. Thi
 A reader who does not sign in gives MIDB no personal data.
 
 - **The browser stores** one value: the chosen theme, in `localStorage` (`theme`). It never leaves the browser.
-- **Third-party requests** from the browser:
-  - Film posters load from `image.tmdb.org` (TMDB).
-  - The Inter Tight font loads from Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`).
-  - Each of these sees the reader's IP address and browser, under its own privacy policy.
-- **MIDB's own server** looks up each page's data on TMDB and Does the Dog Die. These requests carry the title being looked up, never anything about the reader.
-- **Hosting.** The site runs on Cloudflare Workers, which keeps standard request logs (IP address, URL, time) under its own policy. The server also caches the TMDB and Does the Dog Die responses it fetches in Cloudflare's cache; those hold film data only, never anything about a reader.
+- **Third-party requests** from the browser: none. Film posters load from MIDB's own `/img/tmdb/` path, and the Inter Tight font is served from MIDB.
+- **MIDB's own server** looks up each page's data on TMDB and Does the Dog Die, and fetches each poster from `image.tmdb.org` (TMDB). These requests carry the title or file being looked up, never anything about the reader, so TMDB sees MIDB's server and not the reader's IP address or browser.
+- **Hosting.** The site runs on Cloudflare Workers, which keeps standard request logs (IP address, URL, time) under its own policy. The server also caches the TMDB and Does the Dog Die responses it fetches, and public pages and posters, in Cloudflare's cache; those hold film data only, never anything about a reader.
 
 ## Signing in
 
