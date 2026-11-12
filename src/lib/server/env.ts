@@ -16,6 +16,8 @@ export interface Secrets {
 	ANTHROPIC_API_KEY?: string;
 	TURNSTILE_SECRET_KEY?: string;
 	MODERATION_EXTRA_TERMS?: string;
+	/** `1` publishes comments the classifier did not check, on a localhost origin only. */
+	MODERATION_DEV_AUTO_APPROVE?: string;
 }
 
 /** The Worker's bindings and vars (`wrangler.jsonc`, typed by `pnpm cf:types`) plus the secrets. */
