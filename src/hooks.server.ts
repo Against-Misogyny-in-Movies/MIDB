@@ -1,4 +1,3 @@
-import { redirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { emailFromClaims, verifyClaims } from '#lib/server/auth/hanko.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
@@ -44,8 +43,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const { pathname } = event.url;
 
+	// Returned, not thrown: a thrown redirect skips `withSafeCacheHeaders`, and whether this one
+	// applies depends on the cookie, which the edge cache key ignores.
 	if (isAccountPath(pathname) && !claims?.sub) {
-		redirect(303, '/auth');
+		return withSafeCacheHeaders(
+			new Response(null, { status: 303, headers: { location: '/auth' } })
+		);
 	}
 
 	if (pathname.startsWith('/user/moderation')) {

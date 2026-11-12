@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { isHttpError, isRedirect, type RequestEvent } from '@sveltejs/kit';
+import { isHttpError, type RequestEvent } from '@sveltejs/kit';
 import type { JWTPayload } from 'jose';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 
@@ -66,12 +66,15 @@ describe('handle', () => {
 	});
 
 	it.each(['/user', '/user/x', '/user/profile'])(
-		'redirects %s to /auth without claims, with no DB access',
+		'redirects %s to /auth without claims, with no DB access and never cached',
 		async (path) => {
 			verifyClaims.mockResolvedValue(null);
-			const { error, resolve } = await run(path);
-			expect(isRedirect(error)).toBe(true);
-			expect(error).toMatchObject({ status: 303, location: '/auth' });
+			const ev = event(path);
+			const resolve = vi.fn(async () => new Response('ok'));
+			const res = await handle({ event: ev, resolve });
+			expect(res.status).toBe(303);
+			expect(res.headers.get('location')).toBe('/auth');
+			expect(res.headers.get('cache-control')).toBe('private, no-store');
 			expect(resolve).not.toHaveBeenCalled();
 			expect(getOrCreateUser).not.toHaveBeenCalled();
 		}

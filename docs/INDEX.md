@@ -65,7 +65,7 @@ Read the sections your task touches.
   - 513–526 Server cache (`src/lib/server/cache/`) (~580)
   - 527–542 TMDB integration (~810)
   - 543–558 Auth flow (Hanko) (~890)
-  - 559–576 Caching policy (~950) ← 5
+  - 559–576 Caching policy (~980) ← 5
   - 577–627 Configuration & environment (~2.1K)
     - 595–611 Local run sequence (~140)
     - 612–615 npm scripts (~130)
