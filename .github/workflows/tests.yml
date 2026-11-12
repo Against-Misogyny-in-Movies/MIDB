@@ -136,8 +136,6 @@ jobs:
     env:
       # Inlined into the build (`src/env.ts`); the origin is the one `wrangler dev` serves.
       PUBLIC_ORIGIN: http://localhost:4173
-      PUBLIC_TMDB_API_URL: https://api.themoviedb.org
-      PUBLIC_TMDB_IMAGE_URL: /img/tmdb
       PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -153,6 +151,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The TMDB values are the deployed ones, read from `wrangler.jsonc`.
+      - name: Take the TMDB values from wrangler.jsonc
+        run: node scripts/ci/public-vars.ts production export PUBLIC_TMDB_API_URL PUBLIC_TMDB_IMAGE_URL >> "$GITHUB_ENV"
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium

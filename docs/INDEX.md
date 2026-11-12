@@ -22,7 +22,7 @@ Read whole.
   - 120–136 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
-- `.claude/rules/deploy-standards.md` — Deploy standards (~540 tok)
+- `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
 - `.claude/rules/docs-standards.md` — Docs standards (~1.1K tok)
 - `.claude/rules/style-standards.md` — Style standards (~1.3K tok)
 
@@ -52,38 +52,38 @@ Read the sections your task touches.
   - 67–70 Motion (~90)
   - 71–74 Browser surfaces (~50)
   - 75–78 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~46.5K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~46.8K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–257 Directory layout (~7.3K)
-    - 248–257 File-organisation conventions (~450)
-  - 258–271 Styling & theming (~950)
-  - 272–284 Copy & voice (~570) ← 1
-  - 285–314 Routes (~9.4K)
-  - 315–352 User & roles (~2.1K)
-    - 345–352 Migrations (~350)
-  - 353–382 Source sync (~1.8K) ← 3
-  - 383–448 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 449–473 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
-  - 474–493 UM Disambiguation (~630)
-  - 494–502 UM flag rendering (~250)
-  - 503–514 Shared marker pattern (metric row markers) (~410) ← 4
-  - 515–555 Component library (`src/lib/components/`) (~5.6K)
-  - 556–566 Live search (`src/lib/components/search/`) (~710)
-  - 567–580 Server cache (`src/lib/server/cache/`) (~690)
-  - 581–596 TMDB integration (~810)
-  - 597–615 Auth flow (Better Auth) (~1.9K)
-  - 616–634 Caching policy (~1.2K) ← 6
-  - 635–689 Configuration & environment (~2.9K)
-    - 651–663 Local run sequence (~130)
-    - 664–667 npm scripts (~200)
-    - 668–678 CI (`.github/workflows/tests.yml`) (~450)
-    - 679–689 Deploy (`.github/workflows/deploy.yml`) (~380) ← 1
-  - 690–705 Testing (~1.2K)
-    - 700–705 Verification baseline (~80)
-  - 706–714 Known gaps / TODO (~240)
-  - 715–723 Related docs (~140)
+  - 68–258 Directory layout (~7.3K)
+    - 249–258 File-organisation conventions (~450)
+  - 259–272 Styling & theming (~950)
+  - 273–285 Copy & voice (~570) ← 1
+  - 286–315 Routes (~9.4K)
+  - 316–353 User & roles (~2.1K)
+    - 346–353 Migrations (~350)
+  - 354–383 Source sync (~1.8K) ← 3
+  - 384–449 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 450–474 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
+  - 475–494 UM Disambiguation (~630)
+  - 495–503 UM flag rendering (~250)
+  - 504–515 Shared marker pattern (metric row markers) (~410) ← 4
+  - 516–556 Component library (`src/lib/components/`) (~5.6K)
+  - 557–567 Live search (`src/lib/components/search/`) (~710)
+  - 568–581 Server cache (`src/lib/server/cache/`) (~690)
+  - 582–597 TMDB integration (~810)
+  - 598–616 Auth flow (Better Auth) (~1.9K)
+  - 617–635 Caching policy (~1.2K) ← 6
+  - 636–691 Configuration & environment (~3.2K)
+    - 652–664 Local run sequence (~130)
+    - 665–668 npm scripts (~200)
+    - 669–679 CI (`.github/workflows/tests.yml`) (~450)
+    - 680–691 Deploy (`.github/workflows/deploy.yml`) (~630) ← 2
+  - 692–707 Testing (~1.2K)
+    - 702–707 Verification baseline (~80)
+  - 708–716 Known gaps / TODO (~240)
+  - 717–725 Related docs (~140)
 
 ## Phases
 
@@ -95,7 +95,7 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.8K tok)
+- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.9K tok)
   - 5–39 Context (~460)
   - 40–112 Verified platform facts (checked 2026-11-11) (~1.5K)
   - 113–121 Fresh repository (~170)
@@ -107,7 +107,7 @@ Read when a task names the plan.
   - 349–402 Phase 3: Auth (Better Auth) (~1.1K)
   - 403–455 Phase 4: Comments (~1.0K)
   - 456–483 Phase 5: AI moderation (~480)
-  - 484–513 Phase 6: CI, deploy, docs (~460)
+  - 484–513 Phase 6: CI, deploy, docs (~490)
   - 514–555 Verification (~660)
 
 ## Policies
@@ -126,6 +126,7 @@ The sections each area's comments cite, most cited first. Read these before chan
 
 - `e2e-tests`: docs/architecture.md, Caching policy (1)
 - `scripts/checks`: .claude/rules/code-standards.md, File organisation (1)
+- `scripts/ci`: docs/architecture.md, Deploy (`.github/workflows/deploy.yml`) (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
 - `src/lib`: docs/architecture.md, Caching policy (2); docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (1); docs/architecture.md, Source sync (1)

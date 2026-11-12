@@ -15,8 +15,8 @@ The site is not versioned: there are no version bumps and no tags. `package.json
 
 ## Deploys
 
-- **Production** deploys only through `.github/workflows/deploy.yml` on a push to `main`: build, log the D1 Time Travel bookmark, apply the migrations, then deploy the Worker. Migrations apply before the new Worker version goes live, and a failure at any step stops the deploy. `docs/architecture.md`, Deploy, has the steps and the settings they read.
-- **Previews** come from pull requests whose branch is in this repository: they go to the separate preview Worker with its own D1 database. A fork's pull request gets tests only and no secrets, and `pull_request_target` is never used.
+- **Production** deploys only through `.github/workflows/deploy.yml` on a push to `main`. Migrations apply before the new Worker version goes live, and a failure at any step stops the deploy. `docs/architecture.md`, Deploy, has the steps and the settings they read.
+- **Previews** come from pull requests whose branch is in this repository (Dependabot's excluded, since it gets no secrets): the workflow migrates the separate preview D1 database and deploys the preview Worker. Previews from several pull requests share that Worker and its database, and the latest push wins. A fork's pull request gets tests only and no secrets, and `pull_request_target` is never used.
 - **Pulling a bad deploy.** Revert the commit on `main`, or roll back or promote a version in Cloudflare (`wrangler rollback`). Restore the data with D1 Time Travel from the bookmark the run logged.
 - **Migrations.** A migration is never rolled back by hand: fix forward with a new migration.
 

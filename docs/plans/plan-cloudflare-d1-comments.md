@@ -140,7 +140,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
 
 - **CI and forks:**
   - Fork PRs run tests only.
-  - Previews deploy from same-repo branches only.
+  - Previews deploy from same-repo branches only, and not from Dependabot.
   - `pull_request_target` is never used.
 - **Moderation is public.** The prompt, policy and blocklist are public. The real defences are:
   - rate limits;
@@ -492,7 +492,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
      1. `wrangler d1 time-travel info midb` (log the bookmark);
      2. `wrangler d1 migrations apply midb --remote` (failure stops the deploy);
      3. `pnpm build && wrangler deploy`.
-   - Same-repo PRs: migrate the preview DB, then `wrangler versions upload --env preview`.
+   - Same-repo PRs (not Dependabot's): migrate the preview DB, then `wrangler deploy --env preview`. One concurrency group per PR; previews share one Worker and the latest push wins (user decision, 2026-11-12).
    - A scheduled job runs the orphan-user cleanup.
    - Secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 3. **Docs:**

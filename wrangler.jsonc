@@ -73,6 +73,7 @@
 				"PUBLIC_TMDB_API_URL": "https://api.themoviedb.org",
 				"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
 				"MODERATION_MODEL": "claude-haiku-5-5",
+				// The preview build takes this from the repository variable PREVIEW_TURNSTILE_SITE_KEY.
 				"PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
 			}
 		}

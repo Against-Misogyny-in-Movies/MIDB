@@ -1,7 +1,7 @@
 name: Deploy
 
-# Production deploys from `main`, preview deploys from same-repository pull requests, and a
-# daily cleanup of half-made accounts. Every job that holds a Cloudflare token runs only on the
+# Production deploys from `main`, the preview Worker deploys from same-repository pull requests,
+# and a daily cleanup of half-made accounts. Every job that holds a Cloudflare token runs only on the
 # canonical repository. A pull request from a fork has no secrets and does not match the preview
 # job's condition, and `pull_request_target` is never used.
 on:
@@ -16,9 +16,10 @@ on:
 permissions:
   contents: read
 
-# The `PUBLIC_*` values are inlined into the build (`src/env.ts`), so they come from repository
-# variables (Settings → Secrets and variables → Actions → Variables) and must match the `vars` of
-# the target in `wrangler.jsonc`.
+# The `PUBLIC_*` values are inlined into the build (`src/env.ts`) and must equal the `vars` of the
+# target in `wrangler.jsonc`. The origin and the Turnstile site key come from repository variables
+# (Settings → Secrets and variables → Actions → Variables); the TMDB values are read from
+# `wrangler.jsonc`. `scripts/ci/public-vars.ts` fails the run when a value differs.
 
 jobs:
   production:
@@ -31,13 +32,12 @@ jobs:
     timeout-minutes: 20
     environment: production
     # Two deploys never overlap, and a running one is never cancelled half-way through a migration.
+    # A run waiting behind it is replaced by a newer waiting run, which deploys the newer commit.
     concurrency:
       group: deploy-production
       cancel-in-progress: false
     env:
       PUBLIC_ORIGIN: ${{ vars.PUBLIC_ORIGIN }}
-      PUBLIC_TMDB_API_URL: https://api.themoviedb.org
-      PUBLIC_TMDB_IMAGE_URL: /img/tmdb
       PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -56,6 +56,12 @@ jobs:
 
       - name: Require the repository variables
         run: test -n "$PUBLIC_ORIGIN" || { echo "Set the repository variable PUBLIC_ORIGIN."; exit 1; }
+
+      - name: Take the TMDB values from wrangler.jsonc
+        run: node scripts/ci/public-vars.ts production export PUBLIC_TMDB_API_URL PUBLIC_TMDB_IMAGE_URL >> "$GITHUB_ENV"
+
+      - name: Check the build's values against wrangler.jsonc
+        run: node scripts/ci/public-vars.ts production check
 
       # Built before anything remote changes, so a broken build never migrates the database.
       - name: Build
@@ -90,19 +96,20 @@ jobs:
     if: >-
       github.repository == 'Against-Misogyny-in-Movies/MIDB' &&
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: preview
-    # One preview migration at a time; a newer push waits for the one running.
+    # Pull requests share one preview Worker and one database, so the latest run wins. Runs of
+    # one pull request queue in order, and a waiting run is replaced by a newer waiting one.
+    # Dependabot's runs get no secrets, so the condition above skips them.
     concurrency:
-      group: deploy-preview
+      group: deploy-preview-${{ github.event.pull_request.number }}
       cancel-in-progress: false
     env:
       PUBLIC_ORIGIN: ${{ vars.PREVIEW_ORIGIN }}
-      PUBLIC_TMDB_API_URL: https://api.themoviedb.org
-      PUBLIC_TMDB_IMAGE_URL: /img/tmdb
-      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PREVIEW_TURNSTILE_SITE_KEY }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -121,6 +128,12 @@ jobs:
       - name: Require the repository variables
         run: test -n "$PUBLIC_ORIGIN" || { echo "Set the repository variable PREVIEW_ORIGIN."; exit 1; }
 
+      - name: Take the TMDB values from wrangler.jsonc
+        run: node scripts/ci/public-vars.ts preview export PUBLIC_TMDB_API_URL PUBLIC_TMDB_IMAGE_URL >> "$GITHUB_ENV"
+
+      - name: Check the build's values against wrangler.jsonc
+        run: node scripts/ci/public-vars.ts preview check
+
       - name: Build
         run: pnpm build
 
@@ -131,14 +144,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler d1 migrations apply DB --remote --env preview
 
-      # Uploads a version of the preview Worker (`midb-preview`), a separate Worker from
-      # production, so a preview never touches it. The Worker must have been deployed once
-      # (`wrangler deploy --env preview`) before the first upload.
-      - name: Upload a preview version
+      # Deploys the preview Worker (`midb-preview`), a separate Worker from production, so a
+      # preview never touches it.
+      - name: Deploy the preview Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm exec wrangler versions upload --env preview
+        run: pnpm exec wrangler deploy --env preview
 
   # Deletes the accounts a failed passkey sign-up left behind (`docs/architecture.md`, Auth flow).
   cleanup:
