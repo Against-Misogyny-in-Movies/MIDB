@@ -17,7 +17,7 @@ pnpm db:migrate && pnpm db:seed:movies && pnpm db:seed:um
 pnpm dev
 ```
 
-`.env` also holds the Worker's secrets and public values, which `pnpm dev` reads through Wrangler. `.env.example` points `DB_CONNECTION` at the compose database. The compose service runs `postgres:16`. A `db-data` volume created by the earlier `postgres:15` image will not start on 16. Local data can be reseeded, so recreate the volume with `docker compose down -v`, then run the steps above again. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
+`.env` also holds the Worker's secrets and public values, which `pnpm dev` reads through Wrangler. `pnpm preview` builds the site and runs the built Worker locally with `wrangler dev` on port 4173; it reads `.dev.vars` if that file exists, else `.env`. `.env.example` points `DB_CONNECTION` at the compose database. The compose service runs `postgres:16`. A `db-data` volume created by the earlier `postgres:15` image will not start on 16. Local data can be reseeded, so recreate the volume with `docker compose down -v`, then run the steps above again. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
 
 ## Deploy
 

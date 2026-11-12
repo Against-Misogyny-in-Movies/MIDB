@@ -59,7 +59,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
     - `data-sveltekit-*="off"` becomes `false`.
   - **Codemod:** `npx sv migrate sveltekit-3` automates most of it.
 - **adapter-cloudflare 8** (needs Kit 3, wrangler ≥ 4.118):
-  - `platform` is removed. Bindings and `waitUntil` come from `import { env, waitUntil } from 'cloudflare:workers'`, which the adapter emulates in `vite dev` / `preview` through `platformProxy`.
+  - `platform` is removed. Bindings and `waitUntil` come from `import { env, waitUntil } from 'cloudflare:workers'`, which the adapter emulates in `vite dev` only. The built Worker writes the literal `cloudflare:workers` import, which Node's `vite preview` cannot load, so it runs locally with `wrangler dev` (`pnpm preview`).
   - `fs` does not work; use `read` from `$app/server`.
   - It no longer caches anything itself.
   - Wrangler config: `main: ".svelte-kit/cloudflare/_worker.js"`, `assets: { binding: "ASSETS", directory: ".svelte-kit/cloudflare" }`.
@@ -194,7 +194,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
    - In `src/app.d.ts`, drop the `jose` types and `locals.claims`.
 4. **Env access.**
    - New `#lib/server/env.ts` is the single typed accessor for secrets and bindings, over `import { env } from 'cloudflare:workers'`. Public vars come from `$app/env/public`.
-   - Vitest aliases `cloudflare:workers` to a stub, `src/test/cloudflare-workers.stub.ts`. The stub exposes a mutable `env`, a no-op `waitUntil` and a recording `cache.purge`, so unit tests can set and inspect them.
+   - Vitest aliases `cloudflare:workers` to a stub, `src/test/cloudflare-workers.stub.ts`. The stub exposes a mutable `env`, a recording `waitUntil` and a recording `cache.purge`, so unit tests can set and inspect them.
    - Move `TMDB_API_TOKEN` (`integrations/tmdb/client.ts:3`) and `DDD_API_KEY` (`integrations/ddd.ts:1`) off `$env/static/private`.
    - New secrets: `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `DISCORD_CLIENT_ID/SECRET`, `ANTHROPIC_API_KEY`, `TURNSTILE_SECRET_KEY`, `MODERATION_EXTRA_TERMS`.
 5. **App cache** (`src/lib/server/cache/index.ts`).
@@ -484,7 +484,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 
 1. **`tests.yml`:**
    - The `db` job drops its Postgres service and runs on local D1.
-   - `e2e`: apply migrations locally, seed the fixtures, then `vite preview` / `wrangler dev`.
+   - `e2e`: apply migrations locally, seed the fixtures, then `pnpm preview` (`wrangler dev`).
    - Fork PRs get no secrets.
 2. **`deploy.yml`:**
    - On push to `main`:
