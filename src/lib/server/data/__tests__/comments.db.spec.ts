@@ -14,6 +14,7 @@ import {
 	type CommentRow
 } from '#lib/server/data/comment-queries.ts';
 import { removeVote, setVote } from '#lib/server/data/comment-votes.ts';
+import { getUserComments } from '#lib/server/data/user-queries.ts';
 import { reportComment } from '#lib/server/data/comment-reports.ts';
 import {
 	approveComment,
@@ -438,5 +439,35 @@ describe('moderation actions', () => {
 		});
 		expect(await muteUser(admin, 'mod2', until, null)).toMatchObject({ ok: true });
 		expect(await banAccount(mod, 'nobody', null)).toEqual({ ok: false, reason: 'not-found' });
+	});
+});
+
+describe('getUserComments', () => {
+	it('returns the reader’s comments in every status, newest first, with the title', async () => {
+		const pending = await createComment({ title, userId: 'author', body: 'Pending one' });
+		const ok = await published('author', 'Published one');
+		const gone = await published('author', 'Deleted one');
+		await softDeleteComment(gone, 'author');
+		const rejected = await published('author', 'Rejected one');
+		await rejectComment('mod', rejected, 'Not on topic');
+		await published('u1', 'Someone else');
+		if (!pending.ok) throw new Error(pending.reason);
+
+		const rows = await getUserComments('author');
+		expect(rows.map((r) => [r.body, r.status]).sort()).toEqual([
+			['Deleted one', 'deleted'],
+			['Pending one', 'pending'],
+			['Published one', 'published'],
+			['Rejected one', 'rejected']
+		]);
+		expect(rows.find((r) => r.id === rejected)).toMatchObject({
+			moderationReason: 'Not on topic',
+			kind: 'movie',
+			tmdbId: 348,
+			title: 'Alien'
+		});
+		expect(rows.find((r) => r.id === ok)?.status).toBe('published');
+		const times = rows.map((r) => r.createdAt.getTime());
+		expect(times).toEqual([...times].sort((a, b) => b - a));
 	});
 });

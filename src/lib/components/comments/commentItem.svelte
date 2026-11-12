@@ -2,6 +2,8 @@
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
+	import CommentAction from './commentAction.svelte';
+	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import CommentReportForm from './commentReportForm.svelte';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
@@ -52,10 +54,6 @@
 		const ok = await comments.post(body, comment.id);
 		if (ok) mode = null;
 		return ok;
-	}
-
-	async function confirmDelete() {
-		await comments.remove(comment.id);
 	}
 </script>
 
@@ -113,69 +111,46 @@
 			{#if !comment.review}
 				{#if canVote}
 					<div class="votes" role="group" aria-label="Vote on this comment">
-						<button
-							class="action action--icon"
-							type="button"
-							aria-label="Upvote"
-							aria-pressed={vote === 1}
+						<CommentAction
+							icon
+							label="Upvote"
+							pressed={vote === 1}
 							disabled={comments.busy[voteKey]}
 							onclick={() => comments.vote(comment.id, 1)}
 						>
 							<i class="ri-arrow-up-line" aria-hidden="true"></i>
-						</button>
+						</CommentAction>
 						<span class="score" aria-label="Score {comment.score}">{comment.score}</span>
-						<button
-							class="action action--icon"
-							type="button"
-							aria-label="Downvote"
-							aria-pressed={vote === -1}
+						<CommentAction
+							icon
+							label="Downvote"
+							pressed={vote === -1}
 							disabled={comments.busy[voteKey]}
 							onclick={() => comments.vote(comment.id, -1)}
 						>
 							<i class="ri-arrow-down-line" aria-hidden="true"></i>
-						</button>
+						</CommentAction>
 					</div>
 				{:else}
 					<span class="score score--alone" aria-label="Score {comment.score}">{comment.score}</span>
 				{/if}
 			{/if}
 
-			{#if signedIn && !comment.removed && !comment.review}
-				<button
-					class="action"
-					type="button"
-					aria-expanded={mode === 'reply'}
-					onclick={() => toggle('reply')}
+			{#if signedIn && !comment.review}
+				<CommentAction expanded={mode === 'reply'} onclick={() => toggle('reply')}
+					>Reply</CommentAction
 				>
-					Reply
-				</button>
 			{/if}
-			{#if own && !comment.removed}
-				<button
-					class="action"
-					type="button"
-					aria-expanded={mode === 'edit'}
-					onclick={() => toggle('edit')}
+			{#if own}
+				<CommentAction expanded={mode === 'edit'} onclick={() => toggle('edit')}>Edit</CommentAction
 				>
-					Edit
-				</button>
-				<button
-					class="action"
-					type="button"
-					aria-expanded={mode === 'delete'}
-					onclick={() => toggle('delete')}
-				>
+				<CommentAction expanded={mode === 'delete'} onclick={() => toggle('delete')}>
 					Delete
-				</button>
-			{:else if signedIn && !comment.removed}
-				<button
-					class="action"
-					type="button"
-					aria-expanded={mode === 'report'}
-					onclick={() => toggle('report')}
-				>
+				</CommentAction>
+			{:else if signedIn}
+				<CommentAction expanded={mode === 'report'} onclick={() => toggle('report')}>
 					Report
-				</button>
+				</CommentAction>
 			{/if}
 		</div>
 	{/if}
@@ -200,30 +175,19 @@
 		<CommentReportForm commentId={comment.id} state={comments} onclose={() => (mode = null)} />
 	{/if}
 	{#if mode === 'delete'}
-		<div class="confirm">
-			<p class="text-sm">
-				Delete this comment? Its text is removed from the page and cannot be restored.{comment.replyCount >
-				0
-					? ' Replies stay under a placeholder.'
-					: ''}
-			</p>
-			<div class="row">
-				<button
-					class="btn btn--ink"
-					type="button"
-					disabled={comments.busy[deleteKey]}
-					onclick={confirmDelete}
-				>
-					{comments.busy[deleteKey] ? 'Deleting…' : 'Delete comment'}
-				</button>
-				<button class="btn btn--ghost" type="button" onclick={() => (mode = null)}>
-					Keep comment
-				</button>
-			</div>
-			{#if comments.errors[deleteKey]}
-				<Notice tone="error">{comments.errors[deleteKey]}</Notice>
-			{/if}
-		</div>
+		<CommentConfirm
+			message="Delete this comment? Its text is removed from the page and cannot be restored.{comment.replyCount >
+			0
+				? ' Replies stay under a placeholder.'
+				: ''}"
+			confirmLabel="Delete comment"
+			busyLabel="Deleting…"
+			cancelLabel="Keep comment"
+			busy={comments.busy[deleteKey]}
+			error={comments.errors[deleteKey]}
+			onconfirm={() => comments.remove(comment.id)}
+			oncancel={() => (mode = null)}
+		/>
 	{/if}
 </article>
 
@@ -275,69 +239,5 @@
 	.score--alone {
 		@apply text-ink-muted;
 		padding-inline: var(--spacing-sm);
-	}
-
-	/* A quiet text action: no fill until hovered; icon-only votes are square. */
-	.action {
-		@apply inline-flex items-center justify-center text-sm font-medium text-ink-muted;
-		min-height: 2rem;
-		padding-inline: var(--spacing-sm);
-		border: 0;
-		border-radius: 8px;
-		background: none;
-		cursor: pointer;
-		transition:
-			color 0.15s ease,
-			background-color 0.15s ease;
-	}
-
-	.action:hover:not(:disabled) {
-		@apply text-ink;
-		background-color: var(--surface-sunken);
-	}
-
-	.action:disabled {
-		cursor: not-allowed;
-		opacity: 0.55;
-	}
-
-	.action--icon {
-		min-width: 2rem;
-		padding-inline: 0;
-		font-size: 1.125rem;
-	}
-
-	.action[aria-pressed='true'] {
-		color: var(--brand);
-		background-color: color-mix(in oklab, var(--brand) 14%, transparent);
-	}
-
-	.confirm {
-		@apply flex flex-col;
-		gap: var(--spacing-sm);
-		padding: var(--spacing-md);
-		border-radius: 12px;
-		background-color: var(--surface-sunken);
-	}
-
-	.row {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
-	}
-
-	@media (pointer: coarse) {
-		.action {
-			min-height: 2.75rem;
-		}
-
-		.action--icon {
-			min-width: 2.75rem;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.action {
-			transition: none;
-		}
 	}
 </style>

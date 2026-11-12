@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import CommentHistoryRow from '#lib/components/comments/commentHistoryRow.svelte';
 
 	let { data } = $props();
 </script>
@@ -17,14 +17,7 @@
 	{:else}
 		<ul class="card history">
 			{#each data.comments as comment (comment.id)}
-				<li>
-					<a href={titleHref(comment.kind, comment.tmdbId)}>
-						<span class="body">{comment.body}</span>
-						<time class="date" datetime={comment.createdAt.toISOString()}>
-							{comment.createdAt.toLocaleDateString()}
-						</time>
-					</a>
-				</li>
+				<CommentHistoryRow {comment} />
 			{/each}
 		</ul>
 	{/if}
@@ -61,24 +54,7 @@
 		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
 	}
 
-	.history li + li {
+	.history > :global(li + li) {
 		border-top: 1px solid var(--border);
-	}
-
-	.history a {
-		@apply flex flex-col gap-xs no-underline text-ink;
-		padding: 14px 20px;
-	}
-
-	.history a:hover .body {
-		color: var(--brand);
-	}
-
-	.body {
-		@apply line-clamp-2;
-	}
-
-	.date {
-		@apply text-sm text-ink-muted;
 	}
 </style>

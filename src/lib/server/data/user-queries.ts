@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { sessions, users } from '#db/schema/auth.ts';
 import { communityBechdelRatings, communityUmReports, comments } from '#db/schema/community.ts';
@@ -106,20 +106,27 @@ export async function isUsernameAvailable(username: string, excludingId: string)
 /** The title fields a history row needs to link back to its detail page. */
 const titleRef = { kind: titles.kind, tmdbId: titles.tmdbId, title: titles.title };
 
-/** Comment history for the profile history view, newest first, with the title joined. */
+/**
+ * A reader's comments for the history page, newest first, in every status (the page badges
+ * each one), with the title joined.
+ */
 export async function getUserComments(userId: string) {
 	return db
 		.select({
 			id: comments.id,
 			body: comments.body,
 			status: comments.status,
+			moderationReason: comments.moderationReason,
+			parentId: comments.parentId,
+			replyCount: comments.replyCount,
 			createdAt: comments.createdAt,
+			editedAt: comments.editedAt,
 			...titleRef
 		})
 		.from(comments)
 		.innerJoin(titles, eq(comments.titleId, titles.id))
 		.where(eq(comments.userId, userId))
-		.orderBy(sql`${comments.createdAt} DESC`);
+		.orderBy(desc(comments.createdAt), desc(comments.id));
 }
 
 export type UserRating = {

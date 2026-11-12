@@ -59,3 +59,18 @@ export type ViewerCommentState = {
 	/** The reader's pending and rejected comments on this title, newest first. */
 	comments: OwnComment[];
 };
+
+/** One of the reader's comments on `/user/comments`, in any status, with the title it is on. */
+export type UserCommentRow = {
+	id: string;
+	body: string;
+	status: CommentStatus;
+	moderationReason: string | null;
+	parentId: string | null;
+	replyCount: number;
+	createdAt: string;
+	editedAt: string | null;
+	kind: 'movie' | 'tv';
+	tmdbId: number | null;
+	title: string;
+};

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CommentView, OwnComment } from '#lib/media/types/comments.ts';
-import { CommentsState, describeFailure } from '#lib/media/utils/commentsState.svelte.js';
+import { describeFailure } from '#lib/media/utils/commentApi.ts';
+import { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
 
 function view(id: string, over: Partial<CommentView> = {}): CommentView {
 	return {
