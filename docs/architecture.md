@@ -173,6 +173,7 @@ MIDB/
 │       │                       #   deviceName.ts (deviceName / currentDeviceName: "Chrome on macOS", the default passkey name) (+ __tests__/)
 │       ├── auth-client.ts      # `authClient` (Better Auth client + `passkeyClient`) and `createCaptchaClient(token)`: the same client with the Turnstile token in `x-captcha-response`, built per sign-up attempt
 │       ├── auth-errors.ts      # passkeyErrorMessage(error, action), methodErrorMessage(error, fallback) and providerErrorMessage(code): the sentences shown next to a failed sign-in action; `LAST_METHOD_CODE` (+ __tests__/)
+│       ├── signInMethods.svelte.ts # SignInMethods (rune class): `/user/security`'s lists, open plate, result and actions (unlink, delete, rename, add, link), with the focus moves
 │       ├── components/         # Domain UI folders (see Component library)
 │       └── actions/            # Svelte `use:` actions (setAttributesToChilds.ts)
 │
