@@ -30,7 +30,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 5     | AI moderation                 | completed   | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items). |
 | 6     | CI, deploy, docs              | completed   | 2026-11-12. The workflows have not run against a real account (Open items).                                 |
 | 7     | Avatars and usernames         | completed   | 2026-11-12.                                                                                                 |
-| R1    | Reader reports: data          | active      | 2026-11-12. Started.                                                                                        |
+| R1    | Reader reports: data          | completed   | 2026-11-12.                                                                                                 |
 | R2    | Reader reports: API           | not started |                                                                                                             |
 | R3    | Reader reports: moderation    | not started |                                                                                                             |
 | R4    | Reader reports: UI            | not started |                                                                                                             |
@@ -84,6 +84,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - A deleted comment keeps its text, hidden from other readers and still visible to its author and moderators (user decision, 2026-11-12).
 - **Reader reports:**
   - Readers report what a title shows (five categories, sexual violence through UM's flags), not a safety score; reports never change the verdict (user decision, 2026-11-12).
+  - Sexual violence is answered Not shown / Present / Not sure; UM's flags are asked only on Present, and no level is derived from them (user decision, 2026-11-12).
   - Reports count after an account-age wait; contradicting UM, a burst on a title or a busy new account holds a report for a moderator; readers can flag a title's counts (user decision, 2026-11-12).
   - The community Bechdel and DDD tables are dropped, after the reader reports deploy (user decision, 2026-11-12).
 - **Toolchain:**
