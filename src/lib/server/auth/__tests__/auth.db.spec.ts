@@ -26,6 +26,19 @@ beforeAll(async () => {
 const asCtx = (extra: object = {}) =>
 	({ context: { internalAdapter, ...extra } }) as unknown as AuthEndpointContext;
 
+describe('the secret', () => {
+	it('refuses to start without one on a non-local origin', () => {
+		expect(() => createAuth({ db, origin: 'https://midb.example' })).toThrow(/BETTER_AUTH_SECRET/);
+	});
+
+	it('starts without one on localhost, and with one anywhere', () => {
+		expect(() => createAuth({ db, origin: 'http://localhost:5173' })).not.toThrow();
+		expect(() =>
+			createAuth({ db, origin: 'https://midb.example', secret: 'x'.repeat(40) })
+		).not.toThrow();
+	});
+});
+
 describe('passkey sign-up', () => {
 	it('resolves a fresh user each time', () => {
 		expect(resolveNewPasskeyUser().id).not.toBe(resolveNewPasskeyUser().id);

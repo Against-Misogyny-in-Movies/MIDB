@@ -3,6 +3,7 @@
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
+	import Notice from '#lib/components/ui/notice.svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 
@@ -71,7 +72,7 @@
 	</header>
 
 	{#if form?.error}
-		<p class="notice notice--error" role="alert">
+		<Notice tone="error">
 			{#if form.error === 'username-taken'}That username is already taken.
 			{:else if form.error === 'username-format'}A username is 3–32 characters: lowercase letters,
 				numbers and underscores.
@@ -79,11 +80,11 @@
 			{:else if form.error === 'avatar-invalid'}That avatar is not available. Choose another.
 			{:else}The profile could not be saved. Try again.
 			{/if}
-		</p>
+		</Notice>
 	{/if}
 
 	{#if form?.success}
-		<p class="notice notice--success" role="status">Profile saved.</p>
+		<Notice tone="success">Profile saved.</Notice>
 	{/if}
 
 	<form method="POST" action="?/updateProfile" use:enhance class="card profile-form">
@@ -128,8 +129,8 @@
 	</form>
 
 	<nav class="card account-nav" aria-label="Account">
-		<a href="/user/dashboard"
-			>Account settings <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+		<a href="/user/security"
+			>Sign-in methods <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
 		<a href="/user/comments"
 			>Comment history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
@@ -171,22 +172,6 @@
 
 	.details {
 		@apply flex flex-wrap items-center gap-x-md gap-y-xs text-sm text-ink-muted;
-	}
-
-	.notice {
-		@apply text-sm;
-		padding: 12px 16px;
-		border-radius: 12px;
-	}
-
-	.notice--error {
-		background-color: var(--danger-soft);
-		color: var(--danger);
-	}
-
-	.notice--success {
-		background-color: var(--success-soft);
-		color: var(--success);
 	}
 
 	.profile-form {

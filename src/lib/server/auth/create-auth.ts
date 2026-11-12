@@ -6,6 +6,7 @@ import { passkey } from '@better-auth/passkey';
 import type { Db } from '#db/client.ts';
 import { accounts, passkeys, sessions, users, verifications } from '#db/schema/auth.ts';
 import { adoptProviderEmail } from './link-email.ts';
+import { guardLastMethod } from './last-method.ts';
 import { createPasskeyUser, resolveNewPasskeyUser } from './passkey-signup.ts';
 
 export type OAuthCredentials = { clientId: string; clientSecret: string };
@@ -14,7 +15,10 @@ export interface AuthConfig {
 	db: Db;
 	/** The site's origin (`PUBLIC_ORIGIN`): the base URL, the one trusted origin and the passkey RP id's host. */
 	origin: string;
-	/** `BETTER_AUTH_SECRET`; Better Auth refuses to start in production without it. */
+	/**
+	 * `BETTER_AUTH_SECRET`. Only a localhost origin may go without it (Better Auth then signs
+	 * with its public default); anywhere else `createAuth` refuses to start.
+	 */
 	secret?: string;
 	/** Each provider is enabled only when its credentials are set. */
 	google?: OAuthCredentials;
@@ -22,6 +26,9 @@ export interface AuthConfig {
 	/** `TURNSTILE_SECRET_KEY`: enables the Turnstile check on passkey sign-up. */
 	turnstileSecret?: string;
 }
+
+/** The origins a contributor develops on, where `.env.example` needs no secret. */
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 
 /** Better Auth's endpoint that starts a passkey registration; Turnstile guards it. */
 const PASSKEY_SIGNUP_ENDPOINT = '/passkey/generate-register-options';
@@ -32,6 +39,12 @@ const PASSKEY_SIGNUP_ENDPOINT = '/passkey/generate-register-options';
  * env.
  */
 export function createAuth({ db, origin, secret, google, discord, turnstileSecret }: AuthConfig) {
+	// Better Auth's own check keys on `NODE_ENV`, which a Worker does not set, so without this a
+	// deployment missing the secret would sign its cookies with the library's public default.
+	if (!secret && !LOCAL_HOSTS.has(new URL(origin).hostname)) {
+		throw new Error('BETTER_AUTH_SECRET is not set. Set it with `wrangler secret put`.');
+	}
+
 	const socialProviders = {
 		...(google && { google: { clientId: google.clientId, clientSecret: google.clientSecret } }),
 		...(discord && { discord: { clientId: discord.clientId, clientSecret: discord.clientSecret } })
@@ -72,7 +85,9 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 				trustedProviders: ['google', 'discord'],
 				// A passkey-only account has a placeholder email, so a provider's email differs.
 				allowDifferentEmails: true,
-				updateUserInfoOnLink: true
+				updateUserInfoOnLink: true,
+				// Better Auth counts accounts only; `guardLastMethod` counts passkeys too.
+				allowUnlinkingAll: true
 			}
 		},
 		socialProviders,
@@ -105,6 +120,7 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 		// Better Auth's limiter counts per isolate, which is not a limit on Workers; `RL_AUTH`
 		// wraps the route instead (`src/routes/api/auth/[...all]/+server.ts`).
 		rateLimit: { enabled: false },
+		hooks: { before: guardLastMethod },
 		databaseHooks: {
 			session: {
 				create: {
