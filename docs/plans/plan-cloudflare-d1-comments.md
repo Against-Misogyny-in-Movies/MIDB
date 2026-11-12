@@ -325,7 +325,8 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 
    - `sync-bechdel.ts`:
      - **Daily:** the RSS feed plus the year pages for the current year and the two before it.
-     - **Weekly (Sundays):** the full sweep, every year page from 1874 to now (about 150 requests, 1 per second).
+     - **Weekly (Sundays):** the full sweep, every year page from 1874 to now. Year pages are paginated, 200 films per page, so the sweep is about 175 requests at 1 per second.
+     - A film the site lists without an IMDb id is skipped and logged. An unreadable row fails the job and changes nothing.
      - It upserts `titles` (movie, `imdb_id`, title, year) and `title_bechdel` (`bechdel_id`, rating).
      - New titles get their `tmdb_id` through `backfillTmdb` (TMDB `/find`).
    - `sync-popularity.ts`: stream today's TMDB movie and TV export files and update `titles.popularity` for titles that have a `tmdb_id`. Only rows we hold are written: the export is read, not stored.
@@ -337,7 +338,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - Delete the CSV readers (`checkCsvColumns.ts`, the `csv-parse` dependency).
    - Fixture-based db specs cover the sync (`db/scripts/__tests__/sync.db.spec.ts`).
 4. **Schedule:** `.github/workflows/sync-sources.yml`, `cron: '23 9 * * *'` (after TMDB's 08:00 UTC export).
-   - Steps: `db:sync:um --remote`, then `db:sync:bechdel --remote` (`--full` on Sundays), then `db:backfill:tmdb --remote`, then `db:sync:popularity --remote`.
+   - Steps, all `--remote`: `db:sync:um`, `db:sync:bechdel` (`--full` on Sundays), `db:sync:um` again so new films bind the same day, `db:backfill:tmdb`, `db:sync:popularity`.
    - Secrets: `CLOUDFLARE_*` for the D1 REST API, plus `TMDB_API_TOKEN`.
    - Runs only on the canonical repo (`if: github.repository == …`), never on forks.
    - GitHub disables schedules after 60 days with no repo activity. Document this in the README, and alert through workflow failure emails.

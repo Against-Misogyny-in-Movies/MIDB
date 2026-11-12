@@ -39,41 +39,41 @@ Each agent reads its own file.
 
 Read the sections your task touches.
 
-- `README.md` — MIDB (~780 tok)
+- `README.md` — MIDB (~930 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~2.0K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~37.5K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~38.0K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~860)
-  - 68–219 Directory layout (~5.2K)
-    - 210–219 File-organisation conventions (~450)
-  - 220–233 Styling & theming (~950)
-  - 234–246 Copy & voice (~570) ← 1
-  - 247–272 Routes (~7.4K)
-  - 273–286 User & roles (~460)
-  - 287–333 Database schema (~1.9K)
-    - 293–325 Tables (active) (~1.2K)
-    - 326–333 Migrations (~350)
-  - 334–361 Source sync (~1.5K) ← 2
-  - 362–427 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.2K)
-  - 428–447 UM Disambiguation (~630)
-  - 448–456 UM flag rendering (~250)
-  - 457–468 Shared marker pattern (metric row markers) (~410) ← 4
-  - 469–505 Component library (`src/lib/components/`) (~5.0K)
-  - 506–516 Live search (`src/lib/components/search/`) (~710)
-  - 517–530 Server cache (`src/lib/server/cache/`) (~670)
-  - 531–546 TMDB integration (~810)
-  - 547–562 Auth flow (Hanko) (~890)
-  - 563–580 Caching policy (~1.1K) ← 5
-  - 581–626 Configuration & environment (~2.1K)
-    - 598–610 Local run sequence (~130)
-    - 611–614 npm scripts (~200)
-    - 615–626 CI (`.github/workflows/tests.yml`) (~390)
-  - 627–642 Testing (~860)
-    - 637–642 Verification baseline (~80)
-  - 643–653 Known gaps / TODO (~340)
-  - 654–662 Related docs (~160)
+  - 68–221 Directory layout (~5.3K)
+    - 212–221 File-organisation conventions (~450)
+  - 222–235 Styling & theming (~950)
+  - 236–248 Copy & voice (~570) ← 1
+  - 249–274 Routes (~7.4K)
+  - 275–288 User & roles (~460)
+  - 289–335 Database schema (~1.9K)
+    - 295–327 Tables (active) (~1.2K)
+    - 328–335 Migrations (~350)
+  - 336–365 Source sync (~1.7K) ← 2
+  - 366–431 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 432–451 UM Disambiguation (~630)
+  - 452–460 UM flag rendering (~250)
+  - 461–472 Shared marker pattern (metric row markers) (~410) ← 4
+  - 473–509 Component library (`src/lib/components/`) (~5.1K)
+  - 510–520 Live search (`src/lib/components/search/`) (~710)
+  - 521–534 Server cache (`src/lib/server/cache/`) (~690)
+  - 535–550 TMDB integration (~810)
+  - 551–566 Auth flow (Hanko) (~890)
+  - 567–584 Caching policy (~1.1K) ← 5
+  - 585–631 Configuration & environment (~2.2K)
+    - 602–614 Local run sequence (~130)
+    - 615–618 npm scripts (~200)
+    - 619–631 CI (`.github/workflows/tests.yml`) (~420)
+  - 632–647 Testing (~860)
+    - 642–647 Verification baseline (~80)
+  - 648–658 Known gaps / TODO (~340)
+  - 659–667 Related docs (~160)
 
 ## Phases
 
@@ -85,7 +85,7 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.6K tok)
+- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.7K tok)
   - 5–39 Context (~460)
   - 40–112 Verified platform facts (checked 2026-11-11) (~1.5K)
   - 113–121 Fresh repository (~170)
@@ -93,12 +93,12 @@ Read when a task names the plan.
   - 160–177 Phase 0: SvelteKit 3 upgrade (on the current stack, before anything else) (~430)
   - 178–238 Phase 1: Cloudflare platform (~1.3K)
   - 239–285 Phase 2: SQLite / D1 data layer (~940)
-  - 286–348 Phase 2b: Daily source sync (Bechdel Test, Unconsenting Media, popularity) (~1.5K)
-  - 349–401 Phase 3: Auth (Better Auth) (~1.0K)
-  - 402–454 Phase 4: Comments (~970)
-  - 455–482 Phase 5: AI moderation (~480)
-  - 483–512 Phase 6: CI, deploy, docs (~460)
-  - 513–554 Verification (~650)
+  - 286–349 Phase 2b: Daily source sync (Bechdel Test, Unconsenting Media, popularity) (~1.6K)
+  - 350–402 Phase 3: Auth (Better Auth) (~1.0K)
+  - 403–455 Phase 4: Comments (~970)
+  - 456–483 Phase 5: AI moderation (~480)
+  - 484–513 Phase 6: CI, deploy, docs (~460)
+  - 514–555 Verification (~650)
 
 ## Policies
 
