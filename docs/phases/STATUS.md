@@ -4,7 +4,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Rules
 
-- **The live plans.** The phases are the sections of the live plans: rows T1–T3 come from `docs/plans/plan-toolchain.md` and run first; rows 0–6 come from `docs/plans/plan-cloudflare-d1-comments.md`. Their decisions are settled; only the user reopens them.
+- **The live plans.** The phases are the sections of the live plans: rows T1–T3 (the toolchain, done) ran first; rows 0–6 come from `docs/plans/plan-cloudflare-d1-comments.md`. Their decisions are settled; only the user reopens them.
 - **Starting a phase.**
   - If nothing is active, the only legal start is the lowest phase in the table whose earlier phases are completed.
   - When you start a phase, set it to `active` with a one-line note. Do not mark the next phase active.
@@ -20,8 +20,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | ----- | ---------------------- | ----------- | -------------------------------- |
 | T1    | pnpm + Node 22         | completed   | 2026-11-12.                      |
 | T2    | TypeScript 6 + TS 7    | completed   | 2026-11-12.                      |
-| T3    | Oxlint + ESLint Svelte | active      | 2026-11-12: implementer running. |
-| 0     | SvelteKit 3 upgrade    | not started |                                  |
+| T3    | Oxlint + ESLint Svelte | completed   | 2026-11-12.                      |
+| 0     | SvelteKit 3 upgrade    | active      | 2026-11-12: implementer running. |
 | 1     | Cloudflare platform    | not started |                                  |
 | 2     | SQLite / D1 data layer | not started |                                  |
 | 2b    | Daily source sync      | not started |                                  |
@@ -32,6 +32,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Open items
 
+- **UX:**
+  - A film or series page that fails to load from TMDB shows the generic "Something went wrong" heading (`src/routes/+error.svelte`); name what failed.
+  - Enter in the navbar search does nothing unless a row is highlighted; the landing search opens the first result.
 - **Docs:**
   - Decide whether `docs/plans/done/` moves to the new public repository or is deleted (`.claude/rules/docs-standards.md`, Plans).
 - **Sources:**
