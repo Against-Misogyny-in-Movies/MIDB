@@ -79,7 +79,11 @@
 			{item.authorCommentCount}
 			{item.authorCommentCount === 1 ? 'comment' : 'comments'} in all
 		</span>
+		{#if item.authorMutedUntil}
+			<span class="label">Muted until {formatDate(item.authorMutedUntil)}</span>
+		{/if}
 		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		{#if heldBy}<span class="label">{heldBy}</span>{/if}
 	</header>
@@ -146,12 +150,14 @@
 			onclick={() => toggle('reject')}>Reject</button
 		>
 		{#if canActOnAuthor}
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'mute'}
-				onclick={() => toggle('mute')}>Mute author</button
-			>
+			{#if !item.authorMutedUntil}
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'mute'}
+					onclick={() => toggle('mute')}>Mute author</button
+				>
+			{/if}
 			<button
 				class="btn btn--ghost"
 				type="button"

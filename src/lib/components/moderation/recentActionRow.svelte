@@ -4,6 +4,7 @@
 	import type { ActionOutcome, RecentAction } from '#lib/media/types/moderation.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
+	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		entry: RecentAction;
@@ -32,17 +33,38 @@
 			(entry.commentStatus === 'hidden' || entry.commentStatus === 'rejected')
 	);
 	const mine = $derived(outcome?.id === entry.commentId ? outcome : null);
+	/** The author changed the text after this action, so the text below is not what was acted on. */
+	const editedSince = $derived(
+		entry.commentEditedAt !== null && entry.commentEditedAt > entry.createdAt
+	);
+	const href = $derived(entry.title ? titleHref(entry.title.kind, entry.title.tmdbId) : undefined);
+	const muteLength = $derived(
+		entry.muteHours === null
+			? ''
+			: entry.muteHours === 24
+				? ' for 1 day'
+				: ` for ${entry.muteHours / 24} days`
+	);
 </script>
 
 <li class="entry" tabindex="-1" bind:this={root}>
 	<p class="line">
 		<span class="name">{entry.actor?.displayName ?? 'A removed account'}</span>
 		{VERBS[entry.action]}{#if entry.targetUser}
-			<span class="name">{entry.targetUser.displayName}</span>{/if}
+			<span class="name">{entry.targetUser.displayName}</span>{/if}{muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
 	</p>
+	{#if entry.title}
+		<p class="label">
+			On
+			{#if href}<a class="link" {href}>{entry.title.name}</a>{:else}{entry.title.name}{/if}
+		</p>
+	{/if}
 	{#if entry.commentBody}
 		<p class="body">{entry.commentBody}</p>
+	{/if}
+	{#if editedSince}
+		<p class="label">Edited since</p>
 	{/if}
 	{#if entry.reason}
 		<p class="label">Reason: {entry.reason}</p>
@@ -61,8 +83,7 @@
 			}}
 		>
 			<input type="hidden" name="id" value={entry.commentId} />
-			<button class="btn btn--ghost" disabled={busy}
-				>{busy ? 'Restoring…' : 'Restore comment'}</button
+			<button class="btn btn--ink" disabled={busy}>{busy ? 'Restoring…' : 'Restore comment'}</button
 			>
 		</form>
 	{/if}

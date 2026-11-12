@@ -9,6 +9,7 @@
 	import { passkeyErrorMessage, providerErrorMessage } from '#lib/auth-errors.ts';
 	import { AUTH_PROVIDERS, type Provider } from '#lib/media/utils/auth-providers.ts';
 	import { currentDeviceName } from '#lib/media/utils/deviceName.ts';
+	import { DEFAULT_RETURN_PATH, safeReturnPath } from '#lib/media/utils/returnPath.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import type { PageData } from './$types';
 
@@ -18,7 +19,11 @@
 
 	let { data }: Props = $props();
 
-	const AFTER_SIGN_IN = '/user/profile';
+	// A page that sent the reader here passes its path as `?next=`; only a same-origin path counts.
+	const afterSignIn = $derived(safeReturnPath(page.url.searchParams.get('next')));
+	const errorReturn = $derived(
+		afterSignIn === DEFAULT_RETURN_PATH ? '/auth' : `/auth?next=${encodeURIComponent(afterSignIn)}`
+	);
 	const passkeysSupported = typeof PublicKeyCredential !== 'undefined';
 	const providers = $derived(AUTH_PROVIDERS.filter((p) => data.providers[p.id]));
 
@@ -63,7 +68,7 @@
 	);
 
 	async function enter() {
-		await goto(AFTER_SIGN_IN);
+		await goto(afterSignIn);
 	}
 
 	function clearErrors() {
@@ -88,8 +93,8 @@
 		clearErrors();
 		const { error } = await authClient.signIn.social({
 			provider: provider.id,
-			callbackURL: AFTER_SIGN_IN,
-			errorCallbackURL: '/auth'
+			callbackURL: afterSignIn,
+			errorCallbackURL: errorReturn
 		});
 		if (error) socialError = providerErrorMessage(error.code ?? '');
 	}
@@ -156,7 +161,7 @@
 
 	// A signed-in reader has nothing to do here.
 	$effect(() => {
-		if (session.status === 'user') void goto(AFTER_SIGN_IN, { replaceState: true });
+		if (session.status === 'user') void goto(afterSignIn, { replaceState: true });
 	});
 
 	// Offers saved passkeys in the field's autofill list, once the field is on the page. A

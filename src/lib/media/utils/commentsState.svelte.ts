@@ -36,6 +36,8 @@ export class CommentsState {
 	/** `idle` until a signed-in reader's state is requested; `ready` also after a 401 (nothing to show). */
 	viewerPhase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	errors = $state<Record<string, string>>({});
+	/** The HTTP status behind each error (0 when the server could not be reached). */
+	failures = $state<Record<string, number>>({});
 	notices = $state<Record<string, string>>({});
 	busy = $state<Record<string, boolean>>({});
 
@@ -59,12 +61,14 @@ export class CommentsState {
 
 	#fail(key: string, action: CommentAction, reply: { status: number; message: string }): void {
 		this.errors[key] = describeFailure(action, reply.status, reply.message);
+		this.failures[key] = reply.status;
 		delete this.notices[key];
 	}
 
 	#start(key: string): void {
 		this.busy[key] = true;
 		delete this.errors[key];
+		delete this.failures[key];
 		delete this.notices[key];
 	}
 
@@ -131,7 +135,7 @@ export class CommentsState {
 	}
 
 	#ensureViewer(): ViewerCommentState {
-		this.viewer ??= { votes: {}, comments: [] };
+		this.viewer ??= { votes: {}, comments: [], mutedUntil: null };
 		return this.viewer;
 	}
 
@@ -287,6 +291,12 @@ export class CommentsState {
 			return { ok: false, alreadyReported: false };
 		}
 		return { ok: true, alreadyReported: reply.data.alreadyReported };
+	}
+
+	/** When the reader's mute ends, while it has not; otherwise null. */
+	get mutedUntil(): string | null {
+		const until = this.viewer?.mutedUntil ?? null;
+		return until && Date.parse(until) > Date.now() ? until : null;
 	}
 
 	/** The reader's vote on a comment: 1, -1 or null. */

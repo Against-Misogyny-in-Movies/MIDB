@@ -12,6 +12,7 @@ import type {
 	ViewerCommentState
 } from '#lib/media/types/comments.ts';
 import { decideStatus } from '#lib/server/moderation/decide.ts';
+import { activeMute } from './mute.ts';
 import { toPublicUser } from './user-queries.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
 import {
@@ -177,8 +178,9 @@ export function toOwnComment(row: CommentRow): OwnComment {
  */
 export async function getViewerCommentState(
 	titleId: string,
-	userId: string
+	user: { id: string; mutedUntil: Date | null }
 ): Promise<ViewerCommentState> {
+	const userId = user.id;
 	const [votes, own] = await Promise.all([
 		db
 			.select({ commentId: commentVotes.commentId, value: commentVotes.value })
@@ -199,7 +201,8 @@ export async function getViewerCommentState(
 	]);
 	return {
 		votes: Object.fromEntries(votes.map((v) => [v.commentId, v.value === 1 ? 1 : -1])),
-		comments: own.map(toOwnComment)
+		comments: own.map(toOwnComment),
+		mutedUntil: activeMute(user.mutedUntil)
 	};
 }
 

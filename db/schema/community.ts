@@ -215,12 +215,15 @@ export const moderationActions = sqliteTable(
 		targetUserId: text('target_user_id').references(() => users.id, { onDelete: 'set null' }),
 		action: text('action', { enum: moderationAction }).notNull(),
 		reason: text('reason'),
+		/** The length of a mute, in hours; null on every other action. */
+		muteHours: integer('mute_hours'),
 		createdAt: createdAt()
 	},
 	(t) => [
 		index('moderation_actions_created_idx').on(t.createdAt),
 		index('moderation_actions_comment_idx').on(t.targetCommentId),
 		enumCheck('moderation_actions_action_check', t.action, moderationAction),
+		check('moderation_actions_mute_hours', sql`${t.muteHours} IS NULL OR ${t.muteHours} > 0`),
 		check(
 			'moderation_actions_reason_length',
 			sql`length(${t.reason}) <= ${sql.raw(String(MODERATION_REASON_MAX))}`

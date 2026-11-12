@@ -4,13 +4,15 @@
 	interface Props {
 		/** `error` is announced at once (`role="alert"`); `success` and `warn` politely (`role="status"`). */
 		tone: 'error' | 'success' | 'warn';
+		/** Lets a field name this message in `aria-describedby`. */
+		id?: string;
 		children: Snippet;
 	}
 
-	let { tone, children }: Props = $props();
+	let { tone, id, children }: Props = $props();
 </script>
 
-<p class="notice notice--{tone}" role={tone === 'error' ? 'alert' : 'status'}>
+<p {id} class="notice notice--{tone}" role={tone === 'error' ? 'alert' : 'status'}>
 	{@render children()}
 </p>
 

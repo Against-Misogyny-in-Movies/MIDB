@@ -24,6 +24,7 @@
 	let root: HTMLElement | undefined = $state();
 	let busy = $state(false);
 	let error = $state<string | undefined>();
+	let errorStatus = $state<number | undefined>();
 
 	/** A hidden or deleted comment cannot be edited (the endpoint answers 409). */
 	const editable = $derived(comment.status !== 'hidden' && comment.status !== 'deleted');
@@ -33,11 +34,13 @@
 	function toggle(next: 'edit' | 'delete') {
 		mode = mode === next ? null : next;
 		error = undefined;
+		errorStatus = undefined;
 	}
 
 	async function save(body: string): Promise<boolean> {
 		busy = true;
 		error = undefined;
+		errorStatus = undefined;
 		const reply = await requestJson<{ comment: OwnComment }>(
 			fetch,
 			'PATCH',
@@ -47,6 +50,7 @@
 		busy = false;
 		if (!reply.ok) {
 			error = describeFailure('edit', reply.status, reply.message);
+			errorStatus = reply.status;
 			return false;
 		}
 		const saved = reply.data.comment;
@@ -95,7 +99,9 @@
 			initial={comment.body}
 			{busy}
 			{error}
+			invalid={errorStatus === 400}
 			hint="Saving runs moderation again."
+			nested
 			autofocus
 			onsubmit={save}
 			oncancel={() => ((mode = null), (error = undefined))}

@@ -104,8 +104,7 @@ export const actions: Actions = {
 		act(event, 'mute', (staff, data) => {
 			const hours = Number(text(data, 'hours'));
 			if (!MUTE_HOURS.some((h) => h === hours)) return { ok: false, reason: 'invalid' };
-			const until = new Date(Date.now() + hours * 3_600_000);
-			return muteUser(staff, text(data, 'userId') ?? '', until, reasonOf(data));
+			return muteUser(staff, text(data, 'userId') ?? '', hours, reasonOf(data));
 		}),
 	ban: (event) =>
 		act(event, 'ban', (staff, data) =>

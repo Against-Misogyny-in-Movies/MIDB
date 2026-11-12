@@ -113,9 +113,10 @@ describe('moderation actions', () => {
 
 	it('mutes and bans with a log row, and keeps the log when the target is gone', async () => {
 		const actor = mod;
-		const until = new Date(Date.now() + 86_400_000);
-		expect(await muteUser(actor, 'u1', until, 'cool off')).toMatchObject({ ok: true });
-		expect((await db.select().from(users).where(eq(users.id, 'u1')))[0].mutedUntil).toEqual(until);
+		const before = Date.now();
+		expect(await muteUser(actor, 'u1', 168, 'cool off')).toMatchObject({ ok: true });
+		const muted = (await db.select().from(users).where(eq(users.id, 'u1')))[0].mutedUntil;
+		expect(muted?.getTime()).toBeGreaterThanOrEqual(before + 168 * 3_600_000);
 
 		expect(await banAccount(actor, 'u2', 'abuse')).toMatchObject({ ok: true });
 		expect((await db.select().from(users).where(eq(users.id, 'u2')))[0]).toMatchObject({
@@ -126,25 +127,26 @@ describe('moderation actions', () => {
 		const log = await db.select().from(moderationActions);
 		expect(log.map((l) => l.action).sort()).toEqual(['ban', 'mute']);
 		expect(log.find((l) => l.action === 'ban')?.targetUserId).toBeNull();
+		expect(log.find((l) => l.action === 'mute')?.muteHours).toBe(168);
+		expect(log.find((l) => l.action === 'ban')?.muteHours).toBeNull();
 	});
 
 	it('refuses to act on yourself, an administrator, or (as a moderator) a moderator', async () => {
-		const until = new Date(Date.now() + 1000);
-		expect(await muteUser(mod, 'mod', until, null)).toEqual({
+		expect(await muteUser(mod, 'mod', 24, null)).toEqual({
 			ok: false,
 			reason: 'forbidden-target'
 		});
 		expect(await banAccount(mod, 'admin', null)).toEqual({ ok: false, reason: 'forbidden-target' });
-		expect(await muteUser(admin, 'admin', until, null)).toEqual({
+		expect(await muteUser(admin, 'admin', 24, null)).toEqual({
 			ok: false,
 			reason: 'forbidden-target'
 		});
 		await db.insert(users).values(userValues('mod2', { role: 'moderator' }));
-		expect(await muteUser(mod, 'mod2', until, null)).toEqual({
+		expect(await muteUser(mod, 'mod2', 24, null)).toEqual({
 			ok: false,
 			reason: 'forbidden-target'
 		});
-		expect(await muteUser(admin, 'mod2', until, null)).toMatchObject({ ok: true });
+		expect(await muteUser(admin, 'mod2', 24, null)).toMatchObject({ ok: true });
 		expect(await banAccount(mod, 'nobody', null)).toEqual({ ok: false, reason: 'not-found' });
 	});
 });

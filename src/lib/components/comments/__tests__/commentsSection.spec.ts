@@ -73,7 +73,7 @@ function mount(fetcher: ReturnType<typeof api>) {
 }
 
 const viewer = (state: Partial<ViewerCommentState> = {}): Handler => {
-	return () => json({ votes: {}, comments: [], ...state });
+	return () => json({ votes: {}, comments: [], mutedUntil: null, ...state });
 };
 
 const list = (comments: CommentView[], nextCursor: string | null = null): Handler => {
@@ -105,15 +105,22 @@ describe('CommentsSection signed out', () => {
 		mount(api({ [`GET ${LIST}`]: list([view('a')]) }));
 		await screen.findByText('Text of a');
 		const link = screen.getByRole('link', { name: 'Sign in to comment' });
-		expect(link.getAttribute('href')).toBe('/auth');
+		expect(link.getAttribute('href')).toBe('/auth?next=%2Fmovie%2F603');
 		expect(screen.queryByRole('textbox')).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Upvote' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Report' })).toBeNull();
 	});
 
-	it('shows the empty state', async () => {
+	it('shows the empty state and hides the sort chips', async () => {
 		mount(api({ [`GET ${LIST}`]: list([]) }));
 		expect(await screen.findByText('No comments yet.')).toBeTruthy();
+		expect(document.querySelector('.toolbar')?.className).toMatch(/toolbar--hidden/);
+	});
+
+	it('keeps the sort chips while comments are listed', async () => {
+		mount(api({ [`GET ${LIST}`]: list([view('a')]) }));
+		await screen.findByText('Text of a');
+		expect(document.querySelector('.toolbar')?.className).not.toMatch(/toolbar--hidden/);
 	});
 
 	it('says what failed to load and retries', async () => {
@@ -277,7 +284,7 @@ describe('CommentsSection signed in', () => {
 		await fireEvent.click(down);
 		await waitFor(() => expect(down.getAttribute('aria-pressed')).toBe('true'));
 		expect(up.getAttribute('aria-pressed')).toBe('false');
-		expect(screen.getByLabelText('Score 4')).toBeTruthy();
+		expect(document.querySelector('#comment-a .score')?.textContent).toBe('Score 4');
 	});
 
 	it('names what is lost before a delete, then keeps a comment with replies as a placeholder', async () => {
@@ -404,5 +411,80 @@ describe('CommentsSection signed in', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
 		const close = await screen.findByRole('button', { name: 'Close' });
 		await waitFor(() => expect(document.activeElement).toBe(close));
+	});
+
+	it('replaces the composer with the mute, and disables votes, replies and reports until it ends', async () => {
+		const until = new Date(Date.now() + 86_400_000).toISOString();
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('a')]),
+				[`GET ${LIST}/viewer`]: viewer({ mutedUntil: until })
+			})
+		);
+		await screen.findByText('Text of a');
+		await waitFor(() =>
+			expect(screen.getByRole('status').textContent).toMatch(/is muted and cannot/)
+		);
+		expect(screen.getByRole('status').textContent).toMatch(
+			/write, edit, delete, vote on or report/
+		);
+		expect(screen.queryByRole('textbox')).toBeNull();
+		for (const name of ['Upvote', 'Downvote', 'Reply', 'Report']) {
+			expect(screen.getByRole('button', { name })).toHaveProperty('disabled', true);
+		}
+	});
+
+	it('retries a failed viewer load with a secondary button', async () => {
+		let fail = true;
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('a')]),
+				[`GET ${LIST}/viewer`]: () => (fail ? json({ message: 'x' }, 500) : viewer()())
+			})
+		);
+		await screen.findByText(
+			/votes and unpublished comments could not be loaded|could not be loaded/
+		);
+		const retry = screen.getByRole('button', { name: 'Try again' });
+		expect(retry.className).toMatch(/btn--ink/);
+		fail = false;
+		await fireEvent.click(retry);
+		await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+	});
+
+	it('marks the field invalid only for a length error, and ties the message to it', async () => {
+		let status = 400;
+		mount(
+			api({
+				[`GET ${LIST}`]: list([]),
+				[`GET ${LIST}/viewer`]: viewer(),
+				[`POST ${LIST}`]: () => json({ message: 'x' }, status)
+			})
+		);
+		const field = await screen.findByRole('textbox', { name: 'Write a comment' });
+		await fireEvent.input(field, { target: { value: 'Hi' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+		const alert = await screen.findByRole('alert');
+		expect(field.getAttribute('aria-invalid')).toBe('true');
+		expect(field.getAttribute('aria-describedby')).toBe(alert.id);
+		status = 429;
+		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+		await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/Too many/));
+		expect(field.getAttribute('aria-invalid')).toBeNull();
+		expect(field.getAttribute('aria-describedby')).toBe(screen.getByRole('alert').id);
+	});
+
+	it('keeps one primary button: a reply composer submits with the secondary one', async () => {
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('a')]),
+				[`GET ${LIST}/viewer`]: viewer()
+			})
+		);
+		await screen.findByText('Text of a');
+		await fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+		expect(document.querySelectorAll('.btn--brand')).toHaveLength(1);
+		const submit = document.querySelector('#comment-a button[type="submit"]')!;
+		expect(submit.className).toMatch(/btn--ink/);
 	});
 });

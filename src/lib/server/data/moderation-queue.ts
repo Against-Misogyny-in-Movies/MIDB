@@ -8,6 +8,7 @@ import type { PublicUser } from '#lib/media/types/user.ts';
 import type { CommentStatus, OwnComment, ReportReason } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
+import { activeMute } from './mute.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -24,6 +25,8 @@ export type ModerationItem = {
 	reports: { reason: ReportReason; note: string | null; createdAt: string }[];
 	/** How many comments the author has written in all, as context for the decision. */
 	authorCommentCount: number;
+	/** When the author's mute ends, while it is in the future; otherwise null. */
+	authorMutedUntil: string | null;
 };
 
 /** The categories in a stored verdict; an unreadable one reads as none. */
@@ -85,7 +88,8 @@ async function toItems(
 		reports: reports
 			.filter((r) => r.commentId === comment.id)
 			.map((r) => ({ reason: r.reason, note: r.note, createdAt: r.createdAt.toISOString() })),
-		authorCommentCount: counts.get(author.id) ?? 0
+		authorCommentCount: counts.get(author.id) ?? 0,
+		authorMutedUntil: activeMute(author.mutedUntil)
 	}));
 }
 
@@ -124,11 +128,17 @@ export type RecentAction = {
 	createdAt: string;
 	actor: PublicUser | null;
 	targetUser: PublicUser | null;
+	/** The length of a mute, in hours; null on every other action. */
+	muteHours: number | null;
 	/** The comment's text, so the log reads without opening it. */
 	commentBody: string | null;
 	/** The comment acted on and where it is now, so a hide or a reject can be undone from the log. */
 	commentId: string | null;
 	commentStatus: CommentStatus | null;
+	/** When the author last edited the comment, so the log can say it changed after the action. */
+	commentEditedAt: string | null;
+	/** The title the comment is on, for a link back to it. */
+	title: { kind: CommentWithTitle['title']['kind']; tmdbId: number | null; name: string } | null;
 };
 
 /** The latest moderation actions, newest first. */
@@ -137,10 +147,13 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 		.select({
 			action: moderationActions,
 			targetBody: comments.body,
-			targetStatus: comments.status
+			targetStatus: comments.status,
+			targetEditedAt: comments.editedAt,
+			title: { kind: titles.kind, tmdbId: titles.tmdbId, name: titles.title }
 		})
 		.from(moderationActions)
 		.leftJoin(comments, eq(moderationActions.targetCommentId, comments.id))
+		.leftJoin(titles, eq(comments.titleId, titles.id))
 		.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id))
 		.limit(limit);
 	const userIds = [
@@ -156,15 +169,18 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 			people.set(row.id, toPublicUser(row));
 		}
 	}
-	return rows.map(({ action, targetBody, targetStatus }) => ({
+	return rows.map(({ action, targetBody, targetStatus, targetEditedAt, title }) => ({
 		id: action.id,
 		action: action.action,
 		reason: action.reason,
 		createdAt: action.createdAt.toISOString(),
 		actor: (action.actorId && people.get(action.actorId)) || null,
 		targetUser: (action.targetUserId && people.get(action.targetUserId)) || null,
+		muteHours: action.muteHours,
 		commentBody: targetBody,
 		commentId: action.targetCommentId,
-		commentStatus: targetStatus
+		commentStatus: targetStatus,
+		commentEditedAt: targetEditedAt?.toISOString() ?? null,
+		title: title && title.name !== null ? title : null
 	}));
 }

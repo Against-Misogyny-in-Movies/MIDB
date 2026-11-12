@@ -31,6 +31,8 @@
 			(session.user !== null && comment.author !== null && comment.author.id === session.user.id)
 	);
 	const vote = $derived(comments.voteOf(comment.id));
+	/** A muted account cannot write, edit, delete, vote or report until the mute ends. */
+	const muted = $derived(comments.mutedUntil !== null);
 	const canVote = $derived(signedIn && !own && !comment.removed);
 	const role = $derived(
 		comment.author?.role === 'moderator'
@@ -119,7 +121,9 @@
 				initial={comment.body ?? ''}
 				busy={comments.busy[editKey]}
 				error={comments.errors[editKey]}
+				invalid={comments.failures[editKey] === 400}
 				hint="Saving runs moderation again."
+				nested
 				autofocus
 				onsubmit={saveEdit}
 				oncancel={() => (mode = null)}
@@ -148,17 +152,17 @@
 							icon
 							label="Upvote"
 							pressed={vote === 1}
-							disabled={comments.busy[voteKey]}
+							disabled={muted || comments.busy[voteKey]}
 							onclick={() => comments.vote(comment.id, 1)}
 						>
 							<i class="ri-arrow-up-line" aria-hidden="true"></i>
 						</CommentAction>
-						<span class="score" aria-label="Score {comment.score}">{comment.score}</span>
+						<span class="score"><span class="sr-only">Score</span> {comment.score}</span>
 						<CommentAction
 							icon
 							label="Downvote"
 							pressed={vote === -1}
-							disabled={comments.busy[voteKey]}
+							disabled={muted || comments.busy[voteKey]}
 							onclick={() => comments.vote(comment.id, -1)}
 						>
 							<i class="ri-arrow-down-line" aria-hidden="true"></i>
@@ -170,57 +174,70 @@
 			{/if}
 
 			{#if signedIn && !comment.review}
-				<CommentAction expanded={mode === 'reply'} onclick={() => toggle('reply')}
+				<CommentAction disabled={muted} expanded={mode === 'reply'} onclick={() => toggle('reply')}
 					>Reply</CommentAction
 				>
 			{/if}
 			{#if own}
-				<CommentAction expanded={mode === 'edit'} onclick={() => toggle('edit')}>Edit</CommentAction
+				<CommentAction disabled={muted} expanded={mode === 'edit'} onclick={() => toggle('edit')}
+					>Edit</CommentAction
 				>
-				<CommentAction expanded={mode === 'delete'} onclick={() => toggle('delete')}>
+				<CommentAction
+					disabled={muted}
+					expanded={mode === 'delete'}
+					onclick={() => toggle('delete')}
+				>
 					Delete
 				</CommentAction>
 			{:else if signedIn}
-				<CommentAction expanded={mode === 'report'} onclick={() => toggle('report')}>
+				<CommentAction
+					disabled={muted}
+					expanded={mode === 'report'}
+					onclick={() => toggle('report')}
+				>
 					Report
 				</CommentAction>
 			{/if}
 		</div>
 	{/if}
 
-	{#if comments.errors[voteKey]}
-		<Notice tone="error">{comments.errors[voteKey]}</Notice>
-	{/if}
-	{#if mode === 'reply'}
-		<CommentComposer
-			label="Reply to {comment.author?.displayName ?? 'this comment'}"
-			submitLabel="Reply"
-			busy={comments.busy[replyKey]}
-			error={comments.errors[replyKey]}
-			autofocus
-			onsubmit={sendReply}
-			oncancel={() => (mode = null)}
-		/>
-	{:else if comments.notices[replyKey]}
-		<Notice tone="success">{comments.notices[replyKey]}</Notice>
-	{/if}
-	{#if mode === 'report'}
-		<CommentReportForm commentId={comment.id} state={comments} onclose={() => (mode = null)} />
-	{/if}
-	{#if mode === 'delete'}
-		<CommentConfirm
-			message="Delete this comment? Its text is removed from the page and cannot be restored.{comment.replyCount >
-			0
-				? ' Replies stay under a placeholder.'
-				: ''}"
-			confirmLabel="Delete comment"
-			busyLabel="Deleting…"
-			cancelLabel="Keep comment"
-			busy={comments.busy[deleteKey]}
-			error={comments.errors[deleteKey]}
-			onconfirm={remove}
-			oncancel={() => (mode = null)}
-		/>
+	{#if !comment.removed}
+		{#if comments.errors[voteKey]}
+			<Notice tone="error">{comments.errors[voteKey]}</Notice>
+		{/if}
+		{#if mode === 'reply'}
+			<CommentComposer
+				label="Reply to {comment.author?.displayName ?? 'this comment'}"
+				submitLabel="Reply"
+				busy={comments.busy[replyKey]}
+				error={comments.errors[replyKey]}
+				invalid={comments.failures[replyKey] === 400}
+				nested
+				autofocus
+				onsubmit={sendReply}
+				oncancel={() => (mode = null)}
+			/>
+		{:else if comments.notices[replyKey]}
+			<Notice tone="success">{comments.notices[replyKey]}</Notice>
+		{/if}
+		{#if mode === 'report'}
+			<CommentReportForm commentId={comment.id} state={comments} onclose={() => (mode = null)} />
+		{/if}
+		{#if mode === 'delete'}
+			<CommentConfirm
+				message="Delete this comment? Its text is removed from the page and cannot be restored.{comment.replyCount >
+				0
+					? ' Replies stay under a placeholder.'
+					: ''}"
+				confirmLabel="Delete comment"
+				busyLabel="Deleting…"
+				cancelLabel="Keep comment"
+				busy={comments.busy[deleteKey]}
+				error={comments.errors[deleteKey]}
+				onconfirm={remove}
+				oncancel={() => (mode = null)}
+			/>
+		{/if}
 	{/if}
 </article>
 

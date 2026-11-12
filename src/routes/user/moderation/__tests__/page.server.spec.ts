@@ -168,12 +168,11 @@ describe('inputs', () => {
 	});
 
 	it('mutes for a listed length only', async () => {
-		const before = Date.now();
 		await run('mute', { id: 'c1', userId: 'u1', hours: '168' });
-		const [actor, userId, until] = queries.muteUser.mock.calls[0];
+		const [actor, userId, hours] = queries.muteUser.mock.calls[0];
 		expect(actor).toBe(MOD);
 		expect(userId).toBe('u1');
-		expect((until as Date).getTime() - before).toBeGreaterThanOrEqual(168 * 3_600_000);
+		expect(hours).toBe(168);
 
 		queries.muteUser.mockClear();
 		const result = await run('mute', { id: 'c1', userId: 'u1', hours: '5' });

@@ -59,6 +59,8 @@ export type ViewerCommentState = {
 	votes: Record<string, 1 | -1>;
 	/** The reader's pending and rejected comments on this title, newest first. */
 	comments: OwnComment[];
+	/** When the reader's mute ends, while it is in the future; otherwise null. */
+	mutedUntil: string | null;
 };
 
 /**

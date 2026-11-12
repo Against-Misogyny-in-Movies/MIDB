@@ -214,7 +214,7 @@ describe('the public list', () => {
 		await published('author', 'Shown');
 		const before = await db.select().from(comments);
 		await listTitleComments(title.id, { sort: 'top' });
-		await getViewerCommentState(title.id, 'u1');
+		await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
 		expect(await db.select().from(comments)).toEqual(before);
 	});
 });
@@ -312,14 +312,24 @@ describe('votes', () => {
 		const first = await createComment({ title, userId: 'u1', body: 'Waiting' });
 		const second = await published('u1', 'Rejected soon');
 		await rejectComment(mod, second, 'spam');
-		const state = await getViewerCommentState(title.id, 'u1');
+		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
 		expect(state.votes).toEqual({ [shown]: -1 });
 		expect(state.comments.map((c) => c.status).sort()).toEqual(['pending', 'rejected']);
 		expect(state.comments.find((c) => c.status === 'rejected')?.moderationReason).toBe('spam');
 		expect(
 			state.comments.some((c) => c.id === (first as { comment: { id: string } }).comment.id)
 		).toBe(true);
-		expect((await getViewerCommentState(title.id, 'u2')).comments).toEqual([]);
+		expect(
+			(await getViewerCommentState(title.id, { id: 'u2', mutedUntil: null })).comments
+		).toEqual([]);
+	});
+
+	it('reports a mute only while it lasts', async () => {
+		const later = new Date(Date.now() + 3_600_000);
+		const now = { id: 'u1', mutedUntil: later };
+		expect((await getViewerCommentState(title.id, now)).mutedUntil).toBe(later.toISOString());
+		const ended = { id: 'u1', mutedUntil: new Date(Date.now() - 1000) };
+		expect((await getViewerCommentState(title.id, ended)).mutedUntil).toBeNull();
 	});
 });
 

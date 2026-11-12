@@ -200,11 +200,13 @@ CREATE TABLE `moderation_actions` (
 	`target_user_id` text,
 	`action` text NOT NULL,
 	`reason` text,
+	`mute_hours` integer,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`actor_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`target_comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`target_user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "moderation_actions_action_check" CHECK("moderation_actions"."action" IN ('approve', 'hide', 'reject', 'restore', 'dismiss', 'mute', 'ban')),
+	CONSTRAINT "moderation_actions_mute_hours" CHECK("moderation_actions"."mute_hours" IS NULL OR "moderation_actions"."mute_hours" > 0),
 	CONSTRAINT "moderation_actions_reason_length" CHECK(length("moderation_actions"."reason") <= 140)
 );
 --> statement-breakpoint

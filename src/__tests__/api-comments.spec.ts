@@ -124,7 +124,7 @@ beforeEach(async () => {
 		title: { kind: 'movie', tmdbId: 348 }
 	});
 	listTitleComments.mockResolvedValue({ comments: [], nextCursor: null });
-	getViewerCommentState.mockResolvedValue({ votes: {}, comments: [] });
+	getViewerCommentState.mockResolvedValue({ votes: {}, comments: [], mutedUntil: null });
 });
 
 describe('GET the public list', () => {
@@ -161,7 +161,7 @@ describe('GET the viewer state', () => {
 	it('is private, no-store, and needs a user', async () => {
 		const res = await call(viewer.GET, { params: titleParams });
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
-		expect(getViewerCommentState).toHaveBeenCalledWith('t1', 'u1');
+		expect(getViewerCommentState).toHaveBeenCalledWith('t1', expect.objectContaining({ id: 'u1' }));
 		expect(await status(call(viewer.GET, { params: titleParams, user: null }))).toBe(401);
 	});
 });

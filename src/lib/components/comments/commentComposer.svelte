@@ -10,7 +10,11 @@
 		initial?: string;
 		busy?: boolean;
 		error?: string;
+		/** True when the error is about the text itself (a length limit), which marks the field invalid. */
+		invalid?: boolean;
 		notice?: string;
+		/** A reply or an edit: its button is secondary, because the section's own composer is the main action. */
+		nested?: boolean;
 		/** Sets the keyboard focus on the field when it mounts (a reply or an edit just opened). */
 		autofocus?: boolean;
 		/** A line under the field that says what saving does. */
@@ -26,7 +30,9 @@
 		initial = '',
 		busy = false,
 		error,
+		invalid = false,
 		notice,
+		nested = false,
 		autofocus = false,
 		hint,
 		onsubmit,
@@ -64,10 +70,11 @@
 		maxlength={COMMENT_BODY_MAX}
 		bind:value={body}
 		bind:this={field}
-		aria-invalid={error ? true : undefined}></textarea>
+		aria-invalid={invalid && error ? true : undefined}
+		aria-describedby={error ? `${id}-error` : undefined}></textarea>
 	<div class="row">
 		<button
-			class="btn btn--brand"
+			class="btn {nested ? 'btn--ink' : 'btn--brand'}"
 			type="submit"
 			disabled={empty || busy || (initial !== '' && unchanged)}
 		>
@@ -84,7 +91,7 @@
 		<p class="label">{hint}</p>
 	{/if}
 	{#if error}
-		<Notice tone="error">{error}</Notice>
+		<Notice tone="error" id="{id}-error">{error}</Notice>
 	{:else if notice}
 		<Notice tone="success">{notice}</Notice>
 	{/if}

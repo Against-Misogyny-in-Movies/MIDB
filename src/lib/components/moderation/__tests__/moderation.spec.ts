@@ -51,6 +51,7 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 		aiCategories: [],
 		reports: [],
 		authorCommentCount: 4,
+		authorMutedUntil: null,
 		...over
 	};
 }
@@ -72,6 +73,17 @@ function mount(
 }
 
 describe('ModerationItem', () => {
+	it('says when the author is muted and offers no Mute author, and marks an edited comment', () => {
+		mount({
+			authorMutedUntil: '2026-11-20T10:00:00.000Z',
+			comment: { ...item().comment, editedAt: '2026-11-02T10:00:00.000Z' }
+		});
+		expect(screen.getByText(/Muted until/)).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Mute author' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Ban author' })).toBeTruthy();
+		expect(screen.getByText('Edited')).toBeTruthy();
+	});
+
 	it('shows the comment, its title link and the author’s history count', () => {
 		mount();
 		expect(screen.getByText('A comment under review')).toBeTruthy();
@@ -236,9 +248,12 @@ describe('RecentActionRow', () => {
 		createdAt: '2026-11-03T10:00:00.000Z',
 		actor: { ...AUTHOR, id: 'mod', displayName: 'mod' },
 		targetUser: null,
+		muteHours: null,
 		commentBody: 'The rejected text',
 		commentId: 'c1',
 		commentStatus: 'rejected',
+		commentEditedAt: null,
+		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
 
@@ -263,6 +278,30 @@ describe('RecentActionRow', () => {
 		cleanup();
 		mountEntry(entry({ action: 'approve', commentStatus: 'published' }));
 		expect(screen.queryByRole('button', { name: 'Restore comment' })).toBeNull();
+	});
+
+	it('links the title and marks a comment edited after the action', () => {
+		mountEntry(entry({ commentEditedAt: '2026-11-04T10:00:00.000Z' }));
+		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
+		expect(screen.getByText('Edited since')).toBeTruthy();
+		cleanup();
+		mountEntry(entry({ commentEditedAt: '2026-11-02T10:00:00.000Z' }));
+		expect(screen.queryByText('Edited since')).toBeNull();
+	});
+
+	it('gives the length of a mute', () => {
+		mountEntry(
+			entry({
+				action: 'mute',
+				muteHours: 168,
+				commentId: null,
+				commentBody: null,
+				commentStatus: null,
+				title: null,
+				targetUser: AUTHOR
+			})
+		);
+		expect(screen.getByText(/muted/).textContent).toMatch(/anna for 7 days/);
 	});
 
 	it('names the account of a mute or a ban', () => {

@@ -9,6 +9,8 @@
 	import { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
+	import { formatDate } from '#lib/media/utils/format.ts';
+	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		kind: 'movie' | 'tv';
@@ -63,6 +65,15 @@
 		);
 	}
 
+	/** Where `/auth` sends the reader back to after signing in. */
+	const signInHref = $derived(
+		`/auth?next=${encodeURIComponent(titleHref(kind, Number(tmdbId)) ?? '/')}`
+	);
+	/** A reader who is signed in waits for their viewer state before the composer shows, so a mute can replace it. */
+	const viewerPending = $derived(
+		comments.viewerPhase === 'idle' || comments.viewerPhase === 'loading'
+	);
+
 	const loading = $derived(comments.phase === 'loading' && comments.list.length === 0);
 	const showSkeleton = $derived(loading || (comments.phase === 'ready' && waitingForViewer));
 </script>
@@ -70,21 +81,37 @@
 <CollapsibleSection title="Comments">
 	<div class="comments">
 		{#if session.status === 'user'}
-			<CommentComposer
-				label="Write a comment"
-				submitLabel="Comment"
-				busy={comments.busy.compose}
-				error={comments.errors.compose}
-				notice={comments.notices.compose}
-				onsubmit={(body) => comments.post(body)}
-			/>
+			{#if viewerPending}
+				<div class="composer-slot" aria-hidden="true"></div>
+			{:else if comments.mutedUntil}
+				<Notice tone="warn">
+					This account is muted and cannot write, edit, delete, vote on or report comments until {formatDate(
+						comments.mutedUntil
+					)}.
+				</Notice>
+			{:else}
+				<CommentComposer
+					label="Write a comment"
+					submitLabel="Comment"
+					busy={comments.busy.compose}
+					error={comments.errors.compose}
+					invalid={comments.failures.compose === 400}
+					notice={comments.notices.compose}
+					onsubmit={(body) => comments.post(body)}
+				/>
+			{/if}
 		{:else if session.status === 'anon'}
-			<p class="sign-in"><a class="link" href="/auth">Sign in to comment</a></p>
+			<p class="sign-in"><a class="link" href={signInHref}>Sign in to comment</a></p>
 		{:else}
 			<div class="composer-slot" aria-hidden="true"></div>
 		{/if}
 
-		<div class="toolbar" role="group" aria-label="Sort comments">
+		<div
+			class="toolbar"
+			class:toolbar--hidden={comments.phase === 'ready' && threads.length === 0}
+			role="group"
+			aria-label="Sort comments"
+		>
 			<span class="label">Sort</span>
 			{#each SORTS as sort (sort.value)}
 				<button
@@ -107,7 +134,7 @@
 		>
 			{#if comments.phase === 'error'}
 				<Notice tone="error">{comments.errors.load}</Notice>
-				<button class="btn btn--ghost retry" type="button" onclick={() => comments.load()}>
+				<button class="btn btn--ink retry" type="button" onclick={() => comments.load()}>
 					Try again
 				</button>
 			{:else if showSkeleton}
@@ -119,6 +146,9 @@
 			{:else}
 				{#if comments.errors.viewer}
 					<Notice tone="error">{comments.errors.viewer}</Notice>
+					<button class="btn btn--ink retry" type="button" onclick={() => comments.loadViewer()}>
+						Try again
+					</button>
 				{/if}
 				{#if threads.length === 0}
 					<p class="empty">No comments yet.</p>
@@ -127,7 +157,7 @@
 				{/if}
 				{#if comments.nextCursor}
 					<button
-						class="btn btn--ghost more"
+						class="btn btn--ink more"
 						type="button"
 						disabled={comments.busy.more}
 						bind:this={moreButton}
@@ -178,6 +208,11 @@
 	.toolbar {
 		@apply flex items-center;
 		gap: var(--spacing-sm);
+	}
+
+	/* An empty list has nothing to sort; the row keeps its height so nothing moves. */
+	.toolbar--hidden {
+		visibility: hidden;
 	}
 
 	/* A touch target is 44px on a coarse pointer, like the buttons. */
@@ -232,11 +267,16 @@
 	}
 
 	.skeleton-row {
-		@apply border-b border-border;
+		@apply flex items-center border-b border-border;
 		height: 2.375rem;
-		background: linear-gradient(var(--surface-sunken), var(--surface-sunken)) left center / 40%
-			0.75rem no-repeat;
 		animation: pulse 1.6s ease-in-out infinite;
+	}
+
+	.skeleton-row::before {
+		content: '';
+		width: 40%;
+		height: 0.75rem;
+		background-color: var(--surface-sunken);
 	}
 
 	@keyframes pulse {

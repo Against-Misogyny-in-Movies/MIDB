@@ -35,6 +35,7 @@ function logCommentAction(
 				targetUserId: sql<string | null>`NULL`.as('targetUserId'),
 				action: sql<Action>`${action}`.as('action'),
 				reason: sql<string | null>`${reason}`.as('reason'),
+				muteHours: sql<number | null>`NULL`.as('muteHours'),
 				createdAt: sql<number>`${Date.now()}`.as('createdAt')
 			})
 			.from(comments)
@@ -202,23 +203,25 @@ function logUserAction(
 	actorId: string,
 	targetUserId: string,
 	action: Action,
-	reason: string | null
+	reason: string | null,
+	muteHours: number | null = null
 ) {
-	return db.insert(moderationActions).values({ actorId, targetUserId, action, reason });
+	return db.insert(moderationActions).values({ actorId, targetUserId, action, reason, muteHours });
 }
 
-/** Stops a user from commenting until `until`. */
+/** Stops a user from commenting for `hours` hours from now; the log row keeps the length. */
 export async function muteUser(
 	actor: UserRow,
 	targetId: string,
-	until: Date,
+	hours: number,
 	reason: string | null
 ): Promise<ModerationResult> {
 	const target = await targetAllowed(actor, targetId);
 	if (typeof target === 'string') return { ok: false, reason: target };
+	const until = new Date(Date.now() + hours * 3_600_000);
 	await runBatch([
 		db.update(users).set({ mutedUntil: until }).where(eq(users.id, targetId)),
-		logUserAction(actor.id, targetId, 'mute', reason)
+		logUserAction(actor.id, targetId, 'mute', reason, hours)
 	]);
 	return { ok: true, title: null };
 }

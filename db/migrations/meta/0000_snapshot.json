@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "621c80c8-b889-48c0-ab27-942e92fd64a3",
+  "id": "a69d07b6-695c-479d-ac6e-27c3f0d5daa2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -1406,6 +1406,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "mute_hours": {
+          "name": "mute_hours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -1477,6 +1484,10 @@
         "moderation_actions_action_check": {
           "name": "moderation_actions_action_check",
           "value": "\"moderation_actions\".\"action\" IN ('approve', 'hide', 'reject', 'restore', 'dismiss', 'mute', 'ban')"
+        },
+        "moderation_actions_mute_hours": {
+          "name": "moderation_actions_mute_hours",
+          "value": "\"moderation_actions\".\"mute_hours\" IS NULL OR \"moderation_actions\".\"mute_hours\" > 0"
         },
         "moderation_actions_reason_length": {
           "name": "moderation_actions_reason_length",
