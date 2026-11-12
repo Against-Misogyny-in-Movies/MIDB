@@ -19,10 +19,12 @@
 				if (meta) meta.setAttribute('content', dark ? '#141217' : '#fbfafc');
 			} catch (_) {}
 		</script>
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 		<link
-			href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&display=swap"
-			rel="stylesheet"
+			rel="preload"
+			href="%sveltekit.assets%/fonts/inter-tight-latin-700-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin="anonymous"
 		/>
 		%sveltekit.head%
 	</head>

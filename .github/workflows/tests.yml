@@ -150,7 +150,7 @@ jobs:
       DB_CONNECTION: postgres://postgres:postgres@localhost:5432/midb
       PUBLIC_HANKO_API_URL: ${{ vars.PUBLIC_HANKO_API_URL }}
       PUBLIC_TMDB_API_URL: https://api.themoviedb.org
-      PUBLIC_TMDB_IMAGE_URL: https://image.tmdb.org/t/p
+      PUBLIC_TMDB_IMAGE_URL: /img/tmdb
       TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
       DDD_API_KEY: ${{ secrets.DDD_API_KEY }}
     services:

@@ -23,7 +23,7 @@
 <header class="detail-header">
 	<div class="poster">
 		{#if media.posterPath}
-			<Image src={media.posterPath} alt="" imgSizes="(max-width: 767px) 88px, 224px" />
+			<Image src={media.posterPath} alt="" imgSizes="(max-width: 767px) 88px, 224px" priority />
 		{:else}
 			<span class="poster-placeholder" aria-hidden="true">
 				<i class="ri-film-line"></i>
