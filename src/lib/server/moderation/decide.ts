@@ -1,6 +1,6 @@
 import type { CommentStatus, ModerationSource } from '#lib/media/types/comments.ts';
 import { env } from '#lib/server/env.ts';
-import { hitsBlocklist } from './blocklist.ts';
+import { findBlocklistHit } from './blocklist.ts';
 import { isLocalOrigin } from '#lib/server/http/origin.ts';
 import { classifyComment, type ClassifyInput } from './classify.ts';
 import { applyPolicy, type CheckOutcome } from './policy.ts';
@@ -28,7 +28,8 @@ function devAutoApprove(): boolean {
  * localhost.
  */
 export async function decideStatus(input: DecideInput): Promise<Decision> {
-	if (hitsBlocklist(input.body)) return decision(applyPolicy({ kind: 'blocklist' }), null);
+	const hit = findBlocklistHit(input.body);
+	if (hit) return decision(applyPolicy({ kind: 'blocklist', term: hit.term }), null);
 
 	const result = await classifyComment(input);
 	if (!result.ok && result.code === 'ai-unavailable' && devAutoApprove()) {

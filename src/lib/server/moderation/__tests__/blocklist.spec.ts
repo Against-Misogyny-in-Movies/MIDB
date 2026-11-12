@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { env, resetCloudflareStub } from '#test/cloudflare-workers.stub.ts';
-import { hitsBlocklist, normalizeForBlocklist } from '../blocklist.ts';
+import { BLOCKLIST_TERMS, findBlocklistHit, normalizeForBlocklist } from '../blocklist.ts';
 
 beforeEach(resetCloudflareStub);
+
+const hitsBlocklist = (text: string) => findBlocklistHit(text) !== null;
 
 describe('normalizeForBlocklist', () => {
 	it('folds case, accents, leetspeak, repeats and separators', () => {
@@ -13,7 +15,19 @@ describe('normalizeForBlocklist', () => {
 	});
 });
 
-describe('hitsBlocklist', () => {
+describe('findBlocklistHit', () => {
+	it('names a public term and leaves a private one unnamed', () => {
+		env.MODERATION_EXTRA_TERMS = 'zorblax';
+		expect(findBlocklistHit('you should KYS')).toEqual({ term: 'kys' });
+		expect(findBlocklistHit('k1ll y0urs3lf')).toEqual({ term: 'kill yourself' });
+		expect(findBlocklistHit('a zorblax appears')).toEqual({ term: null });
+		expect(findBlocklistHit('a calm comment')).toBeNull();
+	});
+
+	it('keeps words that are names or everyday words in film talk off the public list', () => {
+		for (const word of ['chink', 'spic', 'kike']) expect(BLOCKLIST_TERMS).not.toContain(word);
+	});
+
 	it('matches a public term as a whole word and through common evasions', () => {
 		expect(hitsBlocklist('you should KYS')).toBe(true);
 		expect(hitsBlocklist('k.y.s')).toBe(true);

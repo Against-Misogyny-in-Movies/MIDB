@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { applyPolicy, BLOCKLIST_REASON, REJECT_MIN_SEVERITY } from '../policy.ts';
+import { MODERATION_REASON_MAX } from '#lib/media/utils/comments.ts';
+import { BLOCKLIST_TERMS } from '../blocklist.ts';
+import { applyPolicy, BLOCKLIST_REASON, blocklistReason, REJECT_MIN_SEVERITY } from '../policy.ts';
 import type { Verdict } from '../verdict.ts';
 
 const verdict = (over: Partial<Verdict>): Verdict => ({
@@ -11,12 +13,22 @@ const verdict = (over: Partial<Verdict>): Verdict => ({
 });
 
 describe('applyPolicy', () => {
-	it('rejects a blocklist hit with its own reason', () => {
-		expect(applyPolicy({ kind: 'blocklist' })).toEqual({
+	it('rejects a private blocklist hit with the general reason', () => {
+		expect(applyPolicy({ kind: 'blocklist', term: null })).toEqual({
 			status: 'rejected',
 			source: 'blocklist',
 			reason: BLOCKLIST_REASON
 		});
+	});
+
+	it('names the term of a public blocklist hit, within the reason limit', () => {
+		const result = applyPolicy({ kind: 'blocklist', term: 'kill yourself' });
+		expect(result.reason).toBe(
+			'The comment contains "kill yourself", which the site does not allow.'
+		);
+		for (const term of BLOCKLIST_TERMS) {
+			expect(blocklistReason(term).length).toBeLessThanOrEqual(MODERATION_REASON_MAX);
+		}
 	});
 
 	it('publishes an allow verdict', () => {

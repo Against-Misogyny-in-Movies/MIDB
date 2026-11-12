@@ -31,6 +31,17 @@ describe('decideStatus', () => {
 		expect(classifyComment).not.toHaveBeenCalled();
 	});
 
+	it('names a public blocklist term in the reason and keeps a private one unnamed', async () => {
+		const publicHit = await decideStatus({ ...input, body: 'just KYS' });
+		expect(publicHit.reason).toBe('The comment contains "kys", which the site does not allow.');
+		env.MODERATION_EXTRA_TERMS = 'zorblax';
+		const privateHit = await decideStatus({ ...input, body: 'you zorblax' });
+		expect(privateHit.reason).toBe(
+			'The comment contains a word or phrase the site does not allow.'
+		);
+		expect(privateHit.reason).not.toContain('zorblax');
+	});
+
 	it('publishes an allow verdict and stores the verdict JSON with the model', async () => {
 		classifyComment.mockResolvedValue({ ok: true, verdict: verdict(), model: 'claude-haiku-5-5' });
 		const result = await decideStatus(input);

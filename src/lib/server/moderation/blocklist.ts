@@ -2,16 +2,14 @@ import { env } from '#lib/server/env.ts';
 
 /**
  * The public blocklist: whole words and phrases that reject a comment without a model call.
- * It is short on purpose. The model, the reports and the moderators handle the rest, and a
- * private `MODERATION_EXTRA_TERMS` secret adds terms at runtime.
+ * It is short on purpose: a word that is also a name or an everyday word in film discussion
+ * stays off it, because the model still reads such a comment. The reports and the moderators
+ * handle the rest, and a private `MODERATION_EXTRA_TERMS` secret adds terms at runtime.
  */
 export const BLOCKLIST_TERMS: readonly string[] = [
 	'nigger',
 	'nigga',
 	'faggot',
-	'kike',
-	'chink',
-	'spic',
 	'tranny',
 	'kill yourself',
 	'kys'
@@ -30,9 +28,12 @@ const LEET: Record<string, string> = {
 
 /**
  * Reduces text to space-separated lowercase words, so common evasions meet the same form as
- * the terms: case, accents and look-alike letters (NFKD), zero-width characters, leetspeak,
- * punctuation between letters, runs of three or more of one letter, and letters spaced out one
- * by one ("k y s").
+ * the terms. It folds case; accents and compatibility forms (NFKD: full-width letters, ligatures,
+ * combining marks, but not Cyrillic or Greek look-alikes of Latin letters); zero-width and
+ * soft-hyphen characters; leetspeak digits and `@`/`$`; runs of three or more of one character,
+ * cut to two; and any separator between words. Punctuation or spaces between single letters join
+ * them only in a run of three or more ("k y s", "k.y.s"); between longer words they stay word
+ * breaks, so "a-b-c" joins but "ab-cd" does not.
  */
 export function normalizeForBlocklist(text: string): string {
 	const folded = text
@@ -68,10 +69,19 @@ function extraTerms(): string[] {
 	return raw ? raw.split(/[,\n]/) : [];
 }
 
-/** Whether the text contains a blocklisted word or phrase, as a whole word. */
-export function hitsBlocklist(text: string): boolean {
+/** A blocklist match: the public term that matched, or `null` for a private extra term. */
+export interface BlocklistHit {
+	term: string | null;
+}
+
+/** The first blocklisted word or phrase the text contains as a whole word, else null. */
+export function findBlocklistHit(text: string): BlocklistHit | null {
 	const haystack = ` ${normalizeForBlocklist(text)} `;
-	return [...BLOCKLIST_TERMS, ...extraTerms()]
-		.map(normalizeForBlocklist)
-		.some((term) => term !== '' && haystack.includes(` ${term} `));
+	const hit = (term: string) => {
+		const folded = normalizeForBlocklist(term);
+		return folded !== '' && haystack.includes(` ${folded} `);
+	};
+	const publicTerm = BLOCKLIST_TERMS.find(hit);
+	if (publicTerm !== undefined) return { term: publicTerm };
+	return extraTerms().some(hit) ? { term: null } : null;
 }

@@ -6,7 +6,7 @@ export const REJECT_MIN_SEVERITY = 2;
 
 /** What the automatic check found, before it becomes a status. */
 export type CheckOutcome =
-	| { kind: 'blocklist' }
+	| { kind: 'blocklist'; term: string | null }
 	| { kind: 'verdict'; verdict: Verdict }
 	| { kind: 'failure'; code: string };
 
@@ -17,8 +17,14 @@ export interface PolicyResult {
 	reason: string | null;
 }
 
-/** What the author reads when a blocklisted term rejects the comment. */
-export const BLOCKLIST_REASON = 'The comment contains a word the site does not allow.';
+/** What the author reads when a private blocklist term rejects the comment: the list stays private. */
+export const BLOCKLIST_REASON = 'The comment contains a word or phrase the site does not allow.';
+
+/** The reason for a blocklist hit: it names the term when it is on the public list. */
+export const blocklistReason = (term: string | null): string =>
+	term === null
+		? BLOCKLIST_REASON
+		: `The comment contains "${term}", which the site does not allow.`;
 
 /**
  * Turns the automatic check into a status, the same way for every comment: a blocklist hit
@@ -27,7 +33,7 @@ export const BLOCKLIST_REASON = 'The comment contains a word the site does not a
  */
 export function applyPolicy(outcome: CheckOutcome): PolicyResult {
 	if (outcome.kind === 'blocklist') {
-		return { status: 'rejected', source: 'blocklist', reason: BLOCKLIST_REASON };
+		return { status: 'rejected', source: 'blocklist', reason: blocklistReason(outcome.term) };
 	}
 	if (outcome.kind === 'failure') return { status: 'pending', source: null, reason: null };
 
