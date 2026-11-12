@@ -134,7 +134,7 @@ CREATE TABLE `comments` (
 	FOREIGN KEY (`parent_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`root_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "comments_body_length" CHECK(length("comments"."body") BETWEEN 1 AND 5000),
-	CONSTRAINT "comments_reason_length" CHECK(length("comments"."moderation_reason") <= 500),
+	CONSTRAINT "comments_reason_length" CHECK(length("comments"."moderation_reason") <= 140),
 	CONSTRAINT "comments_ai_verdict_json" CHECK("comments"."ai_verdict" IS NULL OR json_valid("comments"."ai_verdict")),
 	CONSTRAINT "comments_status_check" CHECK("comments"."status" IN ('pending', 'published', 'hidden', 'rejected', 'deleted')),
 	CONSTRAINT "comments_source_check" CHECK("comments"."moderation_source" IN ('ai', 'blocklist', 'moderator', 'reports'))
@@ -205,7 +205,7 @@ CREATE TABLE `moderation_actions` (
 	FOREIGN KEY (`target_comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`target_user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "moderation_actions_action_check" CHECK("moderation_actions"."action" IN ('approve', 'hide', 'reject', 'restore', 'dismiss', 'mute', 'ban')),
-	CONSTRAINT "moderation_actions_reason_length" CHECK(length("moderation_actions"."reason") <= 500)
+	CONSTRAINT "moderation_actions_reason_length" CHECK(length("moderation_actions"."reason") <= 140)
 );
 --> statement-breakpoint
 CREATE INDEX `moderation_actions_created_idx` ON `moderation_actions` (`created_at`);--> statement-breakpoint

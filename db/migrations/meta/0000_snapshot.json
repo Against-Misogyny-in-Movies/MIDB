@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6b918780-3813-4618-80a0-04c1a75d0458",
+  "id": "621c80c8-b889-48c0-ab27-942e92fd64a3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -988,7 +988,7 @@
         },
         "comments_reason_length": {
           "name": "comments_reason_length",
-          "value": "length(\"comments\".\"moderation_reason\") <= 500"
+          "value": "length(\"comments\".\"moderation_reason\") <= 140"
         },
         "comments_ai_verdict_json": {
           "name": "comments_ai_verdict_json",
@@ -1480,7 +1480,7 @@
         },
         "moderation_actions_reason_length": {
           "name": "moderation_actions_reason_length",
-          "value": "length(\"moderation_actions\".\"reason\") <= 500"
+          "value": "length(\"moderation_actions\".\"reason\") <= 140"
         }
       }
     },

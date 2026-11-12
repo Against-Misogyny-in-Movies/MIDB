@@ -14,13 +14,14 @@ import { users } from './auth.ts';
 import { createdAt, enumCheck, timestamps, umFlagColumns } from './columns.ts';
 import {
 	COMMENT_BODY_MAX,
+	MODERATION_REASON_MAX,
 	REPORT_NOTE_MAX,
 	commentStatus,
 	moderationAction,
 	moderationSource,
 	reportReason,
 	reportStatus
-} from '../../src/lib/media/utils/comments.ts';
+} from '../lib/comments.ts';
 
 // One table per metric shape, so each can hold what it names.
 
@@ -136,7 +137,10 @@ export const comments = sqliteTable(
 			'comments_body_length',
 			sql`length(${t.body}) BETWEEN 1 AND ${sql.raw(String(COMMENT_BODY_MAX))}`
 		),
-		check('comments_reason_length', sql`length(${t.moderationReason}) <= 500`),
+		check(
+			'comments_reason_length',
+			sql`length(${t.moderationReason}) <= ${sql.raw(String(MODERATION_REASON_MAX))}`
+		),
 		check('comments_ai_verdict_json', sql`${t.aiVerdict} IS NULL OR json_valid(${t.aiVerdict})`),
 		enumCheck('comments_status_check', t.status, commentStatus),
 		enumCheck('comments_source_check', t.moderationSource, moderationSource)
@@ -217,6 +221,9 @@ export const moderationActions = sqliteTable(
 		index('moderation_actions_created_idx').on(t.createdAt),
 		index('moderation_actions_comment_idx').on(t.targetCommentId),
 		enumCheck('moderation_actions_action_check', t.action, moderationAction),
-		check('moderation_actions_reason_length', sql`length(${t.reason}) <= 500`)
+		check(
+			'moderation_actions_reason_length',
+			sql`length(${t.reason}) <= ${sql.raw(String(MODERATION_REASON_MAX))}`
+		)
 	]
 );

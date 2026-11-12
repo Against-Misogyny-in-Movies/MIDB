@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { commentsTag } from '#lib/server/http/cache.ts';
-import { purgeComments } from '#lib/server/http/purge-comments.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
 import {
 	authorizeWrite,
 	commentIdParam,
@@ -28,7 +27,7 @@ export const PATCH: RequestHandler = async (event) => {
 
 	const result = await editComment(id, user.id, body);
 	if (!result.ok) refuse(result.reason);
-	purgeComments([commentsTag(result.title.kind, result.title.tmdbId ?? '')]);
+	purgeTitleComments(result.title);
 	return privateJson({ comment: result.comment });
 };
 
@@ -39,6 +38,6 @@ export const DELETE: RequestHandler = async (event) => {
 
 	const result = await softDeleteComment(id, user.id);
 	if (!result.ok) refuse(result.reason);
-	purgeComments([commentsTag(result.title.kind, result.title.tmdbId ?? '')]);
+	purgeTitleComments(result.title);
 	return privateJson({ ok: true });
 };

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
-const purgeComments = vi.fn();
+const purgeTitleComments = vi.fn();
 const queries = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -25,9 +25,10 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-comments.ts', () => ({
-	purgeComments: (...args: unknown[]) => purgeComments(...args)
+	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args)
 }));
-vi.mock('#lib/server/data/moderation-queries.ts', () => queries);
+vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
+vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
 vi.mock('#lib/server/data/source-sync.ts', () => ({
 	getSourceSyncDates: () => getSourceSyncDates()
 }));
@@ -54,7 +55,7 @@ function run(name: Name, fields: Record<string, string> = { id: 'c1', userId: 'u
 beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(MOD);
 	rateLimit.mockReset().mockResolvedValue(undefined);
-	purgeComments.mockReset();
+	purgeTitleComments.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	getSourceSyncDates.mockReset().mockResolvedValue({});
@@ -99,7 +100,7 @@ describe.each(NAMES)('?/%s', (name) => {
 		requireRole.mockImplementation(async () => error(403, 'Forbidden'));
 		await expect(run(name)).rejects.toMatchObject({ status: 403 });
 		for (const fn of Object.values(queries)) expect(fn).not.toHaveBeenCalled();
-		expect(purgeComments).not.toHaveBeenCalled();
+		expect(purgeTitleComments).not.toHaveBeenCalled();
 	});
 
 	it('answers 401 to a signed-out reader', async () => {
@@ -127,7 +128,7 @@ describe('purging', () => {
 		async (name) => {
 			const result = await run(name);
 			expect(result).toEqual({ id: 'c1', done: name });
-			expect(purgeComments).toHaveBeenCalledExactlyOnceWith(['comments:movie:348']);
+			expect(purgeTitleComments).toHaveBeenCalledExactlyOnceWith(TITLE);
 		}
 	);
 
@@ -135,7 +136,7 @@ describe('purging', () => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		const result = await run('approve');
 		expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
-		expect(purgeComments).not.toHaveBeenCalled();
+		expect(purgeTitleComments).not.toHaveBeenCalled();
 	});
 
 	it('mute and ban touch no list', async () => {
@@ -143,7 +144,7 @@ describe('purging', () => {
 		queries.banAccount.mockResolvedValue({ ok: true, title: null });
 		expect(await run('mute')).toEqual({ id: 'c1', done: 'mute' });
 		expect(await run('ban')).toEqual({ id: 'c1', done: 'ban' });
-		expect(purgeComments).not.toHaveBeenCalled();
+		expect(purgeTitleComments).not.toHaveBeenCalled();
 	});
 });
 

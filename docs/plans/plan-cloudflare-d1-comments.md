@@ -529,7 +529,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
   - rate-limit binding and its fallback
   - `chunkForD1`
   - moderation policy, plus `classify` with a mocked SDK (refusal, timeout, null parse), plus the blocklist
-  - comment endpoints: 401, 403 when muted or banned, 429, owner-only edit, no self-vote
+  - comment endpoints: 401 signed out (a banned account reads as signed out), 403 when muted, 429, owner-only edit, no self-vote
   - hooks with a mocked Better Auth
 - **Source sync:**
   - parser unit specs against fixtures (UM feed, Bechdel year page and RSS, TMDB NDJSON);

@@ -9,15 +9,14 @@ import { COMMENT_BODY_MAX, REPORT_NOTE_MAX, reportReason } from '#lib/media/util
 type WriteEvent = Pick<RequestEvent, 'locals' | 'request' | 'getClientAddress'>;
 
 /**
- * The first three steps of every comment write, in order: the guard (401), the mute and ban
- * check on the fresh user row (403; `locals.getUser` reads the row on each request, so a ban or
- * mute applies at once), then the rate limit (429). It returns the user; the caller then reads
- * and validates the body, so a refused or throttled request never costs a parse. Call it
+ * The first three steps of every comment write, in order: the guard (401; a banned account is
+ * signed out, because `locals.getUser` reads the row on each request and resolves a banned user
+ * to none), the mute check on that fresh row (403), then the rate limit (429). It returns the
+ * user; the caller then reads and validates the body, so a refused or throttled request never costs a parse. Call it
  * outside any `try`.
  */
 export async function authorizeWrite(event: WriteEvent, bucket: RateLimitBucket): Promise<UserRow> {
 	const user = await requireUser(event.locals);
-	if (user.bannedAt) error(403, 'Account banned');
 	if (user.mutedUntil && user.mutedUntil.getTime() > Date.now()) error(403, 'Account muted');
 	await rateLimit(event, bucket, { userId: user.id });
 	return user;

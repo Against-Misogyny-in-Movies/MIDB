@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { commentsTag } from '#lib/server/http/cache.ts';
-import { purgeComments } from '#lib/server/http/purge-comments.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
 import {
 	authorizeWrite,
 	commentIdParam,
@@ -25,9 +24,7 @@ export const POST: RequestHandler = async (event) => {
 		if (result.reason === 'own-comment') error(403, 'A comment cannot be reported by its author');
 		error(404, 'Comment not found');
 	}
-	if (result.status !== 'published') {
-		purgeComments([commentsTag(result.title.kind, result.title.tmdbId ?? '')]);
-	}
+	if (result.status !== 'published') purgeTitleComments(result.title);
 	return privateJson(
 		{ alreadyReported: result.alreadyReported },
 		result.alreadyReported ? 200 : 201

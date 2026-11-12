@@ -43,11 +43,10 @@ function decodeCursor(cursor: string | null | undefined, sort: CommentSort): Cur
 	const match =
 		sort === 'top' ? /^(-?\d+)\.(\d+)\.([\w-]+)$/.exec(cursor) : /^()(\d+)\.([\w-]+)$/.exec(cursor);
 	if (!match) return null;
-	return {
-		score: sort === 'top' ? Number(match[1]) : null,
-		createdAt: Number(match[2]),
-		id: match[3]
-	};
+	const createdAt = Number(match[2]);
+	// A digit string past the range of a date reads as an invalid cursor.
+	if (!Number.isFinite(new Date(createdAt).getTime())) return null;
+	return { score: sort === 'top' ? Number(match[1]) : null, createdAt, id: match[3] };
 }
 
 function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {

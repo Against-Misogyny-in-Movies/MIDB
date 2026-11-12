@@ -43,7 +43,7 @@ export async function getUserById(id: string): Promise<UserRow | null> {
 	return (await db.query.users.findFirst({ where: eq(users.id, id) })) ?? null;
 }
 
-/** The two statements of a ban, for a batch that also logs it (`moderation-queries.ts`). */
+/** The two statements of a ban, for a batch that also logs it (`moderation-actions.ts`). */
 export function banStatements(id: string, reason: string | null) {
 	return [
 		db.update(users).set({ bannedAt: new Date(), banReason: reason }).where(eq(users.id, id)),

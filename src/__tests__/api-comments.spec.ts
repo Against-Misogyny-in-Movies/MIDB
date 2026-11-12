@@ -170,12 +170,11 @@ describe('POST a comment', () => {
 	const post = (options: Options = {}) =>
 		call(list.POST, { params: titleParams, method: 'POST', body: { body: ' Hello ' }, ...options });
 
-	it('answers 401 signed out, 403 muted or banned, and stores nothing', async () => {
+	it('answers 401 signed out (a banned account is signed out by the hook), 403 muted, and stores nothing', async () => {
 		expect(await status(post({ user: null }))).toBe(401);
 		expect(await status(post({ user: user({ mutedUntil: new Date(Date.now() + 60_000) }) }))).toBe(
 			403
 		);
-		expect(await status(post({ user: user({ bannedAt: new Date() }) }))).toBe(403);
 		expect(createComment).not.toHaveBeenCalled();
 	});
 
@@ -331,7 +330,9 @@ describe('votes', () => {
 
 	it('answers 401 and 403 (muted), then 429 past the vote limit', async () => {
 		expect(await status(put({ user: null }))).toBe(401);
-		expect(await status(put({ user: user({ bannedAt: new Date() }) }))).toBe(403);
+		expect(await status(put({ user: user({ mutedUntil: new Date(Date.now() + 60_000) }) }))).toBe(
+			403
+		);
 		for (let i = 0; i < 30; i++) expect(await status(put())).toBe(200);
 		expect(await status(put())).toBe(429);
 	});

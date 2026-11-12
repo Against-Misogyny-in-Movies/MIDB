@@ -28,7 +28,7 @@ describe('GET /api/me', () => {
 			emailVerified: true,
 			image: null,
 			role: 'moderator',
-			username: null,
+			username: 'mary_wollstonecraft_0427',
 			avatarKey: 'kahlo',
 			bannedAt: null,
 			banReason: null,
@@ -40,10 +40,10 @@ describe('GET /api/me', () => {
 		const body = await res.json();
 		expect(body).toEqual({
 			id: 'user-1',
-			username: null,
+			username: 'mary_wollstonecraft_0427',
 			avatarKey: 'kahlo',
 			role: 'moderator',
-			displayName: 'mary'
+			displayName: 'mary_wollstonecraft_0427'
 		});
 		expect(JSON.stringify(body)).not.toMatch(/example\.com/);
 	});

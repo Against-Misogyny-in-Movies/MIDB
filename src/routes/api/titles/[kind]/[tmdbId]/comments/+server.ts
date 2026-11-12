@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
-import { commentsHeaders, commentsTag } from '#lib/server/http/cache.ts';
-import { purgeComments } from '#lib/server/http/purge-comments.ts';
+import { commentsHeaders } from '#lib/server/http/cache.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
 import {
 	authorizeWrite,
 	createSchema,
@@ -51,6 +51,6 @@ export const POST: RequestHandler = async (event) => {
 	const result = await createComment({ title, userId: user.id, body, parentId });
 	if (!result.ok) error(404, 'The comment to answer was not found');
 
-	purgeComments([commentsTag(kind, tmdbId)]);
+	purgeTitleComments({ kind, tmdbId });
 	return privateJson({ comment: result.comment }, 201);
 };

@@ -1,22 +1,23 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import { commentsTag } from '#lib/server/http/cache.ts';
-import { purgeComments } from '#lib/server/http/purge-comments.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
 import {
 	approveComment,
 	banAccount,
 	dismissReports,
 	hideComment,
-	listPendingQueue,
-	listRecentActions,
-	listReportedQueue,
 	muteUser,
 	rejectComment,
 	restoreComment,
 	type ModerationResult
-} from '#lib/server/data/moderation-queries.ts';
+} from '#lib/server/data/moderation-actions.ts';
+import {
+	listPendingQueue,
+	listRecentActions,
+	listReportedQueue
+} from '#lib/server/data/moderation-queue.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
@@ -79,9 +80,7 @@ async function act(
 		const [status, message] = refusals[result.reason];
 		return fail(status, { id: target, error: message });
 	}
-	if (result.title?.tmdbId != null) {
-		purgeComments([commentsTag(result.title.kind, result.title.tmdbId)]);
-	}
+	if (result.title) purgeTitleComments(result.title);
 	return { id: target, done: name };
 }
 

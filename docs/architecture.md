@@ -98,6 +98,7 @@ MIDB/
 │   ├── lib/                    # code shared by the sync scripts and the app (app imports #db/lib/*, scripts ../lib/*)
 │   │   ├── normalizeTitle.ts   # normalizeTitle + stripTrailingYear: the matching key, identical at sync time and at runtime
 │   │   ├── sources/            # pure parsers for the synced sources, no I/O: um-feed.ts (parseUmFeed, zod), um-match.ts (matchUmFilm), bechdel-html.ts (parseBechdelYearPage, readBechdelYear, parseBechdelRss), tmdb-export.ts (readTmdbExport)
+│   │   ├── comments.ts         # the comment enum tuples and length limits (COMMENT_BODY_MAX, REPORT_NOTE_MAX, MODERATION_REASON_MAX) behind the schema's CHECKs; `#lib/media/utils/comments.ts` re-exports them
 │   │   ├── chunkForD1.ts       # chunkForD1(rows, columns, reserved?): splits rows so a statement stays at or under `D1_MAX_PARAMS`, D1's bound-parameter limit
 │   │   └── __tests__/          # normalizeTitle.spec.ts, chunkForD1.spec.ts (unit project: db/**/*.spec.ts minus *.db.spec.ts); sources/__tests__/ holds the parser specs
 │   ├── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots (never hand-edited)
@@ -140,7 +141,8 @@ MIDB/
 │       │   │   ├── comment-votes.ts     # setVote / removeVote: the vote row and the recomputed score in one db.batch
 │       │   │   ├── comment-reports.ts   # reportComment: the report row and, at REPORT_THRESHOLD open reports, the move to pending (source reports) in one batch
 │       │   │   ├── comment-title.ts     # parseTitleParams, findCommentTitle (read-only), resolveCommentTitle (getOrCreateTitleRow after TMDB, for the first comment)
-│       │   │   ├── moderation-queries.ts # the queues (pending, reported), recent actions (with the comment's id and status, so a hide or reject can be restored), approve/hide/reject/restore/dismiss/mute/ban, each with its moderation_actions row in the same batch
+│       │   │   ├── moderation-queue.ts # the read side: the queues (pending, reported) and recent actions (with the comment's id and status, so a hide or reject can be restored)
+│       │   │   ├── moderation-actions.ts # approve/hide/reject/restore/dismiss/mute/ban, each with its moderation_actions row in the same batch; `targetAllowed` is the authority check
 │       │   │   └── user-queries.ts   # getUserById + toPublicUser + banStatements/banUser + profile update (validated) + username availability + history queries (comments in every status, community ratings)
 │       │   ├── auth/           # (+ __tests__/)
 │       │   │   ├── create-auth.ts    # createAuth(config): the Better Auth options (D1 adapter, providers, passkey, hooks); takes its settings as arguments
@@ -158,7 +160,7 @@ MIDB/
 │       │   │   └── decide.ts         # decideStatus(): the one place that sets a new or edited comment's status (pending until AI moderation)
 │       │   ├── http/           # (+ __tests__/)
 │       │   │   ├── cache.ts          # cache policies as header sets (browser Cache-Control + edge CDN-Cache-Control): PUBLIC_PAGE, PUBLIC_NO_STORE, PUBLIC_SEARCH, PUBLIC_COMMENTS (+ commentsTag/commentsHeaders), PUBLIC_IMAGE, PRIVATE_NO_STORE (see Caching policy)
-│       │   │   ├── purge-comments.ts # purgeComments(tags): cache.purge in waitUntil, failures logged and swallowed
+│       │   │   ├── purge-comments.ts # purgeTitleComments(title): purges the title's comment tag with cache.purge in waitUntil, failures logged and swallowed; skips a title with no TMDB id
 │       │   │   ├── comment-request.ts # the comment endpoints' shared steps: authorizeWrite (guard, mute/ban, rate limit), readBody + the zod schemas, privateJson
 │       │   │   └── rate-limit.ts     # rateLimit(event, bucket, { userId? }): `bucket` names a `RL_*` binding; memory `incr` fallback without one; error(429); fails open
 │       │   ├── titles/
@@ -178,7 +180,7 @@ MIDB/
 │   │                       #   comments.ts (CommentView, CommentList, OwnComment, ViewerCommentState, UserCommentRow and the status/sort types the comment endpoints return),
 │   │                       #   moderation.ts (ModerationItem, RecentAction re-exported as types from the moderation queries, and ActionOutcome, the answer of a moderation form action)
 │       │   └── utils/          # tmdbImage.ts (the image size allow-list, file-name pattern and URL builder shared by the image route and the poster components), format.ts (Intl), metrics.ts (BECHDEL_TIERS/UM_FLAGS/UmEntry/dddUrl/umFlagCount), titleHref.ts,
-│       │                       #   comments.ts (the comment enum tuples, COMMENT_BODY_MAX, REPORT_THRESHOLD, the report-reason and status labels, MODERATION_REASON_MAX, MUTE_HOURS; the schema imports it by relative path), commentApi.ts (requestJson over a fetcher, describeFailure: the sentence for a failed comment request), commentsState.svelte.ts (CommentsState: one title's list, viewer state and writes), commentThread.ts (buildThreads: merges the reader's own pending and rejected comments into the public threads), staleSync.ts (STALE_SYNC_HOURS, staleSyncSources), departments.ts (PRIORITY_DEPARTMENTS), avatars.ts (AVATAR_DEFS/AVATAR_KEYS, plain data), feminist-icons.ts (FEMINIST_ICONS: the names a generated username draws from), username.ts (USERNAME_RE, USERNAME_MAX),
+│       │                       #   comments.ts (re-exports the enum tuples and limits from `db/lib/comments.ts`; REPORT_THRESHOLD, the report-reason and status labels, MUTE_HOURS), commentApi.ts (requestJson over a fetcher, describeFailure: the sentence for a failed comment request), commentsState.svelte.ts (CommentsState: one title's list, viewer state and writes), commentThread.ts (buildThreads: merges the reader's own pending and rejected comments into the public threads), staleSync.ts (STALE_SYNC_HOURS, staleSyncSources), departments.ts (PRIORITY_DEPARTMENTS), avatars.ts (AVATAR_DEFS/AVATAR_KEYS, plain data), feminist-icons.ts (FEMINIST_ICONS: the names a generated username draws from), username.ts (USERNAME_RE, USERNAME_MAX),
 │       │                       #   dddStream.svelte.ts (createDddState rune factory), debouncedQuery.svelte.ts (DebouncedQuery:
 │       │                       #   debounce + AbortController for typed queries), search.ts (SEARCH_QUERY_MAX_LENGTH = 120),
 │       │                       #   titleView.svelte.ts (TitleView: detail-page state), episodeFilter.svelte.ts (TV season/episode filter),
@@ -451,7 +453,7 @@ Both `+page.svelte` files keep only markup and their own sections: the Bechdel c
   - **Rules shown.** No vote controls, report or reply-to-self on one's own comment; Edit and Delete on one's own in any status; removed comments with replies are placeholders; a reply to a reply says "in reply to @name"; a delete confirm names what is lost. A muted or banned account gets the 403 sentence. `commentStatusTone` (`tones.ts`) maps a status to a badge tone.
   - **Shared pieces.** `commentAction` (quiet text action and square vote button), `commentConfirm` (a `.plate` with a message and two buttons), `commentComposer`, `commentReportForm`, `commentList`, `commentItem`; `/user/comments` reuses the composer, action and confirm in `commentHistoryRow`. `moderation/moderationItem` and `recentActionRow` are the moderation rows.
 - **Moderation page.** The load reads the queues (`QUEUE_LIMIT` rows each) and `getSourceSyncDates`; `staleSyncSources` leaves out `bechdel_sweep` because the full sweep runs weekly. Every action goes through `act` in `+page.server.ts`: `requireRole`, `rateLimit` with `RL_MODERATE`, the query, then `purgeComments` for a comment action. A refusal comes back as `fail` with a sentence for the row. A hide or reject can be undone from the log (`?/restore`); mute and ban have no undo.
-- **Authority.** A moderator acts on ordinary accounts; only an administrator acts on a moderator; no one acts on an administrator or on themselves (`moderation-queries.ts`).
+- **Authority.** A moderator acts on ordinary accounts; only an administrator acts on a moderator; no one acts on an administrator or on themselves (`moderation-actions.ts`, `targetAllowed`, applied to a comment's author as well).
 
 ---
 

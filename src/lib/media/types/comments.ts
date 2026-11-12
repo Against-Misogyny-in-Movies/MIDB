@@ -1,3 +1,4 @@
+import type { getUserComments } from '#lib/server/data/user-queries.ts';
 import type { PublicUser } from './user.ts';
 import type { commentStatus, moderationSource, reportReason } from '#lib/media/utils/comments.ts';
 
@@ -60,17 +61,11 @@ export type ViewerCommentState = {
 	comments: OwnComment[];
 };
 
-/** One of the reader's comments on `/user/comments`, in any status, with the title it is on. */
-export type UserCommentRow = {
-	id: string;
-	body: string;
-	status: CommentStatus;
-	moderationReason: string | null;
-	parentId: string | null;
-	replyCount: number;
-	createdAt: string;
-	editedAt: string | null;
-	kind: 'movie' | 'tv';
-	tmdbId: number | null;
-	title: string;
-};
+/**
+ * One of the reader's comments on `/user/comments`, in any status, with the title it is on:
+ * what `getUserComments` returns, with its dates as ISO strings for the load's JSON.
+ */
+export type UserCommentRow = Omit<
+	Awaited<ReturnType<typeof getUserComments>>[number],
+	'createdAt' | 'editedAt'
+> & { createdAt: string; editedAt: string | null };
