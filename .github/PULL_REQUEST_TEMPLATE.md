@@ -11,6 +11,7 @@
 ## Checks
 
 - [ ] `pnpm check`
+- [ ] `pnpm typecheck`
 - [ ] `pnpm lint`
 - [ ] `pnpm test:unit --run`
 - [ ] `pnpm test:db` (when the data layer could move)

@@ -108,9 +108,10 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 Run the cheap checks often and the full set once.
 
-- **While working:** `pnpm check` and `pnpm lint` take seconds, so run them after each edit that could break them. Run the tests the edit touches with `pnpm exec vitest run <file>`.
+- **While working:** `pnpm check`, `pnpm typecheck` and `pnpm lint` take seconds, so run them after each edit that could break them. Run the tests the edit touches with `pnpm exec vitest run <file>`.
 - **Once, at the end, the verification baseline:**
   - `pnpm check` → 0 errors
+  - `pnpm typecheck` → 0 errors
   - `pnpm lint` → clean
   - `pnpm test:unit --run` → all pass
   - `pnpm test:db` → all pass (with `docker compose up -d db`)

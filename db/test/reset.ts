@@ -6,8 +6,7 @@ import { db, closeDb } from '$lib/server/db';
 
 // Vitest setupFile for the `db` project: every test starts from empty app tables.
 const tables = Object.values(schema)
-	.filter((value): value is PgTable => is(value, PgTable))
-	.map((table) => `"${getTableName(table)}"`)
+	.flatMap((value) => (is(value, PgTable) ? [`"${getTableName(value)}"`] : []))
 	.join(', ');
 
 beforeEach(async () => {

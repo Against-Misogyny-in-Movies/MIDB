@@ -14,6 +14,7 @@
 		"test": "pnpm test:integration && pnpm test:unit",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"typecheck": "svelte-kit sync && node node_modules/typescript7/bin/tsc -p tsconfig.typecheck.json",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
@@ -61,7 +62,8 @@
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.3.0",
 		"tslib": "^2.4.1",
-		"typescript": "^5.0.0",
+		"typescript": "~6.0.3",
+		"typescript7": "npm:typescript@7.0.2",
 		"vite": "^8.0.0",
 		"vitest": "^4.0.0"
 	},

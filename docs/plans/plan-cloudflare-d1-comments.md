@@ -161,7 +161,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
 
 1. Upgrade to the latest Kit 2.x (≥ 2.62, so config can live in vite.config). Then run `npx sv migrate sveltekit-3` and finish by hand:
    - Bump the packages:
-     - `@sveltejs/kit@^3`, `svelte@^5.57.1`, `vite@^8.0.12`, `typescript@^6`;
+     - `@sveltejs/kit@^3`, `svelte@^5.57.1`, `vite@^8.0.12`, `typescript@~6.0.3` (the typecheck stays on `typescript7`, TypeScript 7);
      - `svelte-check`, `eslint-plugin-svelte`, `@testing-library/svelte` and `@storybook/sveltekit` to versions that support Kit 3;
      - if Storybook has none yet, keep `storybook`/`build-storybook` out of the baseline and say so in the report.
    - Move the `svelte.config.js` content (`preprocess`, the alias) into `sveltekit({...})` in `vite.config.ts`, then delete the file.
@@ -514,6 +514,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 
 - **Baseline after every phase:**
   - `pnpm check` → 0 errors
+  - `pnpm typecheck` → 0 errors
   - `pnpm lint` clean
   - `pnpm test:unit`
   - `pnpm test:db` (local D1)

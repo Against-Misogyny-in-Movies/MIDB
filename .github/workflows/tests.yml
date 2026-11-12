@@ -40,6 +40,9 @@ jobs:
       - name: Typecheck
         run: pnpm check
 
+      - name: Typecheck with TypeScript 7
+        run: pnpm typecheck
+
       - name: Lint
         run: pnpm lint
 

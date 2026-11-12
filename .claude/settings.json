@@ -4,6 +4,7 @@
 			"Bash(pnpm install)",
 			"Bash(pnpm install --frozen-lockfile)",
 			"Bash(pnpm check)",
+			"Bash(pnpm typecheck)",
 			"Bash(pnpm lint)",
 			"Bash(pnpm format)",
 			"Bash(pnpm test:unit *)",

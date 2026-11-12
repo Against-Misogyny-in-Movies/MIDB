@@ -14,7 +14,8 @@ Find docs through `docs/INDEX.md`. It lists every file an agent reads, its size,
 ## Commands
 
 - `pnpm dev`: the dev server.
-- `pnpm check`: `svelte-check`.
+- `pnpm check`: `svelte-check` on TypeScript 6, `.svelte` files included.
+- `pnpm typecheck`: the TypeScript 7 compiler over the `.ts` files, including `db/`, `scripts/` and `e2e-tests/`.
 - `pnpm lint`: Prettier and ESLint.
 - `pnpm test:unit --run`: the Vitest `unit` project. `pnpm exec vitest run <file>` runs one file.
 - `pnpm test:db`: the Vitest `db` project, against Postgres from `docker compose up -d db`.
