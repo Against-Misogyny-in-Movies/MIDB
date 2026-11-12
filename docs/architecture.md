@@ -348,7 +348,7 @@ Every request carries the `MIDB-sync` User-Agent, a timeout and one retry (`fetc
 3. **`db:backfill:tmdb`** (`backfillTmdb.ts`) — resolve null `tmdb_id` on **movie** titles with an IMDb id via TMDB `/find/{imdb_id}`. Needs `TMDB_API_TOKEN`. `getOrCreateTitleRow` will also backfill once a write endpoint uses it.
 4. **`db:sync:popularity`** (`sync-popularity.ts`) — stream TMDB's daily `movie_ids_*` and `tv_series_ids_*` exports (gzipped NDJSON, no auth, ready by 08:00 UTC; the day before is used when today's is not out) and update `titles.popularity` and `popularity_at` for titles that have a `tmdb_id`, when the score changed. The exports are read, not stored.
 
-**`db:sync:all`** runs 1, 2, 3, 4 in order. The two TMDB steps are skipped with a notice when `TMDB_API_TOKEN` is unset, so the other two need no account; with `--fixtures` the backfill is skipped (it calls TMDB's API) and popularity reads the fixture exports. Each step reads the others' tables as they stand: the UM bindings need the film `titles`, so a first `db:sync:all` binds nothing and the next run (or `db:sync:um`) binds what the Bechdel sync added. Re-running any step is safe.
+**`db:sync:all`** runs 1, 2, 3, 4 in order. The two TMDB steps are skipped with a notice when `TMDB_API_TOKEN` is unset, so the other two need no account; with `--fixtures` the backfill is skipped (it calls TMDB's API) and popularity reads the fixture exports. The UM bindings need the film `titles`, so when the Bechdel sync adds films, `db:sync:all` runs the UM sync a second time over the same feed to bind them. Re-running any step is safe.
 
 **`db/lib/normalizeTitle.ts`** — two exports (the app imports it as `#db/lib/normalizeTitle`, the sync scripts relatively, so the matching key is one module):
 

@@ -13,8 +13,12 @@ import { syncUm } from './sync-um.ts';
  */
 if (isMain(import.meta.url)) {
 	await runSync(process.argv.slice(2), async (db, sources, args) => {
-		await syncUm(db, await sources.umFeed());
-		await syncBechdel(db, sources, { full: args.full });
+		const feed = await sources.umFeed();
+		await syncUm(db, feed);
+		const bechdel = await syncBechdel(db, sources, { full: args.full });
+		// UM binds to film titles, so films the Bechdel sync just added are bound by a second pass
+		// over the same feed (it writes only the new bindings).
+		if (bechdel.titlesInserted > 0) await syncUm(db, feed);
 
 		const token = process.env.TMDB_API_TOKEN;
 		if (!token) {
