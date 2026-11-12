@@ -26,8 +26,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 2     | SQLite / D1 data layer | completed   | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.          |
 | 2b    | Daily source sync      | completed   | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items). |
 | 3     | Auth (Better Auth)     | completed   | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).            |
-| 4     | Comments               | active      | 2026-11-12: implementer running.                                                                          |
-| 5     | AI moderation          | not started |                                                                                                           |
+| 4     | Comments               | completed   | 2026-11-12. Comment e2e specs wait for Phase 6's `wrangler dev` job (Open items).                         |
+| 5     | AI moderation          | active      | 2026-11-12: implementer running.                                                                          |
 | 6     | CI, deploy, docs       | not started |                                                                                                           |
 
 ## Open items
@@ -42,6 +42,10 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Source sync:**
   - When the repository moves, update the `if: github.repository == …` guard in `.github/workflows/sync-sources.yml`, and set its secrets there.
   - Without `TMDB_API_TOKEN` the synced films have no TMDB id, so a contributor's local landing hero is empty.
+- **Comments:**
+  - The footer below a populated comment list moves when the list replaces its skeleton (CLS about 0.13–0.15); the reserved box cannot know the list's height.
+  - Mute and ban have no undo: there is no unmute or unban action.
+  - Commit Playwright specs for comment, reply, edit, vote, report and moderator approval once the `wrangler dev` e2e job exists (Phase 6).
 - **Auth:**
   - Google and Discord sign-in and linking have run only against mocks; test them once their OAuth apps and secrets exist.
 - **Attribution:**
@@ -65,6 +69,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - `RL_AUTH` allows 30 requests a minute per IP (user decision, 2026-11-12).
   - Only Google is a trusted provider for linking by email; a Discord sign-in links only with a verified email (user decision, 2026-11-12).
   - OAuth access and refresh tokens are encrypted at rest (user decision, 2026-11-12).
+- **Comments:**
+  - Every new account gets a generated username (`{feminist icon}_{4 digits}`), which the reader can change (user decision, 2026-11-12).
+  - A deleted comment keeps its text, hidden from other readers and still visible to its author and moderators (user decision, 2026-11-12).
 - **Toolchain:**
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).
   - TypeScript 6.0.3 serves the tooling and TypeScript 7 runs `typecheck`, until svelte-check supports TypeScript 7 (user decision, 2026-11-12).
