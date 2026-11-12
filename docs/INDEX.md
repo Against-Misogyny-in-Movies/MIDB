@@ -71,7 +71,7 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~710 tok)
+- `docs/phases/STATUS.md` — Phase status (~860 tok)
 
 ## Live plans
 
@@ -91,6 +91,17 @@ Read when a task names the plan.
   - 454–481 Phase 5: AI moderation (~480)
   - 482–511 Phase 6: CI, deploy, docs (~460)
   - 512–552 Verification (~650)
+- `docs/plans/plan-toolchain.md` — Plan: pnpm + Node 22, TypeScript 6/7 and Oxlint (~4.1K tok)
+  - 11–36 Context (~390)
+  - 37–185 Changes (~3.0K)
+    - 39–54 1. Package manager (~310)
+    - 55–81 2. Scripts run on Node (~590)
+    - 82–99 3. CI, hosting, hooks (~340)
+    - 100–120 4. Docs (current state only, per `.claude/rules/docs-standards.md`) (~390)
+    - 121–140 5. TypeScript: 6.0.3 for the tooling, 7.0.2 as a fast typecheck (user decision, 2026-11-12) (~470)
+    - 141–171 6. Lint: Oxlint for TS/JS, ESLint only for Svelte templates (user decision, 2026-11-12) (~610)
+    - 172–185 7. Docs for sections 5–6 (~270)
+  - 186–222 Verification (~600)
 
 ## Policies
 
