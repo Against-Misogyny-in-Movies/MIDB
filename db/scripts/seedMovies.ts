@@ -13,6 +13,8 @@ const CSV_PATH = './db/seeds/sources/bechdel.csv';
 const REQUIRED_COLUMNS = ['title', 'year', 'imdbid', 'id', 'bechdelRating'];
 // A row binds every column of its table, defaults included.
 const TITLE_COLUMNS = Object.keys(getTableColumns(titles)).length;
+// The upsert's SET binds `updated_at` once (drizzle binds a parameter for the $onUpdate column).
+const TITLE_SET_PARAMS = 1;
 const BECHDEL_COLUMNS = Object.keys(getTableColumns(titleBechdel)).length;
 const BATCH_SIZE = 1000;
 
@@ -40,7 +42,7 @@ async function flushBatch(db: Db, titleBatch: TitleInsert[], bechdelBatch: Bechd
 	// One statement per chunk: D1 caps a statement at 100 bound parameters. The seed is
 	// idempotent, so a run that stops part way is finished by running it again.
 	const idMap = new Map<string, string>();
-	for (const chunk of chunkForD1(dedupedTitles, TITLE_COLUMNS)) {
+	for (const chunk of chunkForD1(dedupedTitles, TITLE_COLUMNS, TITLE_SET_PARAMS)) {
 		const inserted = await db
 			.insert(titles)
 			.values(chunk)

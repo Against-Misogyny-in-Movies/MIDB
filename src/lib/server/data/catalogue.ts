@@ -81,6 +81,8 @@ export async function getPopularRatedFilms(
  * hero calls it on every request. The pool is cached for an hour; the shuffle runs per call.
  */
 export async function getRandomRatedFilms(count = 6, pool = 100): Promise<LinkedRatedFilm[]> {
+	// The key's version is bumped when the pool's contents or order change (v2: ordered by
+	// popularity), so a cached pool of the old shape is not served.
 	const ranked = await getCached(`catalogue:hero-pool:v2:${pool}`, LANDING_TTL_MS, () =>
 		getPopularRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
 	);

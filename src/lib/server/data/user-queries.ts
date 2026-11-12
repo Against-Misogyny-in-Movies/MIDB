@@ -6,7 +6,7 @@ import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 import { umFlagCount } from '#lib/media/utils/metrics.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
-import { isUniqueViolation } from './db-errors';
+import { isUniqueViolation } from './db-errors.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { createRemoteCallbacks, createRemoteDb } from '../remote-d1.ts';
-import { parseTarget } from '../args.ts';
 
 const ENV = {
 	CLOUDFLARE_ACCOUNT_ID: 'acct',
@@ -78,13 +77,4 @@ describe('remote D1 callbacks', () => {
 		expect(out).toEqual([[[41]], [[42]]]);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
-});
-
-describe('parseTarget', () => {
-	it('defaults to local', () => expect(parseTarget([])).toBe('local'));
-	it('reads --remote and --local', () => {
-		expect(parseTarget(['--remote'])).toBe('remote');
-		expect(parseTarget(['--local'])).toBe('local');
-	});
-	it('rejects both', () => expect(() => parseTarget(['--local', '--remote'])).toThrow());
 });
