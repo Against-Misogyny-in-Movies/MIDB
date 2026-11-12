@@ -10,7 +10,8 @@
 		{ id: 'verdict', label: 'Verdicts' },
 		{ id: 'bechdel', label: 'Bechdel Test' },
 		{ id: 'unconsenting', label: 'Unconsenting Media' },
-		{ id: 'ddd', label: 'Does the Dog Die' }
+		{ id: 'ddd', label: 'Does the Dog Die' },
+		{ id: 'moderation', label: 'Comments and moderation' }
 	];
 </script>
 
@@ -143,6 +144,60 @@
 					votes. The data is fetched from Does the Dog Die when a title page opens (films by IMDb
 					id, series by title) and cached for one hour.
 				</p>
+			</MetricArticle>
+
+			<MetricArticle
+				id="moderation"
+				title="Comments and moderation"
+				icon="ri-shield-check-fill"
+				hue="var(--brand)"
+			>
+				<p>
+					Every new or edited comment is checked automatically before it can appear. The check, its
+					policy and the blocklist are public in the site's source code.
+				</p>
+
+				<SubBlock label="What the check looks at">
+					<p>
+						A short blocklist of words and phrases runs first. A match rejects the comment with no
+						further check. The site also keeps a private list that extends it.
+					</p>
+					<p>
+						Otherwise Claude Haiku 5.5, a model from Anthropic, reads the comment. Describing,
+						quoting and criticising misogyny or sexual violence in a film is allowed. Endorsing it,
+						mocking survivors, attacking people, slurs, threats, sexual content involving minors,
+						explicit sexual content, personal information and spam are not, and neither are comments
+						unrelated to the title. The model answers with a decision, the categories that apply, a
+						severity from 0 to 3 and a reason.
+					</p>
+					<p>
+						Anthropic receives the comment text, the title's name and, for a reply, the comment it
+						answers. It never receives the author's email or account.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="What happens next">
+					<p>
+						<strong>Published:</strong> the model allows the comment. It appears at once.
+					</p>
+					<p>
+						<strong>Awaiting review:</strong> the model asks for a person to look, or finds a clear break
+						below severity 2. The same applies when the check fails (a timeout, an error or a refusal)
+						or when the site has no key for it. Only the author sees the comment until a moderator decides.
+					</p>
+					<p>
+						<strong>Rejected:</strong> the blocklist matches, or the model finds a clear break of severity
+						2 or 3. The author sees the comment with the reason.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="Reviewed by people">
+					<p>
+						Moderators approve, hide or reject comments from a queue. Three different readers
+						reporting a published comment send it back to review. A moderator can also mute or ban
+						an account.
+					</p>
+				</SubBlock>
 			</MetricArticle>
 		</div>
 	</div>
