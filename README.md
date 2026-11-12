@@ -19,6 +19,10 @@ pnpm dev
 
 `.env` also holds the Worker's secrets and public values, which `pnpm dev` reads through Wrangler. `pnpm preview` builds the site and runs the built Worker locally with `wrangler dev` on port 4173; it reads `.dev.vars` if that file exists, else `.env`. The database is a local D1 (SQLite) in `.wrangler/state`, shared by `pnpm dev`, `pnpm preview` and the scripts; no account, Docker or database server is needed. Delete `.wrangler/state` and run the steps above again to start from empty. The `db:sync:*` and `db:backfill:tmdb` scripts take `--remote` to write to the deployed D1 over the Cloudflare API, which needs `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` in `.env`. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
 
+## Daily source sync
+
+`.github/workflows/sync-sources.yml` runs the source sync against the deployed D1 every day at 09:23 UTC, and on demand from the Actions tab. It runs only on the canonical repository and needs these repository secrets: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN` and `TMDB_API_TOKEN`. A failed step fails the run, and GitHub emails the failure to the people watching the repository's workflow runs. GitHub disables a scheduled workflow after 60 days without repository activity; re-enable it from the Actions tab (any commit also resets the clock).
+
 ## Deploy
 
 Not set up yet. The site is built for Cloudflare Workers (`wrangler.jsonc`, `@sveltejs/adapter-cloudflare`) and the deploy workflow is the last phase of `docs/plans/plan-cloudflare-d1-comments.md`. `pnpm build` writes the Worker to `.svelte-kit/cloudflare/_worker.js`.

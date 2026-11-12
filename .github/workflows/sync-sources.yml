@@ -1,0 +1,64 @@
+name: Sync sources
+
+# Loads the Unconsenting Media, Bechdel Test and TMDB data into the deployed D1 every day, after
+# TMDB's daily export is ready (08:00 UTC). It writes to production, so it runs only on the
+# canonical repository, never on a fork, and has no pull_request trigger.
+on:
+  schedule:
+    - cron: '23 9 * * *'
+  workflow_dispatch:
+
+# Two runs never overlap; a manual run waits for the scheduled one.
+concurrency:
+  group: sync-sources
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync sources
+    if: github.repository == 'Against-Misogyny-in-Movies/MIDB'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Sundays (`date -u +%u` is 7) sweep every Bechdel Test year; other days read the recent ones.
+      - name: Choose the Bechdel Test sweep
+        run: |
+          if [ "$(date -u +%u)" = "7" ]; then
+            echo "BECHDEL_ARGS=--full" >> "$GITHUB_ENV"
+          fi
+
+      - name: Unconsenting Media
+        run: pnpm db:sync:um --remote
+
+      - name: Bechdel Test
+        run: pnpm db:sync:bechdel --remote $BECHDEL_ARGS
+
+      # New Bechdel Test films bind to their Unconsenting Media entries the same day.
+      - name: Unconsenting Media bindings
+        run: pnpm db:sync:um --remote
+
+      - name: TMDB ids
+        run: pnpm db:backfill:tmdb --remote
+
+      - name: Popularity
+        run: pnpm db:sync:popularity --remote
