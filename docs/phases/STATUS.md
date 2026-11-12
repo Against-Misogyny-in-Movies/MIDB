@@ -16,19 +16,19 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Phases
 
-| Phase | Work                   | Status      | Note                                                                                                      |
-| ----- | ---------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
-| T1    | pnpm + Node 22         | completed   | 2026-11-12.                                                                                               |
-| T2    | TypeScript 6 + TS 7    | completed   | 2026-11-12.                                                                                               |
-| T3    | Oxlint + ESLint Svelte | completed   | 2026-11-12.                                                                                               |
-| 0     | SvelteKit 3 upgrade    | completed   | 2026-11-12. Storybook builds on Kit 3; a story rendering in a browser is unverified.                      |
-| 1     | Cloudflare platform    | completed   | 2026-11-12. Workers Caching checks wait for the first preview deploy (Open items).                        |
-| 2     | SQLite / D1 data layer | completed   | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.          |
-| 2b    | Daily source sync      | completed   | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items). |
-| 3     | Auth (Better Auth)     | completed   | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).            |
-| 4     | Comments               | completed   | 2026-11-12. Comment e2e specs wait for Phase 6's `wrangler dev` job (Open items).                         |
-| 5     | AI moderation          | active      | 2026-11-12: implementer running.                                                                          |
-| 6     | CI, deploy, docs       | not started |                                                                                                           |
+| Phase | Work                   | Status    | Note                                                                                                        |
+| ----- | ---------------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| T1    | pnpm + Node 22         | completed | 2026-11-12.                                                                                                 |
+| T2    | TypeScript 6 + TS 7    | completed | 2026-11-12.                                                                                                 |
+| T3    | Oxlint + ESLint Svelte | completed | 2026-11-12.                                                                                                 |
+| 0     | SvelteKit 3 upgrade    | completed | 2026-11-12. Storybook builds on Kit 3; a story rendering in a browser is unverified.                        |
+| 1     | Cloudflare platform    | completed | 2026-11-12. Workers Caching checks wait for the first preview deploy (Open items).                          |
+| 2     | SQLite / D1 data layer | completed | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.            |
+| 2b    | Daily source sync      | completed | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items).   |
+| 3     | Auth (Better Auth)     | completed | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).              |
+| 4     | Comments               | completed | 2026-11-12. Comment e2e specs wait for Phase 6's `wrangler dev` job (Open items).                           |
+| 5     | AI moderation          | completed | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items). |
+| 6     | CI, deploy, docs       | active    | 2026-11-12: implementer running.                                                                            |
 
 ## Open items
 
@@ -44,8 +44,11 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Without `TMDB_API_TOKEN` the synced films have no TMDB id, so a contributor's local landing hero is empty.
 - **Comments:**
   - The footer below a populated comment list moves when the list replaces its skeleton (CLS about 0.13–0.15); the reserved box cannot know the list's height.
+  - Posting a comment inserts the reader's own row into the list, which moves the content below it.
   - Mute and ban have no undo: there is no unmute or unban action.
   - Commit Playwright specs for comment, reply, edit, vote, report and moderator approval once the `wrangler dev` e2e job exists (Phase 6).
+- **Moderation:**
+  - The Claude Haiku 5.5 check has run only against a mocked SDK; run a few real comments through it once `ANTHROPIC_API_KEY` is set, and review the blocklist and system prompt against real traffic.
 - **Auth:**
   - Google and Discord sign-in and linking have run only against mocks; test them once their OAuth apps and secrets exist.
 - **Attribution:**
