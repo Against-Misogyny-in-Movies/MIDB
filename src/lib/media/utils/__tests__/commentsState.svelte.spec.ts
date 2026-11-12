@@ -102,7 +102,9 @@ describe('CommentsState', () => {
 		const state = new CommentsState('movie', '1', async () => json({ comment: OWN }, 201));
 		expect(await state.post('hello')).toBe(true);
 		expect(state.viewer?.comments.map((c) => c.id)).toEqual(['new']);
-		expect(state.notices.compose).toMatch(/only to its author/);
+		expect(state.notices.compose).toMatch(
+			/Only its author and moderators see it until a moderator reviews it/
+		);
 	});
 
 	it('shows the server message for a muted account and returns false', async () => {

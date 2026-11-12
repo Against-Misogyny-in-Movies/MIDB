@@ -179,8 +179,8 @@
 					Reject this comment? It leaves the public list, and the author sees it as rejected with
 					the reason.
 				{:else if panel === 'mute'}
-					Mute {author.displayName}? The account cannot comment, edit, vote or report until the mute
-					ends.
+					Mute {author.displayName}? The account cannot write, edit, delete, vote on or report
+					comments until the mute ends.
 				{:else}
 					Ban {author.displayName}? Its sessions end, it cannot sign in again, and this page has no
 					way to undo a ban.

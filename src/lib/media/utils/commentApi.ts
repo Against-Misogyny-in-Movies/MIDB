@@ -16,7 +16,7 @@ export type CommentAction =
 const FAILED: Record<CommentAction, string> = {
 	load: 'The comments could not be loaded',
 	more: 'More comments could not be loaded',
-	viewer: 'Your votes and pending comments could not be loaded',
+	viewer: 'This account’s votes and unpublished comments could not be loaded',
 	create: 'The comment was not posted',
 	edit: 'The edit was not saved',
 	delete: 'The comment was not deleted',
@@ -33,17 +33,18 @@ export function describeFailure(action: CommentAction, status: number, message =
 	if (status === 0) return `${failed}. The server could not be reached.`;
 	if (status === 401) return `${failed}. The session has ended: sign in again.`;
 	if (status === 403) {
-		if (/banned/i.test(message))
-			return 'This account is banned and cannot comment, vote or report.';
+		if (/banned/i.test(message)) {
+			return 'This account is banned and cannot write, edit, delete, vote on or report comments.';
+		}
 		if (/muted/i.test(message)) {
-			return 'This account is muted and cannot comment, vote or report for now.';
+			return 'This account is muted and cannot write, edit, delete, vote on or report comments until the mute ends.';
 		}
 		if (action === 'vote') return 'A comment cannot be voted on by its author.';
 		if (action === 'report') return 'A comment cannot be reported by its author.';
 		return 'Only the author can change a comment.';
 	}
 	if (status === 404) return `${failed}. The comment or title no longer exists.`;
-	if (status === 409) return 'This comment can no longer be edited.';
+	if (status === 409) return 'This comment changed or can no longer be edited. Reload the page.';
 	if (status === 429) return `${failed}. Too many requests: wait a moment and try again.`;
 	if (status === 400) {
 		if (action === 'report') return `${failed}. A note is at most ${REPORT_NOTE_MAX} characters.`;

@@ -99,10 +99,10 @@
 		<header class="meta">
 			<Avatar avatarKey={comment.author?.avatarKey} size={28} />
 			<span class="name">{comment.author?.displayName ?? 'Account'}</span>
-			{#if own && !comment.review}<Badge tone="brand">You</Badge>{/if}
+			{#if own && !comment.review}<Badge tone="brand">Author</Badge>{/if}
 			{#if role}<Badge tone="brand">{role}</Badge>{/if}
 			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-			{#if comment.editedAt}<span class="label">edited</span>{/if}
+			{#if comment.editedAt}<span class="label">Edited</span>{/if}
 			{#if comment.review}
 				<Badge tone={commentStatusTone(comment.review.status)}>
 					{COMMENT_STATUS_LABELS[comment.review.status]}
@@ -111,7 +111,7 @@
 		</header>
 
 		{#if comment.inReplyTo}
-			<p class="label">in reply to @{comment.inReplyTo.displayName}</p>
+			<p class="label">In reply to {comment.inReplyTo.displayName}</p>
 		{/if}
 
 		{#if mode === 'edit'}
@@ -133,10 +133,12 @@
 		{/if}
 
 		{#if comment.review?.status === 'pending'}
-			<p class="label">Only you can see this comment until it is reviewed.</p>
+			<p class="label">
+				Only its author and moderators see this comment until a moderator reviews it.
+			</p>
 		{:else if comment.review?.status === 'rejected'}
 			<p class="label">
-				Only you can see this comment.{comment.review.reason
+				Only its author and moderators see this comment.{comment.review.reason
 					? ` Reason: ${comment.review.reason}`
 					: ''}
 			</p>
@@ -225,7 +227,7 @@
 		{/if}
 		{#if mode === 'delete'}
 			<CommentConfirm
-				message="Delete this comment? Its text is removed from the page and cannot be restored.{comment.replyCount >
+				message="Delete this comment? Other readers no longer see its text, and it cannot be restored.{comment.replyCount >
 				0
 					? ' Replies stay under a placeholder.'
 					: ''}"

@@ -9,7 +9,7 @@ import { runBatch, statusMove } from './comment-status.ts';
 export type ReportResult =
 	| {
 			ok: true;
-			/** True when this reader had already reported the comment; nothing was stored. */
+			/** True when this reader had already reported the comment (in any report status); nothing was stored. */
 			alreadyReported: boolean;
 			/** The comment's status afterwards: `pending` once the report threshold is reached. */
 			status: CommentStatus;
@@ -20,7 +20,9 @@ export type ReportResult =
 /**
  * Stores a reader's report of a published comment. When this makes `REPORT_THRESHOLD` distinct
  * open reports, the comment moves to `pending` (source `reports`) in the same batch, with its
- * thread's reply counts adjusted. One report per reader per comment: a second is ignored.
+ * thread's reply counts adjusted. One report per reader per comment, whatever its status: a
+ * reader whose earlier report was resolved or dismissed cannot report the comment again, and
+ * the second request is ignored.
  */
 export async function reportComment(input: {
 	commentId: string;

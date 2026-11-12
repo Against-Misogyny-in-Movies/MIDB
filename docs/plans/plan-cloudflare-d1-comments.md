@@ -424,8 +424,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
      - `softDeleteComment`
    - `comment-votes.ts`: the vote row and the `score` delta are written in one `db.batch`.
    - `comment-reports.ts`: 3 distinct open reports move a published comment to `pending` (source `reports`).
-   - `moderation-queries.ts`:
-     - the queue;
+   - `moderation-queue.ts` (the queues and the log) and `moderation-actions.ts`:
      - approve, hide, reject, restore, dismiss, mute and ban;
      - each action writes `moderation_actions` in the same batch.
    - The first comment on a title calls `getOrCreateTitleRow`. GETs still use `getTitleRow` only.

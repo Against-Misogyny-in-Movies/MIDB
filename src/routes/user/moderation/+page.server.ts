@@ -53,7 +53,10 @@ const refusals: Record<
 	invalid: [400, 'The request was not valid.'],
 	'not-found': [404, 'The comment or account no longer exists.'],
 	'invalid-state': [409, 'The comment is no longer in a state this action applies to.'],
-	'forbidden-target': [403, 'This account cannot be acted on from your role.']
+	'forbidden-target': [
+		403,
+		'A moderator can act only on ordinary accounts, an administrator also on moderators; no one acts on an administrator or on their own account.'
+	]
 };
 
 /**

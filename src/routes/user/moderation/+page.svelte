@@ -68,8 +68,8 @@
 
 	{#if data.staleSources.length > 0}
 		<Notice tone="warn">
-			No successful source sync for more than {STALE_SYNC_HOURS} hours: titles may show out-of-date data.
-			Last success:
+			These sources have had no successful sync for {STALE_SYNC_HOURS} hours or more, so title pages may
+			show out-of-date data. Last success:
 			{#each data.staleSources as source, i (source.source)}
 				{source.label}, {formatDate(source.lastSuccessAt)}{i < data.staleSources.length - 1
 					? '; '

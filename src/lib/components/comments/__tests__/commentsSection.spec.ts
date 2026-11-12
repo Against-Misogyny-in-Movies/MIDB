@@ -153,7 +153,7 @@ describe('CommentsSection signed out', () => {
 		);
 		expect(await screen.findByText('This comment was removed.')).toBeTruthy();
 		expect(screen.getByText('A reply')).toBeTruthy();
-		expect(screen.getByText('in reply to @bea')).toBeTruthy();
+		expect(screen.getByText('In reply to bea')).toBeTruthy();
 	});
 
 	it('loads the next page on request', async () => {
@@ -238,7 +238,9 @@ describe('CommentsSection signed in', () => {
 			expect.objectContaining({ body: JSON.stringify({ body: 'Hello there' }) })
 		);
 		expect(screen.getByText('Awaiting review')).toBeTruthy();
-		expect(screen.getByRole('status').textContent).toMatch(/only to its author/);
+		expect(screen.getByRole('status').textContent).toMatch(
+			/Only its author and moderators see it until a moderator reviews it/
+		);
 	});
 
 	it('names a muted account when a write is refused', async () => {
@@ -305,7 +307,7 @@ describe('CommentsSection signed in', () => {
 			(b) => b.textContent?.trim() === 'Delete'
 		)!;
 		await fireEvent.click(deleteButton);
-		expect(mine.textContent).toMatch(/cannot be restored/);
+		expect(mine.textContent).toMatch(/Other readers no longer see its text/);
 		expect(mine.textContent).toMatch(/Replies stay under a placeholder/);
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
 		expect(await screen.findByText('This comment was removed.')).toBeTruthy();
@@ -376,7 +378,7 @@ describe('CommentsSection signed in', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
 		await screen.findByText('This comment was removed.');
 		await waitFor(() => expect(document.activeElement?.id).toBe('comment-mine'));
-		expect(mine.textContent).not.toMatch(/cannot be restored/);
+		expect(mine.textContent).not.toMatch(/Other readers no longer see its text/);
 	});
 
 	it('puts the focus on the next comment after a delete that removes the comment', async () => {

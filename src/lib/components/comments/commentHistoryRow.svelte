@@ -85,7 +85,7 @@
 	<div class="meta">
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-		{#if comment.editedAt}<span class="label">edited</span>{/if}
+		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<span class="label">
 			{comment.parentId ? 'Reply on' : 'On'}
 			{#if href}<a class="link" {href}>{comment.title}</a>{:else}{comment.title}{/if}
@@ -114,7 +114,7 @@
 		<p class="label">
 			{comment.status === 'hidden'
 				? 'A moderator hid this comment.'
-				: 'Only you can see it.'}{comment.moderationReason
+				: 'Only its author and moderators see it.'}{comment.moderationReason
 				? ` Reason: ${comment.moderationReason}`
 				: ''}
 		</p>
@@ -136,7 +136,7 @@
 
 	{#if mode === 'delete'}
 		<CommentConfirm
-			message="Delete this comment? Its text is removed from the page and cannot be restored.{comment.replyCount >
+			message="Delete this comment? Other readers no longer see its text. It stays here, marked as deleted.{comment.replyCount >
 			0
 				? ' Replies stay under a placeholder.'
 				: ''}"

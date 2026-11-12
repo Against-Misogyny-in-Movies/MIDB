@@ -102,7 +102,11 @@ describe('CommentHistoryRow', () => {
 		);
 		mount(row({ replyCount: 2 }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-		expect(screen.getByText(/cannot be restored.*Replies stay under a placeholder/)).toBeTruthy();
+		expect(
+			screen.getByText(
+				/Other readers no longer see its text\. It stays here, marked as deleted\..*Replies stay under a placeholder/
+			)
+		).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
 		expect(await screen.findByText('Deleted')).toBeTruthy();
 	});

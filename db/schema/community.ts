@@ -167,7 +167,7 @@ export const commentVotes = sqliteTable(
 	]
 );
 
-/** A reader's report of a comment. One per reporter per comment; three open ones send it back to review. */
+/** A reader's report of a comment. One per reporter per comment; `REPORT_THRESHOLD` open ones send it back to review. */
 export const commentReports = sqliteTable(
 	'comment_reports',
 	{

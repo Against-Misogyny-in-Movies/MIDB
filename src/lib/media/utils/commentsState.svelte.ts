@@ -201,8 +201,8 @@ export class CommentsState {
 			this.#setOwn(comment);
 			this.notices[key] =
 				comment.status === 'rejected'
-					? 'The comment was rejected. It stays visible only to its author.'
-					: 'Comment sent. It stays visible only to its author until it is reviewed.';
+					? 'The comment was rejected. Only its author and moderators see it.'
+					: 'Comment sent. Only its author and moderators see it until a moderator reviews it.';
 		}
 		return true;
 	}

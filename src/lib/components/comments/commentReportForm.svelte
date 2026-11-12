@@ -40,7 +40,7 @@
 	{#if sent}
 		<Notice tone="success">
 			{sent === 'already'
-				? 'This account already reported the comment. Moderators have the report.'
+				? 'This account already reported the comment.'
 				: 'Report sent. Moderators review it.'}
 		</Notice>
 		<div class="row">

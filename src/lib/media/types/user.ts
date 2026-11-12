@@ -12,6 +12,6 @@ export type PublicUser = {
 	username: string | null;
 	avatarKey: string | null;
 	role: UserRole;
-	/** username → email local-part → "Account", resolved on the server. */
+	/** The username ("Account" for a row with none), resolved on the server. */
 	displayName: string;
 };
