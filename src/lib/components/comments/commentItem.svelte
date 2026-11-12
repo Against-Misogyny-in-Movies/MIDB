@@ -132,7 +132,7 @@
 						</CommentAction>
 					</div>
 				{:else}
-					<span class="score score--alone" aria-label="Score {comment.score}">{comment.score}</span>
+					<span class="score score--alone">Score {comment.score}</span>
 				{/if}
 			{/if}
 
@@ -237,7 +237,7 @@
 	}
 
 	.score--alone {
-		@apply text-ink-muted;
+		@apply text-ink-muted font-normal;
 		padding-inline: var(--spacing-sm);
 	}
 </style>

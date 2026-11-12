@@ -92,6 +92,29 @@ describe('buildThreads', () => {
 		expect(threads.map((t) => t.root.id)).toEqual(['lost', 'a']);
 	});
 
+	it('replaces the placeholder of an edited comment that has replies, keeping its place and replies', () => {
+		const reply = view('r', { parentId: 'a', rootId: 'a' });
+		const placeholder = view('a', {
+			removed: true,
+			body: null,
+			author: null,
+			replyCount: 1,
+			replies: [reply]
+		});
+		const threads = buildThreads(
+			[view('first'), placeholder],
+			[own('a', { body: 'Edited text', replyCount: 1 })],
+			ME
+		);
+		expect(threads.map((t) => t.root.id)).toEqual(['first', 'a']);
+		expect(threads[1].root).toMatchObject({
+			body: 'Edited text',
+			removed: false,
+			review: { status: 'pending', reason: null }
+		});
+		expect(threads[1].replies.map((r) => r.id)).toEqual(['r']);
+	});
+
 	it('ignores own comments without a signed-in reader', () => {
 		expect(buildThreads([view('a')], [own('p')], null).map((t) => t.root.id)).toEqual(['a']);
 	});

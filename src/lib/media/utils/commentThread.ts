@@ -42,20 +42,20 @@ const byAge = (a: ShownComment, b: ShownComment) =>
 
 /**
  * The list the section draws: the public page's threads, with the reader's own pending and
- * rejected comments merged in (the public list never carries them). An own root goes first,
- * newest first; an own reply joins its root's thread by age; an own reply whose root is not on
- * the loaded pages stands as a thread of its own at the top.
+ * rejected comments merged in (the public list never carries them). An own comment that is
+ * also in the public list, as the placeholder of an edited comment that has replies, replaces
+ * that placeholder in place. Any other own root goes first, newest first; an own reply joins its
+ * root's thread by age; an own reply whose root is not on the loaded pages stands as a thread
+ * of its own at the top.
  */
 export function buildThreads(
 	list: readonly CommentView[],
 	own: readonly OwnComment[],
 	me: PublicUser | null
 ): Thread[] {
-	const threads: Thread[] = list.map((root) => ({
-		root: asShown(root),
-		replies: root.replies.map(asShown)
-	}));
-	if (!me || own.length === 0) return threads;
+	if (!me || own.length === 0) {
+		return list.map((root) => ({ root: asShown(root), replies: root.replies.map(asShown) }));
+	}
 
 	const names = new Map<string, string>();
 	for (const view of list) {
@@ -64,13 +64,25 @@ export function buildThreads(
 			if (reply.author) names.set(reply.id, reply.author.displayName);
 		}
 	}
-	const ownShown = own.map((c) => ownAsShown(c, me, names));
+	const ownById = new Map(own.map((c) => [c.id, ownAsShown(c, me, names)]));
+	const placed = new Set<string>();
+	const take = (view: CommentView): ShownComment => {
+		const mine = ownById.get(view.id);
+		if (mine) placed.add(view.id);
+		return mine ?? asShown(view);
+	};
+
+	const threads: Thread[] = list.map((root) => ({
+		root: take(root),
+		replies: root.replies.map(take)
+	}));
 	const byRoot = new Map(threads.map((t) => [t.root.id, t]));
-	const ownRoots = ownShown.filter((c) => c.parentId === null);
+	const unplaced = [...ownById.values()].filter((c) => !placed.has(c.id));
+	const ownRoots = unplaced.filter((c) => c.parentId === null);
 	for (const root of ownRoots) byRoot.set(root.id, { root, replies: [] });
 
 	const strays: Thread[] = [];
-	for (const reply of ownShown.filter((c) => c.parentId !== null)) {
+	for (const reply of unplaced.filter((c) => c.parentId !== null)) {
 		const thread = byRoot.get(reply.rootId ?? reply.parentId ?? '');
 		if (thread) thread.replies = [...thread.replies, reply].sort(byAge);
 		else strays.push({ root: reply, replies: [] });
