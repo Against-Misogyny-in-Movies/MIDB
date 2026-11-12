@@ -31,12 +31,12 @@ Each agent reads its own file.
 
 Read the sections your task touches.
 
-- `README.md` — MIDB (~650 tok)
+- `README.md` — MIDB (~660 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~32.9K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~32.8K tok)
   - 7–16 What it is (~410)
-  - 17–35 Tech stack (~1.0K)
+  - 17–35 Tech stack (~950)
   - 36–66 High-level data flow (~870)
   - 67–202 Directory layout (~4.0K)
     - 193–202 File-organisation conventions (~410)

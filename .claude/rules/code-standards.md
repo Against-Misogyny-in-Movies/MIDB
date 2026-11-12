@@ -27,8 +27,9 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 ## File organisation
 
 - **Use `$lib` and `$db` aliases** for all cross-folder imports. Relative `./` is for same-folder siblings only.
-- **Scripts under `db/` and `scripts/` run on Node's type stripping.**
-  - Their relative imports carry the `.ts` extension (`from '../client.ts'`), and they use erasable syntax only (no enums, namespaces or parameter properties); `erasableSyntaxOnly` in `tsconfig.json` enforces it.
+- **The Node-run graph uses type stripping:** the entry points under `db/scripts/` and `scripts/` and what they import (`db/client.ts`, `db/schema/*`, `db/lib/*`, `db/test/global-setup.ts`), not Vitest specs.
+  - It uses relative `.ts` imports instead of `$lib`/`$db`, because Node cannot resolve the aliases.
+  - Those imports look like `from '../client.ts'`, and the graph uses erasable syntax only (no enums, namespaces or parameter properties); `erasableSyntaxOnly` in `tsconfig.json` enforces it.
   - An entry point is guarded with `isMain(import.meta.url)` (`scripts/lib/is-main.ts`), and a script that reads `.env` is run with `--env-file-if-exists=.env`.
 - **One concern per file.** When a file mixes identity resolution, algorithm logic, and rendering, split it. Name files after what they do, not what they are adjacent to.
 - **A file has one job.**

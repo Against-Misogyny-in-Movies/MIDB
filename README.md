@@ -21,7 +21,7 @@ pnpm dev
 
 ## Deploy
 
-Vercel builds from `vercel.json` with pnpm (the version in `packageManager`) on the Node 22 that `engines` selects. Production deploys apply pending migrations to `DB_CONNECTION` before the build (`db/scripts/migrateOnDeploy.ts`); preview deploys skip that step. A failed migration fails the deploy and leaves the database unchanged. Seeding stays manual.
+Vercel installs with `pnpm install --frozen-lockfile` and builds with the `buildCommand` in `vercel.json`, on the Node version that `engines` (`>=22.18`) selects. Production deploys apply pending migrations to `DB_CONNECTION` before the build (`db/scripts/migrateOnDeploy.ts`); preview deploys skip that step. A failed migration fails the deploy and leaves the database unchanged. Seeding stays manual.
 
 ## Tests
 
