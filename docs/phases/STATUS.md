@@ -30,7 +30,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 5     | AI moderation                 | completed   | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items). |
 | 6     | CI, deploy, docs              | completed   | 2026-11-12. The workflows have not run against a real account (Open items).                                 |
 | 7     | Avatars and usernames         | completed   | 2026-11-12.                                                                                                 |
-| R1    | Reader reports: data          | not started |                                                                                                             |
+| R1    | Reader reports: data          | active      | 2026-11-12. Started.                                                                                        |
 | R2    | Reader reports: API           | not started |                                                                                                             |
 | R3    | Reader reports: moderation    | not started |                                                                                                             |
 | R4    | Reader reports: UI            | not started |                                                                                                             |
