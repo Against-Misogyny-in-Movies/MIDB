@@ -4,7 +4,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Rules
 
-- **The live plans.** The phases are the sections of the live plans: rows T1–T3 (the toolchain, done) ran first; rows 0–6 come from `docs/plans/plan-cloudflare-d1-comments.md`. Their decisions are settled; only the user reopens them.
+- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Every row below is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
 - **Starting a phase.**
   - If nothing is active, the only legal start is the lowest phase in the table whose earlier phases are completed.
   - When you start a phase, set it to `active` with a one-line note. Do not mark the next phase active.
@@ -26,9 +26,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 2     | SQLite / D1 data layer | completed | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.            |
 | 2b    | Daily source sync      | completed | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items).   |
 | 3     | Auth (Better Auth)     | completed | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).              |
-| 4     | Comments               | completed | 2026-11-12. Comment e2e specs wait for Phase 6's `wrangler dev` job (Open items).                           |
+| 4     | Comments               | completed | 2026-11-12.                                                                                                 |
 | 5     | AI moderation          | completed | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items). |
-| 6     | CI, deploy, docs       | active    | 2026-11-12: implementer running.                                                                            |
+| 6     | CI, deploy, docs       | completed | 2026-11-12. The workflows have not run against a real account (Open items).                                 |
 
 ## Open items
 
@@ -37,16 +37,17 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - A film or series page that fails to load from TMDB shows the generic "Something went wrong" heading (`src/routes/+error.svelte`); name what failed.
   - Enter in the navbar search does nothing unless a row is highlighted; the landing search opens the first result.
 - **Cloudflare:**
+  - Run the first production and preview deploys through `deploy.yml` once the accounts, secrets and variables exist (`README.md`, Deploying a copy), and check the Workers Caching items below on them.
+  - The `--remote` scripts (`/raw` over the D1 REST API) have run only against a mocked API; confirm them on the first remote load.
   - Replace the `REPLACE-WITH-…` values in `wrangler.jsonc` (D1 ids, origins, Turnstile site key) and check the rate-limit `namespace_id`s are unique in the account.
   - On the first preview deploy, check that a second request for a title page and for an image is a cache hit with the Worker not invoked (`wrangler tail`), and that a new comment purges its list.
 - **Source sync:**
-  - When the repository moves, update the `if: github.repository == …` guard in `.github/workflows/sync-sources.yml`, and set its secrets there.
+  - When the repository moves, update the `if: github.repository == …` guards in `.github/workflows/sync-sources.yml` and `deploy.yml`, and set the secrets and variables there.
   - Without `TMDB_API_TOKEN` the synced films have no TMDB id, so a contributor's local landing hero is empty.
 - **Comments:**
   - The footer below a populated comment list moves when the list replaces its skeleton (CLS about 0.13–0.15); the reserved box cannot know the list's height.
   - Posting a comment inserts the reader's own row into the list, which moves the content below it.
   - Mute and ban have no undo: there is no unmute or unban action.
-  - Commit Playwright specs for comment, reply, edit, vote, report and moderator approval once the `wrangler dev` e2e job exists (Phase 6).
 - **Moderation:**
   - The Claude Haiku 5.5 check has run only against a mocked SDK; run a few real comments through it once `ANTHROPIC_API_KEY` is set, and review the blocklist and system prompt against real traffic.
 - **Auth:**
@@ -81,6 +82,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Oxlint lints TS and JS; ESLint is kept for Svelte templates only (user decision, 2026-11-12).
 - **Source sync:**
   - Bechdel year pages are paginated and followed in full; films with no IMDb id are skipped and logged; an unreadable row fails the run; the daily run binds UM after Bechdel adds films (user decision, 2026-11-12).
+- **Previews:**
+  - Same-repo pull requests deploy the shared preview Worker (`wrangler deploy --env preview`); the latest push wins (user decision, 2026-11-12).
 - **Local preview:**
   - `pnpm preview` and e2e run the built Worker on `wrangler dev`, because adapter-cloudflare 8 emulates `cloudflare:workers` only in `vite dev` (user decision, 2026-11-12).
 - **Sources and repository:**

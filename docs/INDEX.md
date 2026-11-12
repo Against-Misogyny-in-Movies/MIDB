@@ -11,10 +11,10 @@ Read whole.
 - `AGENTS.md` — MIDB: agent rules (~740 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
 - `.claude/rules/code-standards.md` — Code standards (~3.7K tok)
-  - 5–22 Server / client boundary (~620) ← 2
+  - 5–22 Server / client boundary (~620) ← 1
   - 23–27 Caching (~110)
   - 28–34 Route folders are thin (~130)
-  - 35–56 File organisation (~640) ← 4
+  - 35–56 File organisation (~640) ← 3
   - 57–76 Components (~460) ← 3
   - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
@@ -89,26 +89,7 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~1.9K tok)
-
-## Live plans
-
-Read when a task names the plan.
-
-- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.9K tok)
-  - 5–39 Context (~460)
-  - 40–112 Verified platform facts (checked 2026-11-11) (~1.5K)
-  - 113–121 Fresh repository (~170)
-  - 122–159 Open-source constraints (~600)
-  - 160–177 Phase 0: SvelteKit 3 upgrade (on the current stack, before anything else) (~430)
-  - 178–238 Phase 1: Cloudflare platform (~1.3K)
-  - 239–285 Phase 2: SQLite / D1 data layer (~940)
-  - 286–348 Phase 2b: Daily source sync (Bechdel Test, Unconsenting Media, popularity) (~1.6K)
-  - 349–402 Phase 3: Auth (Better Auth) (~1.1K)
-  - 403–455 Phase 4: Comments (~1.0K)
-  - 456–483 Phase 5: AI moderation (~480)
-  - 484–513 Phase 6: CI, deploy, docs (~490)
-  - 514–555 Verification (~660)
+- `docs/phases/STATUS.md` — Phase status (~2.1K tok)
 
 ## Policies
 
