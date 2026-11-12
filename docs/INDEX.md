@@ -51,37 +51,38 @@ Read the sections your task touches.
   - 67–70 Motion (~90)
   - 71–74 Browser surfaces (~50)
   - 75–78 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~45.8K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~46.6K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–256 Directory layout (~7.2K)
-    - 247–256 File-organisation conventions (~450)
-  - 257–270 Styling & theming (~950)
-  - 271–283 Copy & voice (~570) ← 1
-  - 284–313 Routes (~9.4K)
-  - 314–351 User & roles (~2.1K)
-    - 344–351 Migrations (~350)
-  - 352–381 Source sync (~1.8K) ← 3
-  - 382–447 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 448–472 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
-  - 473–492 UM Disambiguation (~630)
-  - 493–501 UM flag rendering (~250)
-  - 502–513 Shared marker pattern (metric row markers) (~410) ← 4
-  - 514–554 Component library (`src/lib/components/`) (~5.6K)
-  - 555–565 Live search (`src/lib/components/search/`) (~710)
-  - 566–579 Server cache (`src/lib/server/cache/`) (~690)
-  - 580–595 TMDB integration (~810)
-  - 596–614 Auth flow (Better Auth) (~1.9K)
-  - 615–633 Caching policy (~1.2K) ← 5
-  - 634–679 Configuration & environment (~2.5K)
-    - 650–662 Local run sequence (~130)
-    - 663–666 npm scripts (~200)
-    - 667–679 CI (`.github/workflows/tests.yml`) (~400)
-  - 680–695 Testing (~860)
-    - 690–695 Verification baseline (~80)
-  - 696–705 Known gaps / TODO (~280)
-  - 706–714 Related docs (~160)
+  - 68–257 Directory layout (~7.3K)
+    - 248–257 File-organisation conventions (~450)
+  - 258–271 Styling & theming (~950)
+  - 272–284 Copy & voice (~570) ← 1
+  - 285–314 Routes (~9.4K)
+  - 315–352 User & roles (~2.1K)
+    - 345–352 Migrations (~350)
+  - 353–382 Source sync (~1.8K) ← 3
+  - 383–448 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 449–473 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
+  - 474–493 UM Disambiguation (~630)
+  - 494–502 UM flag rendering (~250)
+  - 503–514 Shared marker pattern (metric row markers) (~410) ← 4
+  - 515–555 Component library (`src/lib/components/`) (~5.6K)
+  - 556–566 Live search (`src/lib/components/search/`) (~710)
+  - 567–580 Server cache (`src/lib/server/cache/`) (~690)
+  - 581–596 TMDB integration (~810)
+  - 597–615 Auth flow (Better Auth) (~1.9K)
+  - 616–634 Caching policy (~1.2K) ← 6
+  - 635–689 Configuration & environment (~2.9K)
+    - 651–663 Local run sequence (~130)
+    - 664–667 npm scripts (~200)
+    - 668–678 CI (`.github/workflows/tests.yml`) (~450)
+    - 679–689 Deploy (`.github/workflows/deploy.yml`) (~380)
+  - 690–705 Testing (~1.2K)
+    - 700–705 Verification baseline (~80)
+  - 706–715 Known gaps / TODO (~280)
+  - 716–724 Related docs (~160)
 
 ## Phases
 
@@ -122,6 +123,7 @@ Read before a change that touches what they describe.
 
 The sections each area's comments cite, most cited first. Read these before changing code there.
 
+- `e2e-tests`: docs/architecture.md, Caching policy (1)
 - `scripts/checks`: .claude/rules/code-standards.md, File organisation (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)

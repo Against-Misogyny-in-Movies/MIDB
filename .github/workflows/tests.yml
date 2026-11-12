@@ -124,20 +124,25 @@ jobs:
       - name: Run DB tests
         run: pnpm test:db
 
-  # Disabled until the repo variable E2E_ENABLED is set to 'true' and the secrets
-  # below are configured (Settings → Secrets and variables → Actions).
+  # The built Worker on `wrangler dev` against a local D1 loaded with the sync fixtures. It needs
+  # no account. A pull request from a fork gets no secrets, so `TMDB_API_TOKEN` is empty there and
+  # the specs that need TMDB (film and series pages, comments on them, search, posters) skip with
+  # a reason; every other spec runs. Never `pull_request_target`: the specs run the pull
+  # request's own code, so they must not hold secrets on a fork.
   e2e:
     name: E2E tests
-    if: vars.E2E_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      # Inlined into the build (`src/env.ts`); the origin is the one `wrangler dev` serves.
+      PUBLIC_ORIGIN: http://localhost:4173
       PUBLIC_TMDB_API_URL: https://api.themoviedb.org
       PUBLIC_TMDB_IMAGE_URL: /img/tmdb
-      TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
-      DDD_API_KEY: ${{ secrets.DDD_API_KEY }}
+      PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
@@ -152,21 +157,32 @@ jobs:
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Migrate database
+      - name: Migrate the local database
         run: pnpm db:migrate:local
 
-      # `pnpm preview` (started by playwright.config.ts) builds the app and runs the Worker with
-      # `wrangler dev`, which reads the Worker's secrets from .dev.vars, not from
-      # the job's environment. The PUBLIC_* values come from the job's environment at build time.
-      - name: Write the Worker's secrets
+      # The trimmed Unconsenting Media, Bechdel Test and TMDB fixtures: no network, no keys.
+      - name: Load the fixtures
+        run: pnpm db:sync:all --local --fixtures
+
+      # `wrangler dev` reads the Worker's vars and secrets from .dev.vars, not from the job's
+      # environment, and a value here overrides `wrangler.jsonc`. The Google values are fakes: the
+      # specs only check that the button redirects to Google. Comment moderation has no key, so
+      # new comments are pending until a moderator approves them. `TMDB_API_TOKEN` is the
+      # secret; it is empty on a fork.
+      - name: Write the Worker's vars
+        env:
+          TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
         run: |
           {
+            echo "PUBLIC_ORIGIN=$PUBLIC_ORIGIN"
             echo "TMDB_API_TOKEN=$TMDB_API_TOKEN"
-            echo "DDD_API_KEY=$DDD_API_KEY"
+            echo "GOOGLE_CLIENT_ID=e2e-fake-client-id"
+            echo "GOOGLE_CLIENT_SECRET=e2e-fake-client-secret"
           } > .dev.vars
 
+      # `playwright.config.ts` starts `pnpm preview` (build, then `wrangler dev` on 4173).
       - name: Run e2e tests
-        run: pnpm test:integration
+        run: pnpm test:integration --trace off
 
       - name: Upload Playwright report
         if: failure()
