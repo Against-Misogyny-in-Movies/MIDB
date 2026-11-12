@@ -1,7 +1,15 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildGraph, headingsOf, INDEX_PATH, renderIndex, resolveSection, ROOT } from '../index';
+import {
+	buildGraph,
+	groups,
+	headingsOf,
+	INDEX_PATH,
+	renderIndex,
+	resolveSection,
+	ROOT
+} from '../index';
 
 describe('docs index', () => {
 	it('is current (run `pnpm docs:index` after a doc or heading change)', () => {
@@ -12,6 +20,18 @@ describe('docs index', () => {
 	it('every doc citation in code and live docs names a heading', () => {
 		const unresolved = buildGraph().unresolved.map((c) => `${c.from} → ${c.doc}, ${c.section}`);
 		expect(unresolved).toEqual([]);
+	});
+});
+
+describe('renderIndex', () => {
+	it('leaves a group with no files out, and stays Prettier-stable', () => {
+		const graph = buildGraph();
+		const list = groups().map((group) =>
+			group.title === 'Live plans' ? { ...group, files: [] } : group
+		);
+		const out = renderIndex(graph, list);
+		expect(out).not.toContain('## Live plans');
+		expect(out).not.toMatch(/\n\n\n/);
 	});
 });
 

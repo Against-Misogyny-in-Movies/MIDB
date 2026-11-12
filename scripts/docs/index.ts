@@ -17,7 +17,7 @@ const SECTIONED_BYTES = 12_000;
 const CITING_ROOTS = ['src', 'db', 'scripts', 'e2e-tests'];
 const CODE_FILE = /\.(ts|js|svelte|css)$/;
 
-type Group = { title: string; note: string; files: string[] };
+export type Group = { title: string; note: string; files: string[] };
 
 export type Heading = { level: number; text: string; start: number; end: number; bytes: number };
 
@@ -233,7 +233,8 @@ function area(file: string): string {
 	return parts.length <= 2 ? parts[0] : parts.slice(0, 2).join('/');
 }
 
-export function renderIndex(graph: Graph = buildGraph()): string {
+// A group with no files is left out: an empty list would render a stray blank line that Prettier removes.
+export function renderIndex(graph: Graph = buildGraph(), list: Group[] = groups()): string {
 	const byFile = new Map(graph.indexed.map((doc) => [doc.file, doc]));
 	const out: string[] = [
 		'# Docs index',
@@ -243,7 +244,7 @@ export function renderIndex(graph: Graph = buildGraph()): string {
 		'Read a section, not a file: `pnpm docs:section <file> "<heading>"` prints one section with its subsections (the file may be a basename such as `architecture`). The line range works with an offset and limit too. ~tok is bytes / 4. `← n` is how many code files and docs cite the section; the last part of this file lists the code citations by area.',
 		''
 	];
-	for (const group of groups()) {
+	for (const group of list.filter((item) => item.files.length > 0)) {
 		out.push(`## ${group.title}`, '', group.note, '');
 		for (const file of group.files) {
 			const doc = byFile.get(file)!;
