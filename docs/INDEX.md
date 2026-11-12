@@ -79,7 +79,7 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~1.0K tok)
+- `docs/phases/STATUS.md` — Phase status (~1.2K tok)
 
 ## Live plans
 

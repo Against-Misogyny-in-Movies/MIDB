@@ -16,19 +16,19 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Phases
 
-| Phase | Work                   | Status      | Note                             |
-| ----- | ---------------------- | ----------- | -------------------------------- |
-| T1    | pnpm + Node 22         | completed   | 2026-11-12.                      |
-| T2    | TypeScript 6 + TS 7    | completed   | 2026-11-12.                      |
-| T3    | Oxlint + ESLint Svelte | completed   | 2026-11-12.                      |
-| 0     | SvelteKit 3 upgrade    | active      | 2026-11-12: implementer running. |
-| 1     | Cloudflare platform    | not started |                                  |
-| 2     | SQLite / D1 data layer | not started |                                  |
-| 2b    | Daily source sync      | not started |                                  |
-| 3     | Auth (Better Auth)     | not started |                                  |
-| 4     | Comments               | not started |                                  |
-| 5     | AI moderation          | not started |                                  |
-| 6     | CI, deploy, docs       | not started |                                  |
+| Phase | Work                   | Status      | Note                                                                                 |
+| ----- | ---------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| T1    | pnpm + Node 22         | completed   | 2026-11-12.                                                                          |
+| T2    | TypeScript 6 + TS 7    | completed   | 2026-11-12.                                                                          |
+| T3    | Oxlint + ESLint Svelte | completed   | 2026-11-12.                                                                          |
+| 0     | SvelteKit 3 upgrade    | completed   | 2026-11-12. Storybook builds on Kit 3; a story rendering in a browser is unverified. |
+| 1     | Cloudflare platform    | active      | 2026-11-12: implementer running.                                                     |
+| 2     | SQLite / D1 data layer | not started |                                                                                      |
+| 2b    | Daily source sync      | not started |                                                                                      |
+| 3     | Auth (Better Auth)     | not started |                                                                                      |
+| 4     | Comments               | not started |                                                                                      |
+| 5     | AI moderation          | not started |                                                                                      |
+| 6     | CI, deploy, docs       | not started |                                                                                      |
 
 ## Open items
 
