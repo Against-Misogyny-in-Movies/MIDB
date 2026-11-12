@@ -1,12 +1,12 @@
 import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { captcha } from 'better-auth/plugins/captcha';
 import { passkey } from '@better-auth/passkey';
 import type { Db } from '#db/client.ts';
 import { accounts, passkeys, sessions, users, verifications } from '#db/schema/auth.ts';
 import { adoptProviderEmail } from './link-email.ts';
 import { guardLastMethod } from './last-method.ts';
+import { guardPasskeySignUp } from './turnstile.ts';
 import { createPasskeyUser, resolveNewPasskeyUser } from './passkey-signup.ts';
 
 export type OAuthCredentials = { clientId: string; clientSecret: string };
@@ -23,15 +23,12 @@ export interface AuthConfig {
 	/** Each provider is enabled only when its credentials are set. */
 	google?: OAuthCredentials;
 	discord?: OAuthCredentials;
-	/** `TURNSTILE_SECRET_KEY`: enables the Turnstile check on passkey sign-up. */
+	/** `TURNSTILE_SECRET_KEY`: enables the Turnstile check on a passkey sign-up (no session). */
 	turnstileSecret?: string;
 }
 
 /** The origins a contributor develops on, where `.env.example` needs no secret. */
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
-
-/** Better Auth's endpoint that starts a passkey registration; Turnstile guards it. */
-const PASSKEY_SIGNUP_ENDPOINT = '/passkey/generate-register-options';
 
 /**
  * Builds the Better Auth instance (`#lib/server/auth/auth.ts` memoises it). It takes its
@@ -104,16 +101,7 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 					resolveUser: resolveNewPasskeyUser,
 					afterVerification: ({ ctx, user }) => createPasskeyUser(ctx, user)
 				}
-			}),
-			...(turnstileSecret
-				? [
-						captcha({
-							provider: 'cloudflare-turnstile',
-							secretKey: turnstileSecret,
-							endpoints: [PASSKEY_SIGNUP_ENDPOINT]
-						})
-					]
-				: [])
+			})
 		],
 		advanced: {
 			// Cloudflare sets this header and replaces any client value.
@@ -124,6 +112,7 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 		rateLimit: { enabled: false },
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
+				await guardPasskeySignUp(ctx, turnstileSecret);
 				await guardLastMethod(ctx);
 			})
 		},
