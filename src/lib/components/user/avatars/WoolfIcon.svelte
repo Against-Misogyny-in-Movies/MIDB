@@ -11,9 +11,9 @@
 <Portrait {size}>
 	{#snippet back()}
 		<ellipse cx="20" cy="16" rx="7" ry="7.6" fill="var(--avatar-hair)" /><circle
-			cx="25.6"
-			cy="23.2"
-			r="2.6"
+			cx="26.6"
+			cy="22.2"
+			r="3.3"
 			fill="var(--avatar-hair)"
 		/>
 	{/snippet}

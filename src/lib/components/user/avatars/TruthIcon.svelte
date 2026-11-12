@@ -16,9 +16,8 @@
 		<path
 			d="M13.4 17C13 10.4 16.2 8 20 8S27 10.4 26.6 17C26 14 24.4 12.6 20 12.6S14 14 13.4 17Z"
 			fill="var(--avatar-light)"
-			stroke="var(--avatar-line)"
-			stroke-width="0.4"
-			stroke-opacity="0.4"
+			stroke="var(--avatar-hair)"
+			stroke-width="1.2"
 		/><g stroke="var(--avatar-line)" stroke-width="0.7" fill="none"
 			><circle cx="17.7" cy="17.8" r="1.7" /><circle cx="22.3" cy="17.8" r="1.7" /><path
 				d="M19.4 17.6Q20 17.2 20.6 17.6"

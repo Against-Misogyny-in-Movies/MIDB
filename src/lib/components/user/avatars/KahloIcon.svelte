@@ -19,7 +19,7 @@
 		/>
 	{/snippet}
 	{#snippet dress()}
-		<path d="M12.5 30Q20 34.5 27.5 30" stroke="var(--avatar-mark)" stroke-width="1.6" />
+		<path d="M12.5 30Q20 34.5 27.5 30" stroke="var(--avatar-light)" stroke-width="1.8" />
 	{/snippet}
 	{#snippet front()}
 		<path

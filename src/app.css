@@ -143,10 +143,10 @@
 
 	/* Avatar portraits (user/avatars): a violet ramp from plate to hair. Every face takes the same
 	   tone; light (a cap, a collar) stays near white in both themes. */
-	--avatar-plate: light-dark(#e6d6f6, #5b3f80);
+	--avatar-plate: light-dark(#d4bcef, #7552a6);
 	--avatar-face: light-dark(#f7f0fc, #ecdff8);
 	--avatar-hair: light-dark(#2d0050, #1d0a33);
-	--avatar-dress: light-dark(#7400b8, #a77ee0);
+	--avatar-dress: light-dark(#7400b8, #c9a6f2);
 	--avatar-mark: light-dark(#a030d8, #e2c4f8);
 	--avatar-light: light-dark(#ffffff, #faf6fd);
 	/* Lines only ever sit on the light fills (face, light, mark), so one value serves both themes. */

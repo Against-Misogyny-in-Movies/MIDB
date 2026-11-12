@@ -10,7 +10,7 @@
 <!-- Simone de Beauvoir: hair wrapped in a light turban, an open collar. -->
 <Portrait {size}>
 	{#snippet back()}
-		<ellipse cx="20" cy="15" rx="6.6" ry="7" fill="var(--avatar-hair)" />
+		<ellipse cx="20" cy="15.6" rx="7.6" ry="7.2" fill="var(--avatar-hair)" />
 	{/snippet}
 	{#snippet dress()}
 		<path d="M16.4 28.7L20 33.5L23.6 28.7Z" fill="var(--avatar-face)" /><path
@@ -29,6 +29,10 @@
 			stroke="var(--avatar-line)"
 			stroke-width="0.5"
 			stroke-opacity="0.35"
+		/><path
+			d="M13.2 15.5C14.4 12.6 16.6 11.8 20 11.8S25.6 12.6 26.8 15.5"
+			stroke="var(--avatar-hair)"
+			stroke-width="1.2"
 		/>
 	{/snippet}
 </Portrait>

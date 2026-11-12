@@ -44,7 +44,7 @@ Read the sections your task touches.
 - `PRODUCT.md` — Product (~470 tok)
 - `DESIGN.md` — Design (~3.4K tok)
   - 5–8 Idea (~70)
-  - 9–24 Colour (~880) ← 1
+  - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–61 Components (~1.5K)
@@ -69,7 +69,7 @@ Read the sections your task touches.
   - 475–494 UM Disambiguation (~630)
   - 495–503 UM flag rendering (~250)
   - 504–515 Shared marker pattern (metric row markers) (~410) ← 4
-  - 516–556 Component library (`src/lib/components/`) (~5.6K) ← 1
+  - 516–556 Component library (`src/lib/components/`) (~5.6K)
   - 557–567 Live search (`src/lib/components/search/`) (~710)
   - 568–581 Server cache (`src/lib/server/cache/`) (~690)
   - 582–597 TMDB integration (~810)
@@ -90,12 +90,6 @@ Read the sections your task touches.
 STATUS.md, then the live plan section for the active phase.
 
 - `docs/phases/STATUS.md` — Phase status (~2.1K tok)
-
-## Live plans
-
-Read when a task names the plan.
-
-- `docs/plans/plan-avatars.md` — Plan: avatar portraits and username pool (~380 tok)
 
 ## Policies
 

@@ -10,20 +10,20 @@
 <!-- Maya Angelou: close-cropped hair, a wide smile, a beaded necklace. -->
 <Portrait {size} smile>
 	{#snippet back()}
-		<ellipse cx="20" cy="14.8" rx="8" ry="8.4" fill="var(--avatar-hair)" />
+		<ellipse cx="20" cy="13.8" rx="8.8" ry="9" fill="var(--avatar-hair)" />
 	{/snippet}
 	{#snippet dress()}
-		<circle cx="15.4" cy="29.6" r="0.9" fill="var(--avatar-mark)" /><circle
+		<circle cx="15.4" cy="29.6" r="1.15" fill="var(--avatar-light)" /><circle
 			cx="17.6"
 			cy="30.6"
-			r="0.9"
-			fill="var(--avatar-mark)"
-		/><circle cx="20" cy="31" r="0.9" fill="var(--avatar-mark)" /><circle
+			r="1.15"
+			fill="var(--avatar-light)"
+		/><circle cx="20" cy="31" r="1.15" fill="var(--avatar-light)" /><circle
 			cx="22.4"
 			cy="30.6"
-			r="0.9"
-			fill="var(--avatar-mark)"
-		/><circle cx="24.6" cy="29.6" r="0.9" fill="var(--avatar-mark)" />
+			r="1.15"
+			fill="var(--avatar-light)"
+		/><circle cx="24.6" cy="29.6" r="1.15" fill="var(--avatar-light)" />
 	{/snippet}
 	{#snippet front()}
 		<path
