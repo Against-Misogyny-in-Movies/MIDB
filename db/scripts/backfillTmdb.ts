@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { openScriptDb } from './lib/db.ts';
+import { parseTarget } from './lib/args.ts';
 import type { Db } from '../client.ts';
 import { titles } from '../schema/titles.ts';
 
@@ -52,7 +53,7 @@ async function main(db: Db) {
 	console.log(`Done. Updated: ${updated}, not found: ${notFound}`);
 }
 
-const { db, close } = await openScriptDb();
+const { db, close } = await openScriptDb(parseTarget(process.argv.slice(2)));
 try {
 	await main(db);
 } finally {

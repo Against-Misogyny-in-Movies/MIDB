@@ -132,7 +132,8 @@ export async function seedMovies(db: Db, csvPath: string) {
 
 if (isMain(import.meta.url)) {
 	const { openScriptDb } = await import('./lib/db.ts');
-	const { db, close } = await openScriptDb();
+	const { parseTarget } = await import('./lib/args.ts');
+	const { db, close } = await openScriptDb(parseTarget(process.argv.slice(2)));
 	try {
 		await seedMovies(db, CSV_PATH);
 	} finally {

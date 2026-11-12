@@ -259,7 +259,8 @@ export async function seedUnconsenting(db: Db, csvPath: string, reportPath = UNM
 
 if (isMain(import.meta.url)) {
 	const { openScriptDb } = await import('./lib/db.ts');
-	const { db, close } = await openScriptDb();
+	const { parseTarget } = await import('./lib/args.ts');
+	const { db, close } = await openScriptDb(parseTarget(process.argv.slice(2)));
 	try {
 		await seedUnconsenting(db, CSV_PATH);
 	} finally {
