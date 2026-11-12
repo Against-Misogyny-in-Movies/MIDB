@@ -4,7 +4,6 @@ import { SEARCH_QUERY_MAX_LENGTH } from '#lib/media/utils/search.ts';
 
 const searchTitles = vi.fn();
 vi.mock('#lib/server/integrations/tmdb/index.ts', () => ({ searchTitles }));
-vi.mock('$app/env/private', () => ({ REDIS_URL: undefined }));
 
 const { GET } = await import('../routes/api/search/+server');
 const { clearCache } = await import('#lib/server/cache/index.ts');

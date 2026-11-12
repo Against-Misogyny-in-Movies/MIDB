@@ -1,15 +1,14 @@
 import { defineEnvVars } from '@sveltejs/kit/env';
 
-// Static values are inlined at build time (as Kit 2 static env was); the dynamic ones are read
-// when the server starts. The optional dynamic variables stay `undefined` when unset, so the
-// build and `check` need no database and no Redis.
+// Public values are inlined at build time. Secrets and bindings are not declared here: server
+// code reads them through `#lib/server/env.ts` (the Worker's env). The optional dynamic
+// variables stay `undefined` when unset, so the build and `check` need no database.
 export const variables = defineEnvVars({
-	DDD_API_KEY: { static: true },
-	TMDB_API_TOKEN: { static: true },
 	PUBLIC_HANKO_API_URL: { public: true, static: true },
+	PUBLIC_ORIGIN: { public: true, static: true },
 	PUBLIC_TMDB_API_URL: { public: true, static: true },
 	PUBLIC_TMDB_IMAGE_URL: { public: true, static: true },
-	REDIS_URL: { schema: (value) => value },
+	PUBLIC_TURNSTILE_SITE_KEY: { public: true, static: true },
 	DB_CONNECTION: { schema: (value) => value },
 	TEST_DB_CONNECTION: { schema: (value) => value }
 });

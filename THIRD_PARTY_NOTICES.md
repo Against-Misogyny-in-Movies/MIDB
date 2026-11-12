@@ -18,6 +18,10 @@ Each source keeps the rights to its data. MIDB shows it with attribution and a l
 - **Inter Tight:** [SIL Open Font License 1.1](https://openfontlicense.org), loaded from Google Fonts.
 - **Remixicon:** [Apache-2.0](https://github.com/Remix-Design/RemixIcon/blob/master/License), bundled from the `remixicon` package.
 
+## Hosting
+
+The site runs on [Cloudflare Workers](https://workers.cloudflare.com), under Cloudflare's terms. Wrangler and `@sveltejs/adapter-cloudflare` build and run it locally and keep their own licences.
+
 ## Dependencies
 
 Package dependencies keep their own licences, in each package under `node_modules/`.

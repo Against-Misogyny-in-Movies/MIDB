@@ -1,4 +1,4 @@
-import { DDD_API_KEY } from '$app/env/private';
+import { env } from '#lib/server/env.ts';
 import { getCached } from '#lib/server/cache/index.ts';
 import type { TriggerTag, DddResult } from './ddd-types';
 
@@ -35,13 +35,13 @@ interface DddMediaItem {
 
 const EMPTY: DddResult = { itemId: null, tags: [], isSeries: false };
 
-const headers = {
-	'X-API-KEY': DDD_API_KEY,
-	Accept: 'application/json'
-};
+/** Request headers; the key is read per call because the Worker's env belongs to the request. */
+function dddHeaders() {
+	return { 'X-API-KEY': env.DDD_API_KEY ?? '', Accept: 'application/json' };
+}
 
 async function fetchMediaTags(itemId: number): Promise<{ tags: TriggerTag[]; isSeries: boolean }> {
-	const mediaRes = await fetch(`${DDD_BASE}/media/${itemId}`, { headers });
+	const mediaRes = await fetch(`${DDD_BASE}/media/${itemId}`, { headers: dddHeaders() });
 	if (!mediaRes.ok) return { tags: [], isSeries: false };
 
 	const mediaData: DddMediaItem = await mediaRes.json();
@@ -79,11 +79,11 @@ export async function getTriggerTagsLive(imdbId: string | null): Promise<DddResu
 	return getCached(`ddd:imdb:${imdbId}`, CACHE_TTL_MS, async () => {
 		// Step 1: look up by imdb id
 		const searchRes = await fetch(`${DDD_BASE}/dddsearch?imdb=${encodeURIComponent(imdbId)}`, {
-			headers
+			headers: dddHeaders()
 		});
 		if (!searchRes.ok) return EMPTY;
 
-		const searchData = await searchRes.json();
+		const searchData = (await searchRes.json()) as { items?: DddSearchItem[] } | null;
 		const items: DddSearchItem[] = searchData?.items ?? [];
 		if (!Array.isArray(items) || items.length === 0) return EMPTY;
 
@@ -112,11 +112,11 @@ export async function getTriggerTagsForSeries(series: {
 	return getCached(`ddd:tmdb:${series.tmdbId}`, CACHE_TTL_MS, async () => {
 		// Text-search by title (imdb= lookup fails for TV series)
 		const searchRes = await fetch(`${DDD_BASE}/dddsearch?q=${encodeURIComponent(series.title)}`, {
-			headers
+			headers: dddHeaders()
 		});
 		if (!searchRes.ok) return { ...EMPTY, isSeries: true };
 
-		const searchData = await searchRes.json();
+		const searchData = (await searchRes.json()) as { items?: DddSearchItem[] } | null;
 		const items: DddSearchItem[] = searchData?.items ?? [];
 		if (!Array.isArray(items) || items.length === 0) return { ...EMPTY, isSeries: true };
 

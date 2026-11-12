@@ -37,7 +37,8 @@
 	"ignorePatterns": [
 		".svelte-kit",
 		"build",
-		".vercel",
+		".wrangler",
+		"worker-configuration.d.ts",
 		"storybook-static",
 		".claude/skills/impeccable",
 		"db/migrations"

@@ -17,11 +17,11 @@ pnpm db:migrate && pnpm db:seed:movies && pnpm db:seed:um
 pnpm dev
 ```
 
-`.env.example` points `DB_CONNECTION` at the compose database. The compose service runs `postgres:16`. A `db-data` volume created by the earlier `postgres:15` image will not start on 16. Local data can be reseeded, so recreate the volume with `docker compose down -v`, then run the steps above again. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
+`.env` also holds the Worker's secrets and public values, which `pnpm dev` reads through Wrangler. `.env.example` points `DB_CONNECTION` at the compose database. The compose service runs `postgres:16`. A `db-data` volume created by the earlier `postgres:15` image will not start on 16. Local data can be reseeded, so recreate the volume with `docker compose down -v`, then run the steps above again. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
 
 ## Deploy
 
-Vercel installs with `pnpm install --frozen-lockfile` and builds with the `buildCommand` in `vercel.json`, on the Node version that `engines` (`>=22.18`) selects. Production deploys apply pending migrations to `DB_CONNECTION` before the build (`db/scripts/migrateOnDeploy.ts`); preview deploys skip that step. A failed migration fails the deploy and leaves the database unchanged. Seeding stays manual.
+Not set up yet. The site is built for Cloudflare Workers (`wrangler.jsonc`, `@sveltejs/adapter-cloudflare`) and the deploy workflow is the last phase of `docs/plans/plan-cloudflare-d1-comments.md`. `pnpm build` writes the Worker to `.svelte-kit/cloudflare/_worker.js`.
 
 ## Tests
 

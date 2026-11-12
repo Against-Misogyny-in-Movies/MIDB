@@ -16,7 +16,8 @@ export default [
 		ignores: [
 			'.svelte-kit/**',
 			'build/**',
-			'.vercel/**',
+			'.wrangler/**',
+			'worker-configuration.d.ts',
 			'node_modules/**',
 			'package/**',
 			'.claude/skills/impeccable/**',

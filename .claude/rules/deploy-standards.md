@@ -15,15 +15,8 @@ The site is not versioned: there are no version bumps and no tags. `package.json
 
 ## Deploys
 
-- **Production.** Vercel deploys `main` to production through its git integration. `vercel.json`'s `buildCommand` first runs `db/scripts/migrateOnDeploy.ts`:
-  - on `VERCEL_ENV=production` it applies pending migrations to `DB_CONNECTION` in one transaction;
-  - a failure fails the deploy and changes nothing;
-  - previews skip it.
-
-  This deploy step is the one place outside the app that reads the connection string at build time.
-
-- **Previews.** A pull request from a branch of this repository gets a preview deploy. Previews never migrate the production database.
-- **Pulling a bad deploy.** Revert the commit on `main` with a new pull request, or promote the previous deployment in Vercel. A migration is never rolled back by hand: fix forward with a new migration.
+- **Not set up yet.** The site is built for Cloudflare Workers (`wrangler.jsonc`), and the deploy workflow is the last phase of the live plan (`docs/plans/plan-cloudflare-d1-comments.md`). Until it exists nothing deploys on a merge, and an agent never deploys by hand.
+- **Migrations.** A migration is never rolled back by hand: fix forward with a new migration.
 
 ## Who merges and deploys
 

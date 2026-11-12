@@ -16,8 +16,8 @@ import { navigating } from '$app/state';
 async function fetchResults(query: string, signal: AbortSignal): Promise<SearchResult[]> {
 	const res = await fetch('/api/search?q=' + encodeURIComponent(query), { signal });
 	if (!res.ok) return [];
-	const data = await res.json();
-	return data.results as SearchResult[];
+	const data = (await res.json()) as { results: SearchResult[] };
+	return data.results;
 }
 
 /**

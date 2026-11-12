@@ -18,7 +18,7 @@ async function resolveTmdbId(imdbId: string): Promise<number | null> {
 		headers: { Authorization: `Bearer ${TMDB_TOKEN}`, Accept: 'application/json' }
 	});
 	if (!res.ok) return null;
-	const data = await res.json();
+	const data = (await res.json()) as { movie_results?: { id: number }[] } | null;
 	return data?.movie_results?.[0]?.id ?? null;
 }
 

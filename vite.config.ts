@@ -1,9 +1,10 @@
-import adapter from '@sveltejs/adapter-vercel';
+import adapter from '@sveltejs/adapter-cloudflare';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { svelteTesting } from '@testing-library/svelte/vite';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
 	plugins: [
@@ -14,13 +15,19 @@ export default defineConfig({
 			// a separate PostCSS pass that resolves tailwindcss from the package cache.
 			preprocess: vitePreprocess({ style: false }),
 
-			// Deployed on Vercel. See https://svelte.dev/docs/kit/adapter-vercel for its options.
+			// Deployed on Cloudflare Workers, configured by wrangler.jsonc.
 			adapter: adapter()
 		}),
 		svelteTesting()
 	],
 	test: {
 		globals: true,
+		// `cloudflare:workers` exists only in the Workers runtime; specs get a stub.
+		alias: {
+			'cloudflare:workers': fileURLToPath(
+				new URL('./src/test/cloudflare-workers.stub.ts', import.meta.url)
+			)
+		},
 		projects: [
 			{
 				extends: true,

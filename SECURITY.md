@@ -8,7 +8,7 @@ What the site stores and sends is in [PRIVACY.md](PRIVACY.md). This file names t
 - **Browser requests:** the browser calls MIDB's own `/api/*` endpoints, Hanko for sign-in, `image.tmdb.org` for posters, and Google Fonts.
 - **Caching:** public pages are cached by the CDN with a key that ignores cookies, so their loads never read the request's user (`src/lib/server/http/cache.ts`). Account data reaches the browser only through `private, no-store` responses: `/api/me` and the `/user` pages.
 - **Authorization:** every endpoint and page that needs an account checks it with `requireUser` / `requireRole` (`src/lib/server/auth/guards.ts`). Roles are read from the database, never from the session token.
-- **Rate limits:** search and username checks are rate-limited (`src/lib/server/http/rate-limit.ts`).
+- **Rate limits:** search and username checks are rate-limited with Cloudflare Workers rate-limit bindings (`src/lib/server/http/rate-limit.ts`, `wrangler.jsonc`). A limiter outage lets requests through.
 
 ## Supply chain
 
@@ -17,7 +17,7 @@ What the site stores and sends is in [PRIVACY.md](PRIVACY.md). This file names t
   - CI (`.github/workflows/tests.yml`) runs with a read-only token, so pull requests from forks cannot write to the repository or read secrets.
   - Every action is pinned to a commit SHA.
   - Dependabot (`.github/dependabot.yml`) opens weekly updates for packages and actions, which pass the same CI.
-- **Secrets:** no secret is committed. `.env` is ignored by git, and `.env.example` holds placeholders only.
+- **Secrets:** no secret is committed. `.env` and `.dev.vars` are ignored by git, `.env.example` holds placeholders only, and `wrangler.jsonc` holds bindings and non-secret values. Production secrets are set with `wrangler secret put`; server code reads them through `src/lib/server/env.ts`.
 
 ## Reporting a vulnerability
 

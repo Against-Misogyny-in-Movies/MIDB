@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { PUBLIC_TMDB_API_URL } from '$app/env/public';
-import { TMDB_API_TOKEN } from '$app/env/private';
+import { env } from '#lib/server/env.ts';
 import { getCached } from '#lib/server/cache/index.ts';
 
 // TMDB title metadata is near-static; cache it for a day so repeat visits skip the round-trip.
@@ -20,7 +20,7 @@ export async function tmdbFetch<T>(path: string, params: Record<string, string> 
 	for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
 
 	const response = await fetch(url.toString(), {
-		headers: { Authorization: `Bearer ${TMDB_API_TOKEN}`, accept: 'application/json' }
+		headers: { Authorization: `Bearer ${env.TMDB_API_TOKEN ?? ''}`, accept: 'application/json' }
 	});
 	if (!response.ok) {
 		throw error(response.status, `TMDB error: ${response.statusText}`);

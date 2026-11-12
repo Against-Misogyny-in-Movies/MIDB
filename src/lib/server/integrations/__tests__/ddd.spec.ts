@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { env } from '#lib/server/env.ts';
 import { clearCache } from '#lib/server/cache/index.ts';
-
-vi.mock('$app/env/private', () => ({ DDD_API_KEY: 'test-key', REDIS_URL: undefined }));
 
 // ── Shared mock helpers ────────────────────────────────────────────────────
 
@@ -28,6 +27,18 @@ describe('getTriggerTagsLive', () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		const result = await getTriggerTagsLive(null);
 		expect(result).toEqual({ itemId: null, tags: [], isSeries: false });
+	});
+
+	it('sends the API key from the Worker env', async () => {
+		env.DDD_API_KEY = 'test-key';
+		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockSearchResponse([]));
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+		await getTriggerTagsLive('tt0000001');
+		delete env.DDD_API_KEY;
+		expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+			headers: { 'X-API-KEY': 'test-key', Accept: 'application/json' }
+		});
 	});
 
 	it('maps TopicId, index1→season, index2→episode correctly', async () => {

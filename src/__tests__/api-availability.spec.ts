@@ -4,7 +4,6 @@ import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 const isUsernameAvailable = vi.fn(async () => true);
 vi.mock('#lib/server/data/user-queries.ts', () => ({ isUsernameAvailable }));
-vi.mock('$app/env/private', () => ({ REDIS_URL: undefined }));
 
 const { GET } = await import('../routes/user/profile/availability/+server');
 const { clearCache } = await import('#lib/server/cache/index.ts');

@@ -10,18 +10,18 @@ Read whole.
 
 - `AGENTS.md` — MIDB: agent rules (~760 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~3.1K tok)
-  - 5–20 Server / client boundary (~480) ← 2
-  - 21–27 Route folders are thin (~130)
-  - 28–49 File organisation (~640) ← 4
-  - 50–69 Components (~460) ← 3
-  - 70–88 Database (~470)
-  - 89–95 Testing (~160) ← 1
-  - 96–108 Making a change (~440) ← 3
-  - 109–125 Checking a change (~250) ← 6
+- `.claude/rules/code-standards.md` — Code standards (~3.2K tok)
+  - 5–21 Server / client boundary (~560) ← 2
+  - 22–28 Route folders are thin (~130)
+  - 29–50 File organisation (~640) ← 4
+  - 51–70 Components (~460) ← 3
+  - 71–89 Database (~470)
+  - 90–96 Testing (~160) ← 1
+  - 97–109 Making a change (~440) ← 3
+  - 110–126 Checking a change (~250) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
-- `.claude/rules/deploy-standards.md` — Deploy standards (~510 tok)
+- `.claude/rules/deploy-standards.md` — Deploy standards (~410 tok)
 - `.claude/rules/docs-standards.md` — Docs standards (~1.1K tok)
 - `.claude/rules/style-standards.md` — Style standards (~1.3K tok)
 
@@ -42,38 +42,38 @@ Read the sections your task touches.
 - `README.md` — MIDB (~660 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~34.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~34.5K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
-  - 37–67 High-level data flow (~870)
-  - 68–205 Directory layout (~4.2K)
-    - 196–205 File-organisation conventions (~440)
-  - 206–218 Styling & theming (~830)
-  - 219–231 Copy & voice (~570) ← 1
-  - 232–256 Routes (~6.9K)
-  - 257–270 User & roles (~450)
-  - 271–327 Database schema (~2.5K)
-    - 279–309 Tables (active) (~1.0K)
-    - 310–327 Migrations (~1.2K)
-  - 328–350 Seeding (~720) ← 1
-  - 351–416 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.1K)
-  - 417–436 UM Disambiguation (~630)
-  - 437–445 UM flag rendering (~250)
-  - 446–457 Shared marker pattern (metric row markers) (~410) ← 4
-  - 458–494 Component library (`src/lib/components/`) (~5.0K)
-  - 495–505 Live search (`src/lib/components/search/`) (~710)
-  - 506–519 Server cache (`src/lib/server/cache/`) (~550)
-  - 520–531 TMDB integration (~560)
-  - 532–547 Auth flow (Hanko) (~890)
-  - 548–559 Caching policy (~510) ← 3
-  - 560–609 Configuration & environment (~1.8K)
-    - 577–593 Local run sequence (~140)
-    - 594–597 npm scripts (~130)
-    - 598–609 CI (`.github/workflows/tests.yml`) (~360)
-  - 610–625 Testing (~660)
-    - 620–625 Verification baseline (~80)
-  - 626–636 Known gaps / TODO (~340)
-  - 637–645 Related docs (~160)
+  - 37–67 High-level data flow (~850)
+  - 68–208 Directory layout (~4.5K)
+    - 199–208 File-organisation conventions (~450)
+  - 209–221 Styling & theming (~830)
+  - 222–234 Copy & voice (~570) ← 1
+  - 235–259 Routes (~6.9K)
+  - 260–273 User & roles (~450)
+  - 274–330 Database schema (~2.4K)
+    - 282–312 Tables (active) (~1.0K)
+    - 313–330 Migrations (~1.1K)
+  - 331–353 Seeding (~720) ← 1
+  - 354–419 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.1K)
+  - 420–439 UM Disambiguation (~630)
+  - 440–448 UM flag rendering (~250)
+  - 449–460 Shared marker pattern (metric row markers) (~410) ← 4
+  - 461–497 Component library (`src/lib/components/`) (~5.0K)
+  - 498–508 Live search (`src/lib/components/search/`) (~710)
+  - 509–522 Server cache (`src/lib/server/cache/`) (~550)
+  - 523–534 TMDB integration (~570)
+  - 535–550 Auth flow (Hanko) (~890)
+  - 551–562 Caching policy (~560) ← 4
+  - 563–613 Configuration & environment (~2.1K)
+    - 581–597 Local run sequence (~140)
+    - 598–601 npm scripts (~130)
+    - 602–613 CI (`.github/workflows/tests.yml`) (~370)
+  - 614–629 Testing (~690)
+    - 624–629 Verification baseline (~80)
+  - 630–640 Known gaps / TODO (~340)
+  - 641–649 Related docs (~160)
 
 ## Phases
 
@@ -105,10 +105,10 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~510 tok)
-- `PRIVACY.md` — Privacy (~500 tok)
+- `SECURITY.md` — Security (~580 tok)
+- `PRIVACY.md` — Privacy (~540 tok)
 - `ACCESSIBILITY.md` — Accessibility (~400 tok)
-- `THIRD_PARTY_NOTICES.md` — Third-party notices (~580 tok)
+- `THIRD_PARTY_NOTICES.md` — Third-party notices (~630 tok)
 
 ## Code to docs
 
@@ -117,5 +117,5 @@ The sections each area's comments cite, most cited first. Read these before chan
 - `scripts/checks`: .claude/rules/code-standards.md, File organisation (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
-- `src/lib`: docs/architecture.md, Shared marker pattern (metric row markers) (2)
+- `src/lib`: docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Caching policy (1)
 - `src/routes`: docs/architecture.md, Shared marker pattern (metric row markers) (1)

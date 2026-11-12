@@ -12,7 +12,7 @@ A reader who does not sign in gives MIDB no personal data.
   - The Inter Tight font loads from Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`).
   - Each of these sees the reader's IP address and browser, under its own privacy policy.
 - **MIDB's own server** looks up each page's data on TMDB and Does the Dog Die. These requests carry the title being looked up, never anything about the reader.
-- **Hosting.** The site is hosted on Vercel, which keeps standard request logs (IP address, URL, time) under its own policy.
+- **Hosting.** The site runs on Cloudflare Workers, which keeps standard request logs (IP address, URL, time) under its own policy. The server also caches the TMDB and Does the Dog Die responses it fetches in Cloudflare's cache; those hold film data only, never anything about a reader.
 
 ## Signing in
 

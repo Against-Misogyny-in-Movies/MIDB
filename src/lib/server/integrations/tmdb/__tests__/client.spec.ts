@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { env } from '#lib/server/env.ts';
 import { clearCache } from '#lib/server/cache/index.ts';
 import movieFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/movie-603.json';
 import searchFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/search-matrix.json';
 
 vi.mock('$app/env/public', () => ({ PUBLIC_TMDB_API_URL: 'https://tmdb.test' }));
-vi.mock('$app/env/private', () => ({ TMDB_API_TOKEN: 'test-token', REDIS_URL: undefined }));
 
 import { TMDB_SEARCH_TTL_MS, tmdbFetch } from '#lib/server/integrations/tmdb/client.ts';
 import { getMovie, searchTitles } from '#lib/server/integrations/tmdb/index.ts';
@@ -18,12 +18,14 @@ function respond(body: unknown, status = 200, statusText = 'OK') {
 }
 
 beforeEach(async () => {
+	env.TMDB_API_TOKEN = 'test-token';
 	await clearCache();
 	fetchMock.mockReset();
 	vi.stubGlobal('fetch', fetchMock);
 });
 
 afterEach(() => {
+	delete env.TMDB_API_TOKEN;
 	vi.unstubAllGlobals();
 });
 

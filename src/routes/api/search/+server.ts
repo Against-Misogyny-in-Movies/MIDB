@@ -16,7 +16,7 @@ export const GET: RequestHandler = async (event) => {
 
 	// Per IP: the response is public and CDN-cached, so it must not depend on the user.
 	// Outside the try below, so the 429 is not swallowed into an empty result.
-	await rateLimit(event, 'search', 60, 60_000);
+	await rateLimit(event, 'RL_SEARCH');
 
 	try {
 		const results = await searchTitles(q);

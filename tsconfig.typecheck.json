@@ -9,6 +9,7 @@
 		"scripts/**/*.ts",
 		"e2e-tests/**/*.ts",
 		".storybook/**/*.ts",
+		"worker-configuration.d.ts",
 		"*.config.ts"
 	],
 	"exclude": ["node_modules", "db/migrations"]

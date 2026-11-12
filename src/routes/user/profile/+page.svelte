@@ -28,7 +28,7 @@
 				signal
 			});
 			if (!res.ok) return 'idle';
-			const { available } = await res.json();
+			const { available } = (await res.json()) as { available: boolean };
 			return available ? 'available' : 'taken';
 		},
 		(result) => (availability = result),

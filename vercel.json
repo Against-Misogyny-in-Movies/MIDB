@@ -1,4 +1,0 @@
-{
-	"installCommand": "pnpm install --frozen-lockfile",
-	"buildCommand": "node db/scripts/migrateOnDeploy.ts && pnpm build"
-}

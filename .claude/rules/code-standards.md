@@ -4,9 +4,9 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 ## Server / client boundary
 
-- `#lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and all DB access live here only.
+- `#lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`, …) and all DB access live here only.
 - To expose a server type to a client component, re-export it **as a type** from `#lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
-- **Environment variables** are declared once in `src/env.ts` (`defineEnvVars`). Client code imports the public ones from `$app/env/public`, server code the private ones from `$app/env/private`; app code reads no setting from `process.env` (the test runner's `VITEST` flag excepted).
+- **Environment variables.** Public values and the dynamic DB variables are declared once in `src/env.ts` (`defineEnvVars`): client code imports the public ones from `$app/env/public`, server code the DB ones from `$app/env/private`. Secrets and bindings (D1, rate limits) are read only through `#lib/server/env.ts`, when a request needs them, never at module load. App code reads no setting from `process.env` (the test runner's `VITEST` flag excepted).
 - `data/` = Postgres/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
   - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. The email reaches the client on `/user/profile` alone.
@@ -17,6 +17,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
   - Pass `{ userId }` only when the route already ran `requireUser`; otherwise it keys on the client IP.
   - Never read the user just to key a limit on a public or CDN-cached route.
   - Call it outside any `try` that would swallow the 429.
+  - `bucket` names a binding in `wrangler.jsonc`; a new limit adds the binding there, to `RateLimitBucket` and to its memory fallback in the same change.
 
 ## Route folders are thin
 
