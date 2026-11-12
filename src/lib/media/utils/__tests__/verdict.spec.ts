@@ -212,7 +212,7 @@ describe('scoreSafety', () => {
 	// each harmful flag individually
 	for (const flag of SAFETY_HARMFUL_FLAGS) {
 		test(`harmful when ${flag} is true`, () => {
-			const r = scoreSafety(mkUm({ [flag]: true } as Partial<UmRecord>), null);
+			const r = scoreSafety(mkUm({ [flag]: true }), null);
 			expect(r.tier).toBe('harmful');
 			expect(r.tone).toBe('danger');
 		});
@@ -221,7 +221,7 @@ describe('scoreSafety', () => {
 	// each caution flag individually
 	for (const flag of SAFETY_CAUTION_FLAGS) {
 		test(`caution when ${flag} is true`, () => {
-			const r = scoreSafety(mkUm({ [flag]: true } as Partial<UmRecord>), null);
+			const r = scoreSafety(mkUm({ [flag]: true }), null);
 			expect(r.tier).toBe('caution');
 			expect(r.tone).toBe('warn');
 		});

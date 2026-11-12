@@ -146,9 +146,9 @@ export class MovieSearchState {
 	select(item: SearchResult) {
 		this.navigatingTo = item;
 		if (item.mediaType === 'tv') {
-			goto(resolve('/tv/[seriesId]', { seriesId: String(item.id) }));
+			void goto(resolve('/tv/[seriesId]', { seriesId: String(item.id) }));
 		} else {
-			goto(resolve('/movie/[movieId]', { movieId: String(item.id) }));
+			void goto(resolve('/movie/[movieId]', { movieId: String(item.id) }));
 		}
 	}
 }

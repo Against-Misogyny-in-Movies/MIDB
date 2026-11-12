@@ -100,8 +100,8 @@ export function headingsOf(text: string): Heading[] {
 		const match = fenced ? null : /^(#{1,4}) (.+)$/.exec(line);
 		if (match)
 			found.push({
-				level: match[1]!.length,
-				text: match[2]!.trim(),
+				level: match[1].length,
+				text: match[2].trim(),
 				start: index + 1,
 				end: lines.length,
 				bytes: 0
@@ -134,7 +134,7 @@ export function resolveSection(headings: readonly Heading[], section: string): H
 		texts.findIndex((text) => prefix.test(text)),
 		texts.findIndex((text) => inside.test(text))
 	].find((i) => i >= 0);
-	if (at !== undefined) return headings[at]!;
+	if (at !== undefined) return headings[at];
 	const parts = section.split(/ and /);
 	return parts.length > 1
 		? (parts.map((part) => resolveSection(headings, part)).find((heading) => heading !== null) ??
@@ -157,8 +157,8 @@ export function citationsIn(
 	for (const match of text.matchAll(CITATION)) {
 		// "CONTRIBUTING.md, SECURITY.md" lists files: the second name is a doc, not a section.
 		if (text.startsWith('.md', match.index + match[0].length)) continue;
-		const doc = docs.get(match[1]!) ?? docs.get(path.basename(match[1]!));
-		const section = match[2]!.replace(/\*\*/g, '').trim();
+		const doc = docs.get(match[1]) ?? docs.get(path.basename(match[1]));
+		const section = match[2].replace(/\*\*/g, '').trim();
 		if (doc && !/^(phase|user|line|part|step|pr) /i.test(section))
 			found.push({ from: file, doc, section });
 	}
@@ -178,7 +178,7 @@ function load(file: string): Indexed {
 	return {
 		file,
 		bytes: Buffer.byteLength(text),
-		title: title.split(/(?<=\.) /)[0]!.replace(/\.$/, ''),
+		title: title.split(/(?<=\.) /)[0].replace(/\.$/, ''),
 		headings
 	};
 }
@@ -230,7 +230,7 @@ export function buildGraph(): Graph {
 // Where the citing code lives, by directory: src/lib, src/routes, db/scripts.
 function area(file: string): string {
 	const parts = file.split('/');
-	return parts.length <= 2 ? parts[0]! : parts.slice(0, 2).join('/');
+	return parts.length <= 2 ? parts[0] : parts.slice(0, 2).join('/');
 }
 
 export function renderIndex(graph: Graph = buildGraph()): string {

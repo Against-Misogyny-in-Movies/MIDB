@@ -16,7 +16,7 @@ function row(overrides: Partial<UserRow> = {}): UserRow {
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides
-	} as UserRow;
+	};
 }
 
 describe('toPublicUser', () => {

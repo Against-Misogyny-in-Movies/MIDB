@@ -159,8 +159,8 @@ export function scoreSafety(
 	type Tier = 'safe' | 'caution' | 'harmful';
 	let umTier: Tier = 'safe';
 	if (hasUm) {
-		const isHarmful = SAFETY_HARMFUL_FLAGS.some((k) => umData![k] === true);
-		const isCaution = !isHarmful && SAFETY_CAUTION_FLAGS.some((k) => umData![k] === true);
+		const isHarmful = SAFETY_HARMFUL_FLAGS.some((k) => umData[k]);
+		const isCaution = !isHarmful && SAFETY_CAUTION_FLAGS.some((k) => umData[k]);
 		if (isHarmful) umTier = 'harmful';
 		else if (isCaution) umTier = 'caution';
 	}
@@ -168,7 +168,7 @@ export function scoreSafety(
 	// DDD escalation (only to harmful)
 	let dddEscalates = false;
 	if (hasDdd) {
-		dddEscalates = ddd!.tags.some((tag) => {
+		dddEscalates = ddd.tags.some((tag) => {
 			const name = tag.doesName.toLowerCase();
 			return tag.yesSum > tag.noSum && SV_DDD_MATCHERS.some((m) => name.includes(m));
 		});
@@ -189,7 +189,7 @@ export function scoreSafety(
 	if (hasUm) {
 		for (const f of UM_FLAGS) {
 			if (f.key === 'noRape') continue;
-			if (umData![f.key] === true) {
+			if (umData[f.key]) {
 				signals.push({
 					label: UM_LABELS[f.key],
 					detail: 'Flagged',
@@ -206,7 +206,7 @@ export function scoreSafety(
 
 	// DDD line when tags present
 	if (hasDdd) {
-		const n = ddd!.tags.length;
+		const n = ddd.tags.length;
 		signals.push({
 			label: 'Does the Dog Die warnings',
 			detail: String(n),

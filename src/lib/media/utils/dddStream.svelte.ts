@@ -9,7 +9,7 @@ export function createDddState(getPromise: () => Promise<DddResult>, isSeries: b
 	$effect(() => {
 		let cancelled = false;
 		current = null;
-		getPromise()
+		void getPromise()
 			.catch((): DddResult => (isSeries ? EMPTY_SERIES : EMPTY_MOVIE))
 			.then((result) => {
 				if (!cancelled) current = result;

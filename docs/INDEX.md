@@ -8,9 +8,9 @@ Read a section, not a file: `pnpm docs:section <file> "<heading>"` prints one se
 
 Read whole.
 
-- `AGENTS.md` — MIDB: agent rules (~730 tok)
+- `AGENTS.md` — MIDB: agent rules (~760 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~2.8K tok)
+- `.claude/rules/code-standards.md` — Code standards (~2.9K tok)
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~510 tok)
@@ -34,38 +34,38 @@ Read the sections your task touches.
 - `README.md` — MIDB (~660 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~33.7K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~33.8K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–204 Directory layout (~4.1K)
-    - 195–204 File-organisation conventions (~410)
-  - 205–217 Styling & theming (~830)
-  - 218–230 Copy & voice (~570) ← 1
-  - 231–255 Routes (~6.9K)
-  - 256–269 User & roles (~450)
-  - 270–326 Database schema (~2.5K)
-    - 278–308 Tables (active) (~1.0K)
-    - 309–326 Migrations (~1.2K)
-  - 327–349 Seeding (~720) ← 1
-  - 350–415 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.1K)
-  - 416–435 UM Disambiguation (~630)
-  - 436–444 UM flag rendering (~250)
-  - 445–456 Shared marker pattern (metric row markers) (~410) ← 4
-  - 457–493 Component library (`src/lib/components/`) (~5.0K)
-  - 494–504 Live search (`src/lib/components/search/`) (~720)
-  - 505–518 Server cache (`src/lib/server/cache/`) (~550)
-  - 519–530 TMDB integration (~560)
-  - 531–546 Auth flow (Hanko) (~890)
-  - 547–558 Caching policy (~510) ← 3
-  - 559–608 Configuration & environment (~1.7K)
-    - 576–592 Local run sequence (~140)
-    - 593–596 npm scripts (~110)
-    - 597–608 CI (`.github/workflows/tests.yml`) (~360)
-  - 609–624 Testing (~660)
-    - 619–624 Verification baseline (~80)
-  - 625–635 Known gaps / TODO (~340)
-  - 636–644 Related docs (~160)
+  - 68–205 Directory layout (~4.1K)
+    - 196–205 File-organisation conventions (~410)
+  - 206–218 Styling & theming (~830)
+  - 219–231 Copy & voice (~570) ← 1
+  - 232–256 Routes (~6.9K)
+  - 257–270 User & roles (~450)
+  - 271–327 Database schema (~2.5K)
+    - 279–309 Tables (active) (~1.0K)
+    - 310–327 Migrations (~1.2K)
+  - 328–350 Seeding (~720) ← 1
+  - 351–416 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.1K)
+  - 417–436 UM Disambiguation (~630)
+  - 437–445 UM flag rendering (~250)
+  - 446–457 Shared marker pattern (metric row markers) (~410) ← 4
+  - 458–494 Component library (`src/lib/components/`) (~5.0K)
+  - 495–505 Live search (`src/lib/components/search/`) (~720)
+  - 506–519 Server cache (`src/lib/server/cache/`) (~550)
+  - 520–531 TMDB integration (~560)
+  - 532–547 Auth flow (Hanko) (~890)
+  - 548–559 Caching policy (~510) ← 3
+  - 560–609 Configuration & environment (~1.7K)
+    - 577–593 Local run sequence (~140)
+    - 594–597 npm scripts (~130)
+    - 598–609 CI (`.github/workflows/tests.yml`) (~370)
+  - 610–625 Testing (~660)
+    - 620–625 Verification baseline (~80)
+  - 626–636 Known gaps / TODO (~340)
+  - 637–645 Related docs (~160)
 
 ## Phases
 

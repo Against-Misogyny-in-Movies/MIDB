@@ -29,7 +29,7 @@ describe('GET /api/me', () => {
 			avatarKey: 'kahlo',
 			createdAt: new Date(),
 			updatedAt: new Date()
-		} as UserRow);
+		});
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		const body = await res.json();
 		expect(body).toEqual({

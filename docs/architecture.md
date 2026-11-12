@@ -30,7 +30,7 @@ Each metric is designed to show **two scores side by side**: the original author
 | Testing                   | Vitest 4 (projects `unit` + `db` against real Postgres, co-located in `__tests__/`), Playwright 1.61 (integration, in `e2e-tests/`), Storybook 10 (component dev)                                                                                                                                                                                                                                                                                     |
 | Client debounce / ids     | `DebouncedQuery` (`$lib/media/utils/debouncedQuery.svelte.ts`): timer + `AbortController`, no RxJS. Element ids from Svelte's `$props.id()`, no nanoid                                                                                                                                                                                                                                                                                                |
 | Language / typecheck      | TypeScript 6.0.3 for the tooling (`svelte-check`, editor, typescript-eslint); TypeScript 7.0.2 (`typescript7`, the native compiler) for `pnpm typecheck`, until `svelte-check` supports 7. pnpm links the `typescript7` alias's `tsc` bin over TypeScript 6's, so `pnpm exec tsc` runs 7.0.2; the `typescript` module that `svelte-check`, typescript-eslint and the editor load is 6.0.3, and its compiler is `node node_modules/typescript/bin/tsc` |
-| Lint                      | ESLint 10 (flat config) + `@typescript-eslint/*` 8 + Prettier                                                                                                                                                                                                                                                                                                                                                                                         |
+| Lint                      | Oxlint 1.93 (type-aware through `oxlint-tsgolint`) for TS, JS and `.svelte` `<script>` blocks; ESLint 10 (flat config) with `eslint-plugin-svelte` for Svelte templates only, its scripts parsed by `@typescript-eslint/parser`; Prettier                                                                                                                                                                                                             |
 
 ---
 
@@ -175,7 +175,8 @@ MIDB/
 ├── docker-compose.yml          # local Postgres: `db` service, postgres:16, DB `midb` on 5432
 ├── drizzle.config.ts           # drizzle-kit config (out, schema glob, dialect/credentials)
 ├── tsconfig.json, tsconfig.typecheck.json # tsconfig.json extends Kit's generated config; tsconfig.typecheck.json is the TypeScript 7 `pnpm typecheck` scope (the `.ts` files it includes; no `.svelte`, `pnpm check` covers those)
-├── eslint.config.js            # flat config: typescript-eslint + svelte recommended + prettier
+├── .oxlintrc.json              # Oxlint: correctness + suspicious categories, the type-aware promise rules, ignores; `pnpm lint` runs it with `--type-aware --deny-warnings`
+├── eslint.config.js            # flat config scoped to `**/*.svelte`: svelte recommended + prettier (TS and JS belong to Oxlint)
 ├── .prettierrc / .prettierignore # tabs, single quotes, width 100; ignores db/migrations (drizzle-kit output)
 ├── playwright.config.ts        # testDir: 'e2e-tests'; webServer `pnpm build && pnpm preview` on 4173
 ├── svelte.config.js            # adapter-vercel; alias $db/* → ./db/*; vitePreprocess({ style:false })
@@ -592,13 +593,13 @@ pnpm test:db          # wipes midb_test, migrates it from zero, runs *.db.spec.t
 
 ### npm scripts
 
-`dev` / `build` / `preview` · `check` · `typecheck` · `test` = `test:integration` + `test:unit` · `test:unit` = `vitest --project unit` (no DB) · `test:db` = `vitest run --project db` (needs `TEST_DB_CONNECTION`) · `lint` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin <email>` (case-insensitive promote to administrator).
+`dev` / `build` / `preview` · `check` · `typecheck` · `test` = `test:integration` + `test:unit` · `test:unit` = `vitest --project unit` (no DB) · `test:db` = `vitest run --project db` (needs `TEST_DB_CONNECTION`) · `lint` (Prettier, Oxlint type-aware, ESLint for Svelte) / `lint:fix` / `format` · `storybook` / `build-storybook` · `db:generate` · `db:migrate` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin <email>` (case-insensitive promote to administrator).
 
 ### CI (`.github/workflows/tests.yml`)
 
 Runs on every PR, on pushes to `main`, and on manual dispatch. Every job but `commits` installs pnpm (the `packageManager` version) and Node 22 with the pnpm cache.
 
-- **`static`**: `pnpm install --frozen-lockfile` → `cp .env.example .env` (so `$env/static/*` resolves) → `pnpm check` → `pnpm typecheck` → `pnpm lint` (`prettier --check .` + `eslint .`) → `pnpm build`.
+- **`static`**: `pnpm install --frozen-lockfile` → `cp .env.example .env` (so `$env/static/*` resolves) → `pnpm check` → `pnpm typecheck` → `pnpm lint` (`prettier --check .` + `oxlint --type-aware --deny-warnings` + `eslint .`) → `pnpm build`.
 - **`unit`**: `pnpm install --frozen-lockfile` → `pnpm test:unit --run`. Needs no secrets, `.env` or database, because unit specs mock `$env/*` and `$lib/server/db`.
 - **`migrations`**: `pnpm exec drizzle-kit generate --name drift_check`, then fails (printing the status and diff) if `git status --porcelain db/migrations` is non-empty. Needs no DB. A drizzle-kit prompt also fails it (no TTY), which is the correct outcome.
 - **`db`**: `postgres:16` service with DB `midb_test`, `TEST_DB_CONNECTION` set, then `pnpm test:db`. Global setup migrates the empty DB from zero, so this job also proves the migration chain applies cleanly.

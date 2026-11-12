@@ -25,7 +25,7 @@ export function dddUrl(itemId: number | null): string {
 
 export function umFlagCount(umData: Record<UmFlagKey, boolean> | null): number {
 	if (!umData) return 0;
-	return UM_FLAGS.filter((f) => f.key !== 'noRape' && umData[f.key] === true).length;
+	return UM_FLAGS.filter((f) => f.key !== 'noRape' && umData[f.key]).length;
 }
 
 /**
