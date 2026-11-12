@@ -71,6 +71,10 @@ describe('formatDate', () => {
 		expect(formatDate('2015-05-13')).toBe('May 13, 2015');
 	});
 
+	test('reads a full timestamp in UTC, so a late-evening sync keeps its day', () => {
+		expect(formatDate('2026-11-12T23:59:00.000Z')).toBe('November 12, 2026');
+	});
+
 	test('returns — for an empty or invalid value', () => {
 		expect(formatDate('')).toBe('—');
 		expect(formatDate('not a date')).toBe('—');

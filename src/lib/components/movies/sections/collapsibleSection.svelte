@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { BadgeTone } from '#lib/media/utils/tones.ts';
+	import { formatDate } from '#lib/media/utils/format.ts';
 
 	interface Props {
 		title: string;
@@ -17,6 +18,8 @@
 		/** External source, linked under the body. */
 		sourceLabel?: string;
 		sourceHref?: string;
+		/** ISO time of the source's last successful sync, shown beside the source link. */
+		updatedAt?: string | null;
 		/** Internal link to the matching /resources section. */
 		learnHref?: string;
 		learnLabel?: string;
@@ -34,6 +37,7 @@
 		busy = false,
 		sourceLabel,
 		sourceHref,
+		updatedAt = null,
 		learnHref,
 		learnLabel = 'Methodology',
 		open = true,
@@ -63,6 +67,9 @@
 					<a class="link" href={sourceHref} target="_blank" rel="noopener noreferrer">
 						Source: {sourceLabel}
 					</a>
+					{#if updatedAt}
+						<span class="updated">Updated {formatDate(updatedAt)}</span>
+					{/if}
 				{/if}
 				{#if learnHref}
 					<a class="link" href={learnHref}>{learnLabel}</a>
@@ -131,6 +138,10 @@
 
 	.links {
 		@apply flex flex-wrap gap-x-md gap-y-xs text-sm;
+	}
+
+	.updated {
+		@apply text-ink-muted tabular-nums;
 	}
 
 	@media (max-width: 479px) {

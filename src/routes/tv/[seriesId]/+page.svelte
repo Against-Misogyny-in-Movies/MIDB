@@ -36,6 +36,7 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
+			updatedAt={data.syncedAt.um}
 			onselect={(c) => view.selectUm(c)}
 		/>
 

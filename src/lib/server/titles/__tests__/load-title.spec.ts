@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	getBechdel: vi.fn(),
 	getUmEntry: vi.fn(),
 	getUnconsentingCandidates: vi.fn(),
+	getSourceSyncDates: vi.fn(),
 	getTriggerTagsLive: vi.fn(),
 	getTriggerTagsForSeries: vi.fn()
 }));
@@ -33,6 +34,10 @@ vi.mock('#lib/server/data/um-candidates.ts', () => ({
 	getUnconsentingCandidates: mocks.getUnconsentingCandidates
 }));
 
+vi.mock('#lib/server/data/source-sync.ts', () => ({
+	getSourceSyncDates: mocks.getSourceSyncDates
+}));
+
 import { loadTitle } from '#lib/server/titles/load-title.ts';
 
 const movie = { id: '603', tmdbId: '603', title: 'The Matrix', imdbId: 'tt0133093' };
@@ -48,6 +53,7 @@ beforeEach(() => {
 	mocks.getBechdel.mockResolvedValue(bechdel);
 	mocks.getUmEntry.mockResolvedValue(null);
 	mocks.getUnconsentingCandidates.mockResolvedValue([]);
+	mocks.getSourceSyncDates.mockResolvedValue({ um: '2026-11-12T09:30:00.000Z' });
 	// Never settles: proves the load returns without awaiting DDD.
 	mocks.getTriggerTagsLive.mockReturnValue(new Promise(() => {}));
 	mocks.getTriggerTagsForSeries.mockReturnValue(new Promise(() => {}));
@@ -101,6 +107,13 @@ describe('loadTitle', () => {
 		expect(data.bechdel).toBeNull();
 		expect(mocks.getTriggerTagsForSeries).toHaveBeenCalledWith(series);
 		expect(mocks.getTriggerTagsLive).not.toHaveBeenCalled();
+	});
+
+	test('carries the sync dates, with or without a title row', async () => {
+		mocks.getTitleRow.mockResolvedValue(row);
+		expect((await loadTitle('movie', '603')).syncedAt).toEqual({ um: '2026-11-12T09:30:00.000Z' });
+		mocks.getTitleRow.mockResolvedValue(null);
+		expect((await loadTitle('movie', '603')).syncedAt).toEqual({ um: '2026-11-12T09:30:00.000Z' });
 	});
 
 	test('is read-only: never takes the write path', async () => {

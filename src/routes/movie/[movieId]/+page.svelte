@@ -43,6 +43,7 @@
 				open={bechdel !== null}
 				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
+				updatedAt={data.syncedAt.bechdel}
 				learnHref="/resources#bechdel"
 			>
 				{#if bechdel}
@@ -69,6 +70,7 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
+			updatedAt={data.syncedAt.um}
 			onselect={(c) => view.selectUm(c)}
 		/>
 

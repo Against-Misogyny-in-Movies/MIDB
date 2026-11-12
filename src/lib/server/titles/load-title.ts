@@ -7,6 +7,8 @@ import { getTriggerTagsForSeries, getTriggerTagsLive } from '#lib/server/integra
 import { getTitleRow, type TitleKind } from '#lib/server/data/title-queries.ts';
 import { getBechdel, getUmEntry, type BechdelData } from '#lib/server/data/sources.ts';
 import { getUnconsentingCandidates } from '#lib/server/data/um-candidates.ts';
+import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
+import type { SourceSyncDates } from '#lib/media/types/source-sync.ts';
 
 export interface TitlePageData<M extends Movie | Series> {
 	media: M;
@@ -16,6 +18,8 @@ export interface TitlePageData<M extends Movie | Series> {
 	umEntry: UmEntry | null;
 	/** Catalogue candidates when there is no binding; the user's pick stays client-side. */
 	umCandidates: UmEntry[];
+	/** When the daily sync last succeeded per source; shown beside each "Source:" link. */
+	syncedAt: SourceSyncDates;
 	/** Un-awaited, so SvelteKit streams it after first paint. */
 	triggerTags: Promise<DddResult>;
 }
@@ -45,12 +49,15 @@ async function withSources<M extends Movie | Series>(
 ): Promise<TitlePageData<M>> {
 	const row = await getTitleRow(kind, media);
 
-	const [bechdel, umEntry] = row
-		? await Promise.all([kind === 'movie' ? getBechdel(row.id) : null, getUmEntry(row.id)])
-		: [null, null];
+	const [[bechdel, umEntry], syncedAt] = await Promise.all([
+		row
+			? Promise.all([kind === 'movie' ? getBechdel(row.id) : null, getUmEntry(row.id)])
+			: [null, null],
+		getSourceSyncDates()
+	]);
 
 	// No seeded UM binding → offer catalogue candidates for the same title.
 	const umCandidates = umEntry === null ? await getUnconsentingCandidates(media) : [];
 
-	return { media, bechdel, umEntry, umCandidates, triggerTags: streamTriggerTags(media) };
+	return { media, bechdel, umEntry, umCandidates, syncedAt, triggerTags: streamTriggerTags(media) };
 }

@@ -11,10 +11,19 @@
 		umCandidates: UmEntry[];
 		umFlagCount: number;
 		hasUmCandidates: boolean;
+		/** ISO time of the last Unconsenting Media sync, or null when none is recorded. */
+		updatedAt?: string | null;
 		onselect: (candidate: UmEntry) => void;
 	}
 
-	let { umData, umCandidates, umFlagCount, hasUmCandidates, onselect }: Props = $props();
+	let {
+		umData,
+		umCandidates,
+		umFlagCount,
+		hasUmCandidates,
+		updatedAt = null,
+		onselect
+	}: Props = $props();
 </script>
 
 <div id="unconsenting">
@@ -31,6 +40,7 @@
 		open={umData !== null || hasUmCandidates}
 		sourceLabel={umData ? 'UnconsentingMedia.org' : undefined}
 		sourceHref={umData ? `https://www.unconsentingmedia.org/items/${umData.umId}` : undefined}
+		{updatedAt}
 		learnHref="/resources#unconsenting"
 	>
 		{#if umData}
