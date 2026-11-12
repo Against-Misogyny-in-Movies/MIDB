@@ -37,3 +37,22 @@ export const resolveCountFlag = (flagId: string, actorId: string) =>
 /** A moderator found the counts fine. */
 export const dismissCountFlag = (flagId: string, actorId: string) =>
 	closeFlag(flagId, actorId, 'dismissed');
+
+/**
+ * Stores a reader's "counts look wrong" flag on a title: one per account per title. A second
+ * call replaces the note and re-opens a flag a moderator had closed, so the reader can raise it
+ * again.
+ */
+export async function upsertCountFlag(
+	titleId: string,
+	reporterId: string,
+	note: string | null
+): Promise<void> {
+	await db
+		.insert(titleCountFlags)
+		.values({ titleId, reporterId, note })
+		.onConflictDoUpdate({
+			target: [titleCountFlags.titleId, titleCountFlags.reporterId],
+			set: { note, status: 'open', resolvedBy: null, updatedAt: new Date() }
+		});
+}

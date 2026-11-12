@@ -80,3 +80,29 @@ export function commentsTag(kind: string, tmdbId: number | string): string {
 export function commentsHeaders(kind: string, tmdbId: number | string): Record<string, string> {
 	return { ...PUBLIC_COMMENTS, 'cache-tag': commentsTag(kind, tmdbId) };
 }
+
+/**
+ * PUBLIC_READER_REPORTS: a title's reader-report counts, the same for everyone. The browser always
+ * revalidates; the edge keeps the counts for ten minutes and serves them stale for a minute while
+ * they refresh. The response carries `Cache-Tag: reports:<kind>:<tmdbId>` (`readerReportsHeaders`),
+ * and every report write or moderation action purges that tag (`purgeTitleReports`). A report
+ * that starts counting on its own (its account reaches the minimum age) does not purge, so the
+ * counts can trail by up to one TTL.
+ */
+export const PUBLIC_READER_REPORTS = {
+	'cache-control': 'public, max-age=0',
+	'cdn-cache-control': 'max-age=600, stale-while-revalidate=60'
+};
+
+/** The cache tag shared by one title's reader-report counts. */
+export function readerReportsTag(kind: string, tmdbId: number | string): string {
+	return `reports:${kind}:${tmdbId}`;
+}
+
+/** `PUBLIC_READER_REPORTS` plus the title's `Cache-Tag`, for the counts endpoint. */
+export function readerReportsHeaders(
+	kind: string,
+	tmdbId: number | string
+): Record<string, string> {
+	return { ...PUBLIC_READER_REPORTS, 'cache-tag': readerReportsTag(kind, tmdbId) };
+}

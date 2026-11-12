@@ -4,6 +4,7 @@ import {
 	getOrCreateTitleRow,
 	getTitleRow,
 	type TitleKind,
+	type TitleRef,
 	type TitleRow
 } from './title-queries.ts';
 
@@ -34,4 +35,16 @@ export async function resolveCommentTitle(kind: TitleKind, tmdbId: string): Prom
 	if (existing) return existing;
 	const media = kind === 'movie' ? await getMovie(tmdbId) : await getSeries(tmdbId);
 	return getOrCreateTitleRow(kind, media);
+}
+
+/**
+ * The write path's title reference, for a write that makes the row itself (`upsertReport`): the
+ * existing row's identity, or TMDB's data for a title nothing was written for. It creates
+ * nothing, so a write refused afterwards leaves no row behind. An id TMDB does not know is a 404
+ * from the client.
+ */
+export async function resolveWriteRef(kind: TitleKind, tmdbId: string): Promise<TitleRef> {
+	const existing = await findCommentTitle(kind, tmdbId);
+	if (existing) return { title: existing.title, imdbId: existing.imdbId, tmdbId, releaseDate: '' };
+	return kind === 'movie' ? getMovie(tmdbId) : getSeries(tmdbId);
 }
