@@ -385,6 +385,9 @@ describe('moderation actions', () => {
 		const log = await listRecentActions();
 		expect(log.map((a) => a.action).sort()).toEqual(['approve', 'hide', 'reject', 'restore']);
 		expect(log.every((a) => a.commentBody === 'Waiting' && a.actor?.id === 'mod')).toBe(true);
+		// The log says which comment each action concerned and where it stands now, so a hide or a
+		// reject can be undone from it.
+		expect(log.every((a) => a.commentId === cid && a.commentStatus === 'rejected')).toBe(true);
 		expect(await row(cid)).toMatchObject({
 			status: 'rejected',
 			moderationSource: 'moderator',

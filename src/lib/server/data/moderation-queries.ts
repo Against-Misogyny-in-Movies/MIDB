@@ -127,6 +127,9 @@ export type RecentAction = {
 	targetUser: PublicUser | null;
 	/** The comment's text, so the log reads without opening it. */
 	commentBody: string | null;
+	/** The comment acted on and where it is now, so a hide or a reject can be undone from the log. */
+	commentId: string | null;
+	commentStatus: CommentStatus | null;
 };
 
 /** The latest moderation actions, newest first. */
@@ -134,7 +137,8 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 	const rows = await db
 		.select({
 			action: moderationActions,
-			targetBody: comments.body
+			targetBody: comments.body,
+			targetStatus: comments.status
 		})
 		.from(moderationActions)
 		.leftJoin(comments, eq(moderationActions.targetCommentId, comments.id))
@@ -153,14 +157,16 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 			people.set(row.id, toPublicUser(row));
 		}
 	}
-	return rows.map(({ action, targetBody }) => ({
+	return rows.map(({ action, targetBody, targetStatus }) => ({
 		id: action.id,
 		action: action.action,
 		reason: action.reason,
 		createdAt: action.createdAt.toISOString(),
 		actor: (action.actorId && people.get(action.actorId)) || null,
 		targetUser: (action.targetUserId && people.get(action.targetUserId)) || null,
-		commentBody: targetBody
+		commentBody: targetBody,
+		commentId: action.targetCommentId,
+		commentStatus: targetStatus
 	}));
 }
 

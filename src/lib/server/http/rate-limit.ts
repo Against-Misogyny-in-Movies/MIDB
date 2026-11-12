@@ -9,7 +9,8 @@ export type RateLimitBucket =
 	| 'RL_AUTH'
 	| 'RL_COMMENT'
 	| 'RL_VOTE'
-	| 'RL_REPORT';
+	| 'RL_REPORT'
+	| 'RL_MODERATE';
 
 /** `wrangler.jsonc`'s `limit` and `period` for each bucket, for the memory fallback. */
 const FALLBACK_LIMITS: Record<RateLimitBucket, { limit: number; windowMs: number }> = {
@@ -18,7 +19,8 @@ const FALLBACK_LIMITS: Record<RateLimitBucket, { limit: number; windowMs: number
 	RL_AUTH: { limit: 30, windowMs: 60_000 },
 	RL_COMMENT: { limit: 5, windowMs: 60_000 },
 	RL_VOTE: { limit: 30, windowMs: 60_000 },
-	RL_REPORT: { limit: 10, windowMs: 60_000 }
+	RL_REPORT: { limit: 10, windowMs: 60_000 },
+	RL_MODERATE: { limit: 60, windowMs: 60_000 }
 };
 
 /** True when the client is within the bucket's limit. Fails open if the binding errors. */

@@ -2,8 +2,8 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		/** `error` is announced at once (`role="alert"`); `success` politely (`role="status"`). */
-		tone: 'error' | 'success';
+		/** `error` is announced at once (`role="alert"`); `success` and `warn` politely (`role="status"`). */
+		tone: 'error' | 'success' | 'warn';
 		children: Snippet;
 	}
 
@@ -26,6 +26,11 @@
 	.notice--error {
 		background-color: var(--danger-soft);
 		color: var(--danger);
+	}
+
+	.notice--warn {
+		background-color: var(--warn-soft);
+		color: var(--warn);
 	}
 
 	.notice--success {

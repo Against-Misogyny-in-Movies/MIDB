@@ -31,7 +31,7 @@
 	}
 </script>
 
-<form class="report" onsubmit={submit}>
+<form class="plate report" onsubmit={submit}>
 	{#if sent}
 		<Notice tone="success">
 			{sent === 'already'
@@ -72,13 +72,9 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	/* A plate under the comment it reports, like the confirmations on the sign-in methods page. */
 	.report {
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
-		padding: var(--spacing-md);
-		border-radius: 12px;
-		background-color: var(--surface-sunken);
 	}
 
 	.reasons {

@@ -29,7 +29,8 @@
 		{ "name": "RL_AUTH", "namespace_id": "1003", "simple": { "limit": 30, "period": 60 } },
 		{ "name": "RL_COMMENT", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } },
 		{ "name": "RL_VOTE", "namespace_id": "1005", "simple": { "limit": 30, "period": 60 } },
-		{ "name": "RL_REPORT", "namespace_id": "1006", "simple": { "limit": 10, "period": 60 } }
+		{ "name": "RL_REPORT", "namespace_id": "1006", "simple": { "limit": 10, "period": 60 } },
+		{ "name": "RL_MODERATE", "namespace_id": "1007", "simple": { "limit": 60, "period": 60 } }
 	],
 
 	"vars": {
@@ -64,7 +65,8 @@
 				{ "name": "RL_AUTH", "namespace_id": "2003", "simple": { "limit": 30, "period": 60 } },
 				{ "name": "RL_COMMENT", "namespace_id": "2004", "simple": { "limit": 5, "period": 60 } },
 				{ "name": "RL_VOTE", "namespace_id": "2005", "simple": { "limit": 30, "period": 60 } },
-				{ "name": "RL_REPORT", "namespace_id": "2006", "simple": { "limit": 10, "period": 60 } }
+				{ "name": "RL_REPORT", "namespace_id": "2006", "simple": { "limit": 10, "period": 60 } },
+				{ "name": "RL_MODERATE", "namespace_id": "2007", "simple": { "limit": 60, "period": 60 } }
 			],
 			"vars": {
 				"PUBLIC_ORIGIN": "https://REPLACE-WITH-PREVIEW-ORIGIN.example",

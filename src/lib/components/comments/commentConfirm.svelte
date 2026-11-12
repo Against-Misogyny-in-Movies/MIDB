@@ -25,7 +25,7 @@
 	}: Props = $props();
 </script>
 
-<div class="confirm">
+<div class="plate confirm">
 	<p class="text-sm">{message}</p>
 	<div class="row">
 		<button class="btn btn--ink" type="button" disabled={busy} onclick={onconfirm}>
@@ -39,13 +39,9 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	/* A plate under the comment it acts on, like the confirmations on the sign-in methods page. */
 	.confirm {
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
-		padding: var(--spacing-md);
-		border-radius: 12px;
-		background-color: var(--surface-sunken);
 	}
 
 	.row {

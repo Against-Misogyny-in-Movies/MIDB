@@ -59,5 +59,8 @@ export const COMMENT_STATUS_LABELS: Record<(typeof commentStatus)[number], strin
 	deleted: 'Deleted'
 };
 
-/** Hours without a successful source sync after which moderators see a warning. */
-export const STALE_SYNC_HOURS = 48;
+/** A moderator's reason on a hide or a reject is at most this long (the classifier's reason limit). */
+export const MODERATION_REASON_MAX = 140;
+
+/** The mute lengths a moderator picks from, in hours. */
+export const MUTE_HOURS = [24, 168, 720] as const;

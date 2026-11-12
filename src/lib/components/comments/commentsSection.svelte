@@ -159,6 +159,13 @@
 		gap: var(--spacing-sm);
 	}
 
+	/* A touch target is 44px on a coarse pointer, like the buttons. */
+	@media (pointer: coarse) {
+		.chip {
+			height: 2.75rem;
+		}
+	}
+
 	.chip[aria-pressed='true'] {
 		border-color: var(--brand);
 		color: var(--brand);

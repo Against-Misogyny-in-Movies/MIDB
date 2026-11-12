@@ -69,6 +69,7 @@ describe('rateLimit without a binding (memory fallback)', () => {
 		const event = fromIp('203.0.113.7');
 		expect(await allowed(6, event, 'RL_COMMENT')).toBe(5);
 		expect(await allowed(11, event, 'RL_REPORT')).toBe(10);
+		expect(await allowed(61, event, 'RL_MODERATE')).toBe(60);
 	});
 });
 
