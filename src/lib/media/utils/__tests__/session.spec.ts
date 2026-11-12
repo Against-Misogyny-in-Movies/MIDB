@@ -35,6 +35,13 @@ function clearCookies() {
 	}
 }
 
+function hint(): string | undefined {
+	return document.cookie
+		.split(';')
+		.map((c) => c.trim().split('='))
+		.find(([name]) => name === 'midb_hint')?.[1];
+}
+
 describe('Session', () => {
 	beforeEach(clearCookies);
 	afterEach(clearCookies);
@@ -78,9 +85,9 @@ describe('Session', () => {
 		expect(fetcher).toHaveBeenCalledWith('/api/me', { cache: 'no-store' });
 	});
 
-	it('hints "user" from the hanko cookie while the fetch is pending', async () => {
+	it('hints "user" from the midb_hint cookie while the fetch is pending', async () => {
 		document.cookie = 'theme=dark';
-		document.cookie = 'hanko=jwt';
+		document.cookie = 'midb_hint=1';
 		const s = new Session();
 		const { fetcher, release } = deferred(MARY);
 		const done = s.load(fetcher);
@@ -92,8 +99,9 @@ describe('Session', () => {
 		expect(s.status).toBe('user');
 	});
 
-	it('hints "anon" without the cookie, and ignores look-alike cookie names', async () => {
-		document.cookie = 'xhanko=1';
+	it('hints "anon" without the cookie, and ignores look-alike cookie names and values', async () => {
+		document.cookie = 'xmidb_hint=1';
+		document.cookie = 'midb_hint=0';
 		const s = new Session();
 		const { fetcher, release } = deferred(null);
 		const done = s.load(fetcher);
@@ -102,6 +110,35 @@ describe('Session', () => {
 		release();
 		await done;
 		expect(s.status).toBe('anon');
+	});
+
+	it('sets the hint when /api/me returns a user, and when layout data sets one', async () => {
+		const a = new Session();
+		await a.load(respond(MARY));
+		expect(hint()).toBe('1');
+
+		clearCookies();
+		new Session().set(MARY);
+		expect(hint()).toBe('1');
+	});
+
+	it('clears the hint when /api/me returns null, and on clear()', async () => {
+		document.cookie = 'midb_hint=1';
+		await new Session().load(respond(null));
+		expect(hint()).toBeUndefined();
+
+		document.cookie = 'midb_hint=1';
+		new Session().clear();
+		expect(hint()).toBeUndefined();
+	});
+
+	it('keeps the hint when /api/me could not answer', async () => {
+		document.cookie = 'midb_hint=1';
+		await new Session().load(respond(null, false));
+		expect(hint()).toBe('1');
+
+		await new Session().load(vi.fn(async () => Promise.reject(new Error('offline'))));
+		expect(hint()).toBe('1');
 	});
 
 	it('set() from /user/* layout data wins over a slower /api/me response', async () => {

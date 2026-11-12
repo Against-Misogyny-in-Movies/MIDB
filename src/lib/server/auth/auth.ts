@@ -1,11 +1,8 @@
 import { PUBLIC_ORIGIN } from '$app/env/public';
 import { db } from '#lib/server/db.ts';
 import { env } from '#lib/server/env.ts';
-import { createAuth, type Auth, type OAuthCredentials } from './create-auth.ts';
-
-function credentials(id?: string, secret?: string): OAuthCredentials | undefined {
-	return id && secret ? { clientId: id, clientSecret: secret } : undefined;
-}
+import { createAuth, type Auth } from './create-auth.ts';
+import { providerCredentials } from './providers.ts';
 
 let instance: Auth | undefined;
 
@@ -18,8 +15,7 @@ export function getAuth(): Auth {
 		db,
 		origin: PUBLIC_ORIGIN,
 		secret: env.BETTER_AUTH_SECRET || undefined,
-		google: credentials(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
-		discord: credentials(env.DISCORD_CLIENT_ID, env.DISCORD_CLIENT_SECRET),
+		...providerCredentials(),
 		turnstileSecret: env.TURNSTILE_SECRET_KEY || undefined
 	}));
 }

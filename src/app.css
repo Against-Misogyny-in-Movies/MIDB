@@ -227,26 +227,6 @@
 		text-wrap: pretty;
 	}
 
-	/* Hanko's sign-in and profile elements, themed from the tokens. */
-	hanko-auth,
-	hanko-profile {
-		--font-family: var(--font-body);
-		--font-size: 1rem;
-		--color: var(--ink);
-		--color-shade-1: var(--ink-muted);
-		--color-shade-2: var(--border);
-		--brand-color: var(--brand);
-		--brand-color-shade-1: var(--brand-strong);
-		--brand-contrast-color: var(--surface-raised);
-		--background-color: transparent;
-		--error-color: var(--danger);
-		--link-color: var(--brand);
-		--border-radius: 8px;
-		--container-padding: 0;
-		--headline1-font-size: 1.875rem;
-		--headline1-font-weight: 700;
-	}
-
 	select {
 		@apply text-sm text-ink rounded-lg cursor-pointer;
 		padding: 0.5rem 0.75rem;
@@ -328,12 +308,17 @@
 			box-shadow 0.15s ease;
 	}
 
+	.btn:disabled {
+		cursor: not-allowed;
+		opacity: 0.55;
+	}
+
 	.btn--brand {
 		background-color: var(--brand);
 		color: var(--on-brand);
 	}
 
-	.btn--brand:hover {
+	.btn--brand:hover:not(:disabled) {
 		background-color: var(--brand-strong);
 		box-shadow: var(--shadow-brand);
 	}
@@ -343,7 +328,7 @@
 		color: var(--on-ink);
 	}
 
-	.btn--ink:hover {
+	.btn--ink:hover:not(:disabled) {
 		background-color: color-mix(in oklab, var(--ink) 85%, var(--surface));
 	}
 
@@ -353,7 +338,7 @@
 		color: var(--ink);
 	}
 
-	.btn--ghost:hover {
+	.btn--ghost:hover:not(:disabled) {
 		border-color: var(--border-strong);
 	}
 
