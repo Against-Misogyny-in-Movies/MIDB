@@ -92,7 +92,13 @@
 				</p>
 				<BechdelLadderExample />
 				<p>
-					Ratings come from BechdelTest.com, a community site, and are used as published. The rating
+					Ratings come from BechdelTest.com, a community site, and are used as published under the
+					<a
+						class="link"
+						href="https://creativecommons.org/licenses/by-nc/3.0/"
+						target="_blank"
+						rel="noopener noreferrer">CC BY-NC 3.0</a
+					> licence. They are copied daily, and each title page shows the date of the last copy. The rating
 					counts toward the representation verdict.
 				</p>
 			</MetricArticle>
@@ -112,8 +118,9 @@
 				</p>
 				<UmFlagsExample />
 				<p>
-					Entries are matched to titles by name and year. When several entries could match, the
-					title page lists them. The choice applies to that page view only and is not saved.
+					Entries are copied daily, and each title page shows the date of the last copy. They are
+					matched to titles by name and year. When several entries could match, the title page lists
+					them. The choice applies to that page view only and is not saved.
 				</p>
 			</MetricArticle>
 
