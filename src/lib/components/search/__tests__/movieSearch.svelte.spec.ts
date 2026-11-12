@@ -191,6 +191,20 @@ describe('MovieSearchState', () => {
 		expect(s.open).toBe(false);
 	});
 
+	it('keeps the query, results and spinner target until the navigation has run', async () => {
+		const s = new MovieSearchState();
+		const disconnect = s.connect();
+		s.search('matrix');
+		await vi.advanceTimersByTimeAsync(500);
+
+		// Before `navigating.to` is set, the connect() effect must not read `navigatingTo` and reset.
+		s.select(MATRIX);
+		flushSync();
+		expect(s.navigatingTo).toEqual(MATRIX);
+		expect(s).toMatchObject({ query: 'matrix', results: [MATRIX, GOT] });
+		disconnect();
+	});
+
 	it('resets the box once a result-driven navigation completes', async () => {
 		const s = new MovieSearchState();
 		const disconnect = s.connect();

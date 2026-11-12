@@ -11,7 +11,7 @@ Read whole.
 - `AGENTS.md` — MIDB: agent rules (~760 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
 - `.claude/rules/code-standards.md` — Code standards (~3.1K tok)
-  - 5–20 Server / client boundary (~460) ← 2
+  - 5–20 Server / client boundary (~480) ← 2
   - 21–27 Route folders are thin (~130)
   - 28–49 File organisation (~640) ← 4
   - 50–69 Components (~460) ← 3
@@ -66,7 +66,7 @@ Read the sections your task touches.
   - 520–531 TMDB integration (~560)
   - 532–547 Auth flow (Hanko) (~890)
   - 548–559 Caching policy (~510) ← 3
-  - 560–609 Configuration & environment (~1.7K)
+  - 560–609 Configuration & environment (~1.8K)
     - 577–593 Local run sequence (~140)
     - 594–597 npm scripts (~130)
     - 598–609 CI (`.github/workflows/tests.yml`) (~360)

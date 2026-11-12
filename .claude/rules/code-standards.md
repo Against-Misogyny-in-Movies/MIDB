@@ -6,7 +6,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 - `#lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and all DB access live here only.
 - To expose a server type to a client component, re-export it **as a type** from `#lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
-- **Environment variables** are declared once in `src/env.ts` (`defineEnvVars`). Client code imports the public ones from `$app/env/public`, server code the private ones from `$app/env/private`; app code reads no setting from `process.env`.
+- **Environment variables** are declared once in `src/env.ts` (`defineEnvVars`). Client code imports the public ones from `$app/env/public`, server code the private ones from `$app/env/private`; app code reads no setting from `process.env` (the test runner's `VITEST` flag excepted).
 - `data/` = Postgres/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
   - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. The email reaches the client on `/user/profile` alone.

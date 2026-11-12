@@ -9,8 +9,9 @@ import { createDb, type Db } from '#db/client.ts';
 let client: ReturnType<typeof createDb> | undefined;
 
 function connectionUrl(): string {
-	const name = process.env.VITEST ? 'TEST_DB_CONNECTION' : 'DB_CONNECTION';
-	const url = process.env.VITEST ? TEST_DB_CONNECTION : DB_CONNECTION;
+	const [name, url] = process.env.VITEST
+		? ['TEST_DB_CONNECTION', TEST_DB_CONNECTION]
+		: ['DB_CONNECTION', DB_CONNECTION];
 	if (!url) throw new Error(`${name} is not set: the server has no database connection string.`);
 	return url;
 }
