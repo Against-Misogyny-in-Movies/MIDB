@@ -1,0 +1,174 @@
+name: Deploy
+
+# Production deploys from `main`, preview deploys from same-repository pull requests, and a
+# daily cleanup of half-made accounts. Every job that holds a Cloudflare token runs only on the
+# canonical repository. A pull request from a fork has no secrets and does not match the preview
+# job's condition, and `pull_request_target` is never used.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '41 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The `PUBLIC_*` values are inlined into the build (`src/env.ts`), so they come from repository
+# variables (Settings → Secrets and variables → Actions → Variables) and must match the `vars` of
+# the target in `wrangler.jsonc`.
+
+jobs:
+  production:
+    name: Deploy production
+    if: >-
+      github.repository == 'Against-Misogyny-in-Movies/MIDB' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    # Two deploys never overlap, and a running one is never cancelled half-way through a migration.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      PUBLIC_ORIGIN: ${{ vars.PUBLIC_ORIGIN }}
+      PUBLIC_TMDB_API_URL: https://api.themoviedb.org
+      PUBLIC_TMDB_IMAGE_URL: /img/tmdb
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require the repository variables
+        run: test -n "$PUBLIC_ORIGIN" || { echo "Set the repository variable PUBLIC_ORIGIN."; exit 1; }
+
+      # Built before anything remote changes, so a broken build never migrates the database.
+      - name: Build
+        run: pnpm build
+
+      # Logs the bookmark to restore to with `wrangler d1 time-travel restore` if the migration
+      # below goes wrong. Time Travel keeps 30 days on the Workers Paid plan.
+      - name: Log the Time Travel bookmark
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler d1 time-travel info DB --env ""
+
+      # Migrations go first. wrangler applies each file atomically and stops at the first error,
+      # which fails the job and skips the deploy.
+      - name: Apply migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler d1 migrations apply DB --remote --env ""
+
+      # `--env ""` targets the top-level configuration: `wrangler.jsonc` also defines `preview`,
+      # and wrangler warns when no target is named.
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy --env ""
+
+  preview:
+    name: Deploy preview
+    if: >-
+      github.repository == 'Against-Misogyny-in-Movies/MIDB' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: preview
+    # One preview migration at a time; a newer push waits for the one running.
+    concurrency:
+      group: deploy-preview
+      cancel-in-progress: false
+    env:
+      PUBLIC_ORIGIN: ${{ vars.PREVIEW_ORIGIN }}
+      PUBLIC_TMDB_API_URL: https://api.themoviedb.org
+      PUBLIC_TMDB_IMAGE_URL: /img/tmdb
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require the repository variables
+        run: test -n "$PUBLIC_ORIGIN" || { echo "Set the repository variable PREVIEW_ORIGIN."; exit 1; }
+
+      - name: Build
+        run: pnpm build
+
+      # The preview database is separate from production (`env.preview` in `wrangler.jsonc`).
+      - name: Apply migrations to the preview database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler d1 migrations apply DB --remote --env preview
+
+      # Uploads a version of the preview Worker (`midb-preview`), a separate Worker from
+      # production, so a preview never touches it. The Worker must have been deployed once
+      # (`wrangler deploy --env preview`) before the first upload.
+      - name: Upload a preview version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler versions upload --env preview
+
+  # Deletes the accounts a failed passkey sign-up left behind (`docs/architecture.md`, Auth flow).
+  cleanup:
+    name: Clean up orphan accounts
+    if: >-
+      github.repository == 'Against-Misogyny-in-Movies/MIDB' &&
+      github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: deploy-cleanup
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Delete orphan accounts
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm db:cleanup:orphans --remote
