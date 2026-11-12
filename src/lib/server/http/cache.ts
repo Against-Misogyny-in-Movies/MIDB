@@ -58,3 +58,25 @@ export const PUBLIC_SEARCH = {
  * under TMDB's six-month cap on caching its images.
  */
 export const PUBLIC_IMAGE = { 'cache-control': 'public, max-age=2592000' };
+
+/**
+ * PUBLIC_COMMENTS: a title's published comments, the same for everyone. The browser always
+ * revalidates; the edge keeps the list for ten minutes and serves it stale for a minute while it
+ * refreshes. The response also carries `Cache-Tag: comments:<kind>:<tmdbId>` (`commentsHeaders`),
+ * and every comment write or moderation action purges that tag (`purgeComments`), so the list
+ * trails a write by at most the purge. Votes do not purge, so a score can trail by up to one TTL.
+ */
+export const PUBLIC_COMMENTS = {
+	'cache-control': 'public, max-age=0',
+	'cdn-cache-control': 'max-age=600, stale-while-revalidate=60'
+};
+
+/** The cache tag shared by one title's comment list. */
+export function commentsTag(kind: string, tmdbId: number | string): string {
+	return `comments:${kind}:${tmdbId}`;
+}
+
+/** `PUBLIC_COMMENTS` plus the title's `Cache-Tag`, for the list endpoint. */
+export function commentsHeaders(kind: string, tmdbId: number | string): Record<string, string> {
+	return { ...PUBLIC_COMMENTS, 'cache-tag': commentsTag(kind, tmdbId) };
+}

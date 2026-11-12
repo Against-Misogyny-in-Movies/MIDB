@@ -80,21 +80,69 @@ CREATE TABLE `verification` (
 );
 --> statement-breakpoint
 CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);--> statement-breakpoint
+CREATE TABLE `comment_reports` (
+	`id` text PRIMARY KEY NOT NULL,
+	`comment_id` text NOT NULL,
+	`reporter_id` text NOT NULL,
+	`reason` text NOT NULL,
+	`note` text,
+	`status` text DEFAULT 'open' NOT NULL,
+	`resolved_by` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`reporter_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`resolved_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "comment_reports_reason_check" CHECK("comment_reports"."reason" IN ('hate', 'harassment', 'spam', 'sexual-content', 'threat', 'other')),
+	CONSTRAINT "comment_reports_status_check" CHECK("comment_reports"."status" IN ('open', 'resolved', 'dismissed')),
+	CONSTRAINT "comment_reports_note_length" CHECK(length("comment_reports"."note") <= 500)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `comment_reports_uniq` ON `comment_reports` (`comment_id`,`reporter_id`);--> statement-breakpoint
+CREATE INDEX `comment_reports_status_idx` ON `comment_reports` (`comment_id`,`status`);--> statement-breakpoint
+CREATE TABLE `comment_votes` (
+	`comment_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`value` integer NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	PRIMARY KEY(`comment_id`, `user_id`),
+	FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "comment_votes_value" CHECK("comment_votes"."value" IN (-1, 1))
+);
+--> statement-breakpoint
+CREATE INDEX `comment_votes_user_idx` ON `comment_votes` (`user_id`);--> statement-breakpoint
 CREATE TABLE `comments` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title_id` text NOT NULL,
 	`user_id` text NOT NULL,
+	`parent_id` text,
+	`root_id` text,
 	`body` text NOT NULL,
-	`status` text DEFAULT 'visible' NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`score` integer DEFAULT 0 NOT NULL,
+	`reply_count` integer DEFAULT 0 NOT NULL,
+	`edited_at` integer,
+	`moderation_source` text,
+	`moderation_reason` text,
+	`ai_verdict` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`title_id`) REFERENCES `titles`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`parent_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`root_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "comments_body_length" CHECK(length("comments"."body") BETWEEN 1 AND 5000),
-	CONSTRAINT "comments_status_check" CHECK("comments"."status" IN ('visible', 'hidden', 'deleted'))
+	CONSTRAINT "comments_reason_length" CHECK(length("comments"."moderation_reason") <= 500),
+	CONSTRAINT "comments_ai_verdict_json" CHECK("comments"."ai_verdict" IS NULL OR json_valid("comments"."ai_verdict")),
+	CONSTRAINT "comments_status_check" CHECK("comments"."status" IN ('pending', 'published', 'hidden', 'rejected', 'deleted')),
+	CONSTRAINT "comments_source_check" CHECK("comments"."moderation_source" IN ('ai', 'blocklist', 'moderator', 'reports'))
 );
 --> statement-breakpoint
-CREATE INDEX `comments_title_idx` ON `comments` (`title_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `comments_title_status_created_idx` ON `comments` (`title_id`,`status`,`created_at`);--> statement-breakpoint
+CREATE INDEX `comments_title_status_score_idx` ON `comments` (`title_id`,`status`,`score`);--> statement-breakpoint
+CREATE INDEX `comments_root_idx` ON `comments` (`root_id`,`created_at`);--> statement-breakpoint
 CREATE INDEX `comments_user_idx` ON `comments` (`user_id`,`created_at`);--> statement-breakpoint
 CREATE TABLE `community_bechdel_ratings` (
 	`user_id` text NOT NULL,
@@ -145,6 +193,23 @@ CREATE TABLE `community_um_reports` (
 );
 --> statement-breakpoint
 CREATE INDEX `cur_title_idx` ON `community_um_reports` (`title_id`);--> statement-breakpoint
+CREATE TABLE `moderation_actions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`actor_id` text,
+	`target_comment_id` text,
+	`target_user_id` text,
+	`action` text NOT NULL,
+	`reason` text,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`actor_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`target_comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`target_user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "moderation_actions_action_check" CHECK("moderation_actions"."action" IN ('approve', 'hide', 'reject', 'restore', 'dismiss', 'mute', 'ban')),
+	CONSTRAINT "moderation_actions_reason_length" CHECK(length("moderation_actions"."reason") <= 500)
+);
+--> statement-breakpoint
+CREATE INDEX `moderation_actions_created_idx` ON `moderation_actions` (`created_at`);--> statement-breakpoint
+CREATE INDEX `moderation_actions_comment_idx` ON `moderation_actions` (`target_comment_id`);--> statement-breakpoint
 CREATE TABLE `titles` (
 	`id` text PRIMARY KEY NOT NULL,
 	`kind` text NOT NULL,

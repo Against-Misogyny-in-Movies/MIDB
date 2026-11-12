@@ -11,6 +11,9 @@ import { TEST_STATE_PATH } from './state.ts';
 
 /** Children before parents, so every delete respects the foreign keys. */
 const DELETE_ORDER = [
+	'moderation_actions',
+	'comment_reports',
+	'comment_votes',
 	'comments',
 	'community_ddd_votes',
 	'community_um_reports',

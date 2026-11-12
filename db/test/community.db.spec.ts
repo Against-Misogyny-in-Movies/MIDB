@@ -82,12 +82,12 @@ describe('community_ddd_votes', () => {
 });
 
 describe('comments', () => {
-	it('defaults status to visible and rejects an empty or oversized body', async () => {
+	it('defaults status to pending and rejects an empty or oversized body', async () => {
 		const [row] = await db
 			.insert(comments)
 			.values({ userId, titleId, body: 'Useful.' })
 			.returning();
-		expect(row.status).toBe('visible');
+		expect(row.status).toBe('pending');
 		await expect(db.insert(comments).values({ userId, titleId, body: '' })).rejects.toThrow();
 		await expect(
 			db.insert(comments).values({ userId, titleId, body: 'x'.repeat(5001) })

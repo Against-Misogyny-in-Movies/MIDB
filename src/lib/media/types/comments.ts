@@ -1,0 +1,61 @@
+import type { PublicUser } from './user.ts';
+import type { commentStatus, moderationSource, reportReason } from '#lib/media/utils/comments.ts';
+
+export type CommentStatus = (typeof commentStatus)[number];
+export type ModerationSource = (typeof moderationSource)[number];
+export type ReportReason = (typeof reportReason)[number];
+export type CommentSort = 'top' | 'new';
+
+/**
+ * A comment as the public list shows it, the same for every reader. A comment that is no longer
+ * shown (hidden, deleted, or back in review) but still has published replies stays in its thread
+ * as a placeholder: `removed`, with no body and no author.
+ */
+export type CommentView = {
+	id: string;
+	/** The comment this one answers; null on a root. */
+	parentId: string | null;
+	/** The thread's root; null on a root. */
+	rootId: string | null;
+	/** Set on a reply to a reply, for "in reply to @name"; null otherwise. */
+	inReplyTo: { id: string; displayName: string } | null;
+	removed: boolean;
+	body: string | null;
+	author: PublicUser | null;
+	score: number;
+	replyCount: number;
+	/** ISO timestamps, because the list is cached as JSON. */
+	createdAt: string;
+	editedAt: string | null;
+	/** One rendered level, oldest first; empty on a reply. */
+	replies: CommentView[];
+};
+
+export type CommentList = {
+	comments: CommentView[];
+	/** Pass back as `cursor` for the next page; null on the last one. */
+	nextCursor: string | null;
+};
+
+/** The reader's own comment, in any status, as the author sees it. */
+export type OwnComment = {
+	id: string;
+	parentId: string | null;
+	rootId: string | null;
+	body: string;
+	status: CommentStatus;
+	moderationSource: ModerationSource | null;
+	moderationReason: string | null;
+	score: number;
+	replyCount: number;
+	createdAt: string;
+	editedAt: string | null;
+};
+
+/** What the viewer endpoint adds to the public list: the reader's votes and unpublished comments. */
+export type ViewerCommentState = {
+	/** Comment id to the reader's vote. */
+	votes: Record<string, 1 | -1>;
+	/** The reader's pending and rejected comments on this title, newest first. */
+	comments: OwnComment[];
+};
