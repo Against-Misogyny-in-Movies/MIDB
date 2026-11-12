@@ -45,7 +45,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - **Define a constant once.**
   - Shared plain data lives in `#lib/media/utils/` (`departments.ts` `PRIORITY_DEPARTMENTS`, `avatars.ts` `AVATAR_DEFS`/`AVATAR_KEYS`), so server and client import the same value.
   - A `components/` module may hold only what needs components (the avatar key → component map).
-  - Code shared by seeders and the app lives in `db/lib/` (`normalizeTitle.ts`), never in `db/scripts/`.
+  - Code shared by the sync scripts and the app lives in `db/lib/` (`normalizeTitle.ts`), never in `db/scripts/`.
 - **Rune modules** (`.svelte.ts`) are imported as `.svelte.js` (`import { x } from '#lib/media/utils/foo.svelte.js'`, or `./foo.svelte.js` beside it). The component of the same name is imported as `foo.svelte`; the explicit extension is what tells them apart.
 
 ## Components
@@ -85,7 +85,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
   - Timestamps are `integer` `timestamp_ms` via `timestamps()` from `db/schema/columns.ts`. Its `$onUpdate` bumps `updated_at` on every Drizzle update; pin it with ``updatedAt: sql`${col}` `` when a write is not an edit.
   - The nine UM flag columns come from `umFlagColumns()`. Never redeclare them per table.
 - Titles are keyed by `(kind, tmdb_id)`, and `imdb_id` is optional. Never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
-- Migration order matters: `db:seed:movies` before `db:seed:um`.
+- Sync order matters: `db:sync:all` runs Unconsenting Media, the Bechdel Test, the TMDB id backfill, then popularity (`docs/architecture.md`, Source sync).
 - **Production deploys migrate first** (`.claude/rules/deploy-standards.md`, Deploys). A migration merged to `main` reaches the production database on the next deploy, so write it to be safe against live data.
 - **Every schema change ships its generated migration** (SQL + snapshot + journal from `pnpm db:generate`) in the same change. CI's `migrations` job fails on drift.
   - Never hand-write or hand-edit a snapshot JSON.

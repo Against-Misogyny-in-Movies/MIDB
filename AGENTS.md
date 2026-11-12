@@ -23,7 +23,7 @@ Find docs through `docs/INDEX.md`. It lists every file an agent reads, its size,
 - `pnpm build`: a production build.
 - `pnpm commit:check "<subject>"`: checks a commit subject (the `commit-msg` hook runs it for you).
 - `pnpm docs:index` / `pnpm docs:section <file> "<heading>"`: writes the docs index / prints one section.
-- `pnpm db:*`: migrations, seeds and backfills (`docs/architecture.md`, Seeding).
+- `pnpm db:*`: migrations, source syncs and backfills (`docs/architecture.md`, Source sync).
 
 The verification baseline that every finished task reports is in `.claude/rules/code-standards.md`, Checking a change.
 

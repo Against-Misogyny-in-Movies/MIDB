@@ -19,7 +19,8 @@ async function resolveTmdbId(imdbId: string, token: string): Promise<number | nu
 	return data?.movie_results?.[0]?.id ?? null;
 }
 
-async function main(db: Db, token: string) {
+/** Looks up the TMDB id of every film that has an IMDb id and no TMDB id yet. */
+export async function backfillTmdb(db: Db, token: string) {
 	const toBackfill = await db
 		.select({ id: titles.id, imdbId: titles.imdbId })
 		.from(titles)
@@ -56,7 +57,7 @@ if (isMain(import.meta.url)) {
 	}
 	const { db, close } = await openScriptDb(parseTarget(process.argv.slice(2)));
 	try {
-		await main(db, token);
+		await backfillTmdb(db, token);
 	} finally {
 		await close();
 	}

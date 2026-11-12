@@ -20,3 +20,6 @@ worker-configuration.d.ts
 
 # Vendored Impeccable design skill: keep upstream formatting so `npx impeccable update` diffs cleanly
 /.claude/skills/impeccable
+
+# Trimmed copies of real source responses (db/test/fixtures): keep them as the sources serve them
+/db/test/fixtures

@@ -1,6 +1,6 @@
 # MIDB — Architecture Reference
 
-> The detail pages are built around a **multi-source metrics model**: a `titles` spine (movies and TV), seeded source-of-truth tables (`title_bechdel`, and `title_um` bindings into the **spine-independent UM catalogue** `um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The per-metric community tables and `comments` exist; their write path is the next milestone (see _Known gaps_).
+> The detail pages are built around a **multi-source metrics model**: a `titles` spine (movies and TV), synced source-of-truth tables (`title_bechdel`, and `title_um` bindings into the **spine-independent UM catalogue** `um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric is planned to display **two scores side by side**: the original authoritative source and a **MIDB community rating**; titles will also have a **comments section**. The per-metric community tables and `comments` exist; their write path is the next milestone (see _Known gaps_).
 >
 > Living document: update it in the same change as any structural change (`.claude/rules/code-standards.md`, Making a change). It states what is true now (`.claude/rules/docs-standards.md`); the plan in flight is `docs/plans/plan-cloudflare-d1-comments.md`.
 
@@ -8,7 +8,7 @@
 
 **MIDB (Movie Information Database — working title)** is a web platform for displaying movies and TV series through a **diversity / content-safety lens**. The audience is survivors and trauma-sensitive viewers, and people who care about women's representation — people deciding whether a title is safe to watch. Users find a title and see how it scores across structured **metrics** — formal tests and content advisories for representation and harm. Three sources are wired today: the **Bechdel Test**, **Unconsenting Media** (sexual-violence advisories), and **Does The Dog Die** (crowd-sourced trigger tags).
 
-Title facts (poster, overview, release/air date, credits, seasons) are **not stored** — they're fetched live from **TMDB** on each request. What _is_ stored locally is a thin spine (`titles`, keyed by `(kind, tmdb_id)` for films and series) plus **seeded, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
+Title facts (poster, overview, release/air date, credits, seasons) are **not stored** — they're fetched live from **TMDB** on each request. What _is_ stored locally is a thin spine (`titles`, keyed by `(kind, tmdb_id)` for films and series) plus **synced, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
 
 Each metric is designed to show **two scores side by side**: the original authoritative source (Bechdel, UM, DDD) and a **MIDB community rating** contributed by users who have watched the film. Movies will also have a **comments section** for viewer context and discussion. Community ratings and comments are the next major feature milestone: the per-metric community tables and `comments` exist (remediation PR 4), and the `/user/*` area already has the profile editor and the (empty) rating and comment history views.
 
@@ -26,7 +26,7 @@ Each metric is designed to show **two scores side by side**: the original author
 | Auth                      | **Hanko** (passwordless / passkeys) via `@teamhanko/hanko-elements` 2.6; JWT verified with `jose` 6                                                                                                                                                                                                                                                                                                                                                   |
 | External movie data       | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`)                                                                                                                                                                                                                                                                                                                                                   |
 | Server cache              | `#lib/server/cache`: the **Cache API** (`caches.default`, per data centre) behind a per-isolate memory level; the memory level alone where `caches` is missing (unit tests). Caches TMDB (titles, search) + DDD responses. `incr` counters are the memory fallback of `rateLimit`.                                                                                                                                                                    |
-| Seed parsing              | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs)                                                                                                                                                                                                                                                                                                                                                                                         |
+| Source parsing            | **`zod`** 4 validates the Unconsenting Media feed; the Bechdel Test pages and the TMDB exports are read with the regexes in `db/lib/sources/`                                                                                                                                                                                                                                                                                                         |
 | Testing                   | Vitest 4 (projects `unit` + `db` against a local D1, co-located in `__tests__/`), Playwright 1.61 (integration, in `e2e-tests/`), Storybook 10 (component dev)                                                                                                                                                                                                                                                                                        |
 | Client debounce / ids     | `DebouncedQuery` (`#lib/media/utils/debouncedQuery.svelte.ts`): timer + `AbortController`, no RxJS. Element ids from Svelte's `$props.id()`, no nanoid                                                                                                                                                                                                                                                                                                |
 | Language / typecheck      | TypeScript 6.0.3 for the tooling (`svelte-check`, editor, typescript-eslint); TypeScript 7.0.2 (`typescript7`, the native compiler) for `pnpm typecheck`, until `svelte-check` supports 7. pnpm links the `typescript7` alias's `tsc` bin over TypeScript 6's, so `pnpm exec tsc` runs 7.0.2; the `typescript` module that `svelte-check`, typescript-eslint and the editor load is 6.0.3, and its compiler is `node node_modules/typescript/bin/tsc` |
@@ -47,7 +47,7 @@ Each metric is designed to show **two scores side by side**: the original author
                         │  API v3  │ │   API    │ │  (Drizzle)  │
                         └──────────┘ └──────────┘ └─────────────┘
                          ▲            ▲ (streamed,   ▲
-              poster / overview /     │  cached 1h)  │  seeded source data:
+              poster / overview /     │  cached 1h)  │  synced source data:
               credits / imdb_id    trigger tags    titles + Bechdel + UM
               (cached 24h)
 
@@ -79,24 +79,26 @@ MIDB/
 │   │   ├── auth.ts             # userRole tuple + user (Hanko-sub PK, role CHECK, username/avatarKey, lower(username) idx)
 │   │   └── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
 │   ├── scripts/
-│   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → titles (kind movie) + title_bechdel; exports seedMovies(db, csvPath)
-│   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + title_um bindings (matched); exports seedUnconsenting(db, csvPath, reportPath?)
+│   │   ├── sync/               # the daily source sync (see Source sync)
+│   │   │   ├── sync-um.ts      # `db:sync:um` — UM feed → um_source (newer rows), deletions (bindings first), title_um bindings; exports syncUm(db, feed)
+│   │   │   ├── sync-bechdel.ts # `db:sync:bechdel [--full]` — Bechdel Test year pages + RSS → titles (kind movie) + title_bechdel; exports syncBechdel(db, sources)
+│   │   │   ├── sync-popularity.ts # `db:sync:popularity` — TMDB id exports → titles.popularity for titles with a tmdb_id; exports syncPopularity(db, sources)
+│   │   │   ├── sync-all.ts     # `db:sync:all` — UM, Bechdel, TMDB id backfill, popularity, in that order
+│   │   │   └── lib/            # sync-only: http.ts (fetchSource: User-Agent, timeout, one retry), sources.ts (SyncSources: liveSources / fixtureSources), batch.ts (runBatches), stamp.ts (source_sync), args.ts (flags, runSync)
 │   │   ├── seedAdmin.ts        # `db:seed:admin (--username <name> | --email <addr>)` — case-insensitive promote to administrator
-│   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id on movie titles via TMDB /find
-│   │   ├── __tests__/          # seeders.db.spec.ts (smoke test on the 50-row fixtures)
+│   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id on movie titles via TMDB /find; exports backfillTmdb(db, token)
+│   │   ├── __tests__/          # sync.db.spec.ts (the sync against the fixtures)
 │   │   └── lib/                # script-only
 │   │       ├── db.ts           # openScriptDb(target): the local D1 through wrangler's getPlatformProxy, or the remote one; `close()` disposes it
 │   │       ├── remote-d1.ts    # sqlite-proxy callbacks over D1's REST `raw` endpoint (single and batch), from the CLOUDFLARE_* variables
 │   │       ├── args.ts         # parseTarget(argv): `--local` (default) or `--remote`
 │   │       ├── adminArgs.ts    # parseAdminArgs(argv): exactly one of `--username` / `--email` for seedAdmin
-│   │       ├── checkCsvColumns.ts
 │   │       └── __tests__/      # remote-d1.spec.ts (mocked fetch), adminArgs.spec.ts
-│   ├── lib/                    # code shared by the seeders and the app (app imports #db/lib/*, seeders ../lib/*)
-│   │   ├── normalizeTitle.ts   # normalizeTitle + stripTrailingYear: the matching key, identical at seed time and at runtime
+│   ├── lib/                    # code shared by the sync scripts and the app (app imports #db/lib/*, scripts ../lib/*)
+│   │   ├── normalizeTitle.ts   # normalizeTitle + stripTrailingYear: the matching key, identical at sync time and at runtime
+│   │   ├── sources/            # pure parsers for the synced sources, no I/O: um-feed.ts (parseUmFeed, zod), um-match.ts (matchUmFilm), bechdel-html.ts (parseBechdelYearPage, parseBechdelRss), tmdb-export.ts (readTmdbExport)
 │   │   ├── chunkForD1.ts       # chunkForD1(rows, columns, reserved?): splits rows so a statement stays at or under `D1_MAX_PARAMS`, D1's bound-parameter limit
-│   │   └── __tests__/          # normalizeTitle.spec.ts, chunkForD1.spec.ts (unit project: db/**/*.spec.ts minus *.db.spec.ts)
-│   ├── seeds/
-│   │   └── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
+│   │   └── __tests__/          # normalizeTitle.spec.ts, chunkForD1.spec.ts (unit project: db/**/*.spec.ts minus *.db.spec.ts); sources/__tests__/ holds the parser specs
 │   ├── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots (never hand-edited)
 │   └── test/                   # Vitest `db` project harness
 │       ├── global-setup.ts     # wipes .wrangler/test-state and applies db/migrations to it with `wrangler d1 migrations apply --local` (proves the baseline from zero)
@@ -105,7 +107,7 @@ MIDB/
 │       ├── writes.ts           # trackWrites(...tables) / writes(): test-only triggers that log every write, so a spec can prove a read path wrote nothing
 │       ├── d1.db.spec.ts       # what the app relies on from D1 and Drizzle: enum CHECKs, foreign keys, upserts, batch() atomicity, no transactions
 │       ├── community.db.spec.ts # community table constraints (kept out of db/schema/: drizzle-kit loads every .ts there)
-│       └── fixtures/           # 50-row bechdel.csv + unconsenting.csv for the seeder smoke test
+│       └── fixtures/           # trimmed real responses: um-list.json, bechdel-year-*.html, bechdel-rss.xml, tmdb-*-ids.ndjson (read by `--fixtures` and the sync specs; kept as the sources serve them)
 │
 ├── src/
 │   ├── hooks.server.ts         # Auth gate: verifies `hanko` JWT → locals.claims (no DB), lazy memoised locals.getUser(), gates /user + /user/* on claims, role check on /user/moderation*; then the safe cache default (no `cache-control` or a `Set-Cookie` → `private, no-store`)
@@ -195,7 +197,7 @@ MIDB/
 ├── worker-configuration.d.ts   # generated by `pnpm cf:types` (`Cloudflare.Env`); rerun it after editing wrangler.jsonc; tsconfig.json includes it
 ├── static/                     # served as-is: favicon.png, fonts/ (Inter Tight 600 and 700 woff2 in three subsets, `OFL.txt`; `@font-face` in src/app.css, the latin files preloaded in src/app.html)
 ├── vite.config.ts              # tailwindcss() + sveltekit({ adapter-cloudflare, vitePreprocess({ style:false }) }) + svelteTesting() + Vitest projects `unit` (jsdom) and `db` (node, a local D1, its own config without the Svelte plugins), `test.alias` of `cloudflare:workers` to the stub. No `define`, no build-time secrets
-├── README.md                   # short local setup (local D1 + seeds), points at AGENTS.md, the rules and this doc
+├── README.md                   # short local setup (local D1 + source sync), points at AGENTS.md, the rules and this doc
 ├── .env.example                # committed template: every var with check/build-safe placeholders
 └── .env                        # local copy of .env.example (git-ignored), read by `vite dev` through Wrangler: the PUBLIC_* values, the secrets and the `CLOUDFLARE_*` script credentials (all empty in the template)
 ```
@@ -295,7 +297,7 @@ The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `comm
 - `id` text PK (UUID), `kind` text `movie`|`tv` NOT NULL (CHECK), `tmdb_id` integer nullable, `imdb_id` text nullable **unique**, `title` text (CHECK length at most 255), `clean_title` text (CHECK length at most 255; output of `normalizeTitle()`, the UM match key), `year` integer nullable (**NULL = unknown**), `popularity` real nullable (TMDB's popularity score, NULL until a sync has seen the title), `popularity_at` timestamp nullable, `created_at`, `updated_at`.
 - **Unique index `titles_kind_tmdb_idx` on `(kind, tmdb_id)`**: the natural key, because TMDB movie and TV ids share a numeric space (movie 1399 and TV 1399 coexist). SQLite treats NULLs as distinct in a unique index, so rows without a TMDB id coexist. IMDb ids are globally unique across movies and series, so `imdb_id` has a plain unique. **Index `titles_popularity_idx` on `popularity`** serves the landing's ranking (`getPopularRatedFilms`; SQLite sorts NULLs last in descending order).
 
-**`title_bechdel`** (`sources.ts`) — seeded, **1:1 with a title**.
+**`title_bechdel`** (`sources.ts`) — synced, **1:1 with a title**.
 
 - `title_id` text **PK** → `titles.id` (cascade), `bechdel_id` integer, `rating` integer (**CHECK 0..3**), `created_at`.
 
@@ -303,14 +305,14 @@ The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `comm
 
 - `um_id` integer **PK**, `clean_name` text, `clean_title_key` text (year-stripped normalized key, the lookup index), `year` integer nullable (NULL = unknown), the 9 flag columns (`umFlagColumns()`), `comment` text, `source_updated_at` timestamp nullable (the feed's own `updatedAt`).
 - **B-tree index `um_source_clean_title_key_idx` on `clean_title_key`** — `getUnconsentingCandidates` queries this column on every media page with no seeded UM binding (the common case); without the index that's a full table scan.
-- Populated by `db:seed:um` for **all** UM movie/TV rows regardless of whether a title matches. Enables runtime candidate lookup without re-parsing the CSV.
+- Synced by `db:sync:um` for **all** UM movie/TV rows regardless of whether a title matches. Enables runtime candidate lookup without re-reading the feed.
 
-**`title_um`** (`sources.ts`) — seeded, **1:1 with a title**; the resolved UM binding, **by reference only**.
+**`title_um`** (`sources.ts`) — synced, **1:1 with a title**; the resolved UM binding, **by reference only**.
 
 - `title_id` text **PK** → `titles.id` (cascade), `um_id` integer → `um_source.um_id`, `created_at`.
-- The flags are read through the join (`getUmEntry`), so a UM reseed is reflected immediately and there is one row shape (`UmEntry`). Matched by `clean_title` at seed time using a year-aware policy (see Seeding). User choices are never persisted (see UM Disambiguation below).
+- The flags are read through the join (`getUmEntry`), so a UM sync is reflected immediately and there is one row shape (`UmEntry`). Matched by `clean_title` at sync time using a year-aware policy (see Source sync). User choices are never persisted (see UM Disambiguation below).
 
-**`source_sync`** (`sources.ts`) — one row per synced source (`bechdel`, `um`, `popularity`): `source` text PK (CHECK), `last_success_at` timestamp, `rows_changed` integer. Written by the sync scripts; nothing reads it yet.
+**`source_sync`** (`sources.ts`) — one row per synced source (`bechdel`, `um`, `popularity`): `source` text PK (CHECK), `last_success_at` timestamp, `rows_changed` integer. Written by each sync on success (`stampSync`); nothing reads it yet.
 
 **`user`** (`auth.ts`) — Hanko-sub PK. `id` text (Hanko `sub`), `email` nullable, `role` text `user`|`moderator`|`administrator` default `user` (CHECK), `username` text(32) nullable, `avatar_key` text(48) nullable, `timestamps()`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide). Index on `role`.
 
@@ -329,26 +331,31 @@ Wrangler applies the files (`wrangler d1 migrations apply`, `migrations_dir` in 
 
 ---
 
-## Seeding
+## Source sync
 
-Raw CSVs in `db/seeds/sources/`. Scripts run on Node (type stripping) and use `csv-parse` for streaming. Each seeder exports its core as a function taking `(db, csvPath)` (the DB smoke test calls it with the test client and the 50-row fixtures in `db/test/fixtures/`); the Node entry point (`if (isMain(import.meta.url))`) opens the database with `openScriptDb(parseTarget(argv))` from `db/scripts/lib/db.ts` and closes it when done: the local D1 by default (wrangler's `getPlatformProxy`, in `.wrangler/state`), or with `--remote` the deployed one through `drizzle-orm/sqlite-proxy` over D1's REST `raw` endpoint (`db/scripts/lib/remote-d1.ts`, tested with a mocked `fetch`; not run against a live account). All upserts are idempotent (`onConflictDoUpdate`), and every bulk write is split with `chunkForD1` into statements of at most 100 bound parameters, run one after another: a run that stops part way is finished by running it again. The CSVs carry no popularity, so seeding leaves `titles.popularity` NULL.
+The Bechdel Test, Unconsenting Media (UM) and TMDB popularity are read from the sources' public files by the scripts in `db/scripts/sync/`; nothing from them is committed to the repository. The parsers are pure functions in `db/lib/sources/` (`parseUmFeed`, `parseBechdelYearPage`, `parseBechdelRss`, `readTmdbExport`) with every selector in one place, unit-tested against trimmed real responses in `db/test/fixtures/`. Each sync exports its core as a function taking `(db, source, options)`; the Node entry point (`if (isMain(import.meta.url))`) goes through `runSync` (`db/scripts/sync/lib/args.ts`), which opens the database with `openScriptDb(parseTarget(argv))` from `db/scripts/lib/db.ts`, closes it, and turns a failure into a non-zero exit. The database is the local D1 by default (wrangler's `getPlatformProxy`, in `.wrangler/state`), or with `--remote` the deployed one through `drizzle-orm/sqlite-proxy` over D1's REST `raw` endpoint (`db/scripts/lib/remote-d1.ts`, tested with a mocked `fetch`; not run against a live account). `--fixtures` swaps the live sources for the fixtures (`fixtureSources()` in `db/scripts/sync/lib/sources.ts`), so a run works offline; it always sweeps.
 
-1. **`db:seed:movies`** (`seedMovies.ts`) — stream the **Bechdel CSV** → upsert `titles` (`kind: 'movie'`, keyed by `imdb_id`) + `title_bechdel`. Source of `imdb_id`, `title`, `year` (non-positive → NULL), `clean_title`.
-2. **`db:seed:um`** (`seedUnconsenting.ts`) — stream the **UM CSV**:
-   - Populates **`um_source`** for every movie and TV row (idempotent, regardless of match outcome).
-   - Derives a `(titleKey, umYear)` pair per row using **`stripTrailingYear`** (UM's `cleanNameArticles` often embeds the year: `"wuthering heights 2026"`); UM's `yearOfRelease = 0` becomes NULL.
-   - Matches movie rows to movie `titles` by **year-aware policy**: (1) only one movie with this title → bind (unambiguous); (2) several same-title movies → bind the exact `(titleKey, umYear)` hit; (3) several, no year hit → leave unmatched (`ambiguous` in report). Writes only `(title_id, um_id)` into `title_um`. Unmatched rows go to the report (`unconsenting_unmatched.txt` by default; the third argument overrides it, which the smoke test uses). TV rows are never bound at seed time; the runtime picker covers them.
-   - Does **not** create `titles` rows from UM data.
-3. **`db:backfill:tmdb`** (`backfillTmdb.ts`) — resolve null `tmdb_id` on **movie** titles with an IMDb id via TMDB `/find/{imdb_id}`. `getOrCreateTitleRow` will also backfill once a write endpoint uses it.
+Every request carries the `MIDB-sync` User-Agent, a timeout and one retry (`fetchSource`). A sync reads and validates everything before its first write, and a source with no rows (or a changed shape) throws, so a failed run changes nothing and does not stamp `source_sync`. Writes are diffs: a run writes only rows that differ, so an unchanged source writes nothing. Each bulk write is split with `chunkForD1` into statements of at most 100 bound parameters, grouped with `db.batch` (`runBatches`); a run that stops part way is finished by running it again. A successful run stamps its source in `source_sync` with the time and the rows changed.
 
-**`db/lib/normalizeTitle.ts`** — two exports (the app imports it as `#db/lib/normalizeTitle`, the seeders relatively, so the matching key is one module):
+1. **`db:sync:um`** (`sync-um.ts`) — fetch `https://www.unconsentingmedia.org/list.json` (about 26 MB, no keys).
+   - `parseUmFeed` keeps the items whose `itemType` is `movie` or `TV show`, validates them with zod, and maps the nine flags. It derives a `(titleKey, umYear)` pair per item using **`stripTrailingYear`** (UM's `cleanNameArticles` often embeds the year: `"wuthering heights 2026"`); UM's `yearOfRelease = 0` becomes NULL. `source_updated_at` is the feed's `updatedAt`.
+   - Upserts `um_source` rows that are new or whose `updatedAt` is newer than the stored one; deletes rows missing from the feed, removing their `title_um` bindings first (`um_id` has no cascade).
+   - Recomputes the bindings for every UM film against the film `titles` and writes the difference, so a new or renamed item, or a film the Bechdel sync added, is bound on the next run. `matchUmFilm` applies the **year-aware policy**: (1) only one film with the key → bind (unambiguous); (2) several → bind the exact `(titleKey, umYear)` hit; (3) several, no year hit → unmatched (`ambiguous`). One UM film per title: the highest `um_id` wins. Only `(title_id, um_id)` is written to `title_um`. TV rows are never bound here; the runtime picker covers them.
+   - Prints the counts and the unmatched films (the first 200) to the job log. It does **not** create `titles` rows from UM data.
+2. **`db:sync:bechdel`** (`sync-bechdel.ts`) — the JSON API is gone (410), so the data comes from the `https://bechdeltest.com/year/<YYYY>/` pages and the feed of the last 50 additions, at one request a second.
+   - The daily run reads the feed's years plus the current year and the two before. `--full`, and a database that has never synced, sweep every year from 1874. A year with no films has no page (404) and counts as empty; a page whose film count differs from the rows read throws.
+   - Upserts `titles` (`kind: 'movie'`, keyed by `imdb_id`; title, `clean_title`, year) and `title_bechdel` (`bechdel_id`, rating). Nothing is deleted.
+3. **`db:backfill:tmdb`** (`backfillTmdb.ts`) — resolve null `tmdb_id` on **movie** titles with an IMDb id via TMDB `/find/{imdb_id}`. Needs `TMDB_API_TOKEN`. `getOrCreateTitleRow` will also backfill once a write endpoint uses it.
+4. **`db:sync:popularity`** (`sync-popularity.ts`) — stream TMDB's daily `movie_ids_*` and `tv_series_ids_*` exports (gzipped NDJSON, no auth, ready by 08:00 UTC; the day before is used when today's is not out) and update `titles.popularity` and `popularity_at` for titles that have a `tmdb_id`, when the score changed. The exports are read, not stored.
+
+**`db:sync:all`** runs 1, 2, 3, 4 in order. The two TMDB steps are skipped with a notice when `TMDB_API_TOKEN` is unset, so the other two need no account; with `--fixtures` the backfill is skipped (it calls TMDB's API) and popularity reads the fixture exports. Each step reads the others' tables as they stand: the UM bindings need the film `titles`, so a first `db:sync:all` binds nothing and the next run (or `db:sync:um`) binds what the Bechdel sync added. Re-running any step is safe.
+
+**`db/lib/normalizeTitle.ts`** — two exports (the app imports it as `#db/lib/normalizeTitle`, the sync scripts relatively, so the matching key is one module):
 
 - `normalizeTitle(title)` — lowercase, strip leading articles (en/fr/de/es/it), strip diacritics + punctuation, collapse whitespace. Must mirror UM's `cleanName` conventions.
 - `stripTrailingYear(normalized)` — removes a trailing ` (19|20)\d\d` from an already-normalized string, returns `{ key, year }`. Used to handle the ~12% of UM rows whose `cleanNameArticles` embeds the year.
 
-Both are covered by unit specs (`db/lib/__tests__/normalizeTitle.spec.ts`).
-
-Run order matters: **`db:seed:movies` must run before `db:seed:um`** so the `titles` spine is populated before UM tries to bind to it. Re-running either is safe. `db:seed:um` rewrites `db/seeds/sources/unconsenting_unmatched.txt`; don't commit seed-run changes to it.
+Both are covered by unit specs (`db/lib/__tests__/normalizeTitle.spec.ts`). `db/scripts/__tests__/sync.db.spec.ts` covers the sync against the fixtures: the upsert-only diff (a second run writes nothing), deletions removing bindings first, the Bechdel upserts, the popularity update, `source_sync` stamping, and a source with no rows failing with nothing deleted.
 
 ---
 
@@ -594,9 +601,7 @@ Workers Caching (`"cache": { "enabled": true }` in `wrangler.jsonc`) is the CDN.
 pnpm install
 cp .env.example .env
 pnpm db:migrate:local    # creates the local D1 in .wrangler/state
-pnpm db:seed:movies   # must run before db:seed:um
-pnpm db:seed:um
-pnpm db:backfill:tmdb # optional: resolve tmdb_id ahead of time
+pnpm db:sync:all --local   # Unconsenting Media, Bechdel Test, TMDB ids and popularity (--fixtures: offline)
 pnpm dev                # vite dev, with the Worker's bindings emulated
 pnpm preview            # builds, then runs the built Worker locally with `wrangler dev` on 4173
 
@@ -605,7 +610,7 @@ pnpm test:db          # wipes .wrangler/test-state, migrates it from zero, runs 
 
 ### npm scripts
 
-`dev` · `build` · `preview` (`pnpm build && wrangler dev`, local only, port 4173) · `check` · `typecheck` · `test` = `test:integration` + `test:unit` · `test:unit` = `vitest --project unit` (no DB) · `test:db` = `vitest run --project db` (local D1, no Docker) · `lint` / `lint:fix` / `format` (what they run: `package.json`, AGENTS.md) · `storybook` / `build-storybook` · `db:generate` · `db:migrate:local` · `db:migrate:remote` · `db:seed:movies` · `db:seed:um` · `db:backfill:tmdb` · `db:seed:admin` (`--username` or `--email`, case-insensitive promote to administrator). The `db:seed:*` and `db:backfill:tmdb` scripts take `--local` (default) or `--remote`.
+`dev` · `build` · `preview` (`pnpm build && wrangler dev`, local only, port 4173) · `check` · `typecheck` · `test` = `test:integration` + `test:unit` · `test:unit` = `vitest --project unit` (no DB) · `test:db` = `vitest run --project db` (local D1, no Docker) · `lint` / `lint:fix` / `format` (what they run: `package.json`, AGENTS.md) · `storybook` / `build-storybook` · `db:generate` · `db:migrate:local` · `db:migrate:remote` · `db:sync:um` · `db:sync:bechdel` · `db:sync:popularity` · `db:sync:all` · `db:backfill:tmdb` · `db:seed:admin` (`--username` or `--email`, case-insensitive promote to administrator). The `db:sync:*` and `db:backfill:tmdb` scripts take `--local` (default) or `--remote`; the sync scripts also take `--fixtures`, and `db:sync:bechdel` `--full`.
 
 ### CI (`.github/workflows/tests.yml`)
 
@@ -624,7 +629,7 @@ Runs on every PR, on pushes to `main`, and on manual dispatch. Every job but `co
 Three layers, plus Storybook for component development. Specs live in a `__tests__/` folder next to the code they cover; Playwright specs in top-level `e2e-tests/`.
 
 - **`unit`** (Vitest project, `jsdom`; `pnpm test:unit`): `src/**/*.{spec,test}.{js,ts}`, `db/**/*.spec.ts` and `scripts/**/*.spec.ts`, minus `*.db.spec.ts`. Needs no database, `.env` or secrets: specs mock `$app/env/*` and `#lib/server/db`, set secrets and bindings on the `cloudflare:workers` stub (`src/test/cloudflare-workers.stub.ts`), the TMDB/DDD `fetch` and `$app/*` as needed. Components render through `@testing-library/svelte` (`svelteTesting()` in `vite.config.ts`) with `@testing-library/jest-dom` matchers. Rune classes (`TitleView`, `EpisodeFilter`, `Session`, `MovieSearchState`, `DebouncedQuery`) are tested directly, with fake timers where they debounce. Endpoints are called as plain functions with a hand-built `RequestEvent` (`src/__tests__/api-*.spec.ts`).
-- **`db`** (Vitest project, `node`; `pnpm test:db`): every `*.db.spec.ts` against a local D1 (Miniflare, through wrangler), with no Docker and no secrets. The project has its own config in `vite.config.ts` and does not extend the root one: the Svelte plugins add the `browser` export condition, which makes Miniflare load the browser build of `ws`. `db/test/global-setup.ts` wipes `.wrangler/test-state` and applies `db/migrations` to it with `wrangler d1 migrations apply --local` once per run (so the job also proves the baseline applies from zero); `db/test/setup.ts` opens that state with `getPlatformProxy`, binds the app's `db` to it (`bindDb`), deletes every table's rows in foreign-key order before each test and disposes the proxy after. `getPlatformProxy` takes the state root itself while the wrangler CLI adds a `v3` folder, so the setup passes `.wrangler/test-state/v3`. Files run serially (`fileParallelism: false`). "Never writes" checks use `db/test/writes.ts`, whose triggers log every write to a test-only table. Covers title resolution, sources, UM candidates, user queries, community-table constraints, the D1 behaviours the app relies on (`db/test/d1.db.spec.ts`) and a seeder smoke test on 50-row fixtures (`db/test/fixtures/`).
+- **`db`** (Vitest project, `node`; `pnpm test:db`): every `*.db.spec.ts` against a local D1 (Miniflare, through wrangler), with no Docker and no secrets. The project has its own config in `vite.config.ts` and does not extend the root one: the Svelte plugins add the `browser` export condition, which makes Miniflare load the browser build of `ws`. `db/test/global-setup.ts` wipes `.wrangler/test-state` and applies `db/migrations` to it with `wrangler d1 migrations apply --local` once per run (so the job also proves the baseline applies from zero); `db/test/setup.ts` opens that state with `getPlatformProxy`, binds the app's `db` to it (`bindDb`), deletes every table's rows in foreign-key order before each test and disposes the proxy after. `getPlatformProxy` takes the state root itself while the wrangler CLI adds a `v3` folder, so the setup passes `.wrangler/test-state/v3`. Files run serially (`fileParallelism: false`). "Never writes" checks use `db/test/writes.ts`, whose triggers log every write to a test-only table. Covers title resolution, sources, UM candidates, user queries, community-table constraints, the D1 behaviours the app relies on (`db/test/d1.db.spec.ts`) and the source sync on trimmed fixtures (`db/test/fixtures/`).
 - **`e2e`** (Playwright, `pnpm test:integration`): `playwright.config.ts` runs `pnpm preview`, which serves the built Worker with `wrangler dev` on 4173 (Node's `vite preview` cannot load the built Worker: it imports `cloudflare:workers`). `landing.spec.ts` (hero, contribute link, theme toggle) and `navbarSearchOverflow.spec.ts` (mobile dropdown stays in the viewport, `/api/search` mocked with `page.route`). The CI job is gated on `E2E_ENABLED` because it needs real TMDB/DDD secrets.
 - **Storybook** (`pnpm storybook`, `build-storybook`): `*.stories.svelte` with `@storybook/addon-svelte-csf`. Only the poster `image` story remains after the redesign deleted the unused primitives. Not run in CI.
 - **Rule of thumb** (`.claude/rules/code-standards.md`, Testing): anything that touches the database gets a `*.db.spec.ts`; everything else stays in `unit` and mocks the DB. Moving a function means moving its spec's import too.
@@ -638,7 +643,7 @@ The baseline every finished task reports is `.claude/rules/code-standards.md`, C
 ## Known gaps / TODO
 
 1. **Community write path not built** — `community_bechdel_ratings`, `community_um_reports`, `community_ddd_votes` and `comments` exist with their constraints but have no write endpoints (they will resolve titles with `getOrCreateTitleRow`). Empty-state history views are wired at `/user/metrics` and `/user/comments`. The write path (rating submission + comment posting on title detail pages) is the next milestone. DDD stays live and cached; if persistence is ever needed it will be a `ddd_snapshot (title_id, payload jsonb, fetched_at)` cache table, not normalised rows.
-2. **UM data is sparse by design** — ~2,858 of ~9,710 spine movies have a UM binding (latest reseed). "No data" is the common, correct state. ~35 title collisions are left as runtime-picker cases (year unknown); ~7,483 have no UM entry at all.
+2. **UM data is sparse by design** — most spine movies have no UM binding (the last `db:sync:um` printed the counts). "No data" is the common, correct state. Title collisions with an unknown year are left as runtime-picker cases, and many films have no UM entry at all.
 3. **No Storybook stories** for detail-page components.
 4. **`movie.tagline` mapped but unused** — the overview now shows under the title; the tagline stays in the `Movie` shape for later use.
 5. **CI `e2e` job gated off** — the specs pass locally (the stale `Search...` placeholder assertion was fixed in the redesign); turning the CI job on is still open.
@@ -652,5 +657,5 @@ The baseline every finished task reports is `.claude/rules/code-standards.md`, C
 - `docs/INDEX.md` — where every doc and section is, with line ranges.
 - `docs/plans/plan-cloudflare-d1-comments.md` — the live plan; its phases are tracked in `docs/phases/STATUS.md`.
 - `PRODUCT.md`, `DESIGN.md` — product context and the visual system (the Impeccable skill reads both).
-- `README.md` — local setup (Node + pnpm, `.env.example`, local D1 migrate + seeds).
+- `README.md` — local setup (Node + pnpm, `.env.example`, local D1 migrate + source sync).
 - `docs/plans/done/` — plans finished before the docs standards; history, not a source of current rules.
