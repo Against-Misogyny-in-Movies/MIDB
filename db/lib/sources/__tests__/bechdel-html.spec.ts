@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { bechdelYearUrl, parseBechdelRss, parseBechdelYearPage } from '../bechdel-html.ts';
+import {
+	bechdelYearUrl,
+	parseBechdelRss,
+	parseBechdelYearPage,
+	readBechdelYear
+} from '../bechdel-html.ts';
 
 const read = (name: string) => readFileSync(`db/test/fixtures/${name}`, 'utf8');
 
@@ -36,18 +41,60 @@ describe('parseBechdelYearPage', () => {
 		);
 	});
 
-	it('throws when the rows read differ from the count the page declares', () => {
-		const shortCount = read('bechdel-year-2020.html').replace('(11 movies)', '(12 movies)');
-		expect(() => parseBechdelYearPage(shortCount, 2020)).toThrow(/lists 12 films, 11 rows/);
+	it('throws when a film row cannot be read', () => {
 		const changedMarkup = read('bechdel-year-2020.html').replaceAll(
 			'imdb.com/title',
 			'imdb.com/name'
 		);
-		expect(() => parseBechdelYearPage(changedMarkup, 2020)).toThrow(/0 readable/);
+		expect(() => parseBechdelYearPage(changedMarkup, 2020)).toThrow(/11 film rows and 0 readable/);
 	});
 
-	it('builds the page address', () => {
+	it('builds the page address, with the page number after the first', () => {
 		expect(bechdelYearUrl(1999)).toBe('https://bechdeltest.com/year/1999/');
+		expect(bechdelYearUrl(2004, 1)).toBe('https://bechdeltest.com/year/2004/page/1/');
+	});
+});
+
+describe('readBechdelYear', () => {
+	const pages: Record<string, string> = {
+		'2004:0': read('bechdel-year-2004.html'),
+		'2004:1': read('bechdel-year-2004-page-1.html'),
+		'2020:0': read('bechdel-year-2020.html')
+	};
+	const fetchPage = async (year: number, page: number) => pages[`${year}:${page}`] ?? null;
+
+	it('follows the pager through a year that spans pages', async () => {
+		const films = await readBechdelYear(fetchPage, 2004);
+		expect(films.map((f) => f.title)).toEqual([
+			'13 Going on 30',
+			'2046',
+			'3-Iron',
+			'The Third Society',
+			'Three... Extremes'
+		]);
+	});
+
+	it('reads a one-page year and treats a year with no page as empty', async () => {
+		expect(await readBechdelYear(fetchPage, 2020)).toHaveLength(11);
+		expect(await readBechdelYear(fetchPage, 1999)).toEqual([]);
+	});
+
+	it('throws when a linked page is missing', async () => {
+		const noSecond = async (year: number, page: number) =>
+			page === 1 ? null : fetchPage(year, page);
+		await expect(readBechdelYear(noSecond, 2004)).rejects.toThrow(/no page 1/);
+	});
+
+	it('throws when the pages together differ from the declared count', async () => {
+		const short = async (year: number, page: number) =>
+			(await fetchPage(year, page))?.replaceAll('(5 movies)', '(6 movies)') ?? null;
+		await expect(readBechdelYear(short, 2004)).rejects.toThrow(/lists 6 films and 5 were read/);
+	});
+
+	it('throws when the pager points somewhere unexpected', async () => {
+		const loop = async (year: number, page: number) =>
+			page === 1 ? pages['2004:0'] : fetchPage(year, page);
+		await expect(readBechdelYear(loop, 2004)).rejects.toThrow(/unexpected page/);
 	});
 });
 

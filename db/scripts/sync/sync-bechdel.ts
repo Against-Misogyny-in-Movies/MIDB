@@ -8,7 +8,7 @@ import { chunkForD1 } from '../../lib/chunkForD1.ts';
 import {
 	BECHDEL_FIRST_YEAR,
 	parseBechdelRss,
-	parseBechdelYearPage,
+	readBechdelYear,
 	type BechdelFilm
 } from '../../lib/sources/bechdel-html.ts';
 import { isMain } from '../../../scripts/lib/is-main.ts';
@@ -71,9 +71,8 @@ export async function syncBechdel(
 
 	const byImdb = new Map<string, BechdelFilm>();
 	for (const year of years) {
-		const html = await sources.bechdelYear(year);
-		if (html === null) continue;
-		for (const film of parseBechdelYearPage(html, year)) byImdb.set(film.imdbId, film);
+		for (const film of await readBechdelYear(sources.bechdelYear, year))
+			byImdb.set(film.imdbId, film);
 	}
 	if (byImdb.size === 0) {
 		throw new Error('The Bechdel Test pages gave no films; nothing was changed.');

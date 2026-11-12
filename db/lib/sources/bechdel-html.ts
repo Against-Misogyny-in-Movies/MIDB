@@ -9,8 +9,11 @@ export const BECHDEL_RSS_URL = `${BECHDEL_ORIGIN}/rss/`;
 /** The first year with a film on the site. */
 export const BECHDEL_FIRST_YEAR = 1874;
 
-export function bechdelYearUrl(year: number): string {
-	return `${BECHDEL_ORIGIN}/year/${year}/`;
+/** A year's films come 200 to a page: page 0 is `/year/<year>/`, then `/year/<year>/page/<n>/`. */
+export function bechdelYearUrl(year: number, page = 0): string {
+	return page === 0
+		? `${BECHDEL_ORIGIN}/year/${year}/`
+		: `${BECHDEL_ORIGIN}/year/${year}/page/${page}/`;
 }
 
 const SELECTORS = {
@@ -20,6 +23,8 @@ const SELECTORS = {
 	film: /<div class="movie"><a href="https:\/\/www\.imdb\.com\/title\/(tt\d+)\/"><img [^>]*?alt="\[([0-3])\]"[^>]*><\/a>\s*<a id="movie-(\d+)" href="[^"]*">([^<]*)<\/a>/g,
 	// `<div class="movie">` opens every film, so the count of them checks `film` read them all.
 	filmStart: /<div class="movie">/g,
+	// `<a href="/year/2004/page/1/">continued on next page`, in the pager at the end of a full page.
+	nextPage: /<a href="\/year\/(\d+)\/page\/(\d+)\/">continued on next page/,
 	rssItem: /<item [^>]*>([\s\S]*?)<\/item>/g,
 	rssTitle: /<title>([^<]*)<\/title>/,
 	rssLink: /<link>https:\/\/bechdeltest\.com\/view\/(\d+)\//,
@@ -59,13 +64,19 @@ export interface BechdelFilm {
 	rating: number;
 }
 
-/**
- * The films on one year page. A page without its film count, or whose count differs from the
- * films read, throws. A year with no films has no page (a 404), which the caller treats as empty.
- */
-export function parseBechdelYearPage(html: string, year: number): BechdelFilm[] {
+/** The film count a year page declares for the whole year, every page of it. */
+function declaredCount(html: string, year: number): number {
 	const declared = SELECTORS.yearCount.exec(html);
 	if (!declared) throw new Error(`The Bechdel Test page for ${year} has no film count.`);
+	return Number(declared[1].replaceAll(',', ''));
+}
+
+/**
+ * The films on one page of a year. A page without its film count, or with a film row it cannot
+ * read, throws. A year with no films has no page (a 404), which `readBechdelYear` treats as empty.
+ */
+export function parseBechdelYearPage(html: string, year: number): BechdelFilm[] {
+	declaredCount(html, year);
 	const films: BechdelFilm[] = [];
 	for (const match of html.matchAll(SELECTORS.film)) {
 		films.push({
@@ -76,11 +87,45 @@ export function parseBechdelYearPage(html: string, year: number): BechdelFilm[] 
 			rating: Number(match[2])
 		});
 	}
-	const expected = Number(declared[1].replaceAll(',', ''));
 	const opened = [...html.matchAll(SELECTORS.filmStart)].length;
-	if (films.length !== expected || opened !== expected) {
+	if (films.length !== opened) {
 		throw new Error(
-			`The Bechdel Test page for ${year} lists ${expected} films, ${opened} rows and ${films.length} readable.`
+			`The Bechdel Test page for ${year} has ${opened} film rows and ${films.length} readable.`
+		);
+	}
+	return films;
+}
+
+/**
+ * Every film of a year: page 0, then each page the pager links to. The pages together must
+ * hold the film count the site declares. `fetchPage` returns null for a page the site does not
+ * have: page 0 of a year with no films is empty, a missing later page throws.
+ */
+export async function readBechdelYear(
+	fetchPage: (year: number, page: number) => Promise<string | null>,
+	year: number
+): Promise<BechdelFilm[]> {
+	const films: BechdelFilm[] = [];
+	let declared = 0;
+	for (let page = 0; ; page++) {
+		const html = await fetchPage(year, page);
+		if (html === null) {
+			if (page === 0) return [];
+			throw new Error(`The Bechdel Test has no page ${page} for ${year}.`);
+		}
+		declared = declaredCount(html, year);
+		films.push(...parseBechdelYearPage(html, year));
+		const next = SELECTORS.nextPage.exec(html);
+		if (!next) break;
+		if (Number(next[1]) !== year || Number(next[2]) !== page + 1) {
+			throw new Error(
+				`The Bechdel Test pager for ${year} page ${page} points to an unexpected page.`
+			);
+		}
+	}
+	if (films.length !== declared) {
+		throw new Error(
+			`The Bechdel Test page for ${year} lists ${declared} films and ${films.length} were read.`
 		);
 	}
 	return films;

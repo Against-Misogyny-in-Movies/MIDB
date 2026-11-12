@@ -59,8 +59,10 @@ function yearPage(
 function with2020(edit: (html: string) => string): BechdelSources {
 	return {
 		bechdelRss: sources.bechdelRss,
-		bechdelYear: async (year) =>
-			year === 2020 ? edit((await sources.bechdelYear(2020))!) : sources.bechdelYear(year)
+		bechdelYear: async (year, page) => {
+			const html = await sources.bechdelYear(year, page);
+			return year === 2020 && html !== null ? edit(html) : html;
+		}
 	};
 }
 
@@ -72,14 +74,14 @@ async function loadAll() {
 describe('source sync (fixtures)', () => {
 	it('loads the Bechdel films, then the UM catalogue, and binds matches by reference', async () => {
 		const bechdel = await syncBechdel(db, sources, quiet);
-		// A database that never synced sweeps every year: the fixtures hold 1874 and 2020.
+		// A database that never synced sweeps every year: the fixtures hold 1874, 2004 (two pages) and 2020.
 		expect(bechdel).toMatchObject({
 			full: true,
-			films: 12,
-			titlesInserted: 12,
-			ratingsWritten: 12
+			films: 17,
+			titlesInserted: 17,
+			ratingsWritten: 17
 		});
-		expect(await tally()).toMatchObject({ titles: 12, bechdel: 12 });
+		expect(await tally()).toMatchObject({ titles: 17, bechdel: 17 });
 
 		const um = await syncUm(db, await sources.umFeed(), quiet);
 		expect(um).toMatchObject({
@@ -115,7 +117,7 @@ describe('source sync (fixtures)', () => {
 		expect(await stamp('bechdel')).toEqual({
 			source: 'bechdel',
 			lastSuccessAt: NOW,
-			rowsChanged: 24
+			rowsChanged: 34
 		});
 		expect(await stamp('um')).toEqual({ source: 'um', lastSuccessAt: NOW, rowsChanged: 31 });
 
@@ -261,7 +263,7 @@ describe('source sync (fixtures)', () => {
 		// The feed's years (1997, 2023, 2026) join the current year and the two before it.
 		expect(asked).toEqual([1997, 2023, 2024, 2025, 2026]);
 		expect(result).toMatchObject({ full: false, years: 5, films: 1, titlesInserted: 1 });
-		expect(await tally()).toMatchObject({ titles: 13, bechdel: 13 });
+		expect(await tally()).toMatchObject({ titles: 18, bechdel: 18 });
 	});
 
 	it('scores titles from the TMDB exports and writes only changed scores', async () => {
@@ -350,7 +352,7 @@ describe('source sync failures change nothing', () => {
 		const gone: BechdelSources = { bechdelRss: sources.bechdelRss, bechdelYear: async () => null };
 		await expect(syncBechdel(db, gone, { ...quiet, full: true })).rejects.toThrow(/no films/);
 		expect(await tally()).toEqual(before);
-		expect((await stamp('bechdel')).rowsChanged).toBe(24);
+		expect((await stamp('bechdel')).rowsChanged).toBe(34);
 	});
 
 	it('a Bechdel page that does not match its own count fails the whole run', async () => {

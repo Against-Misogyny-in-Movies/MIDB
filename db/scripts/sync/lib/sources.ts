@@ -11,8 +11,8 @@ export interface SyncSources {
 	/** The Unconsenting Media feed, parsed JSON. */
 	umFeed(): Promise<unknown>;
 	bechdelRss(): Promise<string>;
-	/** A year's page, or null when the site has none (a year without films). */
-	bechdelYear(year: number): Promise<string | null>;
+	/** One page of a year (page 0 is the first), or null when the site has none (a year without films). */
+	bechdelYear(year: number, page: number): Promise<string | null>;
 	/** The decompressed TMDB export of that UTC day, or null when it is not published yet. */
 	tmdbExport(kind: TmdbExportKind, date: Date): Promise<AsyncIterable<Uint8Array | string> | null>;
 }
@@ -44,9 +44,9 @@ export function liveSources(): SyncSources {
 			await politeBechdel();
 			return requireText(BECHDEL_RSS_URL);
 		},
-		async bechdelYear(year) {
+		async bechdelYear(year, page) {
 			await politeBechdel();
-			const res = await fetchSource(bechdelYearUrl(year), {
+			const res = await fetchSource(bechdelYearUrl(year, page), {
 				timeoutMs: PAGE_TIMEOUT_MS,
 				notFoundIsNull: true
 			});
@@ -84,7 +84,10 @@ export function fixtureSources(): SyncSources {
 		async bechdelRss() {
 			return (await readFixture('bechdel-rss.xml'))!;
 		},
-		bechdelYear: (year) => readFixture(`bechdel-year-${year}.html`),
+		bechdelYear: (year, page) =>
+			readFixture(
+				page === 0 ? `bechdel-year-${year}.html` : `bechdel-year-${year}-page-${page}.html`
+			),
 		async tmdbExport(kind) {
 			return createReadStream(fixturePath(`tmdb-${kind}-ids.ndjson`));
 		}
