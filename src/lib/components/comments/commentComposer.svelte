@@ -130,7 +130,7 @@
 
 	/*
 	 * The live region for the check and its outcome. While a check runs, and while its outcome
-	 * shows, it holds two lines of a notice so the outcome replaces the line in place and the
+	 * shows, it holds a notice's height (one line, three on a phone) so the outcome replaces the line in place and the
 	 * list below does not move.
 	 */
 	.status {
@@ -143,7 +143,7 @@
 
 	@media (max-width: 40rem) {
 		.status--held {
-			min-height: 4rem;
+			min-height: 5.25rem;
 		}
 	}
 
