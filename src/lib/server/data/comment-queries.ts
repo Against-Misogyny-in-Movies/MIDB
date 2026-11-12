@@ -14,7 +14,13 @@ import type {
 import { decideStatus } from '#lib/server/moderation/decide.ts';
 import { toPublicUser } from './user-queries.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
-import { countNewReply, runBatch, statusMove, type BatchStatement } from './comment-status.ts';
+import {
+	countNewReply,
+	runBatch,
+	runMove,
+	statusMove,
+	type BatchStatement
+} from './comment-status.ts';
 
 export type CommentRow = typeof comments.$inferSelect;
 
@@ -223,7 +229,7 @@ export async function getCommentWithTitle(id: string): Promise<CommentWithTitle 
 	};
 }
 
-type WriteFailure = 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found';
+type WriteFailure = 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict';
 export type CommentWrite =
 	| { ok: true; comment: OwnComment; title: CommentWithTitle['title'] }
 	| { ok: false; reason: WriteFailure };
@@ -288,7 +294,8 @@ export async function createComment(input: {
 /**
  * The author edits a comment: the body changes, `edited_at` is set and moderation runs again,
  * so a published comment goes back through `decideStatus`. A hidden or deleted comment cannot be
- * edited, which keeps an author from reviving what a moderator removed.
+ * edited, which keeps an author from reviving what a moderator removed. A comment that left
+ * the status the edit read (a moderator acted meanwhile) answers `conflict`.
  */
 export async function editComment(id: string, userId: string, body: string): Promise<CommentWrite> {
 	const found = await getCommentWithTitle(id);
@@ -314,7 +321,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		kind: title.kind,
 		parentBody
 	});
-	await runBatch(
+	const moved = await runMove(
 		statusMove(comment.id, comment.status, decision.status, {
 			body,
 			editedAt: new Date(),
@@ -323,13 +330,15 @@ export async function editComment(id: string, userId: string, body: string): Pro
 			aiVerdict: decision.aiVerdict
 		})
 	);
+	if (!moved) return { ok: false, reason: 'conflict' };
 	const [stored] = await db.select().from(comments).where(eq(comments.id, id));
 	return { ok: true, comment: toOwnComment(stored), title };
 }
 
 /**
  * The author deletes a comment. It stays in the table as `deleted`, so replies keep their
- * thread; the public list shows a bodiless placeholder when it has published replies.
+ * thread; the public list shows a bodiless placeholder when it has published replies. A
+ * comment a moderator moved meanwhile answers `conflict`.
  */
 export async function softDeleteComment(
 	id: string,
@@ -338,6 +347,8 @@ export async function softDeleteComment(
 	const found = await getCommentWithTitle(id);
 	if (!found || found.comment.status === 'deleted') return { ok: false, reason: 'not-found' };
 	if (found.comment.userId !== userId) return { ok: false, reason: 'forbidden' };
-	await runBatch(statusMove(id, found.comment.status, 'deleted'));
+	if (!(await runMove(statusMove(id, found.comment.status, 'deleted')))) {
+		return { ok: false, reason: 'conflict' };
+	}
 	return { ok: true, title: found.title };
 }

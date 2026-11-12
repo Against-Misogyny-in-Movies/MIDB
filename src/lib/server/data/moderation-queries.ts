@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
@@ -8,7 +8,7 @@ import type { PublicUser } from '#lib/media/types/user.ts';
 import type { CommentStatus, OwnComment, ReportReason } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { toOwnComment, getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
-import { runBatch, statusMove, type BatchStatement } from './comment-status.ts';
+import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
 import { banStatements, toPublicUser, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -183,7 +183,8 @@ function logCommentAction(
 	commentId: string,
 	action: Action,
 	reason: string | null,
-	from: CommentStatus
+	from: CommentStatus,
+	extraWhere: SQL = sql`1 = 1`
 ): BatchStatement {
 	return db.insert(moderationActions).select(
 		db
@@ -197,22 +198,44 @@ function logCommentAction(
 				createdAt: sql<number>`${Date.now()}`.as('createdAt')
 			})
 			.from(comments)
-			.where(and(eq(comments.id, commentId), eq(comments.status, from)))
+			.where(and(eq(comments.id, commentId), eq(comments.status, from), extraWhere))
 	);
 }
 
-const resolveOpenReports = (commentId: string, actorId: string, status: 'resolved' | 'dismissed') =>
+const hasOpenReports = (commentId: string) =>
+	sql`EXISTS (SELECT 1 FROM comment_reports r WHERE r.comment_id = ${commentId} AND r.status = 'open')`;
+
+/**
+ * Resolves or dismisses a comment's open reports, only while the comment is still in
+ * `expected`, so a batch whose status move is lost resolves nothing. It returns the rows it
+ * changed.
+ */
+const resolveOpenReports = (
+	commentId: string,
+	actorId: string,
+	status: 'resolved' | 'dismissed',
+	expected: CommentStatus
+) =>
 	db
 		.update(commentReports)
 		.set({ status, resolvedBy: actorId })
-		.where(and(eq(commentReports.commentId, commentId), eq(commentReports.status, 'open')));
+		.where(
+			and(
+				eq(commentReports.commentId, commentId),
+				eq(commentReports.status, 'open'),
+				stillIn(commentId, expected)
+			)
+		)
+		.returning({ id: commentReports.id });
 
 /**
  * One moderator action on a comment, as a single batch: the log row, the status move (with its
- * reply counts) and the resolution of the comment's open reports.
+ * reply counts) and the resolution of the comment's open reports. The actor must be allowed to
+ * act on the comment's author (`targetAllowed`). When the comment left the expected status
+ * between the read and the batch, nothing is written and the result is `invalid-state`.
  */
 async function moveComment(
-	actorId: string,
+	actor: UserRow,
 	commentId: string,
 	action: Action,
 	spec: {
@@ -225,22 +248,26 @@ async function moveComment(
 	const found = await getCommentWithTitle(commentId);
 	if (!found) return { ok: false, reason: 'not-found' };
 	const { comment, title } = found;
+	const author = await targetAllowed(actor, comment.userId);
+	if (typeof author === 'string') return { ok: false, reason: author };
 	if (!spec.from.includes(comment.status)) return { ok: false, reason: 'invalid-state' };
 
-	await runBatch([
-		logCommentAction(actorId, commentId, action, spec.reason, comment.status),
-		...(spec.reports ? [resolveOpenReports(commentId, actorId, spec.reports)] : []),
+	const moved = await runMove([
+		logCommentAction(actor.id, commentId, action, spec.reason, comment.status),
+		...(spec.reports
+			? [resolveOpenReports(commentId, actor.id, spec.reports, comment.status)]
+			: []),
 		...statusMove(commentId, comment.status, spec.to, {
 			moderationSource: 'moderator',
 			moderationReason: spec.reason
 		})
 	]);
-	return { ok: true, title };
+	return moved ? { ok: true, title } : { ok: false, reason: 'invalid-state' };
 }
 
 /** Publishes a pending comment; its reports, if any, are dismissed. */
-export const approveComment = (actorId: string, commentId: string) =>
-	moveComment(actorId, commentId, 'approve', {
+export const approveComment = (actor: UserRow, commentId: string) =>
+	moveComment(actor, commentId, 'approve', {
 		from: ['pending'],
 		to: 'published',
 		reason: null,
@@ -248,8 +275,8 @@ export const approveComment = (actorId: string, commentId: string) =>
 	});
 
 /** Takes a pending or published comment out of view, keeping it for its replies and the author. */
-export const hideComment = (actorId: string, commentId: string, reason: string | null) =>
-	moveComment(actorId, commentId, 'hide', {
+export const hideComment = (actor: UserRow, commentId: string, reason: string | null) =>
+	moveComment(actor, commentId, 'hide', {
 		from: ['pending', 'published'],
 		to: 'hidden',
 		reason,
@@ -257,8 +284,8 @@ export const hideComment = (actorId: string, commentId: string, reason: string |
 	});
 
 /** Rejects a pending or published comment; the author sees the reason. */
-export const rejectComment = (actorId: string, commentId: string, reason: string | null) =>
-	moveComment(actorId, commentId, 'reject', {
+export const rejectComment = (actor: UserRow, commentId: string, reason: string | null) =>
+	moveComment(actor, commentId, 'reject', {
 		from: ['pending', 'published'],
 		to: 'rejected',
 		reason,
@@ -266,8 +293,8 @@ export const rejectComment = (actorId: string, commentId: string, reason: string
 	});
 
 /** Puts a hidden or rejected comment back in the public list. */
-export const restoreComment = (actorId: string, commentId: string) =>
-	moveComment(actorId, commentId, 'restore', {
+export const restoreComment = (actor: UserRow, commentId: string) =>
+	moveComment(actor, commentId, 'restore', {
 		from: ['hidden', 'rejected'],
 		to: 'published',
 		reason: null,
@@ -278,13 +305,12 @@ export const restoreComment = (actorId: string, commentId: string) =>
  * Dismisses a comment's open reports. A comment that the reports sent back to review is
  * published again; any other status stays as it is.
  */
-export async function dismissReports(
-	actorId: string,
-	commentId: string
-): Promise<ModerationResult> {
+export async function dismissReports(actor: UserRow, commentId: string): Promise<ModerationResult> {
 	const found = await getCommentWithTitle(commentId);
 	if (!found) return { ok: false, reason: 'not-found' };
 	const { comment, title } = found;
+	const author = await targetAllowed(actor, comment.userId);
+	if (typeof author === 'string') return { ok: false, reason: author };
 	const [{ open }] = await db
 		.select({ open: sql<number>`count(*)` })
 		.from(commentReports)
@@ -292,9 +318,16 @@ export async function dismissReports(
 	if (open === 0) return { ok: false, reason: 'invalid-state' };
 
 	const restores = comment.status === 'pending' && comment.moderationSource === 'reports';
-	await runBatch([
-		logCommentAction(actorId, commentId, 'dismiss', null, comment.status),
-		resolveOpenReports(commentId, actorId, 'dismissed'),
+	const results = await runBatch([
+		logCommentAction(
+			actor.id,
+			commentId,
+			'dismiss',
+			null,
+			comment.status,
+			hasOpenReports(commentId)
+		),
+		resolveOpenReports(commentId, actor.id, 'dismissed', comment.status),
 		...(restores
 			? statusMove(commentId, 'pending', 'published', {
 					moderationSource: null,
@@ -302,6 +335,10 @@ export async function dismissReports(
 				})
 			: [])
 	]);
+	const resolved = results[1];
+	if (!Array.isArray(resolved) || resolved.length === 0) {
+		return { ok: false, reason: 'invalid-state' };
+	}
 	return { ok: true, title };
 }
 

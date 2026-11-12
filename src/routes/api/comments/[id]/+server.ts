@@ -11,8 +11,11 @@ import {
 } from '#lib/server/http/comment-request.ts';
 import { editComment, softDeleteComment } from '#lib/server/data/comment-queries.ts';
 
-function refuse(reason: 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found'): never {
+function refuse(
+	reason: 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict'
+): never {
 	if (reason === 'forbidden') error(403, 'Only the author can change a comment');
+	if (reason === 'conflict') error(409, 'This comment changed. Reload it and try again.');
 	if (reason === 'not-editable') error(409, 'This comment can no longer be edited');
 	error(404, 'Comment not found');
 }

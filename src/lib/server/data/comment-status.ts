@@ -6,11 +6,30 @@ import type { CommentStatus } from '#lib/media/types/comments.ts';
 
 export type BatchStatement = BatchItem<'sqlite'>;
 
-/** A non-empty statement list is what `db.batch` takes. */
-export function runBatch(statements: BatchStatement[]): Promise<unknown> {
-	if (statements.length === 0) return Promise.resolve();
+/** A non-empty statement list is what `db.batch` takes. Resolves to one result per statement. */
+export async function runBatch(statements: BatchStatement[]): Promise<unknown[]> {
+	if (statements.length === 0) return [];
 	return db.batch(statements as [BatchStatement, ...BatchStatement[]]);
 }
+
+/**
+ * Runs a batch whose last statement is the status update of a `statusMove`, and says whether
+ * that update changed a row. It is false when the comment had already left the expected status
+ * (a lost race), in which case the batch's guarded statements changed nothing either.
+ */
+export async function runMove(statements: BatchStatement[]): Promise<boolean> {
+	const results = await runBatch(statements);
+	const last = results[results.length - 1];
+	return Array.isArray(last) && last.length > 0;
+}
+
+/**
+ * A condition that holds while the comment is still in `status`. A statement that must apply
+ * only when a `statusMove` in the same batch will move the comment is guarded with it, since
+ * the batch is atomic and the move runs after it.
+ */
+export const stillIn = (id: string, status: CommentStatus): SQL =>
+	sql`EXISTS (SELECT 1 FROM comments c WHERE c.id = ${id} AND c.status = ${status})`;
 
 /** Fields a status change may set alongside the status itself. */
 export type StatusPatch = Partial<
@@ -21,7 +40,7 @@ export type StatusPatch = Partial<
 >;
 
 /**
- * The statements that move one comment from `from` to `to`, for a `db.batch` (atomic). Both
+ * The statements that move one comment from `from` to `to`, for a `db.batch` (atomic); the last returns the moved row, so `runMove` can tell whether the move happened. Both
  * are guarded on the comment still being in `from` (and on `extraWhere`, an extra SQL
  * condition such as a report count), so a concurrent change makes the whole move a no-op instead of
  * leaving `reply_count` off.
@@ -57,6 +76,7 @@ export function statusMove(
 			.update(comments)
 			.set({ status: to, ...patch })
 			.where(sql`${comments.id} = ${id} AND ${comments.status} = ${from} AND (${extraWhere})`)
+			.returning({ id: comments.id })
 	);
 	return statements;
 }

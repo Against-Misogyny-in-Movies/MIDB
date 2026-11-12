@@ -90,19 +90,17 @@ const reasonOf = (data: FormData) => text(data, 'reason')?.slice(0, MODERATION_R
 
 export const actions: Actions = {
 	approve: (event) =>
-		act(event, 'approve', (staff, data) => approveComment(staff.id, text(data, 'id') ?? '')),
+		act(event, 'approve', (staff, data) => approveComment(staff, text(data, 'id') ?? '')),
 	hide: (event) =>
-		act(event, 'hide', (staff, data) =>
-			hideComment(staff.id, text(data, 'id') ?? '', reasonOf(data))
-		),
+		act(event, 'hide', (staff, data) => hideComment(staff, text(data, 'id') ?? '', reasonOf(data))),
 	reject: (event) =>
 		act(event, 'reject', (staff, data) =>
-			rejectComment(staff.id, text(data, 'id') ?? '', reasonOf(data))
+			rejectComment(staff, text(data, 'id') ?? '', reasonOf(data))
 		),
 	restore: (event) =>
-		act(event, 'restore', (staff, data) => restoreComment(staff.id, text(data, 'id') ?? '')),
+		act(event, 'restore', (staff, data) => restoreComment(staff, text(data, 'id') ?? '')),
 	dismiss: (event) =>
-		act(event, 'dismiss', (staff, data) => dismissReports(staff.id, text(data, 'id') ?? '')),
+		act(event, 'dismiss', (staff, data) => dismissReports(staff, text(data, 'id') ?? '')),
 	mute: (event) =>
 		act(event, 'mute', (staff, data) => {
 			const hours = Number(text(data, 'hours'));

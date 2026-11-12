@@ -150,12 +150,20 @@ describe('purging', () => {
 describe('inputs', () => {
 	it('trims a reason and keeps it to the limit', async () => {
 		await run('reject', { id: 'c1', reason: `  ${'x'.repeat(300)}  ` });
-		expect(queries.rejectComment).toHaveBeenCalledWith('mod-1', 'c1', 'x'.repeat(140));
+		expect(queries.rejectComment).toHaveBeenCalledWith(
+			expect.objectContaining({ id: 'mod-1' }),
+			'c1',
+			'x'.repeat(140)
+		);
 	});
 
 	it('passes no reason when the field is empty', async () => {
 		await run('hide', { id: 'c1', reason: '   ' });
-		expect(queries.hideComment).toHaveBeenCalledWith('mod-1', 'c1', null);
+		expect(queries.hideComment).toHaveBeenCalledWith(
+			expect.objectContaining({ id: 'mod-1' }),
+			'c1',
+			null
+		);
 	});
 
 	it('mutes for a listed length only', async () => {

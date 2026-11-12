@@ -299,6 +299,15 @@ describe('PATCH and DELETE a comment', () => {
 		).toBe(404);
 	});
 
+	it('answers 409 when a moderator moved the comment during an edit or a delete', async () => {
+		editComment.mockResolvedValue({ ok: false, reason: 'conflict' });
+		expect(
+			await status(call(comment.PATCH, { params, method: 'PATCH', body: { body: 'x' } }))
+		).toBe(409);
+		softDeleteComment.mockResolvedValue({ ok: false, reason: 'conflict' });
+		expect(await status(call(comment.DELETE, { params, method: 'DELETE', body: {} }))).toBe(409);
+	});
+
 	it('deletes as the owner and purges, and answers 403 for someone else', async () => {
 		const res = await call(comment.DELETE, { params, method: 'DELETE', body: {} });
 		expect(res.status).toBe(200);
