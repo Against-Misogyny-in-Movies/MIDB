@@ -8,7 +8,7 @@
 </script>
 
 <!-- Marie Curie: hair swept up into a top bun, a black high-necked dress, a glow of radium. -->
-<Portrait {size}>
+<Portrait {size} dressFill="var(--avatar-hair)">
 	{#snippet back()}
 		<ellipse cx="20" cy="12.8" rx="7.8" ry="6.6" fill="var(--avatar-hair)" /><circle
 			cx="20"
@@ -18,14 +18,12 @@
 		/>
 	{/snippet}
 	{#snippet dress()}
-		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill="var(--avatar-hair)" /><rect
-			x="17"
-			y="24.4"
-			width="6"
-			height="5"
-			rx="1.2"
-			fill="var(--avatar-hair)"
-		/><circle cx="30" cy="31" r="2.2" fill="var(--avatar-mark)" /><path
+		<rect x="17" y="24.4" width="6" height="5" rx="1.2" fill="var(--avatar-hair)" /><circle
+			cx="30"
+			cy="31"
+			r="2.2"
+			fill="var(--avatar-mark)"
+		/><path
 			d="M30 26.6V28M30 34V35.4M25.6 31H27M33 31H34.4M26.9 27.9L27.9 28.9M32.1 33.1L33.1 34.1M33.1 27.9L32.1 28.9M27.9 33.1L26.9 34.1"
 			stroke="var(--avatar-mark)"
 			stroke-width="0.8"

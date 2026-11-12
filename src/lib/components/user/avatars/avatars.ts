@@ -13,7 +13,7 @@ import HopperIcon from './HopperIcon.svelte';
 import KusamaIcon from './KusamaIcon.svelte';
 import OkeeffeIcon from './OkeeffeIcon.svelte';
 import VardaIcon from './VardaIcon.svelte';
-import SimoneIcon from './SimoneIcon.svelte';
+import NinaSimoneIcon from './NinaSimoneIcon.svelte';
 import WoolfIcon from './WoolfIcon.svelte';
 import AngelouIcon from './AngelouIcon.svelte';
 import LordeIcon from './LordeIcon.svelte';
@@ -36,7 +36,7 @@ export const AVATAR_COMPONENTS: Record<string, Component<{ size?: number }>> = {
 	kusama: KusamaIcon,
 	okeeffe: OkeeffeIcon,
 	varda: VardaIcon,
-	simone: SimoneIcon,
+	'nina-simone': NinaSimoneIcon,
 	woolf: WoolfIcon,
 	angelou: AngelouIcon,
 	lorde: LordeIcon,

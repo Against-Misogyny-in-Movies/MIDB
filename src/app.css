@@ -149,6 +149,7 @@
 	--avatar-dress: light-dark(#7400b8, #a77ee0);
 	--avatar-mark: light-dark(#a030d8, #e2c4f8);
 	--avatar-light: light-dark(#ffffff, #faf6fd);
+	/* Lines only ever sit on the light fills (face, light, mark), so one value serves both themes. */
 	--avatar-line: #2d0050;
 
 	/* Elevation: hairlines do the separation; shadows are for floating things. */

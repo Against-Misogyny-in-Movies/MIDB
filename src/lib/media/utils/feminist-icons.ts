@@ -11,7 +11,7 @@ export const ICON_NAME_MAX = USERNAME_MAX - 1 - GENERATED_DIGITS;
  * film-makers and athletes. A new account's generated username is one of
  * these plus `_` and four random digits (`#lib/server/auth/generate-username.ts`). Each entry
  * is lowercase ASCII with underscores (accents transliterated) and at most `ICON_NAME_MAX`
- * characters.
+ * characters. Every avatar figure (`AVATAR_DEFS`) is in the list.
  */
 export const FEMINIST_ICONS = [
 	'audre_lorde',

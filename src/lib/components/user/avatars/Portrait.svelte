@@ -4,6 +4,8 @@
 
 	interface Props {
 		size?: number;
+		/** The shoulders' fill: a dark gown or uniform passes `var(--avatar-hair)`. */
+		dressFill?: string;
 		/** A wide smile instead of the closed mouth. */
 		smile?: boolean;
 		/** Behind the head: the hair's outline, a bun, a drape. */
@@ -16,7 +18,15 @@
 		detail?: Snippet;
 	}
 
-	let { size = 40, smile = false, back, dress, front, detail }: Props = $props();
+	let {
+		size = 40,
+		dressFill = 'var(--avatar-dress)',
+		smile = false,
+		back,
+		dress,
+		front,
+		detail
+	}: Props = $props();
 
 	const clipId = $props.id();
 	const detailed = $derived(size >= PORTRAIT_DETAIL_MIN);
@@ -38,7 +48,7 @@
 	<g clip-path="url(#{clipId})">
 		{@render back?.()}
 		<rect x="17.6" y="21" width="4.8" height="8.5" fill="var(--avatar-face)" />
-		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill="var(--avatar-dress)" />
+		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill={dressFill} />
 		{@render dress?.()}
 		<ellipse cx="20" cy="17" rx="5.8" ry="7" fill="var(--avatar-face)" />
 		{#if detailed}
@@ -59,6 +69,6 @@
 			</g>
 		{/if}
 		{@render front?.()}
-		{#if detailed}{@render detail?.()}{/if}
+		{#if detailed && detail}<g data-portrait-fine>{@render detail()}</g>{/if}
 	</g>
 </svg>

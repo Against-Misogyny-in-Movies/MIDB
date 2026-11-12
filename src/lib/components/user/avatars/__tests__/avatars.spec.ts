@@ -28,16 +28,28 @@ describe('avatar registry', () => {
 
 describe('Component/Portrait', () => {
 	test.each(AVATAR_DEFS.map((a) => a.key))(
-		'%s draws eyes from the detail size up and its outline at every size',
+		'%s draws eyes and mouth only from the detail size up',
 		(avatarKey) => {
 			const small = render(Avatar, { avatarKey, size: PORTRAIT_DETAIL_MIN - 1 }).container;
 			const large = render(Avatar, { avatarKey, size: PORTRAIT_DETAIL_MIN }).container;
 			expect(small.querySelector('[data-portrait-detail]')).toBeNull();
 			expect(large.querySelector('[data-portrait-detail]')).not.toBeNull();
-			// The figure's own shapes sit beside the shared neck, shoulders and face.
-			expect(small.querySelectorAll('g[clip-path] > *').length).toBeGreaterThan(3);
 		}
 	);
+
+	test("a figure's fine marks draw only from the detail size up", () => {
+		const small = render(Avatar, { avatarKey: 'kahlo', size: PORTRAIT_DETAIL_MIN - 1 }).container;
+		const large = render(Avatar, { avatarKey: 'kahlo', size: PORTRAIT_DETAIL_MIN }).container;
+		expect(small.querySelector('[data-portrait-fine]')).toBeNull();
+		expect(large.querySelector('[data-portrait-fine]')).not.toBeNull();
+	});
+
+	test('glasses draw at the smallest size', () => {
+		for (const avatarKey of ['truth', 'johnson', 'ginsburg']) {
+			const small = render(Avatar, { avatarKey, size: 24 }).container;
+			expect(small.querySelector('g[stroke="var(--avatar-line)"]')).not.toBeNull();
+		}
+	});
 
 	test('two portraits on one page clip to their own circle', () => {
 		render(Avatar, { avatarKey: 'kahlo' });

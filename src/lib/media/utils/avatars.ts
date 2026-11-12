@@ -20,7 +20,7 @@ export const AVATAR_DEFS: AvatarDef[] = [
 	{ key: 'kusama', name: 'Yayoi Kusama' },
 	{ key: 'okeeffe', name: "Georgia O'Keeffe" },
 	{ key: 'varda', name: 'Agnès Varda' },
-	{ key: 'simone', name: 'Nina Simone' },
+	{ key: 'nina-simone', name: 'Nina Simone' },
 	{ key: 'woolf', name: 'Virginia Woolf' },
 	{ key: 'angelou', name: 'Maya Angelou' },
 	{ key: 'lorde', name: 'Audre Lorde' },

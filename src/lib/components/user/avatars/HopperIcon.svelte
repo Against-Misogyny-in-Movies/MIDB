@@ -8,16 +8,12 @@
 </script>
 
 <!-- Grace Hopper: a naval officer's cap over short hair, a dark uniform with a white collar. -->
-<Portrait {size}>
+<Portrait {size} dressFill="var(--avatar-hair)">
 	{#snippet back()}
 		<ellipse cx="20" cy="17" rx="6.8" ry="6.6" fill="var(--avatar-hair)" />
 	{/snippet}
 	{#snippet dress()}
-		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill="var(--avatar-hair)" /><path
-			d="M16.6 28.7L20 32.6L23.4 28.7"
-			stroke="var(--avatar-light)"
-			stroke-width="1"
-		/>
+		<path d="M16.6 28.7L20 32.6L23.4 28.7" stroke="var(--avatar-light)" stroke-width="1" />
 	{/snippet}
 	{#snippet front()}
 		<path

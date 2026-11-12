@@ -8,12 +8,9 @@
 </script>
 
 <!-- Sojourner Truth: a white cap, a white shawl crossed over a dark dress, small round glasses. -->
-<Portrait {size}>
+<Portrait {size} dressFill="var(--avatar-hair)">
 	{#snippet dress()}
-		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill="var(--avatar-hair)" /><path
-			d="M11 30.6L20 38L29 30.6L33 33L20 42L7 33Z"
-			fill="var(--avatar-light)"
-		/>
+		<path d="M11 30.6L20 38L29 30.6L33 33L20 42L7 33Z" fill="var(--avatar-light)" />
 	{/snippet}
 	{#snippet front()}
 		<path
@@ -22,10 +19,7 @@
 			stroke="var(--avatar-line)"
 			stroke-width="0.4"
 			stroke-opacity="0.4"
-		/>
-	{/snippet}
-	{#snippet detail()}
-		<g stroke="var(--avatar-line)" stroke-width="0.5" fill="none"
+		/><g stroke="var(--avatar-line)" stroke-width="0.7" fill="none"
 			><circle cx="17.7" cy="17.8" r="1.7" /><circle cx="22.3" cy="17.8" r="1.7" /><path
 				d="M19.4 17.6Q20 17.2 20.6 17.6"
 			/></g

@@ -8,15 +8,12 @@
 </script>
 
 <!-- Ruth Bader Ginsburg: hair pulled back, large glasses, a lace jabot on a black robe. -->
-<Portrait {size}>
+<Portrait {size} dressFill="var(--avatar-hair)">
 	{#snippet back()}
 		<ellipse cx="20" cy="15.6" rx="6.6" ry="7" fill="var(--avatar-hair)" />
 	{/snippet}
 	{#snippet dress()}
-		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill="var(--avatar-hair)" /><path
-			d="M15.6 29L20 35L24.4 29Q20 31 15.6 29Z"
-			fill="var(--avatar-light)"
-		/>
+		<path d="M15.6 29L20 35L24.4 29Q20 31 15.6 29Z" fill="var(--avatar-light)" />
 	{/snippet}
 	{#snippet front()}
 		<path
