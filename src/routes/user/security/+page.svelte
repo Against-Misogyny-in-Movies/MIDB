@@ -1,9 +1,21 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { authClient } from '#lib/auth-client.ts';
-	import { passkeyErrorMessage, providerErrorMessage } from '#lib/auth-errors.ts';
+	import {
+		methodErrorMessage,
+		passkeyErrorMessage,
+		providerErrorMessage,
+		type AuthClientError
+	} from '#lib/auth-errors.ts';
+	import {
+		AUTH_PROVIDERS,
+		providerIcon,
+		providerLabel,
+		type Provider
+	} from '#lib/media/utils/auth-providers.ts';
+	import { currentDeviceName, DEFAULT_PASSKEY_NAME } from '#lib/media/utils/deviceName.ts';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -11,14 +23,6 @@
 	}
 
 	let { data }: Props = $props();
-
-	type Provider = 'google' | 'discord';
-	const PROVIDERS: { id: Provider; label: string; icon: string }[] = [
-		{ id: 'google', label: 'Google', icon: 'ri-google-fill' },
-		{ id: 'discord', label: 'Discord', icon: 'ri-discord-fill' }
-	];
-	const providerLabel = (id: string) => PROVIDERS.find((p) => p.id === id)?.label ?? id;
-	const providerIcon = (id: string) => PROVIDERS.find((p) => p.id === id)?.icon ?? 'ri-user-line';
 
 	interface LinkedAccount {
 		id: string;
@@ -30,6 +34,12 @@
 		name?: string | null;
 		createdAt?: Date | string | null;
 	}
+	/** A result shown beside the action it reports on: a row (`account:<id>`, `passkey:<id>`) or the add buttons. */
+	interface Result {
+		at: string;
+		tone: 'error' | 'success';
+		text: string;
+	}
 
 	let accounts = $state<LinkedAccount[]>([]);
 	let passkeys = $state<PasskeyRow[]>([]);
@@ -37,21 +47,37 @@
 	let loadFailed = $state(false);
 	let busy = $state(false);
 
-	let error = $state<string | null>(null);
-	let done = $state<string | null>(null);
+	let notice = $state<Result | null>(null);
 	/** The row with its inline confirm open (`account:<id>` or `passkey:<id>`). */
 	let confirming = $state<string | null>(null);
 	let renaming = $state<string | null>(null);
 	let nameDraft = $state('');
+	let heading = $state<HTMLHeadingElement>();
 
 	const total = $derived(accounts.length + passkeys.length);
 	const onlyMethod = $derived(total <= 1);
 	const linkable = $derived(
-		PROVIDERS.filter((p) => data.providers[p.id] && !accounts.some((a) => a.providerId === p.id))
+		AUTH_PROVIDERS.filter(
+			(p) => data.providers[p.id] && !accounts.some((a) => a.providerId === p.id)
+		)
 	);
 
-	const added = (value?: Date | string | null) =>
-		value ? `Added ${new Date(value).toLocaleDateString(undefined, { dateStyle: 'medium' })}` : '';
+	const passkeyName = (p: PasskeyRow) => p.name || DEFAULT_PASSKEY_NAME;
+	// Two passkeys with the same name are told apart by the time they were added.
+	const duplicateNames = $derived(
+		new Set(passkeys.map(passkeyName).filter((name, i, names) => names.indexOf(name) !== i))
+	);
+
+	function added(value?: Date | string | null, withTime = false) {
+		if (!value) return '';
+		const when = new Date(value).toLocaleString(undefined, {
+			dateStyle: 'medium',
+			...(withTime && { timeStyle: 'short' })
+		});
+		return `Added ${when}`;
+	}
+
+	const say = (at: string, tone: Result['tone'], text: string) => (notice = { at, tone, text });
 
 	// Each list has its own load, so a change refetches only what it touched: every call counts
 	// against the auth rate limit.
@@ -69,93 +95,141 @@
 
 	onMount(() => {
 		const code = page.url.searchParams.get('error');
-		if (code) error = providerErrorMessage(code);
+		if (code) say('add', 'error', providerErrorMessage(code));
 		void Promise.all([loadAccounts(), loadPasskeys()]).then(() => (loading = false));
 	});
 
-	/** Runs one change, then reloads the list it touched; a refused change shows the server's reason. */
-	async function change(
-		run: () => Promise<{ error: { message?: string } | null }>,
-		success: string,
-		fallback: string,
-		reload: () => Promise<void>
-	) {
+	/** Moves focus to an element by id, or to the list heading when that element is gone. */
+	async function focusOn(id: string) {
+		await tick();
+		(document.getElementById(id) ?? heading)?.focus();
+	}
+
+	/** Closes a confirm or rename plate and hands focus back to the button that opened it. */
+	function closePlate(triggerId: string) {
+		confirming = null;
+		renaming = null;
+		notice = null;
+		void focusOn(triggerId);
+	}
+
+	function openConfirm(key: string) {
+		notice = null;
+		renaming = null;
+		confirming = key;
+		void focusOn(`confirm-${key}`);
+	}
+
+	function openRename(p: PasskeyRow) {
+		notice = null;
+		confirming = null;
+		renaming = p.id;
+		nameDraft = passkeyName(p);
+		void tick().then(() => {
+			const input = document.getElementById(`rename-${p.id}`) as HTMLInputElement | null;
+			input?.focus();
+			input?.select();
+		});
+	}
+
+	interface Change {
+		/** Where a failure shows: the open plate of the row. */
+		at: string;
+		run: () => Promise<{ error: AuthClientError | null }>;
+		success: string;
+		/** Where the success shows: the row, or the add buttons when the row is gone. */
+		successAt: string;
+		fallback: string;
+		reload: () => Promise<void>;
+		/** What takes focus afterwards: the trigger, or the heading when it is gone. */
+		focusId: string;
+	}
+
+	/** Runs one change, then reloads the list it touched. */
+	async function change(c: Change) {
 		busy = true;
-		error = null;
-		done = null;
-		const { error: failure } = await run();
+		notice = null;
+		const { error: failure } = await c.run();
 		if (failure) {
 			busy = false;
-			error = failure.message || fallback;
+			say(c.at, 'error', methodErrorMessage(failure, c.fallback));
 			return;
 		}
 		confirming = null;
 		renaming = null;
-		done = success;
-		await reload();
+		say(c.successAt, 'success', c.success);
+		await c.reload();
 		busy = false;
+		void focusOn(c.focusId);
 	}
 
 	const unlink = (a: LinkedAccount) =>
-		change(
-			() => authClient.unlinkAccount({ accountId: a.id }),
-			`${providerLabel(a.providerId)} removed.`,
-			'The account could not be removed. Try again.',
-			loadAccounts
-		);
+		change({
+			at: `account:${a.id}`,
+			run: () => authClient.unlinkAccount({ accountId: a.id }),
+			success: `${providerLabel(a.providerId)} removed.`,
+			successAt: 'add',
+			fallback: 'The account could not be removed. Try again.',
+			reload: loadAccounts,
+			focusId: 'methods-heading'
+		});
 
 	const removePasskey = (p: PasskeyRow) =>
-		change(
-			() => authClient.passkey.deletePasskey({ id: p.id }),
-			'Passkey deleted.',
-			'The passkey could not be deleted. Try again.',
-			loadPasskeys
-		);
+		change({
+			at: `passkey:${p.id}`,
+			run: () => authClient.passkey.deletePasskey({ id: p.id }),
+			success: 'Passkey deleted.',
+			successAt: 'add',
+			fallback: 'The passkey could not be deleted. Try again.',
+			reload: loadPasskeys,
+			focusId: 'methods-heading'
+		});
 
 	const renamePasskey = (p: PasskeyRow) =>
-		change(
-			() => authClient.passkey.updatePasskey({ id: p.id, name: nameDraft.trim() }),
-			'Passkey renamed.',
-			'The passkey could not be renamed. Try again.',
-			loadPasskeys
-		);
+		change({
+			at: `passkey:${p.id}`,
+			run: () => authClient.passkey.updatePasskey({ id: p.id, name: nameDraft.trim() }),
+			success: 'Passkey renamed.',
+			successAt: `passkey:${p.id}`,
+			fallback: 'The passkey could not be renamed. Try again.',
+			reload: loadPasskeys,
+			focusId: `rename-passkey-${p.id}`
+		});
 
 	async function addPasskey() {
 		busy = true;
-		error = null;
-		done = null;
-		const { error: failure } = await authClient.passkey.addPasskey({});
+		notice = null;
+		const { error: failure } = await authClient.passkey.addPasskey({ name: currentDeviceName() });
 		if (failure) {
 			busy = false;
-			error = passkeyErrorMessage(failure, 'add-passkey');
+			say('add', 'error', passkeyErrorMessage(failure, 'add-passkey'));
 			return;
 		}
-		done = 'Passkey added.';
+		say('add', 'success', 'Passkey added.');
 		await loadPasskeys();
 		busy = false;
 	}
 
 	async function link(provider: Provider) {
-		error = null;
-		done = null;
+		notice = null;
 		const { error: failure } = await authClient.linkSocial({
-			provider,
+			provider: provider.id,
 			callbackURL: '/user/security',
 			errorCallbackURL: '/user/security'
 		});
-		if (failure) error = providerErrorMessage(failure.code ?? '');
-	}
-
-	function startRename(p: PasskeyRow) {
-		confirming = null;
-		renaming = p.id;
-		nameDraft = p.name ?? '';
+		if (failure) say('add', 'error', providerErrorMessage(failure.code ?? ''));
 	}
 </script>
 
 <svelte:head>
 	<title>Sign-in methods | MIDB</title>
 </svelte:head>
+
+{#snippet result(at: string)}
+	{#if notice?.at === at}
+		<Notice tone={notice.tone}>{notice.text}</Notice>
+	{/if}
+{/snippet}
 
 <div class="account-page">
 	<header>
@@ -165,26 +239,24 @@
 		<h1 class="display">Sign-in methods</h1>
 	</header>
 
-	{#if error}
-		<Notice tone="error">{error}</Notice>
-	{/if}
-	{#if done}
-		<Notice tone="success">{done}</Notice>
-	{/if}
-
 	<section class="card methods" aria-busy={loading || busy} aria-labelledby="methods-heading">
-		<h2 id="methods-heading">Accounts and passkeys</h2>
+		<h2 id="methods-heading" tabindex="-1" bind:this={heading}>Accounts and passkeys</h2>
 
 		{#if loadFailed}
-			<p class="empty">The sign-in methods could not be loaded. Reload the page to try again.</p>
+			<Notice tone="error">
+				The sign-in methods could not be loaded. Reload the page to try again.
+			</Notice>
 		{:else if loading}
 			<p class="empty">Loading…</p>
 		{:else}
 			{#if onlyMethod}
-				<p class="hint">The only sign-in method cannot be removed. Add another one first.</p>
+				<p id="last-method-hint" class="hint">
+					The only sign-in method cannot be removed. Add another one first.
+				</p>
 			{/if}
 			<ul>
 				{#each accounts as account (account.id)}
+					{@const key = `account:${account.id}`}
 					<li>
 						<div class="row">
 							<i class="{providerIcon(account.providerId)} icon" aria-hidden="true"></i>
@@ -192,21 +264,26 @@
 								<span class="name">{providerLabel(account.providerId)}</span>
 								<span class="label">{added(account.createdAt)}</span>
 							</div>
-							<button
-								type="button"
-								class="btn btn--ghost"
-								disabled={onlyMethod || busy}
-								onclick={() => (confirming = `account:${account.id}`)}
-							>
-								Remove
-							</button>
+							<div class="row-actions">
+								<button
+									type="button"
+									id="remove-account-{account.id}"
+									class="btn btn--ghost"
+									disabled={onlyMethod || busy}
+									aria-describedby={onlyMethod ? 'last-method-hint' : undefined}
+									onclick={() => openConfirm(key)}
+								>
+									Remove
+								</button>
+							</div>
 						</div>
-						{#if confirming === `account:${account.id}`}
+						{#if confirming === key}
 							<div class="confirm">
-								<p>
+								<p id="confirm-{key}" tabindex="-1">
 									Remove {providerLabel(account.providerId)}? The account can no longer sign in with
 									it.
 								</p>
+								{@render result(key)}
 								<div class="actions">
 									<button
 										type="button"
@@ -215,42 +292,51 @@
 										onclick={() => unlink(account)}
 										>Remove {providerLabel(account.providerId)}</button
 									>
-									<button type="button" class="btn btn--ghost" onclick={() => (confirming = null)}
-										>Keep it</button
+									<button
+										type="button"
+										class="btn btn--ghost"
+										onclick={() => closePlate(`remove-account-${account.id}`)}>Keep it</button
 									>
 								</div>
 							</div>
+						{:else}
+							{@render result(key)}
 						{/if}
 					</li>
 				{/each}
 
 				{#each passkeys as passkey (passkey.id)}
+					{@const key = `passkey:${passkey.id}`}
 					<li>
 						<div class="row">
 							<i class="ri-fingerprint-line icon" aria-hidden="true"></i>
 							<div class="meta">
-								<span class="name">{passkey.name || 'Passkey'}</span>
-								<span class="label">{added(passkey.createdAt)}</span>
+								<span class="name">{passkeyName(passkey)}</span>
+								<span class="label"
+									>{added(passkey.createdAt, duplicateNames.has(passkeyName(passkey)))}</span
+								>
 							</div>
-							<button
-								type="button"
-								class="btn btn--ghost"
-								disabled={busy}
-								onclick={() => startRename(passkey)}
-							>
-								Rename
-							</button>
-							<button
-								type="button"
-								class="btn btn--ghost"
-								disabled={onlyMethod || busy}
-								onclick={() => {
-									renaming = null;
-									confirming = `passkey:${passkey.id}`;
-								}}
-							>
-								Delete
-							</button>
+							<div class="row-actions">
+								<button
+									type="button"
+									id="rename-passkey-{passkey.id}"
+									class="btn btn--ghost"
+									disabled={busy}
+									onclick={() => openRename(passkey)}
+								>
+									Rename
+								</button>
+								<button
+									type="button"
+									id="delete-passkey-{passkey.id}"
+									class="btn btn--ghost"
+									disabled={onlyMethod || busy}
+									aria-describedby={onlyMethod ? 'last-method-hint' : undefined}
+									onclick={() => openConfirm(key)}
+								>
+									Delete
+								</button>
+							</div>
 						</div>
 						{#if renaming === passkey.id}
 							<form
@@ -263,28 +349,32 @@
 								<label for="rename-{passkey.id}" class="label">Passkey name</label>
 								<input
 									id="rename-{passkey.id}"
+									class="input"
 									type="text"
 									bind:value={nameDraft}
 									maxlength="64"
 									autocomplete="off"
 									required
 								/>
+								{@render result(key)}
 								<div class="actions">
 									<button type="submit" class="btn btn--ink" disabled={busy || !nameDraft.trim()}
 										>Save name</button
 									>
-									<button type="button" class="btn btn--ghost" onclick={() => (renaming = null)}
-										>Cancel</button
+									<button
+										type="button"
+										class="btn btn--ghost"
+										onclick={() => closePlate(`rename-passkey-${passkey.id}`)}>Cancel</button
 									>
 								</div>
 							</form>
-						{/if}
-						{#if confirming === `passkey:${passkey.id}`}
+						{:else if confirming === key}
 							<div class="confirm">
-								<p>
-									Delete “{passkey.name || 'Passkey'}”? It can no longer sign in to MIDB. The copy
-									on the device stays until it is deleted in the device's passkey settings.
+								<p id="confirm-{key}" tabindex="-1">
+									Delete “{passkeyName(passkey)}”? It can no longer sign in to MIDB. The copy on the
+									device stays until it is deleted in the device's passkey settings.
 								</p>
+								{@render result(key)}
 								<div class="actions">
 									<button
 										type="button"
@@ -292,32 +382,39 @@
 										disabled={busy}
 										onclick={() => removePasskey(passkey)}>Delete passkey</button
 									>
-									<button type="button" class="btn btn--ghost" onclick={() => (confirming = null)}
-										>Keep it</button
+									<button
+										type="button"
+										class="btn btn--ghost"
+										onclick={() => closePlate(`delete-passkey-${passkey.id}`)}>Keep it</button
 									>
 								</div>
 							</div>
+						{:else}
+							{@render result(key)}
 						{/if}
 					</li>
 				{/each}
 			</ul>
 
 			<div class="add">
-				<button type="button" class="btn btn--brand" disabled={busy} onclick={addPasskey}>
-					<i class="ri-fingerprint-line" aria-hidden="true"></i>
-					Add a passkey
-				</button>
-				{#each linkable as provider (provider.id)}
-					<button
-						type="button"
-						class="btn btn--ghost"
-						disabled={busy}
-						onclick={() => link(provider.id)}
-					>
-						<i class={provider.icon} aria-hidden="true"></i>
-						Link {provider.label}
+				<div class="add-actions">
+					<button type="button" class="btn btn--brand" disabled={busy} onclick={addPasskey}>
+						<i class="ri-fingerprint-line" aria-hidden="true"></i>
+						Add a passkey
 					</button>
-				{/each}
+					{#each linkable as provider (provider.id)}
+						<button
+							type="button"
+							class="btn btn--ghost"
+							disabled={busy}
+							onclick={() => link(provider)}
+						>
+							<i class={provider.icon} aria-hidden="true"></i>
+							Link {provider.label}
+						</button>
+					{/each}
+				</div>
+				{@render result('add')}
 			</div>
 		{/if}
 	</section>
@@ -335,7 +432,7 @@
 
 	.back {
 		@apply inline-flex items-center text-sm text-ink-muted no-underline;
-		margin-bottom: var(--spacing-sm);
+		min-height: 2.75rem;
 	}
 
 	.back:hover {
@@ -371,8 +468,12 @@
 	}
 
 	.row {
-		@apply flex items-center gap-sm;
+		@apply flex flex-wrap items-center gap-sm;
 		padding-block: var(--spacing-sm);
+	}
+
+	.row-actions {
+		@apply flex gap-sm;
 	}
 
 	.icon {
@@ -380,7 +481,8 @@
 	}
 
 	.meta {
-		@apply flex flex-col flex-1 min-w-0;
+		@apply flex flex-col min-w-0;
+		flex: 1 1 8rem;
 	}
 
 	.name {
@@ -400,30 +502,20 @@
 	}
 
 	.add {
-		@apply flex flex-wrap gap-sm;
+		@apply flex flex-col gap-sm;
 		padding-top: var(--spacing-sm);
+	}
+
+	.add-actions {
+		@apply flex flex-wrap gap-sm;
 	}
 
 	.add .btn {
 		@apply gap-sm;
 	}
 
-	input {
-		@apply w-full text-ink bg-surface-raised;
-		height: 2.75rem;
-		padding-inline: 16px;
-		border-radius: 12px;
-		border: 1px solid var(--border-strong);
-		transition: border-color 0.15s ease;
-	}
-
-	input:hover {
-		border-color: var(--ink-muted);
-	}
-
-	input:focus-visible {
-		@apply outline-none;
-		border-color: var(--brand);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
+	h2:focus-visible,
+	.confirm p:focus-visible {
+		outline-offset: 2px;
 	}
 </style>
