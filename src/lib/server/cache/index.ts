@@ -3,7 +3,7 @@ import { createCacheApiBackend } from '#lib/server/cache/cache-api.ts';
 import { createMemoryBackend } from '#lib/server/cache/memory.ts';
 
 /**
- * Server-side cache for upstream responses, with the fixed-window counters behind `incr`.
+ * Server-side cache for what the server fetches (TMDB, DDD and the landing's database queries), with the fixed-window counters behind `incr`.
  *
  * On Cloudflare Workers the backend is the Cache API behind a per-isolate memory level
  * (`cache-api.ts`): isolates are short-lived, so process memory alone would lose most
@@ -11,7 +11,7 @@ import { createMemoryBackend } from '#lib/server/cache/memory.ts';
  * (`memory.ts`). Callers use `getCached(key, ttlMs, fetcher)` either way.
  *
  * This is not the page CDN: Workers Caching serves page responses (`docs/architecture.md`,
- * Caching policy), and this store holds only what the server fetches from TMDB and DDD.
+ * Caching policy), and this store holds only the values above.
  */
 
 // One memory level for the isolate's lifetime; the Cache API backend wraps it.

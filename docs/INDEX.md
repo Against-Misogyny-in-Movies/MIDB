@@ -39,18 +39,18 @@ Each agent reads its own file.
 
 Read the sections your task touches.
 
-- `README.md` — MIDB (~660 tok)
+- `README.md` — MIDB (~690 tok)
 - `PRODUCT.md` — Product (~290 tok)
-- `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~36.2K tok)
+- `DESIGN.md` — Design (~2.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~36.6K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~860)
   - 68–210 Directory layout (~4.7K)
     - 201–210 File-organisation conventions (~450)
-  - 211–224 Styling & theming (~890)
+  - 211–224 Styling & theming (~950)
   - 225–237 Copy & voice (~570) ← 1
-  - 238–263 Routes (~7.5K)
+  - 238–263 Routes (~7.4K)
   - 264–277 User & roles (~450)
   - 278–334 Database schema (~2.4K)
     - 286–316 Tables (active) (~1.0K)
@@ -62,18 +62,18 @@ Read the sections your task touches.
   - 453–464 Shared marker pattern (metric row markers) (~410) ← 4
   - 465–501 Component library (`src/lib/components/`) (~5.0K)
   - 502–512 Live search (`src/lib/components/search/`) (~710)
-  - 513–526 Server cache (`src/lib/server/cache/`) (~580)
+  - 513–526 Server cache (`src/lib/server/cache/`) (~670)
   - 527–542 TMDB integration (~810)
   - 543–558 Auth flow (Hanko) (~890)
-  - 559–576 Caching policy (~980) ← 5
-  - 577–627 Configuration & environment (~2.1K)
-    - 595–611 Local run sequence (~140)
-    - 612–615 npm scripts (~130)
-    - 616–627 CI (`.github/workflows/tests.yml`) (~370)
-  - 628–643 Testing (~690)
-    - 638–643 Verification baseline (~80)
-  - 644–654 Known gaps / TODO (~340)
-  - 655–663 Related docs (~160)
+  - 559–576 Caching policy (~1.1K) ← 5
+  - 577–628 Configuration & environment (~2.3K)
+    - 595–612 Local run sequence (~180)
+    - 613–616 npm scripts (~140)
+    - 617–628 CI (`.github/workflows/tests.yml`) (~410)
+  - 629–644 Testing (~720)
+    - 639–644 Verification baseline (~80)
+  - 645–655 Known gaps / TODO (~340)
+  - 656–664 Related docs (~160)
 
 ## Phases
 
@@ -105,10 +105,10 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~680 tok)
-- `PRIVACY.md` — Privacy (~550 tok)
+- `SECURITY.md` — Security (~720 tok)
+- `PRIVACY.md` — Privacy (~610 tok)
 - `ACCESSIBILITY.md` — Accessibility (~400 tok)
-- `THIRD_PARTY_NOTICES.md` — Third-party notices (~660 tok)
+- `THIRD_PARTY_NOTICES.md` — Third-party notices (~680 tok)
 
 ## Code to docs
 
