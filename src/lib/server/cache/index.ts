@@ -34,12 +34,13 @@ function backend(): Backend {
  * never make a request fail, only slower.
  *
  * @param key - Namespaced cache key, e.g. `tmdb:movie:603`.
- * @param ttlMs - Time-to-live in milliseconds.
+ * @param ttlMs - Time-to-live in milliseconds, or a function of the fetched value for results
+ *   that should live shorter (a failed upstream answer).
  * @param fetcher - Produces the value on a cache miss.
  */
 export async function getCached<T>(
 	key: string,
-	ttlMs: number,
+	ttlMs: number | ((value: T) => number),
 	fetcher: () => Promise<T>
 ): Promise<T> {
 	const store = backend();
@@ -47,7 +48,7 @@ export async function getCached<T>(
 	if (hit !== undefined) return hit;
 
 	const value = await fetcher();
-	await store.set(key, value, ttlMs);
+	await store.set(key, value, typeof ttlMs === 'function' ? ttlMs(value) : ttlMs);
 	return value;
 }
 

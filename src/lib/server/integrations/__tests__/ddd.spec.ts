@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { env } from '#lib/server/env.ts';
 import { clearCache } from '#lib/server/cache/index.ts';
 
@@ -257,6 +257,75 @@ describe('getTriggerTagsForSeries', () => {
 		const second = await getTriggerTagsForSeries(series);
 
 		expect(second).toEqual(first);
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+});
+
+// ── Failed upstream answers ──────────────────────────────────────────────
+
+describe('a non-OK upstream answer', () => {
+	const failed = { ok: false, status: 503, json: async () => ({}) } as Response;
+
+	beforeEach(() => {
+		vi.resetAllMocks();
+		vi.useFakeTimers();
+	});
+	afterEach(() => vi.useRealTimers());
+
+	it('is cached for 60 seconds, not an hour', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(failed)
+			.mockResolvedValueOnce(mockSearchResponse([]));
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+
+		await getTriggerTagsLive('tt0000009');
+		await getTriggerTagsLive('tt0000009');
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+		vi.advanceTimersByTime(61 * 1000);
+		await getTriggerTagsLive('tt0000009');
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+		// The retry succeeded (no items), so this answer lasts the full hour.
+		vi.advanceTimersByTime(30 * 60 * 1000);
+		await getTriggerTagsLive('tt0000009');
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+
+	it('covers a failed media request for a found item too', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 7 }]))
+			.mockResolvedValueOnce(failed)
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 7 }]))
+			.mockResolvedValueOnce(mockMediaResponse([]));
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+
+		await getTriggerTagsLive('tt0000010');
+		vi.advanceTimersByTime(61 * 1000);
+		await getTriggerTagsLive('tt0000010');
+		expect(fetchSpy).toHaveBeenCalledTimes(4);
+	});
+
+	it('applies to a series search as well', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(failed)
+			.mockResolvedValueOnce(mockSearchResponse([]));
+		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+
+		const series = { title: 'X', tmdbId: '555', firstAirDate: '2020-01-01' };
+		await expect(getTriggerTagsForSeries(series)).resolves.toEqual({
+			itemId: null,
+			tags: [],
+			isSeries: true
+		});
+		vi.advanceTimersByTime(61 * 1000);
+		await getTriggerTagsForSeries(series);
 		expect(fetchSpy).toHaveBeenCalledTimes(2);
 	});
 });

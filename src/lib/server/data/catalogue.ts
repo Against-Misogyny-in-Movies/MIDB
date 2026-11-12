@@ -1,5 +1,6 @@
 import { and, count, desc, eq, isNotNull } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
+import { getCached } from '#lib/server/cache/index.ts';
 import { titles } from '#db/schema/titles.ts';
 import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
 import { toUmEntry } from './sources';
@@ -9,13 +10,18 @@ import type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '#lib/media/typ
 
 export type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '#lib/media/types/catalogue.ts';
 
-/** Row counts of `title_bechdel` and `um_source`. */
-export async function getCatalogueCounts(): Promise<CatalogueCounts> {
-	const [[bechdel], [um]] = await Promise.all([
-		db.select({ n: count() }).from(titleBechdel),
-		db.select({ n: count() }).from(umSource)
-	]);
-	return { bechdelRatings: bechdel.n, umEntries: um.n };
+/** Seeded data changes on the daily sync, so the landing's queries are kept for an hour. */
+const LANDING_TTL_MS = 60 * 60 * 1000;
+
+/** Row counts of `title_bechdel` and `um_source`, cached for an hour. */
+export function getCatalogueCounts(): Promise<CatalogueCounts> {
+	return getCached('catalogue:counts', LANDING_TTL_MS, async () => {
+		const [[bechdel], [um]] = await Promise.all([
+			db.select({ n: count() }).from(titleBechdel),
+			db.select({ n: count() }).from(umSource)
+		]);
+		return { bechdelRatings: bechdel.n, umEntries: um.n };
+	});
 }
 
 /**
@@ -71,12 +77,14 @@ export async function getMostVotedRatedFilms(
 /**
  * `count` films picked at random from the `pool` most IMDb-voted films that have a Bechdel
  * rating, an Unconsenting Media entry and a TMDB id (so each links to its page). The landing
- * hero calls it on every request.
+ * hero calls it on every request. The pool is cached for an hour; the shuffle runs per call.
  */
 export async function getRandomRatedFilms(count = 6, pool = 100): Promise<LinkedRatedFilm[]> {
-	const films = (
-		await getMostVotedRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
-	).filter((film): film is LinkedRatedFilm => film.tmdbId !== null);
+	const ranked = await getCached(`catalogue:hero-pool:${pool}`, LANDING_TTL_MS, () =>
+		getMostVotedRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
+	);
+	// `filter` copies, so the shuffle below never reorders the cached array.
+	const films = ranked.filter((film): film is LinkedRatedFilm => film.tmdbId !== null);
 	// Partial Fisher–Yates: the first `count` slots end up a uniform random sample.
 	for (let i = 0; i < Math.min(count, films.length); i++) {
 		const j = i + Math.floor(Math.random() * (films.length - i));

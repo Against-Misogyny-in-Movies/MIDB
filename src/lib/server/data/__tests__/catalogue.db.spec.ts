@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { titles } from '#db/schema/titles.ts';
 import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
 import { db } from '#lib/server/db.ts';
+import { clearCache } from '#lib/server/cache/index.ts';
 import {
 	getCatalogueCounts,
 	getMostVotedRatedFilms,
@@ -19,6 +20,9 @@ const FLAGS = {
 	rapeOffScrn: false,
 	rapeOnScreen: false
 };
+
+// The landing queries are cached for an hour; each test starts from an empty cache.
+beforeEach(() => clearCache());
 
 async function film(title: string, numVotes: number, rating: number, tmdbId: number | null) {
 	const [row] = await db
@@ -104,6 +108,37 @@ describe('getMostVotedRatedFilms', () => {
 		expect((await getMostVotedRatedFilms(5, { requireUmEntry: true })).map((f) => f.title)).toEqual(
 			['Bound']
 		);
+	});
+});
+
+describe('landing queries are cached', () => {
+	it('serves counts and the hero pool from the cache until it is cleared', async () => {
+		await film('A', 10, 3, 1);
+		expect((await getCatalogueCounts()).bechdelRatings).toBe(1);
+		const row = await film('B', 20, 3, 2);
+		await db.insert(umSource).values({ umId: 9, cleanName: 'b', cleanTitleKey: 'b', ...FLAGS });
+		await db.insert(titleUm).values({ titleId: row.id, umId: 9 });
+		expect(await getRandomRatedFilms(6)).toHaveLength(1);
+
+		await film('C', 30, 3, 3);
+		expect((await getCatalogueCounts()).bechdelRatings).toBe(1);
+		await clearCache();
+		expect((await getCatalogueCounts()).bechdelRatings).toBe(3);
+	});
+
+	it('shuffles per call from one cached pool', async () => {
+		for (let i = 1; i <= 8; i++) {
+			const row = await film(`F${i}`, i, 3, i);
+			await db
+				.insert(umSource)
+				.values({ umId: i, cleanName: `f${i}`, cleanTitleKey: `f${i}`, ...FLAGS });
+			await db.insert(titleUm).values({ titleId: row.id, umId: i });
+		}
+		const orders = new Set<string>();
+		for (let i = 0; i < 12; i++) {
+			orders.add((await getRandomRatedFilms(8)).map((f) => f.title).join());
+		}
+		expect(orders.size).toBeGreaterThan(1);
 	});
 });
 

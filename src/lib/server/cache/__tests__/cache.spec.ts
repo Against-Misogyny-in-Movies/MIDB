@@ -20,6 +20,14 @@ describe('memory backend', () => {
 		expect(fetcher).toHaveBeenCalledTimes(2);
 	});
 
+	it('getCached takes the TTL from the fetched value when given a function', async () => {
+		const fetcher = vi.fn(async () => 'short');
+		await getCached('k', (value) => (value === 'short' ? 100 : 5000), fetcher);
+		vi.advanceTimersByTime(100);
+		await getCached('k', (value) => (value === 'short' ? 100 : 5000), fetcher);
+		expect(fetcher).toHaveBeenCalledTimes(2);
+	});
+
 	it('getCached stores nothing when the fetcher throws', async () => {
 		await expect(
 			getCached('k', 1000, async () => {
