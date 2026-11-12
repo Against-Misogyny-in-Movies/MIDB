@@ -160,6 +160,18 @@ describe('CommentsSection signed out', () => {
 		expect(await screen.findByText('Text of b')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Show more comments' })).toBeNull();
 	});
+
+	it('moves the focus to the first new comment after Show more', async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValueOnce(json({ comments: [view('a')], nextCursor: 'next' }))
+			.mockResolvedValueOnce(json({ comments: [view('b')], nextCursor: null }));
+		mount(fetcher as never);
+		await screen.findByText('Text of a');
+		await fireEvent.click(screen.getByRole('button', { name: 'Show more comments' }));
+		await screen.findByText('Text of b');
+		await waitFor(() => expect(document.activeElement?.id).toBe('comment-b'));
+	});
 });
 
 describe('CommentsSection signed in', () => {
@@ -336,5 +348,61 @@ describe('CommentsSection signed in', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 		await waitFor(() => expect(patch).toHaveBeenCalledOnce());
 		expect(await screen.findByText('Awaiting review')).toBeTruthy();
+	});
+
+	it('puts the focus on the placeholder after a delete that leaves one', async () => {
+		const reply = view('r', { parentId: 'mine', rootId: 'mine', body: 'A reply' });
+		mount(
+			api({
+				[`GET ${LIST}`]: list([
+					view('mine', { author: ME, body: 'My words', replyCount: 1, replies: [reply] })
+				]),
+				[`GET ${LIST}/viewer`]: viewer(),
+				'DELETE /api/comments/mine': () => json({ ok: true })
+			})
+		);
+		await screen.findByText('My words');
+		const mine = document.getElementById('comment-mine')!;
+		await fireEvent.click(
+			[...mine.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Delete')!
+		);
+		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
+		await screen.findByText('This comment was removed.');
+		await waitFor(() => expect(document.activeElement?.id).toBe('comment-mine'));
+		expect(mine.textContent).not.toMatch(/cannot be restored/);
+	});
+
+	it('puts the focus on the next comment after a delete that removes the comment', async () => {
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('mine', { author: ME, body: 'My words' }), view('a')]),
+				[`GET ${LIST}/viewer`]: viewer(),
+				'DELETE /api/comments/mine': () => json({ ok: true })
+			})
+		);
+		await screen.findByText('My words');
+		const mine = document.getElementById('comment-mine')!;
+		await fireEvent.click(
+			[...mine.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Delete')!
+		);
+		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
+		await waitFor(() => expect(document.getElementById('comment-mine')).toBeNull());
+		await waitFor(() => expect(document.activeElement?.id).toBe('comment-a'));
+	});
+
+	it('puts the focus on Close once a report is sent', async () => {
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('a')]),
+				[`GET ${LIST}/viewer`]: viewer(),
+				'POST /api/comments/a/report': () => json({ alreadyReported: false }, 201)
+			})
+		);
+		await screen.findByText('Text of a');
+		await fireEvent.click(screen.getByRole('button', { name: 'Report' }));
+		await fireEvent.click(screen.getByLabelText('Spam'));
+		await fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+		const close = await screen.findByRole('button', { name: 'Close' });
+		await waitFor(() => expect(document.activeElement).toBe(close));
 	});
 });

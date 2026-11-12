@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Notice from '#lib/components/ui/notice.svelte';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import type { ReportReason } from '#lib/media/types/comments.ts';
 	import {
 		REPORT_NOTE_MAX,
@@ -20,6 +21,7 @@
 	let note = $state('');
 	/** Set once the report went through; the form then shows only the result. */
 	let sent = $state<'sent' | 'already' | null>(null);
+	let closeButton: HTMLButtonElement | undefined = $state();
 
 	const key = $derived(`report:${commentId}`);
 
@@ -27,7 +29,10 @@
 		event.preventDefault();
 		if (!reason || comments.busy[key]) return;
 		const result = await comments.report(commentId, { reason, note });
-		if (result.ok) sent = result.alreadyReported ? 'already' : 'sent';
+		if (result.ok) {
+			sent = result.alreadyReported ? 'already' : 'sent';
+			await focusAfterUpdate(() => closeButton);
+		}
 	}
 </script>
 
@@ -39,7 +44,9 @@
 				: 'Report sent. Moderators review it.'}
 		</Notice>
 		<div class="row">
-			<button class="btn btn--ghost" type="button" onclick={onclose}>Close</button>
+			<button class="btn btn--ink" type="button" bind:this={closeButton} onclick={onclose}
+				>Close</button
+			>
 		</div>
 	{:else}
 		<fieldset class="reasons">

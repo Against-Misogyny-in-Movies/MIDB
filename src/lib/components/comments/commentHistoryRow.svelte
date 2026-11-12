@@ -6,6 +6,7 @@
 	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
@@ -20,6 +21,7 @@
 	// svelte-ignore state_referenced_locally
 	let comment = $state<UserCommentRow>(initial);
 	let mode = $state<'edit' | 'delete' | null>(null);
+	let root: HTMLElement | undefined = $state();
 	let busy = $state(false);
 	let error = $state<string | undefined>();
 
@@ -56,6 +58,7 @@
 			editedAt: saved.editedAt
 		};
 		mode = null;
+		await focusAfterUpdate(() => root);
 		return true;
 	}
 
@@ -70,10 +73,11 @@
 		}
 		comment = { ...comment, status: 'deleted' };
 		mode = null;
+		await focusAfterUpdate(() => root);
 	}
 </script>
 
-<li class="row" id="comment-{comment.id}">
+<li class="row" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<div class="meta">
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>

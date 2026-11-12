@@ -10,6 +10,7 @@
 		MUTE_HOURS,
 		REPORT_REASON_LABELS
 	} from '#lib/media/utils/comments.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
@@ -27,6 +28,7 @@
 	let panel = $state<Panel | null>(null);
 	/** The action whose form is in flight, so its button reads as busy and the others wait. */
 	let busy = $state<string | null>(null);
+	let root: HTMLElement | undefined = $state();
 
 	const { comment, author } = $derived(item);
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
@@ -38,12 +40,23 @@
 	};
 	const heldBy = $derived(comment.moderationSource ? SOURCES[comment.moderationSource] : null);
 
+	/**
+	 * A form action. When the comment leaves the queue its row is gone, so the focus goes to the
+	 * next row, the previous one, or the empty-state line; a row that stays takes it back.
+	 */
 	const submit = (name: string) => () => {
 		busy = name;
+		const neighbour = root?.nextElementSibling ?? root?.previousElementSibling;
 		return async ({ update }: { update: () => Promise<void> }) => {
 			await update();
 			busy = null;
 			panel = null;
+			await focusAfterUpdate(() =>
+				root?.isConnected
+					? root
+					: ((neighbour?.isConnected ? (neighbour as HTMLElement) : null) ??
+						document.getElementById('moderation-empty'))
+			);
 		};
 	};
 
@@ -55,7 +68,7 @@
 	};
 </script>
 
-<li class="item" id="comment-{comment.id}">
+<li class="item" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<header class="meta">
 		<Avatar avatarKey={author.avatarKey} size={24} />
 		<span class="name">{author.displayName}</span>

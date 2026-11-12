@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import type { ActionOutcome, RecentAction } from '#lib/media/types/moderation.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 
 	interface Props {
@@ -12,6 +13,7 @@
 	let { entry, outcome }: Props = $props();
 
 	let busy = $state(false);
+	let root: HTMLElement | undefined = $state();
 
 	const VERBS: Record<RecentAction['action'], string> = {
 		approve: 'approved a comment',
@@ -32,7 +34,7 @@
 	const mine = $derived(outcome?.id === entry.commentId ? outcome : null);
 </script>
 
-<li class="entry">
+<li class="entry" tabindex="-1" bind:this={root}>
 	<p class="line">
 		<span class="name">{entry.actor?.displayName ?? 'A removed account'}</span>
 		{VERBS[entry.action]}{#if entry.targetUser}
@@ -54,6 +56,7 @@
 				return async ({ update }) => {
 					await update();
 					busy = false;
+					await focusAfterUpdate(() => root);
 				};
 			}}
 		>

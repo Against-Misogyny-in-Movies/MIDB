@@ -7,6 +7,7 @@
 	import type { CommentSort } from '#lib/media/types/comments.ts';
 	import { buildThreads } from '#lib/media/utils/commentThread.ts';
 	import { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 
 	interface Props {
@@ -50,6 +51,18 @@
 	const waitingForViewer = $derived(
 		session.likelyUser && (comments.viewerPhase === 'idle' || comments.viewerPhase === 'loading')
 	);
+	let moreButton: HTMLButtonElement | undefined = $state();
+
+	/** Loads the next page and puts the focus on its first comment, or back on the button if it failed. */
+	async function showMore() {
+		const before = comments.list.length;
+		await comments.loadMore();
+		const first = comments.list[before];
+		await focusAfterUpdate(() =>
+			first ? document.getElementById(`comment-${first.id}`) : moreButton
+		);
+	}
+
 	const loading = $derived(comments.phase === 'loading' && comments.list.length === 0);
 	const showSkeleton = $derived(loading || (comments.phase === 'ready' && waitingForViewer));
 </script>
@@ -87,6 +100,8 @@
 
 		<div
 			class="slot"
+			data-comment-list
+			tabindex="-1"
 			class:slot--stale={comments.phase === 'loading' && comments.list.length > 0}
 			aria-busy={comments.phase === 'loading' || waitingForViewer}
 		>
@@ -115,7 +130,8 @@
 						class="btn btn--ghost more"
 						type="button"
 						disabled={comments.busy.more}
-						onclick={() => comments.loadMore()}
+						bind:this={moreButton}
+						onclick={showMore}
 					>
 						{comments.busy.more ? 'Loading…' : 'Show more comments'}
 					</button>

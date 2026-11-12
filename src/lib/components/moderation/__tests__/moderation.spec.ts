@@ -1,8 +1,24 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ModerationItem, RecentAction } from '#lib/media/types/moderation.ts';
 
-vi.mock('$app/forms', () => ({ enhance: () => ({ destroy() {} }) }));
+const form = vi.hoisted(() => ({ update: async () => {} }));
+
+// `enhance` runs the component's submit callback and its result handler, with an `update` the
+// test replaces to stand for the page re-rendering after the action.
+vi.mock('$app/forms', () => ({
+	enhance: (
+		node: HTMLFormElement,
+		submit?: () => (opts: { update: () => Promise<void> }) => Promise<void>
+	) => {
+		const onSubmit = (event: Event) => {
+			event.preventDefault();
+			void submit?.()({ update: () => form.update() });
+		};
+		node.addEventListener('submit', onSubmit);
+		return { destroy: () => node.removeEventListener('submit', onSubmit) };
+	}
+}));
 
 const { default: ModerationItemRow } = await import('../moderationItem.svelte');
 const { default: RecentActionRow } = await import('../recentActionRow.svelte');
@@ -39,7 +55,10 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 	};
 }
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	form.update = async () => {};
+});
 
 function mount(
 	over: Partial<ModerationItem> = {},
@@ -150,6 +169,62 @@ describe('ModerationItem', () => {
 			target: other
 		});
 		expect(screen.queryByRole('alert')).toBeNull();
+	});
+});
+
+describe('focus after an action', () => {
+	function mountTwo(second = true) {
+		const list = document.body.appendChild(document.createElement('ul'));
+		const first = render(ModerationItemRow, {
+			props: { item: item(), outcome: null, canActOnAuthor: true },
+			target: list
+		});
+		if (second) {
+			render(ModerationItemRow, {
+				props: {
+					item: item({ comment: { ...item().comment, id: 'c2' } }),
+					outcome: null,
+					canActOnAuthor: true
+				},
+				target: list
+			});
+		}
+		return { list, first };
+	}
+
+	it('moves to the next row when the comment leaves the queue', async () => {
+		const { list } = mountTwo();
+		form.update = async () => {
+			document.getElementById('comment-c1')?.remove();
+		};
+		await fireEvent.submit(
+			screen.getAllByRole('button', { name: 'Approve' })[0].closest('form') as HTMLFormElement
+		);
+		await waitFor(() => expect(document.activeElement).toBe(list.querySelector('#comment-c2')));
+	});
+
+	it('moves to the empty-state line when the last row leaves', async () => {
+		mountTwo(false);
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<p id="moderation-empty" tabindex="-1">No comments are waiting for review.</p>'
+		);
+		form.update = async () => {
+			document.getElementById('comment-c1')?.remove();
+		};
+		await fireEvent.submit(
+			screen.getByRole('button', { name: 'Approve' }).closest('form') as HTMLFormElement
+		);
+		await waitFor(() => expect(document.activeElement?.id).toBe('moderation-empty'));
+	});
+
+	it('stays on a row that is still there, such as one that was only muted', async () => {
+		mountTwo(false);
+		await fireEvent.click(screen.getByRole('button', { name: 'Mute author' }));
+		await fireEvent.submit(
+			screen.getByRole('button', { name: 'Mute account' }).closest('form') as HTMLFormElement
+		);
+		await waitFor(() => expect(document.activeElement?.id).toBe('comment-c1'));
 	});
 });
 

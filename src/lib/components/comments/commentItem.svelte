@@ -9,6 +9,7 @@
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
 	import type { ShownComment } from '#lib/media/utils/commentThread.ts';
 	import type { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
@@ -22,6 +23,7 @@
 
 	/** The one open panel under the comment. */
 	let mode = $state<'reply' | 'edit' | 'report' | 'delete' | null>(null);
+	let root: HTMLElement | undefined = $state();
 
 	const signedIn = $derived(session.status === 'user');
 	const own = $derived(
@@ -44,20 +46,51 @@
 
 	const toggle = (next: NonNullable<typeof mode>) => (mode = mode === next ? null : next);
 
+	/** The comments next to this one, in the order focus falls back to when this one leaves the list. */
+	function neighbourIds(): string[] {
+		const all = [...document.querySelectorAll<HTMLElement>('article[id^="comment-"]')];
+		const at = root ? all.indexOf(root) : -1;
+		return [all[at + 1]?.id, all[at - 1]?.id].filter((id): id is string => Boolean(id));
+	}
+
 	async function saveEdit(body: string): Promise<boolean> {
 		const ok = await comments.edit(comment.id, body);
-		if (ok) mode = null;
+		if (ok) {
+			mode = null;
+			await focusAfterUpdate(() => root);
+		}
 		return ok;
 	}
 
 	async function sendReply(body: string): Promise<boolean> {
 		const ok = await comments.post(body, comment.id);
-		if (ok) mode = null;
+		if (ok) {
+			mode = null;
+			await focusAfterUpdate(() => root);
+		}
 		return ok;
+	}
+
+	/**
+	 * Deletes the comment. It stays as a placeholder while it has replies, so the focus goes to
+	 * it; otherwise it leaves the list, and the focus goes to the next comment, the previous one,
+	 * or the list itself.
+	 */
+	async function remove(): Promise<void> {
+		const neighbours = neighbourIds();
+		const list = root?.closest<HTMLElement>('[data-comment-list]');
+		if (!(await comments.remove(comment.id))) return;
+		mode = null;
+		await focusAfterUpdate(
+			() =>
+				(comment.removed ? root : undefined) ??
+				neighbours.map((id) => document.getElementById(id)).find((el) => el !== null) ??
+				list
+		);
 	}
 </script>
 
-<article class="comment" id="comment-{comment.id}">
+<article class="comment" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	{#if comment.removed}
 		<p class="removed">This comment was removed.</p>
 	{:else}
@@ -185,7 +218,7 @@
 			cancelLabel="Keep comment"
 			busy={comments.busy[deleteKey]}
 			error={comments.errors[deleteKey]}
-			onconfirm={() => comments.remove(comment.id)}
+			onconfirm={remove}
 			oncancel={() => (mode = null)}
 		/>
 	{/if}

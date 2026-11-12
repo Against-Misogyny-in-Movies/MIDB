@@ -5,6 +5,7 @@
 	import type { ActionOutcome } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 
 	let { data, form } = $props();
 
@@ -16,6 +17,32 @@
 		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
 	]);
+
+	/**
+	 * The tab keyboard pattern: one tab is in the tab order, the arrow keys move between tabs
+	 * (wrapping), Home and End go to the ends, and the focused tab is the selected one.
+	 */
+	function onTabKeydown(event: KeyboardEvent, index: number) {
+		const last = TABS.length - 1;
+		const target =
+			event.key === 'ArrowRight'
+				? index === last
+					? 0
+					: index + 1
+				: event.key === 'ArrowLeft'
+					? index === 0
+						? last
+						: index - 1
+					: event.key === 'Home'
+						? 0
+						: event.key === 'End'
+							? last
+							: null;
+		if (target === null) return;
+		event.preventDefault();
+		tab = TABS[target].id;
+		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
+	}
 
 	const outcome = $derived((form ?? null) as ActionOutcome);
 	const items = $derived(tab === 'reported' ? data.reported : data.pending);
@@ -52,15 +79,17 @@
 	{/if}
 
 	<div class="tabs" role="tablist" aria-label="Moderation queues">
-		{#each TABS as t (t.id)}
+		{#each TABS as t, i (t.id)}
 			<button
 				class="chip"
 				type="button"
 				role="tab"
 				id="tab-{t.id}"
 				aria-selected={tab === t.id}
-				aria-controls="panel-{t.id}"
+				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
+				tabindex={tab === t.id ? 0 : -1}
 				onclick={() => (tab = t.id)}
+				onkeydown={(event) => onTabKeydown(event, i)}
 			>
 				{t.label}{#if t.count !== null}
 					<span class="count">{t.count}</span>{/if}
@@ -71,7 +100,7 @@
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
 		{#if tab === 'recent'}
 			{#if data.recent.length === 0}
-				<p class="empty">No moderation actions yet.</p>
+				<p class="empty" id="moderation-empty" tabindex="-1">No moderation actions yet.</p>
 			{:else}
 				<ul class="card list">
 					{#each data.recent as entry (entry.id)}
@@ -80,7 +109,7 @@
 				</ul>
 			{/if}
 		{:else if items.length === 0}
-			<p class="empty">
+			<p class="empty" id="moderation-empty" tabindex="-1">
 				{tab === 'pending'
 					? 'No comments are waiting for review.'
 					: 'No comments have open reports.'}
