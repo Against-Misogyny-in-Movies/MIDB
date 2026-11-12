@@ -25,8 +25,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 1     | Cloudflare platform    | completed   | 2026-11-12. Workers Caching checks wait for the first preview deploy (Open items).                        |
 | 2     | SQLite / D1 data layer | completed   | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.          |
 | 2b    | Daily source sync      | completed   | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items). |
-| 3     | Auth (Better Auth)     | active      | 2026-11-12: implementer running.                                                                          |
-| 4     | Comments               | not started |                                                                                                           |
+| 3     | Auth (Better Auth)     | completed   | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).            |
+| 4     | Comments               | active      | 2026-11-12: implementer running.                                                                          |
 | 5     | AI moderation          | not started |                                                                                                           |
 | 6     | CI, deploy, docs       | not started |                                                                                                           |
 
@@ -43,7 +43,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - When the repository moves, update the `if: github.repository == …` guard in `.github/workflows/sync-sources.yml`, and set its secrets there.
   - Without `TMDB_API_TOKEN` the synced films have no TMDB id, so a contributor's local landing hero is empty.
 - **Auth:**
-  - Drop the `jose` types and `locals.claims` from `src/app.d.ts` with Hanko in Phase 3.
+  - Google and Discord sign-in and linking have run only against mocks; test them once their OAuth apps and secrets exist.
 - **Attribution:**
   - The footer carries the TMDB notice as text; add the official TMDB logo asset.
 - **Docs:**
@@ -61,6 +61,10 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Auth and comments:**
   - Better Auth with Google and Discord SSO and passkeys, passkey-only sign-up allowed, and no email/password (user decision, 2026-11-11).
   - Comments: threads, votes, history, human moderation, and tiered AI moderation on Claude Haiku 5.5 (user decision, 2026-11-11).
+- **Auth limits and linking:**
+  - `RL_AUTH` allows 30 requests a minute per IP (user decision, 2026-11-12).
+  - Only Google is a trusted provider for linking by email; a Discord sign-in links only with a verified email (user decision, 2026-11-12).
+  - OAuth access and refresh tokens are encrypted at rest (user decision, 2026-11-12).
 - **Toolchain:**
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).
   - TypeScript 6.0.3 serves the tooling and TypeScript 7 runs `typecheck`, until svelte-check supports TypeScript 7 (user decision, 2026-11-12).
