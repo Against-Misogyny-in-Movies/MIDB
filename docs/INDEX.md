@@ -41,7 +41,16 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~1.1K tok)
 - `PRODUCT.md` — Product (~390 tok)
-- `DESIGN.md` — Design (~3.0K tok)
+- `DESIGN.md` — Design (~3.1K tok)
+  - 5–8 Idea (~70)
+  - 9–23 Colour (~670)
+  - 24–30 Type (~150)
+  - 31–35 Shapes and elevation (~80)
+  - 36–59 Components (~1.4K)
+  - 60–66 Pages (~410)
+  - 67–70 Motion (~90)
+  - 71–74 Browser surfaces (~50)
+  - 75–78 Avoid (~90)
 - `docs/architecture.md` — MIDB — Architecture Reference (~45.8K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
@@ -55,7 +64,7 @@ Read the sections your task touches.
     - 344–351 Migrations (~350)
   - 352–381 Source sync (~1.8K) ← 3
   - 382–447 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 448–472 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~1.9K) ← 1
+  - 448–472 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
   - 473–492 UM Disambiguation (~630)
   - 493–501 UM flag rendering (~250)
   - 502–513 Shared marker pattern (metric row markers) (~410) ← 4
@@ -107,7 +116,7 @@ Read before a change that touches what they describe.
 - `SECURITY.md` — Security (~2.1K tok)
 - `PRIVACY.md` — Privacy (~2.1K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
-- `THIRD_PARTY_NOTICES.md` — Third-party notices (~1.0K tok)
+- `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
 
 ## Code to docs
 
