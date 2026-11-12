@@ -15,7 +15,7 @@ Each source keeps the rights to its data. MIDB shows it with attribution and a l
 
 ## Fonts and icons
 
-- **Inter Tight:** [SIL Open Font License 1.1](https://openfontlicense.org), Latin 600 and 700 woff2 files from the `@fontsource/inter-tight` package, copyright 2022 The Inter Project Authors, served from `static/fonts`.
+- **Inter Tight:** [SIL Open Font License 1.1](https://openfontlicense.org), latin, latin-ext and vietnamese 600 and 700 woff2 files from the `@fontsource/inter-tight` package, copyright 2022 The Inter Project Authors, served from `static/fonts` with the license text in `static/fonts/OFL.txt`.
 - **Remixicon:** [Apache-2.0](https://github.com/Remix-Design/RemixIcon/blob/master/License), bundled from the `remixicon` package.
 
 ## Hosting

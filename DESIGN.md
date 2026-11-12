@@ -23,7 +23,7 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 
 ## Type
 
-- **Display:** Inter Tight 700 (`.display`, `--font-display`), self-hosted from `static/fonts` (Latin 600 and 700, `font-display: swap`, the 700 file preloaded). Hero 60px at line-height 1; page titles 30–60px; section and card headings 18–24px at 600.
+- **Display:** Inter Tight 700 (`.display`, `--font-display`), self-hosted from `static/fonts` (600 and 700 in the latin, latin-ext and vietnamese subsets, `font-display: swap`, the latin files preloaded). Hero 60px at line-height 1; page titles 30–60px; section and card headings 18–24px at 600.
 - **Text:** the system UI stack (`--font-body`) at 16px / 1.5, tracked tight (-0.02em) so it reads as data. 14px for labels and buttons, 12px for captions.
 - **Mono:** the system mono stack (`--font-mono`), only for year tiles.
 - Field names are sentence case, never uppercase. Numbers are tabular.
