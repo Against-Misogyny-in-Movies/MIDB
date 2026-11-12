@@ -22,7 +22,7 @@ const ok = (...rows: unknown[][][]) => ({
 describe('remote D1 callbacks', () => {
 	it('posts one statement to the raw endpoint with the bearer token', async () => {
 		const fetchMock = reply(ok([[1, 'a']]));
-		const { single } = createRemoteCallbacks(ENV, fetchMock as unknown as typeof fetch);
+		const { single } = createRemoteCallbacks(ENV, fetchMock);
 		const out = await single('select ?', [7], 'all');
 		expect(out).toEqual({ rows: [[1, 'a']] });
 		const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
@@ -33,7 +33,7 @@ describe('remote D1 callbacks', () => {
 
 	it('maps get to the first row and run to no rows', async () => {
 		const fetchMock = reply(ok([[1], [2]]));
-		const { single } = createRemoteCallbacks(ENV, fetchMock as unknown as typeof fetch);
+		const { single } = createRemoteCallbacks(ENV, fetchMock);
 		expect(await single('s', [], 'get')).toEqual({ rows: [1] });
 		expect(await single('s', [], 'run')).toEqual({ rows: [] });
 		expect(await single('s', [], 'values')).toEqual({ rows: [[1], [2]] });
@@ -41,7 +41,7 @@ describe('remote D1 callbacks', () => {
 
 	it('posts a batch and maps each result by its method', async () => {
 		const fetchMock = reply(ok([[1]], [[2, 3]]));
-		const { batch } = createRemoteCallbacks(ENV, fetchMock as unknown as typeof fetch);
+		const { batch } = createRemoteCallbacks(ENV, fetchMock);
 		const out = await batch([
 			{ sql: 'a', params: [1], method: 'get' },
 			{ sql: 'b', params: [], method: 'all' }
@@ -61,7 +61,7 @@ describe('remote D1 callbacks', () => {
 			{ success: false, errors: [{ code: 7500, message: 'no such table' }] },
 			400
 		);
-		const { single } = createRemoteCallbacks(ENV, fetchMock as unknown as typeof fetch);
+		const { single } = createRemoteCallbacks(ENV, fetchMock);
 		await expect(single('s', [], 'all')).rejects.toThrow('no such table');
 	});
 
@@ -73,7 +73,7 @@ describe('remote D1 callbacks', () => {
 
 	it('drives a Drizzle client, including db.batch', async () => {
 		const fetchMock = reply(ok([[41]], [[42]]));
-		const db = createRemoteDb(ENV, fetchMock as unknown as typeof fetch);
+		const db = createRemoteDb(ENV, fetchMock);
 		const out = await db.batch([db.all(sql`select 41`), db.all(sql`select 42`)]);
 		expect(out).toEqual([[[41]], [[42]]]);
 		expect(fetchMock).toHaveBeenCalledTimes(1);

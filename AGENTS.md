@@ -19,7 +19,7 @@ Find docs through `docs/INDEX.md`. It lists every file an agent reads, its size,
 - `pnpm lint`: Prettier, Oxlint (type-aware) for TS and JS, and ESLint for Svelte templates.
 - `pnpm lint:fix`: Oxlint and ESLint with their autofixes.
 - `pnpm test:unit --run`: the Vitest `unit` project. `pnpm exec vitest run <file>` runs one file.
-- `pnpm test:db`: the Vitest `db` project, against Postgres from `docker compose up -d db`.
+- `pnpm test:db`: the Vitest `db` project, against a local D1 (Miniflare; no Docker, no secrets).
 - `pnpm build`: a production build.
 - `pnpm commit:check "<subject>"`: checks a commit subject (the `commit-msg` hook runs it for you).
 - `pnpm docs:index` / `pnpm docs:section <file> "<heading>"`: writes the docs index / prints one section.
@@ -41,4 +41,4 @@ After `implementer` reports a green exit, run `reviewer` on the diff. Also run `
 
 ## Cloud sessions
 
-`.claude/hooks/session-start.sh` installs dependencies in a cloud session. Cloud sessions have no Docker by default, so `pnpm test:db` may not run there. Report it as not run, as `.claude/rules/code-standards.md` (Checking a change) says.
+`.claude/hooks/session-start.sh` installs dependencies in a cloud session. `pnpm test:db` needs no Docker, so it runs there too.

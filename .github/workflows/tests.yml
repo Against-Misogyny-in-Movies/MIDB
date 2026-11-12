@@ -101,28 +101,13 @@ jobs:
             exit 1
           fi
 
-  # Data-layer tests against a real Postgres. global-setup migrates the empty database
-  # from zero, so this job also proves the migration chain applies cleanly.
+  # Data-layer tests against a local D1 (Miniflare, through wrangler): no service and no secrets.
+  # global-setup migrates the empty state from zero, so this job also proves the migration chain
+  # applies cleanly.
   db:
     name: DB tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      TEST_DB_CONNECTION: postgres://postgres:postgres@localhost:5432/midb_test
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: midb_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -147,26 +132,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DB_CONNECTION: postgres://postgres:postgres@localhost:5432/midb
       PUBLIC_HANKO_API_URL: ${{ vars.PUBLIC_HANKO_API_URL }}
       PUBLIC_TMDB_API_URL: https://api.themoviedb.org
       PUBLIC_TMDB_IMAGE_URL: /img/tmdb
       TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
       DDD_API_KEY: ${{ secrets.DDD_API_KEY }}
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: midb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -187,12 +157,11 @@ jobs:
         run: pnpm db:migrate:local
 
       # `pnpm preview` (started by playwright.config.ts) builds the app and runs the Worker with
-      # `wrangler dev`, which reads the Worker's secrets and DB_CONNECTION from .dev.vars, not from
+      # `wrangler dev`, which reads the Worker's secrets from .dev.vars, not from
       # the job's environment. The PUBLIC_* values come from the job's environment at build time.
       - name: Write the Worker's secrets
         run: |
           {
-            echo "DB_CONNECTION=$DB_CONNECTION"
             echo "TMDB_API_TOKEN=$TMDB_API_TOKEN"
             echo "DDD_API_KEY=$DDD_API_KEY"
           } > .dev.vars

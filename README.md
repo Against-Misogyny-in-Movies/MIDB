@@ -5,19 +5,17 @@ MIDB (Movie Information Database, working title) is a SvelteKit app that shows m
 ## Prerequisites
 
 - [Node.js](https://nodejs.org) 22.18 or later, with [pnpm](https://pnpm.io) (`corepack enable` installs the version in `packageManager`)
-- [Docker](https://docs.docker.com/get-docker/) (for the local Postgres)
 
 ## Local setup
 
 ```sh
 pnpm install
 cp .env.example .env
-docker compose up -d db
-pnpm db:migrate && pnpm db:seed:movies && pnpm db:seed:um
+pnpm db:migrate:local && pnpm db:seed:movies && pnpm db:seed:um
 pnpm dev
 ```
 
-`.env` also holds the Worker's secrets and public values, which `pnpm dev` reads through Wrangler. `pnpm preview` builds the site and runs the built Worker locally with `wrangler dev` on port 4173; it reads `.dev.vars` if that file exists, else `.env`. `.env.example` points `DB_CONNECTION` at the compose database. The compose service runs `postgres:16`. A `db-data` volume created by the earlier `postgres:15` image will not start on 16. Local data can be reseeded, so recreate the volume with `docker compose down -v`, then run the steps above again. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
+`.env` also holds the Worker's secrets and public values, which `pnpm dev` reads through Wrangler. `pnpm preview` builds the site and runs the built Worker locally with `wrangler dev` on port 4173; it reads `.dev.vars` if that file exists, else `.env`. The database is a local D1 (SQLite) in `.wrangler/state`, shared by `pnpm dev`, `pnpm preview` and the scripts; no account, Docker or database server is needed. Delete `.wrangler/state` and run the steps above again to start from empty. The `db:seed:*` and `db:backfill:tmdb` scripts take `--remote` to write to the deployed D1 over the Cloudflare API, which needs `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` in `.env`. Title pages need real values for `TMDB_API_TOKEN` and `DDD_API_KEY`, and sign-in needs a Hanko tenant in `PUBLIC_HANKO_API_URL`.
 
 ## Deploy
 
@@ -27,11 +25,10 @@ Not set up yet. The site is built for Cloudflare Workers (`wrangler.jsonc`, `@sv
 
 ```sh
 pnpm test:unit --run   # no database needed
-docker compose exec db createdb -U postgres midb_test   # once
-pnpm test:db           # data-layer tests against real Postgres
+pnpm test:db           # data-layer tests against a local D1
 ```
 
-`pnpm test:db` reads `TEST_DB_CONNECTION` (in `.env.example`, pointing at `midb_test` on the compose server). Each run wipes that database and migrates it from zero. It never uses `DB_CONNECTION`.
+`pnpm test:db` runs on its own local D1 in `.wrangler/test-state`, which each run wipes and migrates from zero. It needs no secrets, network or Docker.
 
 ## Further reading
 

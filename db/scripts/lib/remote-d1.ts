@@ -62,7 +62,7 @@ export function createRemoteCallbacks(env: Env, fetchImpl: Fetch = fetch) {
 	const shape = (result: RawResult | undefined, method: string): { rows: unknown[] } => {
 		const rows = result?.results?.rows ?? [];
 		if (method === 'run') return { rows: [] };
-		if (method === 'get') return { rows: rows[0] as unknown[] };
+		if (method === 'get') return { rows: rows[0] };
 		return { rows };
 	};
 

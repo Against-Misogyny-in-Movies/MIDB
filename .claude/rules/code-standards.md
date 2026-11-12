@@ -7,7 +7,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - `#lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`, …) and all DB access live here only.
 - To expose a server type to a client component, re-export it **as a type** from `#lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
 - **Environment variables.** Public values and the dynamic DB variables are declared once in `src/env.ts` (`defineEnvVars`): client code imports the public ones from `$app/env/public`, server code the DB ones from `$app/env/private`. Secrets and bindings (D1, rate limits) are read only through `#lib/server/env.ts`, when a request needs them, never at module load. App code reads no setting from `process.env` (the test runner's `VITEST` flag excepted).
-- `data/` = Postgres/Drizzle modules. `integrations/` = external HTTP clients.
+- `data/` = D1/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
   - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. The email reaches the client on `/user/profile` alone.
   - Public pages (`PUBLIC_PAGE` from `#lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()` or read `locals.claims`.
@@ -72,13 +72,16 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 - The DB layer lives in `db/` (outside `src/`), imported by app code as `#db/*`.
 - **App code gets `db` from `#lib/server/db.ts` only.**
-  - It connects lazily from the dynamic `DB_CONNECTION` (`src/env.ts`, read from `$app/env/private`) and throws if unset.
-  - Never read the connection string at build time (no Vite `define`, and `DB_CONNECTION` is never `static` in `src/env.ts`), and never add a localhost fallback.
-  - Scripts use `db/scripts/lib/db.ts` and close the pool when done.
+  - The database is Cloudflare D1, reached through the `DB` binding. `db` is a lazy proxy over `env.DB` that throws without a binding, so nothing touches the database at build time.
+  - Tests and scripts attach a binding with `bindDb(d1)`; the app never builds its own client.
+  - Scripts call `openScriptDb(target)` from `db/scripts/lib/db.ts` (local D1 by default, `--remote` over the Cloudflare API) and `close()` it when done. A script that writes takes `--local|--remote` through `parseTarget`.
+- **D1 has no `BEGIN`.** `db.transaction()` fails: use `db.batch()` for writes that must be atomic.
+- **A statement binds at most 100 parameters.** Every bulk write, and every `inArray` over a list that can grow, goes through `chunkForD1` (`db/lib/chunkForD1.ts`).
+- **Foreign keys are always on.** A migration that rebuilds a table sets `PRAGMA defer_foreign_keys = on`.
 - GET routes use the **read-only** resolver `getTitleRow(kind, ref)`: page visits must never mutate the DB.
 - The write path `getOrCreateTitleRow(kind, ref)` is reserved for write endpoints (community ratings, comments).
 - **Schema helpers:**
-  - Timestamps are `timestamptz` via `timestamps()` from `db/schema/columns.ts`. Its `$onUpdate` bumps `updated_at` on every Drizzle update; pin it with ``updatedAt: sql`${col}` `` when a write is not an edit.
+  - Timestamps are `integer` `timestamp_ms` via `timestamps()` from `db/schema/columns.ts`. Its `$onUpdate` bumps `updated_at` on every Drizzle update; pin it with ``updatedAt: sql`${col}` `` when a write is not an edit.
   - The nine UM flag columns come from `umFlagColumns()`. Never redeclare them per table.
 - Titles are keyed by `(kind, tmdb_id)`, and `imdb_id` is optional. Never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
 - Migration order matters: `db:seed:movies` before `db:seed:um`.
@@ -90,7 +93,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 ## Testing
 
 - Unit tests: Vitest, co-located in `__tests__/` subfolders (`src/`, `db/`, `scripts/`). Playwright e2e specs live in top-level `e2e-tests/`.
-- **Anything touching Postgres gets a `*.db.spec.ts`**, run by `pnpm test:db` (the Vitest `db` project, a real Postgres at `TEST_DB_CONNECTION`, tables truncated before each test). Unit specs must not need a live DB: mock `#lib/server/db`.
+- **Anything touching the database gets a `*.db.spec.ts`**, run by `pnpm test:db` (the Vitest `db` project, on a local D1 in Miniflare that needs no Docker, secrets or network; every table is emptied before each test). Unit specs must not need a live DB: mock `#lib/server/db`.
 - When moving a function to a new file, update its test's import path. Don't leave a test importing from the old location.
 - A behaviour change ships with its test in the same change. A test that asserts the buggy result is a finding.
 
@@ -117,9 +120,9 @@ Run the cheap checks often and the full set once.
   - `pnpm typecheck` → 0 errors
   - `pnpm lint` → clean (AGENTS.md, Commands, says what it runs)
   - `pnpm test:unit --run` → all pass
-  - `pnpm test:db` → all pass (with `docker compose up -d db`)
+  - `pnpm test:db` → all pass
   - `pnpm build` → clean
 
   Do not run it again on an unchanged tree: a green run stands until a file changes. Fix a failure with the failing file (`pnpm exec vitest run <file> -t "<name>"`), then run the baseline once more.
 
-- **Reporting:** give each command with its result, and say whether the tree changed after it ran. A command that could not run (no Docker for `test:db`) is reported as not run, with the reason.
+- **Reporting:** give each command with its result, and say whether the tree changed after it ran. A command that could not run is reported as not run, with the reason.
