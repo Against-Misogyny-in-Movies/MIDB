@@ -85,6 +85,9 @@
 	--spacing-md: 1rem;
 	--spacing-lg: 2rem;
 	--spacing-xl: 3rem;
+
+	/* The comment field's minimum height, which the section reserves for its composer. */
+	--comment-field-height: 5.5rem;
 }
 
 /* ─── Semantic tokens ───

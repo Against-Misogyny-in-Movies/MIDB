@@ -99,6 +99,14 @@ describe('Session', () => {
 		expect(s.status).toBe('user');
 	});
 
+	it('keeps the data-hint attribute on the root in step with the sign-in state', async () => {
+		const s = new Session();
+		s.set(MARY);
+		expect(document.documentElement.dataset.hint).toBe('user');
+		s.clear();
+		expect(document.documentElement.dataset.hint).toBeUndefined();
+	});
+
 	it('hints "anon" without the cookie, and ignores look-alike cookie names and values', async () => {
 		document.cookie = 'xmidb_hint=1';
 		document.cookie = 'midb_hint=0';

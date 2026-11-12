@@ -22,6 +22,9 @@ function writeHint(signedIn: boolean): void {
 	const secure = location.protocol === 'https:' ? '; Secure' : '';
 	const lifetime = signedIn ? `max-age=${HINT_MAX_AGE_SECONDS}` : 'max-age=0';
 	document.cookie = `${HINT_COOKIE}=${signedIn ? '1' : ''}; path=/; ${lifetime}; SameSite=Lax${secure}`;
+	// The pre-paint script in app.html sets the same attribute on a full page load.
+	if (signedIn) document.documentElement.dataset.hint = 'user';
+	else delete document.documentElement.dataset.hint;
 }
 
 /**

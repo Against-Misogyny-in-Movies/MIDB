@@ -60,7 +60,7 @@
 	<textarea
 		id="{id}-field"
 		class="input field"
-		rows="3"
+		rows="2"
 		maxlength={COMMENT_BODY_MAX}
 		bind:value={body}
 		bind:this={field}
@@ -101,7 +101,7 @@
 	/* The shared text field, grown to hold a paragraph. */
 	.field {
 		height: auto;
-		min-height: 5.5rem;
+		min-height: var(--comment-field-height);
 		padding-block: 10px;
 		resize: vertical;
 		line-height: 1.5;

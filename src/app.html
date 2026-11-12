@@ -7,6 +7,13 @@
 		<meta name="theme-color" content="#fbfafc" />
 		<script>
 			try {
+				// `midb_hint` (session.svelte.ts) marks a probably signed-in reader, so the comment
+				// section reserves the composer's height in the first paint.
+				if (/(?:^|;\s*)midb_hint=1(?:;|$)/.test(document.cookie)) {
+					document.documentElement.dataset.hint = 'user';
+				}
+			} catch (_) {}
+			try {
 				var t = localStorage.getItem('theme');
 				if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
 				// Tint the mobile browser chrome with the active theme's --surface

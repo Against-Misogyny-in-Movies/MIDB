@@ -68,11 +68,7 @@
 		{:else if session.status === 'anon'}
 			<p class="sign-in"><a class="link" href="/auth">Sign in to comment</a></p>
 		{:else}
-			<div
-				class="composer-slot"
-				class:composer-slot--likely={session.likelyUser}
-				aria-hidden="true"
-			></div>
+			<div class="composer-slot" aria-hidden="true"></div>
 		{/if}
 
 		<div class="toolbar" role="group" aria-label="Sort comments">
@@ -140,17 +136,26 @@
 		gap: var(--spacing-md);
 	}
 
-	/* While the session resolves: the sign-in line's height, or the composer's (field and button row) for a reader probably signed in. */
+	/*
+	 * While the session resolves: the sign-in line's height, or, for a reader probably signed
+	 * in (app.html and the session set data-hint before the first paint), the composer's: the
+	 * field, the gap and the button row.
+	 */
 	.composer-slot {
 		height: 1.5rem;
 	}
 
-	.composer-slot--likely {
-		height: 8.5rem;
+	:global(:root[data-hint='user']) .composer-slot {
+		height: calc(var(--comment-field-height) + var(--spacing-sm) + 2.5rem);
 	}
 
 	.sign-in {
 		@apply text-sm;
+		min-height: 1.5rem;
+	}
+
+	.sign-in .link {
+		@apply inline-flex items-center;
 		min-height: 1.5rem;
 	}
 
@@ -163,6 +168,20 @@
 	@media (pointer: coarse) {
 		.chip {
 			height: 2.75rem;
+		}
+
+		.composer-slot,
+		.sign-in,
+		.sign-in .link {
+			min-height: 2.75rem;
+		}
+
+		.composer-slot {
+			height: 2.75rem;
+		}
+
+		:global(:root[data-hint='user']) .composer-slot {
+			height: calc(var(--comment-field-height) + var(--spacing-sm) + 2.75rem);
 		}
 	}
 
