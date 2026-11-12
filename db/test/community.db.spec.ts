@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { titles } from '#db/schema/titles.ts';
 import { users } from '#db/schema/auth.ts';
+import { userValues } from './users.ts';
 import {
 	comments,
 	communityBechdelRatings,
@@ -25,7 +26,7 @@ let titleId: string;
 const userId = 'sub-1';
 
 beforeEach(async () => {
-	await db.insert(users).values({ id: userId });
+	await db.insert(users).values(userValues(userId));
 	const [title] = await db
 		.insert(titles)
 		.values({ kind: 'movie', title: 'Alien', cleanTitle: 'alien', tmdbId: 348 })

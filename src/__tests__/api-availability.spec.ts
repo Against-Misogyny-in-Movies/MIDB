@@ -13,7 +13,7 @@ const user = (id: string) => ({ id, role: 'user' }) as UserRow;
 function call(signedIn: UserRow | null, username = 'zed', ip = '203.0.113.7') {
 	const event = {
 		url: new URL(`http://localhost/user/profile/availability?username=${username}`),
-		locals: { claims: signedIn ? { sub: signedIn.id } : null, getUser: async () => signedIn },
+		locals: { getUser: async () => signedIn },
 		getClientAddress: () => ip
 	} as unknown as RequestEvent;
 	return GET(event as Parameters<typeof GET>[0]);

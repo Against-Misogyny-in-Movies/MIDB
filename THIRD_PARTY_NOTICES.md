@@ -18,6 +18,10 @@ Each source keeps the rights to its data. MIDB copies Bechdel Test and Unconsent
 - **Inter Tight:** [SIL Open Font License 1.1](https://openfontlicense.org), latin, latin-ext and vietnamese 600 and 700 woff2 files from the `@fontsource/inter-tight` package, copyright 2022 The Inter Project Authors, served from `static/fonts` with the license text in `static/fonts/OFL.txt`.
 - **Remixicon:** [Apache-2.0](https://github.com/Remix-Design/RemixIcon/blob/master/License), bundled from the `remixicon` package.
 
+## Sign-in
+
+[Better Auth](https://www.better-auth.com) (`better-auth`, `@better-auth/passkey`, MIT) runs the accounts, sessions and passkeys inside MIDB's own Worker and database, and keeps its own licence. Google and Discord are used for sign-in only where a reader chooses them, under their terms; Cloudflare Turnstile guards creating an account with a passkey.
+
 ## Hosting
 
 The site runs on [Cloudflare Workers](https://workers.cloudflare.com), under Cloudflare's terms. Wrangler and `@sveltejs/adapter-cloudflare` build and run it locally and keep their own licences.

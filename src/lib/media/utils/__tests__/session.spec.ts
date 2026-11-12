@@ -5,7 +5,13 @@ vi.mock('$app/env', () => ({ browser: true }));
 
 const { Session } = await import('#lib/media/utils/session.svelte.js');
 
-const MARY: PublicUser = { username: 'mary', avatarKey: null, role: 'user', displayName: 'mary' };
+const MARY: PublicUser = {
+	id: 'user-1',
+	username: 'mary',
+	avatarKey: null,
+	role: 'user',
+	displayName: 'mary'
+};
 
 function respond(body: PublicUser | null, ok = true) {
 	return vi.fn(async () => ({ ok, json: async () => body }) as Response);

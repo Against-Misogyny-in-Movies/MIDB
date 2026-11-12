@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { titles } from '#db/schema/titles.ts';
 import { users } from '#db/schema/auth.ts';
+import { userValues } from './users.ts';
 import { comments, communityBechdelRatings } from '#db/schema/community.ts';
 import { db } from '#lib/server/db.ts';
 import { trackWrites, writes } from './writes.ts';
@@ -27,7 +28,7 @@ describe('D1 through Drizzle', () => {
 		await expect(
 			db.insert(titles).values({ ...movie(1), kind: 'show' as 'movie' })
 		).rejects.toThrow();
-		await db.insert(users).values({ id: 'u1' });
+		await db.insert(users).values(userValues('u1'));
 		await expect(
 			db
 				.update(users)
@@ -43,9 +44,13 @@ describe('D1 through Drizzle', () => {
 			db.insert(titles).values({ ...movie(1), cleanTitle: long(256) })
 		).rejects.toThrow();
 		await db.insert(titles).values({ ...movie(1), title: long(255), cleanTitle: long(255) });
-		await expect(db.insert(users).values({ id: 'u1', username: long(33) })).rejects.toThrow();
-		await expect(db.insert(users).values({ id: 'u1', avatarKey: long(49) })).rejects.toThrow();
-		await db.insert(users).values({ id: 'u1', username: long(32), avatarKey: long(48) });
+		await expect(
+			db.insert(users).values(userValues('u1', { username: long(33) }))
+		).rejects.toThrow();
+		await expect(
+			db.insert(users).values(userValues('u1', { avatarKey: long(49) }))
+		).rejects.toThrow();
+		await db.insert(users).values(userValues('u1', { username: long(32), avatarKey: long(48) }));
 	});
 
 	it('enforces foreign keys and cascades deletes', async () => {
@@ -53,7 +58,7 @@ describe('D1 through Drizzle', () => {
 			db.insert(communityBechdelRatings).values({ userId: 'nobody', titleId: 'none', rating: 1 })
 		).rejects.toThrow();
 
-		await db.insert(users).values({ id: 'u1' });
+		await db.insert(users).values(userValues('u1'));
 		const [title] = await db.insert(titles).values(movie(2)).returning();
 		await db.insert(comments).values({ userId: 'u1', titleId: title.id, body: 'x' });
 		await db.delete(titles).where(eq(titles.id, title.id));
@@ -101,7 +106,7 @@ describe('D1 through Drizzle', () => {
 	it('logs inserts, updates and deletes on a tracked table, and nothing for a read', async () => {
 		await trackWrites('user');
 		const before = await writes();
-		await db.insert(users).values({ id: 'u1' });
+		await db.insert(users).values(userValues('u1'));
 		await db.update(users).set({ username: 'ada' }).where(eq(users.id, 'u1'));
 		await db.delete(users).where(eq(users.id, 'u1'));
 		expect(await writes()).toBe(before + 3);

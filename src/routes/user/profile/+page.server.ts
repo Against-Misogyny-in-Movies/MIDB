@@ -1,12 +1,13 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.ts';
+import { realEmail } from '#lib/server/auth/placeholder-email.ts';
 import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 
 // The one page allowed to send the email to the client; everything else uses PublicUser.
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await requireUser(locals, { page: true });
-	return { email: user.email };
+	return { email: realEmail(user) };
 };
 
 export const actions: Actions = {

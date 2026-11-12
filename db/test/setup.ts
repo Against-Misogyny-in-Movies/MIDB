@@ -20,6 +20,10 @@ const DELETE_ORDER = [
 	'um_source',
 	'source_sync',
 	'titles',
+	'passkey',
+	'account',
+	'session',
+	'verification',
 	'user'
 ];
 

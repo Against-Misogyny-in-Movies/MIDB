@@ -1,11 +1,12 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
-import { users } from '#db/schema/auth.ts';
+import { sessions, users } from '#db/schema/auth.ts';
 import { communityBechdelRatings, communityUmReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 import { umFlagCount } from '#lib/media/utils/metrics.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
+import { realEmail } from '#lib/server/auth/placeholder-email.ts';
 import { isUniqueViolation } from './db-errors.ts';
 
 export type UserRow = typeof users.$inferSelect;
@@ -24,58 +25,35 @@ const RESERVED = new Set([
 ]);
 
 /**
- * JIT-provision, read first. Steady state is one primary-key read and zero writes.
- * - Hit: return the row. If its email is null and the claim has one, backfill it once.
- * - Miss: INSERT … ON CONFLICT DO NOTHING; if a concurrent first request won the race,
- *   nothing is returned, so read the row it wrote.
- * Never bumps updated_at (the backfill pins it past `$onUpdate`); reserve that for profile edits.
- */
-export async function getOrCreateUser({
-	sub,
-	email
-}: {
-	sub: string;
-	email: string | null;
-}): Promise<UserRow> {
-	const existing = await getUserById(sub);
-	if (existing) {
-		if (existing.email !== null || !email) return existing;
-		const [updated] = await db
-			.update(users)
-			.set({ email, updatedAt: sql`${users.updatedAt}` })
-			.where(and(eq(users.id, sub), isNull(users.email)))
-			.returning();
-		return updated ?? existing;
-	}
-
-	const [inserted] = await db
-		.insert(users)
-		.values({ id: sub, email })
-		.onConflictDoNothing({ target: users.id })
-		.returning();
-	if (inserted) return inserted;
-
-	const raced = await getUserById(sub);
-	if (!raced) throw new Error(`getOrCreateUser: user ${sub} missing after insert conflict`);
-	return raced;
-}
-
-/**
- * Map a row to the client-safe shape. The email is used only for the display-name
- * fallback and never copied: it reaches the client on /user/profile alone.
+ * Map a row to the client-safe shape. The real email is used only for the display-name
+ * fallback and never copied: it reaches the client on /user/profile alone. A placeholder email
+ * (`realEmail` is null) never shows.
  */
 export function toPublicUser(row: UserRow): PublicUser {
 	return {
+		id: row.id,
 		username: row.username,
 		avatarKey: row.avatarKey,
 		role: row.role,
-		displayName: row.username || row.email?.split('@')[0] || 'Account'
+		displayName: row.username || realEmail(row)?.split('@')[0] || 'Account'
 	};
 }
 
-/** Read-only user lookup by Hanko sub. */
+/** Read-only user lookup by Better Auth user id. */
 export async function getUserById(id: string): Promise<UserRow | null> {
 	return (await db.query.users.findFirst({ where: eq(users.id, id) })) ?? null;
+}
+
+/**
+ * Bans a user and ends every session they hold, in one batch. The session cookie cache lets a
+ * session read as valid for a few minutes, so `locals.getUser` also re-reads `banned_at`; the
+ * `session.create` hook (`create-auth.ts`) refuses a new session.
+ */
+export async function banUser(id: string, reason: string | null): Promise<void> {
+	await db.batch([
+		db.update(users).set({ bannedAt: new Date(), banReason: reason }).where(eq(users.id, id)),
+		db.delete(sessions).where(eq(sessions.userId, id))
+	]);
 }
 
 type ProfileUpdate = { username?: string; avatarKey?: string };

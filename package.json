@@ -78,13 +78,15 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@better-auth/passkey": "1.7.21",
 		"@teamhanko/hanko-elements": "^2.6.0",
+		"better-auth": "1.7.21",
 		"drizzle-orm": "^0.45.2",
-		"jose": "^6.2.3",
 		"remixicon": "^4.9.1"
 	},
 	"pnpm": {
 		"overrides": {
+			"@better-auth/passkey": "1.7.21",
 			"@cloudflare/workers-types": "5.20261112.1",
 			"@faker-js/faker": "10.5.0",
 			"@playwright/test": "1.61.0",
@@ -98,11 +100,11 @@
 			"@testing-library/jest-dom": "6.9.1",
 			"@testing-library/svelte": "5.4.2",
 			"@typescript-eslint/parser": "8.61.1",
+			"better-auth": "1.7.21",
 			"drizzle-kit": "0.31.10",
 			"drizzle-orm": "0.45.2",
 			"eslint": "10.5.0",
 			"eslint-plugin-svelte": "3.24.1",
-			"jose": "6.2.3",
 			"oxlint": "1.93.0",
 			"oxlint-tsgolint": "7.0.2006",
 			"postcss": "8.5.15",

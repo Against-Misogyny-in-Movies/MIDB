@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { eq } from 'drizzle-orm';
-import { users } from '#db/schema/auth.ts';
+import { sessions, users } from '#db/schema/auth.ts';
 import { db } from '#lib/server/db.ts';
 import { trackWrites, writes } from '#db/test/writes.ts';
+import { userValues } from '#db/test/users.ts';
 import {
-	getOrCreateUser,
+	banUser,
+	getUserById,
 	isUsernameAvailable,
 	updateProfile
 } from '#lib/server/data/user-queries.ts';
@@ -12,11 +13,6 @@ import {
 const OLD = new Date('2020-01-01T00:00:00Z');
 
 beforeAll(() => trackWrites('user'));
-
-async function count(id: string): Promise<number> {
-	const rows = await db.select().from(users).where(eq(users.id, id));
-	return rows.length;
-}
 
 async function insertUser(values: typeof users.$inferInsert) {
 	const [row] = await db
@@ -26,59 +22,42 @@ async function insertUser(values: typeof users.$inferInsert) {
 	return row;
 }
 
-describe('getOrCreateUser', () => {
-	it('inserts the row on the first call', async () => {
-		const user = await getOrCreateUser({ sub: 'sub-1', email: 'mary@example.com' });
-		expect(user).toMatchObject({ id: 'sub-1', email: 'mary@example.com', role: 'user' });
-		expect(await count('sub-1')).toBe(1);
-	});
-
-	it('does no write on a repeat call (no write logged)', async () => {
-		await getOrCreateUser({ sub: 'sub-1', email: 'mary@example.com' });
+describe('getUserById', () => {
+	it('reads a user without writing, and returns null for an unknown id', async () => {
+		await insertUser(userValues('sub-1'));
 		const before = await writes();
-		const again = await getOrCreateUser({ sub: 'sub-1', email: 'mary@example.com' });
-		expect(again.id).toBe('sub-1');
+		expect((await getUserById('sub-1'))?.id).toBe('sub-1');
+		expect(await getUserById('nobody')).toBeNull();
 		expect(await writes()).toBe(before);
 	});
+});
 
-	it('does no write on a repeat call without an email claim', async () => {
-		await getOrCreateUser({ sub: 'sub-1', email: null });
-		const before = await writes();
-		await getOrCreateUser({ sub: 'sub-1', email: null });
-		expect(await writes()).toBe(before);
-	});
-
-	it('backfills the email when the stored value is null, without bumping updated_at', async () => {
-		await insertUser({ id: 'sub-1', email: null });
-		const user = await getOrCreateUser({ sub: 'sub-1', email: 'mary@example.com' });
-		expect(user.email).toBe('mary@example.com');
-		expect(user.updatedAt).toEqual(OLD);
-	});
-
-	it('never overwrites a stored email', async () => {
-		await insertUser({ id: 'sub-1', email: 'mary@example.com' });
-		const before = await writes();
-		const user = await getOrCreateUser({ sub: 'sub-1', email: 'other@example.com' });
-		expect(user.email).toBe('mary@example.com');
-		expect(await writes()).toBe(before);
-	});
-
-	it('resolves two concurrent first calls for one sub to a single row', async () => {
-		const [a, b] = await Promise.all([
-			getOrCreateUser({ sub: 'sub-race', email: 'race@example.com' }),
-			getOrCreateUser({ sub: 'sub-race', email: 'race@example.com' })
+describe('banUser', () => {
+	it('sets the ban and ends every session of that user only', async () => {
+		await insertUser(userValues('sub-1'));
+		await insertUser(userValues('sub-2'));
+		const base = { expiresAt: new Date(Date.now() + 60_000), ipAddress: null, userAgent: null };
+		await db.insert(sessions).values([
+			{ id: 's1', token: 't1', userId: 'sub-1', ...base },
+			{ id: 's2', token: 't2', userId: 'sub-1', ...base },
+			{ id: 's3', token: 't3', userId: 'sub-2', ...base }
 		]);
-		expect(a.id).toBe('sub-race');
-		expect(b.id).toBe('sub-race');
-		expect(a.createdAt).toEqual(b.createdAt);
-		expect(await count('sub-race')).toBe(1);
+
+		await banUser('sub-1', 'spam');
+
+		const banned = await getUserById('sub-1');
+		expect(banned?.bannedAt).toBeInstanceOf(Date);
+		expect(banned?.banReason).toBe('spam');
+		expect((await getUserById('sub-2'))?.bannedAt).toBeNull();
+		const left = await db.select({ id: sessions.id }).from(sessions);
+		expect(left).toEqual([{ id: 's3' }]);
 	});
 });
 
 describe('updateProfile', () => {
 	it('returns username-taken for a case-insensitive duplicate', async () => {
-		await insertUser({ id: 'sub-a', username: 'Mary' });
-		await insertUser({ id: 'sub-b' });
+		await insertUser(userValues('sub-a', { username: 'Mary' }));
+		await insertUser(userValues('sub-b'));
 		expect(await updateProfile('sub-b', { username: 'mary' })).toEqual({
 			ok: false,
 			reason: 'username-taken'
@@ -91,14 +70,14 @@ describe('updateProfile', () => {
 		[{ username: 'Admin' }, 'username-reserved'],
 		[{ avatarKey: 'not-an-avatar' }, 'avatar-invalid']
 	])('rejects %o with %s', async (patch, reason) => {
-		await insertUser({ id: 'sub-a' });
+		await insertUser(userValues('sub-a'));
 		const before = await writes();
 		expect(await updateProfile('sub-a', patch)).toEqual({ ok: false, reason });
 		expect(await writes()).toBe(before);
 	});
 
 	it('stores a lowercased username and avatar, and bumps updated_at', async () => {
-		await insertUser({ id: 'sub-a' });
+		await insertUser(userValues('sub-a'));
 		const result = await updateProfile('sub-a', { username: 'Mary_W', avatarKey: 'kahlo' });
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
@@ -109,14 +88,14 @@ describe('updateProfile', () => {
 
 describe('isUsernameAvailable', () => {
 	it('matches case-insensitively', async () => {
-		await insertUser({ id: 'sub-a', username: 'Mary' });
+		await insertUser(userValues('sub-a', { username: 'Mary' }));
 		expect(await isUsernameAvailable('MARY', 'sub-b')).toBe(false);
 		expect(await isUsernameAvailable('mary', 'sub-b')).toBe(false);
 		expect(await isUsernameAvailable('ada', 'sub-b')).toBe(true);
 	});
 
 	it('excludes the requesting user', async () => {
-		await insertUser({ id: 'sub-a', username: 'Mary' });
+		await insertUser(userValues('sub-a', { username: 'Mary' }));
 		expect(await isUsernameAvailable('mary', 'sub-a')).toBe(true);
 	});
 });

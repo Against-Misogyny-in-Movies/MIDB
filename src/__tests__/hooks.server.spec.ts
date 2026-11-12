@@ -1,30 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { JWTPayload } from 'jose';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 
-const verifyClaims = vi.fn<() => Promise<JWTPayload | null>>();
-const getOrCreateUser = vi.fn<() => Promise<UserRow>>();
+type Session = { user: { id: string } } | null;
 
-vi.mock('#lib/server/auth/hanko.ts', () => ({
-	verifyClaims: () => verifyClaims(),
-	emailFromClaims: () => 'mary@example.com'
+const getSession = vi.fn<(args: { headers: Headers }) => Promise<Session>>();
+const getUserById = vi.fn<(id: string) => Promise<UserRow | null>>();
+
+vi.mock('#lib/server/auth/auth.ts', () => ({
+	getAuth: () => ({ api: { getSession: (args: { headers: Headers }) => getSession(args) } })
 }));
 vi.mock('#lib/server/data/user-queries.ts', () => ({
-	getOrCreateUser: () => getOrCreateUser()
+	getUserById: (id: string) => getUserById(id)
 }));
 
 const { handle } = await import('../hooks.server');
 
-function event(pathname: string): RequestEvent {
+const SESSION_COOKIE = 'better-auth.session_token=abc.def';
+
+function event(pathname: string, cookie?: string): RequestEvent {
 	return {
 		url: new URL(`http://localhost${pathname}`),
+		request: new Request(`http://localhost${pathname}`, {
+			headers: cookie ? { cookie } : {}
+		}),
 		locals: {} as App.Locals
 	} as RequestEvent;
 }
 
-async function run(pathname: string) {
-	const ev = event(pathname);
+const row = (overrides: Partial<UserRow> = {}) =>
+	({ id: 'user-1', role: 'user', bannedAt: null, ...overrides }) as UserRow;
+
+async function run(pathname: string, cookie?: string) {
+	const ev = event(pathname, cookie);
 	const resolve = vi.fn(async () => new Response('ok'));
 	try {
 		await handle({ event: ev, resolve });
@@ -36,39 +44,61 @@ async function run(pathname: string) {
 
 describe('handle', () => {
 	beforeEach(() => {
-		verifyClaims.mockReset();
-		getOrCreateUser.mockReset();
+		getSession.mockReset();
+		getUserById.mockReset();
 	});
 
-	it('never resolves the user on a public page, even when signed in', async () => {
-		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
-		const { ev, resolve, error } = await run('/movie/1');
+	it('never resolves the user on a public page, even with a session cookie', async () => {
+		const { ev, resolve, error } = await run('/movie/1', SESSION_COOKIE);
 		expect(error).toBeNull();
 		expect(resolve).toHaveBeenCalledOnce();
-		expect(ev.locals.claims).toEqual({ sub: 'sub-1' });
-		expect(getOrCreateUser).not.toHaveBeenCalled();
+		expect(ev.locals).not.toHaveProperty('claims');
+		expect(getSession).not.toHaveBeenCalled();
+		expect(getUserById).not.toHaveBeenCalled();
 	});
 
-	it('memoises getUser: one DB call per request', async () => {
-		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
-		getOrCreateUser.mockResolvedValue({ id: 'sub-1', role: 'user' } as UserRow);
-		const { ev } = await run('/movie/1');
+	it('memoises getUser: one session read and one row read per request', async () => {
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row());
+		const { ev } = await run('/api/me', SESSION_COOKIE);
 		await Promise.all([ev.locals.getUser(), ev.locals.getUser()]);
 		await ev.locals.getUser();
-		expect(getOrCreateUser).toHaveBeenCalledOnce();
+		expect(getSession).toHaveBeenCalledOnce();
+		expect(getUserById).toHaveBeenCalledOnce();
 	});
 
-	it('getUser is null without claims and never touches the DB', async () => {
-		verifyClaims.mockResolvedValue(null);
+	it('reads the session from the request headers', async () => {
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row());
+		const { ev } = await run('/api/me', SESSION_COOKIE);
+		await ev.locals.getUser();
+		expect(getSession.mock.calls[0][0].headers.get('cookie')).toBe(SESSION_COOKIE);
+	});
+
+	it('getUser is null without a session and never reads the row', async () => {
+		getSession.mockResolvedValue(null);
 		const { ev } = await run('/');
 		await expect(ev.locals.getUser()).resolves.toBeNull();
-		expect(getOrCreateUser).not.toHaveBeenCalled();
+		expect(getUserById).not.toHaveBeenCalled();
+	});
+
+	it('getUser is null when the session names a user that no longer exists', async () => {
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(null);
+		const { ev } = await run('/api/me', SESSION_COOKIE);
+		await expect(ev.locals.getUser()).resolves.toBeNull();
+	});
+
+	it('getUser is null for a banned user, even while the session cookie is cached', async () => {
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row({ bannedAt: new Date() }));
+		const { ev } = await run('/api/me', SESSION_COOKIE);
+		await expect(ev.locals.getUser()).resolves.toBeNull();
 	});
 
 	it.each(['/user', '/user/x', '/user/profile'])(
-		'redirects %s to /auth without claims, with no DB access and never cached',
+		'redirects %s to /auth without a session cookie, with no auth call and never cached',
 		async (path) => {
-			verifyClaims.mockResolvedValue(null);
 			const ev = event(path);
 			const resolve = vi.fn(async () => new Response('ok'));
 			const res = await handle({ event: ev, resolve });
@@ -76,52 +106,63 @@ describe('handle', () => {
 			expect(res.headers.get('location')).toBe('/auth');
 			expect(res.headers.get('cache-control')).toBe('private, no-store');
 			expect(resolve).not.toHaveBeenCalled();
-			expect(getOrCreateUser).not.toHaveBeenCalled();
+			expect(getSession).not.toHaveBeenCalled();
+			expect(getUserById).not.toHaveBeenCalled();
 		}
 	);
 
-	it('gates /user/* on claims only: signed-in requests pass without a DB read', async () => {
-		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
-		const { error, resolve } = await run('/user/profile');
-		expect(error).toBeNull();
-		expect(resolve).toHaveBeenCalledOnce();
-		expect(getOrCreateUser).not.toHaveBeenCalled();
-	});
+	it.each(['better-auth.session_token=abc', '__Secure-better-auth.session_token=abc'])(
+		'gates /user/* on the cookie only: %s passes without a session or row read',
+		async (cookie) => {
+			const { error, resolve } = await run('/user/profile', cookie);
+			expect(error).toBeNull();
+			expect(resolve).toHaveBeenCalledOnce();
+			expect(getSession).not.toHaveBeenCalled();
+			expect(getUserById).not.toHaveBeenCalled();
+		}
+	);
 
 	it.each(['/users', '/users/42', '/username'])('does not gate %s', async (path) => {
-		verifyClaims.mockResolvedValue(null);
 		const { error, resolve } = await run(path);
 		expect(error).toBeNull();
 		expect(resolve).toHaveBeenCalledOnce();
 	});
 
 	it('answers 403 on /user/moderation for role user, never cached', async () => {
-		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
-		getOrCreateUser.mockResolvedValue({ id: 'sub-1', role: 'user' } as UserRow);
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row());
 		const resolve = vi.fn(async () => new Response('ok'));
-		const res = await handle({ event: event('/user/moderation'), resolve });
+		const res = await handle({ event: event('/user/moderation', SESSION_COOKIE), resolve });
 		expect(res.status).toBe(403);
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		expect(resolve).not.toHaveBeenCalled();
 	});
 
-	it('redirects /user/moderation to /auth when the user row is missing, never cached', async () => {
-		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
-		getOrCreateUser.mockResolvedValue(null as unknown as UserRow);
+	it('redirects /user/moderation to /auth when the session is stale, never cached', async () => {
+		getSession.mockResolvedValue(null);
 		const resolve = vi.fn(async () => new Response('ok'));
-		const res = await handle({ event: event('/user/moderation'), resolve });
+		const res = await handle({ event: event('/user/moderation', SESSION_COOKIE), resolve });
 		expect(res.status).toBe(303);
 		expect(res.headers.get('location')).toBe('/auth');
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		expect(resolve).not.toHaveBeenCalled();
 	});
 
+	it('redirects a banned user away from /user/moderation', async () => {
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row({ role: 'moderator', bannedAt: new Date() }));
+		const resolve = vi.fn(async () => new Response('ok'));
+		const res = await handle({ event: event('/user/moderation', SESSION_COOKIE), resolve });
+		expect(res.status).toBe(303);
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
 	it.each(['moderator', 'administrator'] as const)(
 		'lets a %s into /user/moderation',
 		async (role) => {
-			verifyClaims.mockResolvedValue({ sub: 'sub-1' });
-			getOrCreateUser.mockResolvedValue({ id: 'sub-1', role } as UserRow);
-			const { error, resolve } = await run('/user/moderation/queue');
+			getSession.mockResolvedValue({ user: { id: 'user-1' } });
+			getUserById.mockResolvedValue(row({ role }));
+			const { error, resolve } = await run('/user/moderation/queue', SESSION_COOKIE);
 			expect(error).toBeNull();
 			expect(resolve).toHaveBeenCalledOnce();
 		}
@@ -130,7 +171,6 @@ describe('handle', () => {
 
 describe('handle cache headers', () => {
 	async function respond(init: Response) {
-		verifyClaims.mockResolvedValue(null);
 		return handle({ event: event('/x'), resolve: async () => init });
 	}
 

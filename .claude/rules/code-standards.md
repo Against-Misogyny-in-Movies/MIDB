@@ -9,7 +9,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - **Environment variables.** `src/env.ts` (`defineEnvVars`) declares the public values only; client code imports them from `$app/env/public`. Secrets and bindings (the `DB` database, rate limits, API tokens) are declared nowhere in it: server code reads them only through `#lib/server/env.ts`, when a request needs them, never at module load. App code reads no setting from `process.env`.
 - `data/` = D1/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
-  - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. The email reaches the client on `/user/profile` alone.
+  - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. It carries the opaque Better Auth `id` and never the email. The real email reaches the client on `/user/profile` alone, and a `@users.invalid` placeholder never does (`realEmail`).
   - Public pages (`PUBLIC_PAGE` from `#lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()` or read `locals.claims`.
   - The navbar reads the client session (`session.svelte.js`).
 - **Authorize with the guards.** Every load, action and endpoint that needs a user calls `requireUser` / `requireRole` from `#lib/server/auth/guards.ts` (redirect for pages, 401/403 otherwise). The hook's `/user` gate is claims-only and does not cover form actions on public pages.

@@ -8,7 +8,7 @@ const { GET } = await import('../routes/api/me/+server');
 
 function call(user: UserRow | null) {
 	const event = {
-		locals: { claims: user ? { sub: user.id } : null, getUser: async () => user }
+		locals: { getUser: async () => user }
 	} as unknown as RequestEvent;
 	return GET(event as Parameters<typeof GET>[0]);
 }
@@ -20,24 +20,31 @@ describe('GET /api/me', () => {
 		await expect(res.json()).resolves.toBeNull();
 	});
 
-	it('returns a PublicUser (no email, no id) with private, no-store', async () => {
+	it('returns a PublicUser (the opaque id, no email) with private, no-store', async () => {
 		const res = await call({
-			id: 'hanko-sub-1',
+			id: 'user-1',
+			name: 'Mary',
 			email: 'mary@example.com',
+			emailVerified: true,
+			image: null,
 			role: 'moderator',
 			username: null,
 			avatarKey: 'kahlo',
+			bannedAt: null,
+			banReason: null,
+			mutedUntil: null,
 			createdAt: new Date(),
 			updatedAt: new Date()
 		});
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		const body = await res.json();
 		expect(body).toEqual({
+			id: 'user-1',
 			username: null,
 			avatarKey: 'kahlo',
 			role: 'moderator',
 			displayName: 'mary'
 		});
-		expect(JSON.stringify(body)).not.toMatch(/example\.com|hanko-sub-1/);
+		expect(JSON.stringify(body)).not.toMatch(/example\.com/);
 	});
 });

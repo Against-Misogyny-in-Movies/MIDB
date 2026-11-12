@@ -1,8 +1,9 @@
 import { isHttpError, isRedirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
-import { emailFromClaims, verifyClaims } from '#lib/server/auth/hanko.ts';
+import { getSessionCookie } from 'better-auth/cookies';
+import { getAuth } from '#lib/server/auth/auth.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import { getOrCreateUser, type UserRow } from '#lib/server/data/user-queries.ts';
+import { getUserById, type UserRow } from '#lib/server/data/user-queries.ts';
 
 /** `/user` and `/user/*` only: `/users…` and `/username` are not account routes. */
 function isAccountPath(pathname: string): boolean {
@@ -27,25 +28,30 @@ function withSafeCacheHeaders(response: Response): Response {
 	return safe;
 }
 
+/**
+ * The signed-in user, or null. The session comes from Better Auth (its cookie cache answers
+ * without a query for a few minutes); the row is then read fresh, so a ban, a role change or a
+ * deleted account applies on the next request, not when the cached cookie expires.
+ */
+async function resolveUser(request: Request): Promise<UserRow | null> {
+	const session = await getAuth().api.getSession({ headers: request.headers });
+	if (!session) return null;
+	const user = await getUserById(session.user.id);
+	return user && !user.bannedAt ? user : null;
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
-	// Local crypto against the cached JWKS: no DB.
-	const claims = await verifyClaims(event);
-	event.locals.claims = claims;
-
-	// Lazy and memoised: only routes that need the user (/user/*, /api/me) touch the DB,
-	// and at most once per request.
+	// Lazy and memoised: only routes that need the user (/user/*, /api/me) touch Better Auth
+	// and the DB, and at most once per request. Public pages never call it.
 	let user: Promise<UserRow | null> | undefined;
-
-	event.locals.getUser = () =>
-		(user ??= claims?.sub
-			? getOrCreateUser({ sub: claims.sub, email: emailFromClaims(claims) })
-			: Promise.resolve(null));
+	event.locals.getUser = () => (user ??= resolveUser(event.request));
 
 	const { pathname } = event.url;
 
 	// Returned, not thrown: a thrown redirect skips `withSafeCacheHeaders`, and whether this one
-	// applies depends on the cookie, which the edge cache key ignores.
-	if (isAccountPath(pathname) && !claims?.sub) {
+	// applies depends on the cookie, which the edge cache key ignores. The gate checks only that
+	// a session cookie exists; the guards verify the session itself.
+	if (isAccountPath(pathname) && !getSessionCookie(event.request)) {
 		return withSafeCacheHeaders(
 			new Response(null, { status: 303, headers: { location: '/auth' } })
 		);
