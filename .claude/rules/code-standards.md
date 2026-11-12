@@ -6,7 +6,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 - `#lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`, …) and all DB access live here only.
 - To expose a server type to a client component, re-export it **as a type** from `#lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
-- **Environment variables.** Public values and the dynamic DB variables are declared once in `src/env.ts` (`defineEnvVars`): client code imports the public ones from `$app/env/public`, server code the DB ones from `$app/env/private`. Secrets and bindings (D1, rate limits) are read only through `#lib/server/env.ts`, when a request needs them, never at module load. App code reads no setting from `process.env` (the test runner's `VITEST` flag excepted).
+- **Environment variables.** `src/env.ts` (`defineEnvVars`) declares the public values only; client code imports them from `$app/env/public`. Secrets and bindings (the `DB` database, rate limits, API tokens) are declared nowhere in it: server code reads them only through `#lib/server/env.ts`, when a request needs them, never at module load. App code reads no setting from `process.env`.
 - `data/` = D1/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
   - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. The email reaches the client on `/user/profile` alone.
@@ -73,10 +73,11 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - The DB layer lives in `db/` (outside `src/`), imported by app code as `#db/*`.
 - **App code gets `db` from `#lib/server/db.ts` only.**
   - The database is Cloudflare D1, reached through the `DB` binding. `db` is a lazy proxy over `env.DB` that throws without a binding, so nothing touches the database at build time.
-  - Tests and scripts attach a binding with `bindDb(d1)`; the app never builds its own client.
-  - Scripts call `openScriptDb(target)` from `db/scripts/lib/db.ts` (local D1 by default, `--remote` over the Cloudflare API) and `close()` it when done. A script that writes takes `--local|--remote` through `parseTarget`.
+  - `bindDb(d1)` attaches a binding in tests only; the app never builds its own client.
+  - Scripts do not use `bindDb`: they call `openScriptDb(target)` from `db/scripts/lib/db.ts` (local D1 by default, `--remote` over the Cloudflare API) and `close()` it when done. A script that writes takes `--local|--remote` through `parseTarget`.
 - **D1 has no `BEGIN`.** `db.transaction()` fails: use `db.batch()` for writes that must be atomic.
-- **A statement binds at most 100 parameters.** Every bulk write, and every `inArray` over a list that can grow, goes through `chunkForD1` (`db/lib/chunkForD1.ts`).
+- **A statement binds at most D1's bound-parameter limit (`D1_MAX_PARAMS`).** Every bulk write, and every `inArray` over a list that can grow, goes through `chunkForD1` (`db/lib/chunkForD1.ts`, which says what counts as a parameter).
+- **Write queries with the query builder.** A raw `db.all` / `db.get` with a `sql` template returns objects on D1 but positional arrays over sqlite-proxy (`--remote`), so a script that reads raw rows breaks on one of the two.
 - **Foreign keys are always on.** A migration that rebuilds a table sets `PRAGMA defer_foreign_keys = on`.
 - GET routes use the **read-only** resolver `getTitleRow(kind, ref)`: page visits must never mutate the DB.
 - The write path `getOrCreateTitleRow(kind, ref)` is reserved for write endpoints (community ratings, comments).

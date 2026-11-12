@@ -17,7 +17,7 @@ What the site stores and sends is in [PRIVACY.md](PRIVACY.md). This file names t
   - CI (`.github/workflows/tests.yml`) runs with a read-only token, so pull requests from forks cannot write to the repository or read secrets.
   - Every action is pinned to a commit SHA.
   - Dependabot (`.github/dependabot.yml`) opens weekly updates for packages and actions, which pass the same CI.
-- **Secrets:** no secret is committed. `.env` and `.dev.vars` are ignored by git, `.env.example` holds placeholders only, and `wrangler.jsonc` holds bindings and non-secret values. Production secrets are set with `wrangler secret put`; server code reads them through `src/lib/server/env.ts`.
+- **Secrets:** no secret is committed. `.env` and `.dev.vars` are ignored by git, `.env.example` holds placeholders only, and `wrangler.jsonc` holds bindings and non-secret values. Production secrets are set with `wrangler secret put`; server code reads them through `src/lib/server/env.ts`. The database is reached only by server code, through the `DB` binding. `CLOUDFLARE_API_TOKEN` (with `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_DATABASE_ID`) is a local script credential for `--remote`: it can write to the production database, and it lives only in a contributor's gitignored `.env`.
 
 ## Reporting a vulnerability
 

@@ -93,7 +93,7 @@ MIDB/
 │   │       └── __tests__/      # remote-d1.spec.ts (mocked fetch), adminArgs.spec.ts
 │   ├── lib/                    # code shared by the seeders and the app (app imports #db/lib/*, seeders ../lib/*)
 │   │   ├── normalizeTitle.ts   # normalizeTitle + stripTrailingYear: the matching key, identical at seed time and at runtime
-│   │   ├── chunkForD1.ts       # chunkForD1(rows, columns, reserved?): splits rows so a statement stays at or under D1's 100 bound parameters
+│   │   ├── chunkForD1.ts       # chunkForD1(rows, columns, reserved?): splits rows so a statement stays at or under `D1_MAX_PARAMS`, D1's bound-parameter limit
 │   │   └── __tests__/          # normalizeTitle.spec.ts, chunkForD1.spec.ts (unit project: db/**/*.spec.ts minus *.db.spec.ts)
 │   ├── seeds/
 │   │   └── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
@@ -124,7 +124,7 @@ MIDB/
 │       ├── server/             # SvelteKit-ENFORCED server-only boundary (no client import)
 │       │   ├── env.ts          # the one typed accessor for secrets and bindings over `cloudflare:workers` (`env`: `Cloudflare.Env` + `Secrets`); read per request, never at module load (+ __tests__/)
 │       │   ├── db.ts           # the app's `db`: lazy createDb over `env.DB` (`#lib/server/env.ts`), rebuilt only when the binding changes;
-│       │   │                   #   throws if there is no binding; bindDb(d1) overrides it for tests and scripts (+ __tests__/)
+│       │   │                   #   throws if there is no binding; bindDb(d1) overrides it in tests (+ __tests__/)
 │       │   ├── data/           # D1 / Drizzle access, all via #lib/server/db (+ __tests__/, incl. *.db.spec.ts)
 │       │   │   ├── title-queries.ts  # identity resolution: getTitleRow(kind, ref) (read-only) + getOrCreateTitleRow (write path, unused by GETs)
 │       │   │   ├── sources.ts        # seeded metric reads: getBechdel, getUmEntry (title_um → um_source) + toUmEntry mapper
@@ -276,7 +276,7 @@ Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored
 
 **Role enum (`user_role`):** `user` | `moderator` | `administrator`. Default `user`. Authorization always reads the DB role through `requireRole` (`#lib/server/auth/guards.ts`) — Hanko has no concept of MIDB roles. Promote via `pnpm db:seed:admin <email>`.
 
-**Profile fields:** `username` (varchar 32, case-insensitive unique via `lower(username)` index, validated `^[a-z0-9_]{3,32}$` + reserved-name blocklist), `avatar_key` (varchar 48, validated against avatar registry), `email` (nullable — Hanko's claim shape varies by tenant version; `emailFromClaims` handles both string and `{ address }` object forms).
+**Profile fields:** `username` (text, CHECK length at most 32, case-insensitive unique via `lower(username)` index, validated `^[a-z0-9_]{3,32}$` + reserved-name blocklist), `avatar_key` (text, CHECK length at most 48, validated against avatar registry), `email` (nullable — Hanko's claim shape varies by tenant version; `emailFromClaims` handles both string and `{ address }` object forms).
 
 **`getOrCreateUser`** reads first: `SELECT` by id; on a hit it returns the row, and `UPDATE`s `email` only when the stored value is null and the claim has one. On a miss it runs `INSERT … ON CONFLICT (id) DO NOTHING RETURNING *`, then re-`SELECT`s if a concurrent first request won. Steady state is one primary-key read and zero writes. It never bumps `updated_at`; that column is only set in `updateProfile` for real edits.
 
@@ -286,13 +286,13 @@ Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored
 
 The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `community.ts`, with shared column sets in `columns.ts`. The barrel `db/schema/index.ts` re-exports every file, and `createDb` (`db/client.ts`) and `db/test/setup.ts` rely on it.
 
-**Conventions:** every timestamp is an integer of epoch milliseconds (`timestamp_ms`); tables with `created_at`/`updated_at` use `timestamps()` from `columns.ts`, which fills both on insert and whose `$onUpdate` bumps `updated_at` on every Drizzle update (pin it with ``updatedAt: sql`${col}` `` when a write must not count as an edit). Write-once tables use `createdAt()`. Ids are `text` filled by `crypto.randomUUID()`. A column with a fixed set of values is `text({ enum })` plus a CHECK, and the tuple is exported (`userRole`, `titleKind`, `commentStatus`, `syncSource`). Booleans are `integer({ mode: 'boolean' })`. The nine UM flag columns are defined once in `umFlagColumns()`. There are no `0` sentinels: unknown years and missing ids are `NULL`. D1 allows 100 bound parameters per statement, so every bulk write goes through `chunkForD1` (`db/lib/chunkForD1.ts`), and D1 has no `BEGIN`: `db.transaction()` fails, and `db.batch()` is the atomic unit.
+**Conventions:** every timestamp is an integer of epoch milliseconds (`timestamp_ms`); tables with `created_at`/`updated_at` use `timestamps()` from `columns.ts`, which fills both on insert and whose `$onUpdate` bumps `updated_at` on every Drizzle update (pin it with ``updatedAt: sql`${col}` `` when a write must not count as an edit). Write-once tables use `createdAt()`. Ids are `text` filled by `crypto.randomUUID()`. A column with a fixed set of values is `text({ enum })` plus an `enumCheck(name, column, tuple)` CHECK from `columns.ts`, so the values are written once in the exported tuple (`userRole`, `titleKind`, `commentStatus`, `syncSource`). SQLite does not enforce `text(n)`, so a length limit is a `length(col) <= n` CHECK (`titles.title` and `clean_title`, `user.username` and `avatar_key`). Booleans are `integer({ mode: 'boolean' })`. The nine UM flag columns are defined once in `umFlagColumns()`. There are no `0` sentinels: unknown years and missing ids are `NULL`. D1 limits the bound parameters per statement (`D1_MAX_PARAMS`), so every bulk write goes through `chunkForD1` (`db/lib/chunkForD1.ts`), and D1 has no `BEGIN`: `db.transaction()` fails, and `db.batch()` is the atomic unit.
 
 ### Tables (active)
 
 **`titles`** (`titles.ts`) — the spine for movies **and** TV; synced from the Bechdel Test, ids backfilled from TMDB.
 
-- `id` text PK (UUID), `kind` text `movie`|`tv` NOT NULL (CHECK), `tmdb_id` integer nullable, `imdb_id` text nullable **unique**, `title` text, `clean_title` text (output of `normalizeTitle()`, the UM match key), `year` integer nullable (**NULL = unknown**), `popularity` real nullable (TMDB's popularity score, NULL until a sync has seen the title), `popularity_at` timestamp nullable, `created_at`, `updated_at`.
+- `id` text PK (UUID), `kind` text `movie`|`tv` NOT NULL (CHECK), `tmdb_id` integer nullable, `imdb_id` text nullable **unique**, `title` text (CHECK length at most 255), `clean_title` text (CHECK length at most 255; output of `normalizeTitle()`, the UM match key), `year` integer nullable (**NULL = unknown**), `popularity` real nullable (TMDB's popularity score, NULL until a sync has seen the title), `popularity_at` timestamp nullable, `created_at`, `updated_at`.
 - **Unique index `titles_kind_tmdb_idx` on `(kind, tmdb_id)`**: the natural key, because TMDB movie and TV ids share a numeric space (movie 1399 and TV 1399 coexist). SQLite treats NULLs as distinct in a unique index, so rows without a TMDB id coexist. IMDb ids are globally unique across movies and series, so `imdb_id` has a plain unique. **Index `titles_popularity_idx` on `popularity`** serves the landing's ranking (`getPopularRatedFilms`; SQLite sorts NULLs last in descending order).
 
 **`title_bechdel`** (`sources.ts`) — seeded, **1:1 with a title**.
@@ -325,7 +325,7 @@ The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `comm
 
 One SQLite baseline, `db/migrations/0000_init.sql` with its snapshot and journal, generated by drizzle-kit (`pnpm db:generate`, `dialect: 'sqlite'`, `drizzle.config.ts`). While the schema is still changing the baseline is regenerated (delete `db/migrations`, then generate) instead of stacked; once a database holds data, a change is a new migration, fixed forward and never rolled back by hand. Commit the generated SQL, snapshot and journal in the same change as the schema change; never hand-write or hand-edit a snapshot JSON. CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "pnpm exec drizzle-kit generate" /dev/null` and answer the prompts.
 
-Wrangler applies the files (`wrangler d1 migrations apply`, `migrations_dir` in `wrangler.jsonc`): `pnpm db:migrate:local` for the local database in `.wrangler/state` and `pnpm db:migrate:remote` for the deployed one. Each file is applied atomically and a failure stops the run. D1 keeps foreign keys on and ignores `PRAGMA foreign_keys = OFF`, so a migration that rebuilds a table sets `PRAGMA defer_foreign_keys = on`. **Boot does not migrate.** The `drizzle.config.ts` D1 HTTP credentials (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN`) are read only when all three are set.
+Wrangler applies the files (`wrangler d1 migrations apply`, `migrations_dir` in `wrangler.jsonc`): `pnpm db:migrate:local` for the local database in `.wrangler/state` and `pnpm db:migrate:remote` for the deployed one. Each file is applied atomically and a failure stops the run. Foreign keys stay on (`.claude/rules/code-standards.md`, Database, says what a table rebuild sets). **Boot does not migrate.** The `drizzle.config.ts` D1 HTTP credentials (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN`) are read only when all three are set.
 
 ---
 

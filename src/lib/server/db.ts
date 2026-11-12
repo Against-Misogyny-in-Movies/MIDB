@@ -24,7 +24,7 @@ export const db: Db = new Proxy({} as Db, {
 	}
 });
 
-/** Use this D1 database instead of the Worker's binding (tests and scripts). `undefined` unbinds. */
+/** Use this D1 database instead of the Worker's binding (tests only). `undefined` unbinds. */
 export function bindDb(d1: D1Database | undefined): void {
 	override = d1;
 }

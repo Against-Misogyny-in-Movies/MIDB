@@ -10,15 +10,15 @@ Read whole.
 
 - `AGENTS.md` — MIDB: agent rules (~740 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~3.3K tok)
-  - 5–21 Server / client boundary (~560) ← 2
+- `.claude/rules/code-standards.md` — Code standards (~3.4K tok)
+  - 5–21 Server / client boundary (~540) ← 2
   - 22–28 Route folders are thin (~130)
   - 29–50 File organisation (~640) ← 4
   - 51–70 Components (~460) ← 3
-  - 71–92 Database (~600)
-  - 93–99 Testing (~170) ← 1
-  - 100–112 Making a change (~440) ← 3
-  - 113–129 Checking a change (~230) ← 6
+  - 71–93 Database (~680) ← 1
+  - 94–100 Testing (~170) ← 1
+  - 101–113 Making a change (~440) ← 3
+  - 114–130 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~410 tok)
@@ -42,7 +42,7 @@ Read the sections your task touches.
 - `README.md` — MIDB (~680 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~2.0K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~36.4K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~36.5K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~860)
@@ -51,10 +51,10 @@ Read the sections your task touches.
   - 218–231 Styling & theming (~950)
   - 232–244 Copy & voice (~570) ← 1
   - 245–270 Routes (~7.4K)
-  - 271–284 User & roles (~450)
-  - 285–331 Database schema (~1.8K)
+  - 271–284 User & roles (~460)
+  - 285–331 Database schema (~1.9K)
     - 291–323 Tables (active) (~1.2K)
-    - 324–331 Migrations (~360)
+    - 324–331 Migrations (~350)
   - 332–354 Seeding (~830) ← 1
   - 355–420 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.2K)
   - 421–440 UM Disambiguation (~630)
@@ -105,8 +105,8 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~720 tok)
-- `PRIVACY.md` — Privacy (~610 tok)
+- `SECURITY.md` — Security (~800 tok)
+- `PRIVACY.md` — Privacy (~700 tok)
 - `ACCESSIBILITY.md` — Accessibility (~400 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~680 tok)
 

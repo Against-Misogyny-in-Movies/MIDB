@@ -9,7 +9,7 @@ A reader who does not sign in gives MIDB no personal data.
 - **The browser stores** one value: the chosen theme, in `localStorage` (`theme`). It never leaves the browser.
 - **Third-party requests** from the browser: none. Posters load from MIDB's own `/img/tmdb/` path, and the Inter Tight font is served from MIDB.
 - **MIDB's own server** looks up each page's data on TMDB and Does the Dog Die, and fetches each poster from `image.tmdb.org` (TMDB). These requests carry the title or file being looked up, never anything about the reader, so TMDB sees MIDB's server and not the reader's IP address or browser.
-- **Hosting.** The site runs on Cloudflare Workers, which keeps standard request logs (IP address, URL, time) under its own policy. The server also caches what it fetches from TMDB, Does the Dog Die and its database, search results, public pages and posters, in Cloudflare's cache. These hold film data and search text, never a reader's IP address, cookie or account.
+- **Hosting.** The site runs on Cloudflare Workers, which keeps standard request logs (IP address, URL, time) under its own policy. MIDB's database is Cloudflare D1, so the account data listed under Signing in is stored by Cloudflare. D1 Time Travel keeps the database's history for the window Cloudflare sets (30 days on the paid plan, per Cloudflare's D1 documentation), so a deleted account stays recoverable from that history for that long. The server also caches what it fetches from TMDB, Does the Dog Die and its database, search results, public pages and posters, in Cloudflare's cache. These hold film data and search text, never a reader's IP address, cookie or account.
 - **Rate limiting.** The rate limiter sends a key to Cloudflare's rate-limit service and counts it for the window set in `wrangler.jsonc`: the reader's IP address for search, or the account id for the username check.
 
 ## Signing in
@@ -18,7 +18,7 @@ Sign-in is provided by Hanko (`hanko.io`).
 
 - **Hanko** holds the sign-in method and the account's email address.
 - **The `hanko` session cookie** is set on sign-in and identifies the session to MIDB.
-- **MIDB's own database** stores, for each account:
+- **MIDB's own database** (Cloudflare D1) stores, for each account:
   - the Hanko account id;
   - the email address;
   - the role (user, moderator or administrator);
