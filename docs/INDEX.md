@@ -19,7 +19,7 @@ Read whole.
   - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
   - 108–120 Making a change (~440) ← 3
-  - 121–137 Checking a change (~230) ← 6
+  - 121–137 Checking a change (~230) ← 7
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
@@ -90,6 +90,12 @@ Read the sections your task touches.
 STATUS.md, then the live plan section for the active phase.
 
 - `docs/phases/STATUS.md` — Phase status (~2.1K tok)
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-domain-midb-info.md` — Plan: serve the site on midb.info (~1.0K tok)
 
 ## Policies
 
