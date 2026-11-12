@@ -72,8 +72,10 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 			}
 		},
 		session: {
-			// The signed cookie lets `getSession` skip the database for five minutes. The hook
-			// re-reads the user row (`locals.getUser`), so a ban or a role change applies at once.
+			// The signed cookie lets `getSession` skip the database for five minutes after Better
+			// Auth sets it. The hook's own session read cannot set cookies, so it never renews the
+			// cookie. It re-reads the user row (`locals.getUser`), so a ban or a role change applies
+			// at once.
 			cookieCache: { enabled: true, maxAge: 300 }
 		},
 		account: {
@@ -87,7 +89,9 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 				updateUserInfoOnLink: true,
 				// Better Auth counts accounts only; `guardLastMethod` counts passkeys too.
 				allowUnlinkingAll: true
-			}
+			},
+			// Access and refresh tokens are stored encrypted with a key derived from the secret.
+			encryptOAuthTokens: true
 		},
 		socialProviders,
 		plugins: [

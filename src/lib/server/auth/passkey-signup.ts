@@ -18,9 +18,10 @@ export function resolveNewPasskeyUser(): RegistrationUser {
 
 /**
  * `passkey({ registration: { afterVerification } })`: creates the account a verified
- * passkey-first sign-up belongs to, with the placeholder email and an unverified address,
- * with the id the registration resolved, and returns it for the passkey to attach to. When the user already exists (a signed-in
- * user adding a passkey) nothing is created and the passkey stays theirs.
+ * passkey-first sign-up belongs to, with the id the registration resolved, the placeholder
+ * email and an unverified address, and returns it for the passkey to attach to. When the user
+ * already exists (a signed-in user adding a passkey) nothing is created and the passkey stays
+ * theirs.
  */
 export async function createPasskeyUser(
 	ctx: Pick<AuthEndpointContext, 'context'>,

@@ -1,4 +1,5 @@
 import { env } from '#lib/server/env.ts';
+import type { ConfiguredProviders } from '#lib/media/utils/auth-providers.ts';
 import type { OAuthCredentials } from './create-auth.ts';
 
 function credentials(id?: string, secret?: string): OAuthCredentials | undefined {
@@ -17,7 +18,7 @@ export function providerCredentials(): { google?: OAuthCredentials; discord?: OA
  * Which social buttons `/auth` shows: the flags only, never a credential. They depend on the
  * deployment, not on the request, so the page's load can return them without reading the user.
  */
-export function configuredProviders(): { google: boolean; discord: boolean } {
+export function configuredProviders(): ConfiguredProviders {
 	const { google, discord } = providerCredentials();
 	return { google: google !== undefined, discord: discord !== undefined };
 }

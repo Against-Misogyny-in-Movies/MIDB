@@ -3,6 +3,7 @@ import type { Handle } from '@sveltejs/kit/hooks';
 import { getSessionCookie } from 'better-auth/cookies';
 import { getAuth } from '#lib/server/auth/auth.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
+import { asPrivate } from '#lib/server/http/cache.ts';
 import { getUserById, type UserRow } from '#lib/server/data/user-queries.ts';
 
 /** `/user` and `/user/*` only: `/users…` and `/username` are not account routes. */
@@ -19,13 +20,7 @@ function withSafeCacheHeaders(response: Response): Response {
 	const setsCookie = response.headers.has('set-cookie');
 	if (!setsCookie && response.headers.has('cache-control')) return response;
 
-	// A response from `fetch` has immutable headers; copy it before changing them.
-	const safe = new Response(response.body, response);
-	safe.headers.set('cache-control', 'private, no-store');
-	// A forced-private response must not keep an edge directive, which would outrank it.
-	safe.headers.delete('cdn-cache-control');
-	safe.headers.delete('cloudflare-cdn-cache-control');
-	return safe;
+	return asPrivate(response);
 }
 
 /**

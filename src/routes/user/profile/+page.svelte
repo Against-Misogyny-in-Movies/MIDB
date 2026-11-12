@@ -96,6 +96,7 @@
 				id="username"
 				name="username"
 				type="text"
+				class="input"
 				value={usernameInput}
 				oninput={(e) => {
 					usernameInput = (e.target as HTMLInputElement).value;
@@ -188,25 +189,6 @@
 	legend {
 		@apply font-medium text-ink p-0;
 		margin-bottom: var(--spacing-xs);
-	}
-
-	input[type='text'] {
-		@apply w-full text-ink bg-surface-raised;
-		height: 2.75rem;
-		padding-inline: 16px;
-		border-radius: 12px;
-		border: 1px solid var(--border-strong);
-		transition: border-color 0.15s ease;
-	}
-
-	input[type='text']:hover {
-		border-color: var(--ink-muted);
-	}
-
-	input[type='text']:focus-visible {
-		@apply outline-none;
-		border-color: var(--brand);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
 	}
 
 	.hint {

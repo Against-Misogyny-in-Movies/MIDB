@@ -36,14 +36,19 @@ describe('/api/auth/[...all]', () => {
 		expect(handler).not.toHaveBeenCalled();
 	});
 
-	it('forces private, no-store over what Better Auth sent, keeping its cookies', async () => {
+	it('forces private, no-store over what Better Auth sent, drops edge directives and keeps its cookies', async () => {
 		handler.mockResolvedValue(
 			new Response('ok', {
-				headers: { 'cache-control': 'public, max-age=60', 'set-cookie': 'a=b; Path=/' }
+				headers: {
+					'cache-control': 'public, max-age=60',
+					'cdn-cache-control': 'max-age=600',
+					'set-cookie': 'a=b; Path=/'
+				}
 			})
 		);
 		const res = await call(POST);
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
+		expect(res.headers.get('cdn-cache-control')).toBeNull();
 		expect(res.headers.get('set-cookie')).toBe('a=b; Path=/');
 	});
 

@@ -186,7 +186,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
    - `"cache": { "enabled": true }` (Workers Caching);
    - `compatibility_date: "2026-11-01"`, `compatibility_flags: ["nodejs_compat"]`;
    - `d1_databases: [{ binding: "DB", database_name: "midb", database_id, migrations_dir: "db/migrations" }]`;
-   - `ratelimits`: `RL_SEARCH` 60/60, `RL_AVAILABILITY` 30/60, `RL_AUTH` 10/60, `RL_COMMENT` 5/60, `RL_VOTE` 30/60, `RL_REPORT` 10/60;
+   - `ratelimits`: `RL_SEARCH` 60/60, `RL_AVAILABILITY` 30/60, `RL_AUTH` 30/60, `RL_COMMENT` 5/60, `RL_VOTE` 30/60, `RL_REPORT` 10/60;
    - `vars`: `PUBLIC_ORIGIN`, `PUBLIC_TMDB_*`, `MODERATION_MODEL="claude-haiku-5-5"`, `PUBLIC_TURNSTILE_SITE_KEY`;
    - `env.preview` with its own D1 database.
 3. **Types.**
@@ -355,11 +355,12 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 2. **Server** (`src/lib/server/auth/auth.ts`). `getAuth()` is memoised per isolate:
    - `drizzleAdapter(db, { provider: 'sqlite', schema })`
    - `socialProviders.google` / `.discord`, included only when configured
-   - `account.accountLinking: { enabled: true, trustedProviders: ['google','discord'], allowDifferentEmails: true, updateUserInfoOnLink: true }`
+   - `account.accountLinking: { enabled: true, trustedProviders: ['google'], allowDifferentEmails: true, updateUserInfoOnLink: true }`: a Discord sign-in links to an existing user only when Discord reports the email verified.
+   - `account.encryptOAuthTokens: true`: the access and refresh tokens are stored encrypted, keyed from `BETTER_AUTH_SECRET`.
      - When linking replaces a placeholder email, adopt the provider's verified email.
    - `passkey({ rpID: new URL(PUBLIC_ORIGIN).hostname, rpName: 'MIDB', origin: PUBLIC_ORIGIN, registration: { requireSession: false, resolveUser, afterVerification } })`
      - `afterVerification` creates the user with the placeholder email and returns `userId`.
-   - `captcha({ provider: 'cloudflare-turnstile', endpoints: ['/passkey/generate-register-options'] })`, skipped when no secret is set.
+   - A `hooks.before` Turnstile check (`turnstile.ts`) on `/passkey/generate-register-options`, enforced only when there is no session (a sign-up, not an added passkey) and skipped when no secret is set.
    - `session.cookieCache: { enabled: true, maxAge: 300 }`
    - `advanced.ipAddress.ipAddressHeaders: ['cf-connecting-ip']`
    - `rateLimit.enabled: false`. Instead, `RL_AUTH` keys on the IP and wraps the route.
@@ -367,7 +368,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - Banning also deletes the user's sessions. Write paths re-read the ban and mute state from the DB, because of the cookie cache.
 3. **Routes.**
    - `src/routes/api/auth/[...all]/+server.ts` calls `getAuth().handler(request)`, with `PRIVATE_NO_STORE`.
-   - Orphan users (no `account` and no `passkey` after 1h; D1 has no transaction around the passkey insert) are removed by a scheduled workflow running `db:cleanup:orphans --remote`.
+   - Orphan users (no `account`, no `passkey` and no `session` after 1h: a sign-up that never got its passkey, as D1 has no transaction around the passkey insert) are removed by a scheduled workflow running `db:cleanup:orphans --remote`.
 4. **Hook.**
    - `locals.getUser()` stays lazy and memoised: `getAuth().api.getSession({ headers })`, returning `UserRow | null`. Banned users resolve to null.
    - The `/user` gate checks only that the session cookie exists. The `/user/moderation` role gate stays.

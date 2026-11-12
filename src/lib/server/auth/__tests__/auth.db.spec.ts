@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { eq } from 'drizzle-orm';
 import type { Account } from 'better-auth';
-import { handleOAuthUserInfo } from 'better-auth/oauth2';
+import { handleOAuthUserInfo, setTokenUtil } from 'better-auth/oauth2';
 import { accounts, sessions, users } from '#db/schema/auth.ts';
 import { userValues } from '#db/test/users.ts';
 import { db } from '#lib/server/db.ts';
@@ -104,7 +104,7 @@ describe('adoptProviderEmail against the database', () => {
 		getUserInfo: async () => ({ user: { email, emailVerified: true } })
 	});
 	const ctxWith = (email: string) =>
-		asCtx({ socialProviders: [provider(email)], logger: { warn: () => {} } });
+		asCtx({ options: {}, socialProviders: [provider(email)], logger: { warn: () => {} } });
 
 	it('stores the verified provider email on a placeholder account', async () => {
 		await db.insert(users).values(userValues('user-1', { email: 'user-1@users.invalid' }));
@@ -159,5 +159,50 @@ describe('account linking', () => {
 		const rows = await db.select().from(accounts);
 		expect(rows).toHaveLength(1);
 		expect(rows[0]).toMatchObject({ userId: 'user-1', providerId: 'discord' });
+	});
+});
+
+describe('OAuth token storage', () => {
+	// `$context` is typed for the configured options; the token helpers take the generic one.
+	const tokenCtx = async () =>
+		(await auth.$context) as unknown as Parameters<typeof setTokenUtil>[1];
+
+	it('stores the access and refresh tokens encrypted', async () => {
+		const stored = await setTokenUtil('plain-access-token', await tokenCtx());
+		expect(stored).not.toBe('plain-access-token');
+		expect(stored).toBeTruthy();
+	});
+
+	it('hands adoptProviderEmail decrypted tokens', async () => {
+		const context = await auth.$context;
+		const encrypted = {
+			userId: 'user-1',
+			providerId: 'google',
+			accessToken: await setTokenUtil('plain-access', await tokenCtx()),
+			refreshToken: await setTokenUtil('plain-refresh', await tokenCtx())
+		} as Account;
+		await db.insert(users).values(userValues('user-1', { email: 'user-1@users.invalid' }));
+
+		let received: { accessToken?: string; refreshToken?: string } | undefined;
+		const provider = {
+			id: 'google',
+			getUserInfo: async (tokens: { accessToken?: string; refreshToken?: string }) => {
+				received = tokens;
+				return { user: { email: 'mary@example.com', emailVerified: true } };
+			}
+		};
+		await adoptProviderEmail(
+			encrypted,
+			asCtx({
+				options: context.options,
+				secretConfig: context.secretConfig,
+				socialProviders: [provider],
+				logger: { warn: () => {} }
+			})
+		);
+
+		expect(received).toMatchObject({ accessToken: 'plain-access', refreshToken: 'plain-refresh' });
+		const [row] = await db.select().from(users).where(eq(users.id, 'user-1'));
+		expect(row.email).toBe('mary@example.com');
 	});
 });

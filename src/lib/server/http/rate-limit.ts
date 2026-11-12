@@ -15,7 +15,7 @@ export type RateLimitBucket =
 const FALLBACK_LIMITS: Record<RateLimitBucket, { limit: number; windowMs: number }> = {
 	RL_SEARCH: { limit: 60, windowMs: 60_000 },
 	RL_AVAILABILITY: { limit: 30, windowMs: 60_000 },
-	RL_AUTH: { limit: 10, windowMs: 60_000 },
+	RL_AUTH: { limit: 30, windowMs: 60_000 },
 	RL_COMMENT: { limit: 5, windowMs: 60_000 },
 	RL_VOTE: { limit: 30, windowMs: 60_000 },
 	RL_REPORT: { limit: 10, windowMs: 60_000 }

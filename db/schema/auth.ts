@@ -7,7 +7,7 @@ export const userRole = ['user', 'moderator', 'administrator'] as const;
 /**
  * The Better Auth tables (`user`, `session`, `account`, `verification`, `passkey`), generated
  * with the `auth` CLI (`generate --adapter drizzle --dialect sqlite`) and merged here. Better
- * Auth reads them through the `schema` map in `#lib/server/auth/auth.ts`, which names each
+ * Auth reads them through the `schema` map in `#lib/server/auth/create-auth.ts`, which names each
  * table by its model (`user`, `session`, …).
  *
  * `user` adds MIDB's own columns: `role`, `username` and `avatar_key` (declared to Better Auth
@@ -101,7 +101,7 @@ export const passkeys = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		credentialID: text('credential_id').notNull(),
+		credentialID: text('credential_id').notNull().unique(),
 		counter: integer('counter').notNull(),
 		deviceType: text('device_type').notNull(),
 		backedUp: integer('backed_up', { mode: 'boolean' }).notNull(),
@@ -110,8 +110,5 @@ export const passkeys = sqliteTable(
 		// Better Auth sets it on registration; the table has no `updated_at`, so not `timestamps()`.
 		createdAt: createdAt()
 	},
-	(t) => [
-		index('passkey_user_id_idx').on(t.userId),
-		index('passkey_credential_id_idx').on(t.credentialID)
-	]
+	(t) => [index('passkey_user_id_idx').on(t.userId)]
 );

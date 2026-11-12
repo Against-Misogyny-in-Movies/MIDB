@@ -28,8 +28,21 @@ export const PUBLIC_PAGE = {
  */
 export const PUBLIC_NO_STORE = { 'cache-control': 'no-store' };
 
-/** Personalised responses (/api/me, /user/*): never stored by a browser or shared cache. */
+/** Personalised responses (/api/me, /api/auth/*, /user/*): never stored by a browser or shared cache. */
 export const PRIVATE_NO_STORE = { 'cache-control': 'private, no-store' };
+
+/**
+ * A copy of `response` made private: `PRIVATE_NO_STORE` replaces its `Cache-Control`, and the
+ * edge directives are dropped, because one would outrank it. The copy is needed because a
+ * response from `fetch` or a library has immutable headers.
+ */
+export function asPrivate(response: Response): Response {
+	const out = new Response(response.body, response);
+	for (const [name, value] of Object.entries(PRIVATE_NO_STORE)) out.headers.set(name, value);
+	out.headers.delete('cdn-cache-control');
+	out.headers.delete('cloudflare-cdn-cache-control');
+	return out;
+}
 
 /**
  * /api/search: user-agnostic, so browsers keep a result for a minute and the edge for ten,

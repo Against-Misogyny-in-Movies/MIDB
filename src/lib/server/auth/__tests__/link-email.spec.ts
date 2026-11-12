@@ -11,6 +11,7 @@ const warn = vi.fn();
 
 const ctx = {
 	context: {
+		options: {},
 		internalAdapter: { findUserById, findUserByEmail, updateUser },
 		socialProviders: [{ id: 'google', getUserInfo }],
 		logger: { warn }

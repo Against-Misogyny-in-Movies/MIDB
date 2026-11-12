@@ -10,15 +10,15 @@ Read whole.
 
 - `AGENTS.md` — MIDB: agent rules (~740 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~3.4K tok)
-  - 5–21 Server / client boundary (~570) ← 2
-  - 22–28 Route folders are thin (~130)
-  - 29–50 File organisation (~640) ← 4
-  - 51–70 Components (~460) ← 3
-  - 71–93 Database (~700) ← 1
-  - 94–100 Testing (~170) ← 1
-  - 101–113 Making a change (~440) ← 3
-  - 114–130 Checking a change (~230) ← 6
+- `.claude/rules/code-standards.md` — Code standards (~3.5K tok)
+  - 5–22 Server / client boundary (~620) ← 2
+  - 23–29 Route folders are thin (~130)
+  - 30–51 File organisation (~640) ← 4
+  - 52–71 Components (~460) ← 3
+  - 72–94 Database (~700) ← 1
+  - 95–101 Testing (~170) ← 1
+  - 102–114 Making a change (~440) ← 3
+  - 115–131 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~410 tok)
@@ -41,37 +41,37 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~1.0K tok)
 - `PRODUCT.md` — Product (~290 tok)
-- `DESIGN.md` — Design (~2.2K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~38.9K tok)
+- `DESIGN.md` — Design (~2.3K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~39.7K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–231 Directory layout (~5.8K)
-    - 222–231 File-organisation conventions (~450)
-  - 232–245 Styling & theming (~950)
-  - 246–258 Copy & voice (~570) ← 1
-  - 259–285 Routes (~7.9K)
-  - 286–320 User & roles (~1.7K)
-    - 313–320 Migrations (~350)
-  - 321–350 Source sync (~1.8K) ← 2
-  - 351–416 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 417–436 UM Disambiguation (~630)
-  - 437–445 UM flag rendering (~250)
-  - 446–457 Shared marker pattern (metric row markers) (~410) ← 4
-  - 458–494 Component library (`src/lib/components/`) (~5.1K)
-  - 495–505 Live search (`src/lib/components/search/`) (~710)
-  - 506–519 Server cache (`src/lib/server/cache/`) (~690)
-  - 520–535 TMDB integration (~810)
-  - 536–554 Auth flow (Better Auth) (~1.3K)
-  - 555–572 Caching policy (~1.1K) ← 5
-  - 573–618 Configuration & environment (~2.3K)
-    - 589–601 Local run sequence (~130)
-    - 602–605 npm scripts (~200)
-    - 606–618 CI (`.github/workflows/tests.yml`) (~400)
-  - 619–634 Testing (~860)
-    - 629–634 Verification baseline (~80)
-  - 635–645 Known gaps / TODO (~340)
-  - 646–654 Related docs (~160)
+  - 68–233 Directory layout (~5.9K)
+    - 224–233 File-organisation conventions (~450)
+  - 234–247 Styling & theming (~950)
+  - 248–260 Copy & voice (~570) ← 1
+  - 261–287 Routes (~7.9K)
+  - 288–322 User & roles (~1.8K)
+    - 315–322 Migrations (~350)
+  - 323–352 Source sync (~1.8K) ← 2
+  - 353–418 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 419–438 UM Disambiguation (~630)
+  - 439–447 UM flag rendering (~250)
+  - 448–459 Shared marker pattern (metric row markers) (~410) ← 4
+  - 460–496 Component library (`src/lib/components/`) (~5.1K)
+  - 497–507 Live search (`src/lib/components/search/`) (~710)
+  - 508–521 Server cache (`src/lib/server/cache/`) (~690)
+  - 522–537 TMDB integration (~810)
+  - 538–556 Auth flow (Better Auth) (~1.8K)
+  - 557–574 Caching policy (~1.1K) ← 5
+  - 575–620 Configuration & environment (~2.3K)
+    - 591–603 Local run sequence (~130)
+    - 604–607 npm scripts (~200)
+    - 608–620 CI (`.github/workflows/tests.yml`) (~400)
+  - 621–636 Testing (~860)
+    - 631–636 Verification baseline (~80)
+  - 637–647 Known gaps / TODO (~340)
+  - 648–656 Related docs (~160)
 
 ## Phases
 
@@ -83,7 +83,7 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.7K tok)
+- `docs/plans/plan-cloudflare-d1-comments.md` — Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation (~10.8K tok)
   - 5–39 Context (~460)
   - 40–112 Verified platform facts (checked 2026-11-11) (~1.5K)
   - 113–121 Fresh repository (~170)
@@ -92,20 +92,20 @@ Read when a task names the plan.
   - 178–238 Phase 1: Cloudflare platform (~1.3K)
   - 239–285 Phase 2: SQLite / D1 data layer (~940)
   - 286–348 Phase 2b: Daily source sync (Bechdel Test, Unconsenting Media, popularity) (~1.6K)
-  - 349–401 Phase 3: Auth (Better Auth) (~1.0K)
-  - 402–455 Phase 4: Comments (~1000)
-  - 456–483 Phase 5: AI moderation (~480)
-  - 484–513 Phase 6: CI, deploy, docs (~460)
-  - 514–555 Verification (~650)
+  - 349–402 Phase 3: Auth (Better Auth) (~1.1K)
+  - 403–456 Phase 4: Comments (~1000)
+  - 457–484 Phase 5: AI moderation (~480)
+  - 485–514 Phase 6: CI, deploy, docs (~460)
+  - 515–556 Verification (~650)
 
 ## Policies
 
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~1.3K tok)
-- `PRIVACY.md` — Privacy (~1.2K tok)
-- `ACCESSIBILITY.md` — Accessibility (~450 tok)
+- `SECURITY.md` — Security (~1.5K tok)
+- `PRIVACY.md` — Privacy (~1.3K tok)
+- `ACCESSIBILITY.md` — Accessibility (~520 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~830 tok)
 
 ## Code to docs
