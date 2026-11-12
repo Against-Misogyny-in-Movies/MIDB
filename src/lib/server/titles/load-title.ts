@@ -1,12 +1,12 @@
-import type { Movie } from '$lib/media/types/movie';
-import type { Series } from '$lib/media/types/series';
-import type { DddResult } from '$lib/media/types/ddd';
-import type { UmEntry } from '$lib/media/types/um';
-import { getMovie, getSeries } from '$lib/server/integrations/tmdb';
-import { getTriggerTagsForSeries, getTriggerTagsLive } from '$lib/server/integrations/ddd';
-import { getTitleRow, type TitleKind } from '$lib/server/data/title-queries';
-import { getBechdel, getUmEntry, type BechdelData } from '$lib/server/data/sources';
-import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
+import type { Movie } from '#lib/media/types/movie.ts';
+import type { Series } from '#lib/media/types/series.ts';
+import type { DddResult } from '#lib/media/types/ddd.ts';
+import type { UmEntry } from '#lib/media/types/um.ts';
+import { getMovie, getSeries } from '#lib/server/integrations/tmdb/index.ts';
+import { getTriggerTagsForSeries, getTriggerTagsLive } from '#lib/server/integrations/ddd.ts';
+import { getTitleRow, type TitleKind } from '#lib/server/data/title-queries.ts';
+import { getBechdel, getUmEntry, type BechdelData } from '#lib/server/data/sources.ts';
+import { getUnconsentingCandidates } from '#lib/server/data/um-candidates.ts';
 
 export interface TitlePageData<M extends Movie | Series> {
 	media: M;

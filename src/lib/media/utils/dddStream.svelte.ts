@@ -1,4 +1,4 @@
-import type { DddResult } from '$lib/media/types/ddd';
+import type { DddResult } from '#lib/media/types/ddd.ts';
 
 const EMPTY_MOVIE: DddResult = { itemId: null, tags: [], isSeries: false };
 const EMPTY_SERIES: DddResult = { itemId: null, tags: [], isSeries: true };

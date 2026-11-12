@@ -1,10 +1,10 @@
 <script lang="ts">
-	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
+	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import UmCandidates from './umCandidates.svelte';
 	import UmComment from './umComment.svelte';
-	import { UM_FLAGS } from '$lib/media/utils/metrics';
-	import { umTone } from '$lib/media/utils/tones';
-	import type { UmEntry } from '$lib/media/types/um';
+	import { UM_FLAGS } from '#lib/media/utils/metrics.ts';
+	import { umTone } from '#lib/media/utils/tones.ts';
+	import type { UmEntry } from '#lib/media/types/um.ts';
 
 	interface Props {
 		umData: UmEntry | null;

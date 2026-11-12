@@ -1,4 +1,4 @@
-import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
+import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
 
 /**
  * DDD tags for a season/episode selection. Series-level tags (season -1) always show; with no

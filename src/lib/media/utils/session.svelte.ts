@@ -1,5 +1,5 @@
-import { browser } from '$app/environment';
-import type { PublicUser } from '$lib/media/types/user';
+import { browser } from '$app/env';
+import type { PublicUser } from '#lib/media/types/user.ts';
 
 export type SessionStatus = 'pending' | 'anon' | 'user';
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;

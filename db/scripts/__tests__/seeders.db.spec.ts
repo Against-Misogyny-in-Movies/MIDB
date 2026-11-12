@@ -3,9 +3,9 @@ import { mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { seedMovies } from '$db/scripts/seedMovies';
-import { seedUnconsenting } from '$db/scripts/seedUnconsenting';
+import { db } from '#lib/server/db.ts';
+import { seedMovies } from '#db/scripts/seedMovies.ts';
+import { seedUnconsenting } from '#db/scripts/seedUnconsenting.ts';
 
 const BECHDEL_CSV = 'db/test/fixtures/bechdel.csv';
 const UM_CSV = 'db/test/fixtures/unconsenting.csv';
@@ -46,9 +46,7 @@ describe('seeders (50-row fixtures)', () => {
 		expect(readFileSync(report, 'utf8').split('\n')[0]).toMatch(/^id\tname/);
 
 		// Bindings carry only (title_id, um_id); every flag is read from um_source.
-		const [binding] = await db.execute<Record<string, unknown>>(
-			sql`SELECT * FROM title_um LIMIT 1`
-		);
+		const [binding] = await db.execute(sql`SELECT * FROM title_um LIMIT 1`);
 		expect(Object.keys(binding).sort()).toEqual(['created_at', 'title_id', 'um_id']);
 
 		await seedUnconsenting(db, UM_CSV, report);

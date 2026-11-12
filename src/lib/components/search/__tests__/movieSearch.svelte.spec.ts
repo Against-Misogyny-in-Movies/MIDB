@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { writable } from 'svelte/store';
-import type { SearchResult } from '$lib/components/search/types';
+import { flushSync } from 'svelte';
+import type { SearchResult } from '#lib/components/search/types.ts';
 
 const goto = vi.fn();
-const navigating = writable<object | null>(null);
+
 vi.mock('$app/navigation', () => ({ goto }));
-vi.mock('$app/stores', () => ({ navigating }));
+vi.mock('$app/state', () => import('./navigating.svelte.js'));
 vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) =>
 		route.replace(/\[(\w+)\]/, (_, key) => params[key])
 }));
 
-const { MovieSearchState, optionId } = await import('$lib/components/search/movieSearch.svelte.js');
+const { navigating } = await import('./navigating.svelte.js');
+const { MovieSearchState, optionId } = await import('#lib/components/search/movieSearch.svelte.js');
 
 const MATRIX: SearchResult = {
 	id: 603,
@@ -197,8 +198,10 @@ describe('MovieSearchState', () => {
 		await vi.advanceTimersByTimeAsync(500);
 
 		s.select(MATRIX);
-		navigating.set({});
-		navigating.set(null);
+		navigating.to = {};
+		flushSync();
+		navigating.to = null;
+		flushSync();
 		expect(s).toMatchObject({ query: '', results: [], open: false, navigatingTo: null });
 		disconnect();
 	});

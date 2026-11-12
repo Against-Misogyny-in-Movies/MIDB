@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../migrate', () => ({ migrateDatabase: vi.fn() }));
 
-const { deployMigration } = await import('$db/scripts/migrateOnDeploy');
+const { deployMigration } = await import('#db/scripts/migrateOnDeploy.ts');
 
 const URL = 'postgres://user:secret@db.example.com:5432/midb';
 

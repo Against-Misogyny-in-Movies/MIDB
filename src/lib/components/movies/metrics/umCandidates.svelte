@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Badge from '$lib/components/ui/badge.svelte';
-	import { umFlagCount } from '$lib/media/utils/metrics';
-	import { umTone } from '$lib/media/utils/tones';
-	import type { UmEntry } from '$lib/media/types/um';
+	import Badge from '#lib/components/ui/badge.svelte';
+	import { umFlagCount } from '#lib/media/utils/metrics.ts';
+	import { umTone } from '#lib/media/utils/tones.ts';
+	import type { UmEntry } from '#lib/media/types/um.ts';
 
 	interface Props {
 		candidates: UmEntry[];

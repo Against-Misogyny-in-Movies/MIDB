@@ -8,10 +8,10 @@ import {
 	toneTokens,
 	SAFETY_HARMFUL_FLAGS,
 	SAFETY_CAUTION_FLAGS
-} from '$lib/media/utils/verdict';
-import type { GenderBreakdown, CastMember, CrewDepartment } from '$lib/media/types/media';
-import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
-import type { UmFlagKey } from '$lib/media/utils/metrics';
+} from '#lib/media/utils/verdict.ts';
+import type { GenderBreakdown, CastMember, CrewDepartment } from '#lib/media/types/media.ts';
+import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
+import type { UmFlagKey } from '#lib/media/utils/metrics.ts';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

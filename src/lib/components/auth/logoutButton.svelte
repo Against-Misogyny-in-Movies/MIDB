@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Hanko } from '@teamhanko/hanko-elements';
 	import { goto } from '$app/navigation';
-	import { PUBLIC_HANKO_API_URL } from '$env/static/public';
-	import { session } from '$lib/media/utils/session.svelte.js';
+	import { PUBLIC_HANKO_API_URL } from '$app/env/public';
+	import { session } from '#lib/media/utils/session.svelte.js';
 
 	interface Props {
 		/** `button` is a ghost button (the profile page); `menu` fills a row of the mobile menu. */
@@ -21,7 +21,7 @@
 			// Already signed out or Hanko unreachable: still drop the local session below.
 		}
 		session.clear();
-		await goto('/auth', { invalidateAll: true });
+		await goto('/auth', { refreshAll: true });
 	};
 </script>
 

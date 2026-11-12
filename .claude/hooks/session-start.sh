@@ -14,6 +14,6 @@ if ! log=$(pnpm install --frozen-lockfile 2>&1); then
   echo "$log" >&2
   exit 1
 fi
-# $env/static/* needs every variable defined; the placeholders in .env.example are enough for check and build.
+# Static env variables (src/env.ts) need every variable defined; the placeholders in .env.example are enough for check and build.
 [ -f .env ] || cp .env.example .env
 echo "Dependencies installed."

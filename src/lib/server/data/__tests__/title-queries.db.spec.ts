@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { titles } from '$db/schema/titles';
-import { db } from '$lib/server/db';
-import { getOrCreateTitleRow, getTitleRow, type TitleRef } from '$lib/server/data/title-queries';
+import { titles } from '#db/schema/titles.ts';
+import { db } from '#lib/server/db.ts';
+import { getOrCreateTitleRow, getTitleRow, type TitleRef } from '#lib/server/data/title-queries.ts';
 
 const GOT: TitleRef = {
 	title: 'Game of Thrones',

@@ -1,6 +1,6 @@
-import type { SafetyTier } from '$lib/media/utils/verdict';
+import type { SafetyTier } from '#lib/media/utils/verdict.ts';
 
-/** Size of the two seeded sources (see `$lib/server/data/catalogue.ts`). */
+/** Size of the two seeded sources (see `#lib/server/data/catalogue.ts`). */
 export interface CatalogueCounts {
 	bechdelRatings: number;
 	umEntries: number;

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { UserRow } from '$lib/server/data/user-queries';
+import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 const isUsernameAvailable = vi.fn(async () => true);
-vi.mock('$lib/server/data/user-queries', () => ({ isUsernameAvailable }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('#lib/server/data/user-queries.ts', () => ({ isUsernameAvailable }));
+vi.mock('$app/env/private', () => ({ REDIS_URL: undefined }));
 
 const { GET } = await import('../routes/user/profile/availability/+server');
-const { clearCache } = await import('$lib/server/cache');
+const { clearCache } = await import('#lib/server/cache/index.ts');
 
 const user = (id: string) => ({ id, role: 'user' }) as UserRow;
 

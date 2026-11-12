@@ -1,6 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { jwtVerify, createRemoteJWKSet, type JWTPayload } from 'jose';
-import { PUBLIC_HANKO_API_URL } from '$env/static/public';
+import { PUBLIC_HANKO_API_URL } from '$app/env/public';
 
 // Module-level: created once. jose caches keys on the set instance; re-creating per request defeats that.
 const JWKS = createRemoteJWKSet(new URL(`${PUBLIC_HANKO_API_URL}/.well-known/jwks.json`));

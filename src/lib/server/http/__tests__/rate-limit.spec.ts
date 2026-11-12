@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', () => ({ REDIS_URL: undefined }));
 
-const { rateLimit } = await import('$lib/server/http/rate-limit');
-const { clearCache } = await import('$lib/server/cache');
+const { rateLimit } = await import('#lib/server/http/rate-limit.ts');
+const { clearCache } = await import('#lib/server/cache/index.ts');
 
 function fromIp(ip: string) {
 	return { getClientAddress: vi.fn(() => ip) };

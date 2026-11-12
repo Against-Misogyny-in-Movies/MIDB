@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { PUBLIC_PAGE } from '$lib/server/http/cache';
-import { loadTitle } from '$lib/server/titles/load-title';
+import { PUBLIC_PAGE } from '#lib/server/http/cache.ts';
+import { loadTitle } from '#lib/server/titles/load-title.ts';
 
 // User-agnostic (the navbar's session comes from /api/me), so a shared CDN may serve it.
 // Nothing in this load may read locals.getUser().

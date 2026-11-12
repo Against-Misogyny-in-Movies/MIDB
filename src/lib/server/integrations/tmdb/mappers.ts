@@ -6,11 +6,11 @@ import type {
 	GenderBreakdown,
 	GenderCategory,
 	MediaDetail
-} from '$lib/media/types/media';
-import type { Movie } from '$lib/media/types/movie';
-import type { Series } from '$lib/media/types/series';
-import type { SearchResult } from '$lib/components/search/types';
-import { PRIORITY_DEPARTMENTS, type PriorityDepartment } from '$lib/media/utils/departments';
+} from '#lib/media/types/media.ts';
+import type { Movie } from '#lib/media/types/movie.ts';
+import type { Series } from '#lib/media/types/series.ts';
+import type { SearchResult } from '#lib/components/search/types.ts';
+import { PRIORITY_DEPARTMENTS, type PriorityDepartment } from '#lib/media/utils/departments.ts';
 
 export interface TmdbCreditEntry {
 	gender: number;

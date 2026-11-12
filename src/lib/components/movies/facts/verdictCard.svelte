@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { AxisVerdict } from '$lib/media/utils/verdict';
-	import { toneTokens } from '$lib/media/utils/verdict';
+	import type { AxisVerdict } from '#lib/media/utils/verdict.ts';
+	import { toneTokens } from '#lib/media/utils/verdict.ts';
 
 	interface Props {
 		verdict: AxisVerdict<string>;

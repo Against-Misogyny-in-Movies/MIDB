@@ -10,7 +10,15 @@ Read whole.
 
 - `AGENTS.md` — MIDB: agent rules (~760 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~2.9K tok)
+- `.claude/rules/code-standards.md` — Code standards (~3.1K tok)
+  - 5–20 Server / client boundary (~460) ← 2
+  - 21–27 Route folders are thin (~130)
+  - 28–49 File organisation (~640) ← 4
+  - 50–69 Components (~460) ← 3
+  - 70–88 Database (~470)
+  - 89–95 Testing (~160) ← 1
+  - 96–108 Making a change (~440) ← 3
+  - 109–125 Checking a change (~250) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~510 tok)
@@ -34,12 +42,12 @@ Read the sections your task touches.
 - `README.md` — MIDB (~660 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~33.8K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~34.0K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–205 Directory layout (~4.1K)
-    - 196–205 File-organisation conventions (~410)
+  - 68–205 Directory layout (~4.2K)
+    - 196–205 File-organisation conventions (~440)
   - 206–218 Styling & theming (~830)
   - 219–231 Copy & voice (~570) ← 1
   - 232–256 Routes (~6.9K)
@@ -53,7 +61,7 @@ Read the sections your task touches.
   - 437–445 UM flag rendering (~250)
   - 446–457 Shared marker pattern (metric row markers) (~410) ← 4
   - 458–494 Component library (`src/lib/components/`) (~5.0K)
-  - 495–505 Live search (`src/lib/components/search/`) (~720)
+  - 495–505 Live search (`src/lib/components/search/`) (~710)
   - 506–519 Server cache (`src/lib/server/cache/`) (~550)
   - 520–531 TMDB integration (~560)
   - 532–547 Auth flow (Hanko) (~890)
@@ -61,7 +69,7 @@ Read the sections your task touches.
   - 560–609 Configuration & environment (~1.7K)
     - 577–593 Local run sequence (~140)
     - 594–597 npm scripts (~130)
-    - 598–609 CI (`.github/workflows/tests.yml`) (~350)
+    - 598–609 CI (`.github/workflows/tests.yml`) (~360)
   - 610–625 Testing (~660)
     - 620–625 Verification baseline (~80)
   - 626–636 Known gaps / TODO (~340)

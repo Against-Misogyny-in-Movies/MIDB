@@ -1,5 +1,5 @@
-import { DDD_API_KEY } from '$env/static/private';
-import { getCached } from '$lib/server/cache';
+import { DDD_API_KEY } from '$app/env/private';
+import { getCached } from '#lib/server/cache/index.ts';
 import type { TriggerTag, DddResult } from './ddd-types';
 
 export type { TriggerTag, DddResult } from './ddd-types';

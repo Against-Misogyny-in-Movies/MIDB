@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { register } from '@teamhanko/hanko-elements';
 	import { onMount } from 'svelte';
-	import { PUBLIC_HANKO_API_URL } from '$env/static/public';
+	import { PUBLIC_HANKO_API_URL } from '$app/env/public';
 
 	onMount(async () => {
 		register(PUBLIC_HANKO_API_URL).catch((_error) => {

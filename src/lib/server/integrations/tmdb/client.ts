@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { PUBLIC_TMDB_API_URL } from '$env/static/public';
-import { TMDB_API_TOKEN } from '$env/static/private';
-import { getCached } from '$lib/server/cache';
+import { PUBLIC_TMDB_API_URL } from '$app/env/public';
+import { TMDB_API_TOKEN } from '$app/env/private';
+import { getCached } from '#lib/server/cache/index.ts';
 
 // TMDB title metadata is near-static; cache it for a day so repeat visits skip the round-trip.
 export const TMDB_TTL_MS = 24 * 60 * 60 * 1000;

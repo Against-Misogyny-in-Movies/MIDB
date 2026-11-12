@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { PUBLIC_NO_STORE } from '$lib/server/http/cache';
-import { getCatalogueCounts, getRandomRatedFilms } from '$lib/server/data/catalogue';
+import { PUBLIC_NO_STORE } from '#lib/server/http/cache.ts';
+import { getCatalogueCounts, getRandomRatedFilms } from '#lib/server/data/catalogue.ts';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
 	setHeaders({ 'cache-control': PUBLIC_NO_STORE });

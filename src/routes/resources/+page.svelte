@@ -1,10 +1,10 @@
 <script lang="ts">
-	import ResourceNav from '$lib/components/resources/resourceNav.svelte';
-	import MetricArticle from '$lib/components/resources/metricArticle.svelte';
-	import SubBlock from '$lib/components/resources/subBlock.svelte';
-	import BechdelLadderExample from '$lib/components/resources/bechdelLadderExample.svelte';
-	import UmFlagsExample from '$lib/components/resources/umFlagsExample.svelte';
-	import VerdictTierExample from '$lib/components/resources/verdictTierExample.svelte';
+	import ResourceNav from '#lib/components/resources/resourceNav.svelte';
+	import MetricArticle from '#lib/components/resources/metricArticle.svelte';
+	import SubBlock from '#lib/components/resources/subBlock.svelte';
+	import BechdelLadderExample from '#lib/components/resources/bechdelLadderExample.svelte';
+	import UmFlagsExample from '#lib/components/resources/umFlagsExample.svelte';
+	import VerdictTierExample from '#lib/components/resources/verdictTierExample.svelte';
 
 	const navItems = [
 		{ id: 'verdict', label: 'Verdicts' },

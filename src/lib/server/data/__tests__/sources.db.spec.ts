@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { titles } from '$db/schema/titles';
-import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
-import { db } from '$lib/server/db';
-import { getBechdel, getUmEntry } from '$lib/server/data/sources';
+import { titles } from '#db/schema/titles.ts';
+import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
+import { db } from '#lib/server/db.ts';
+import { getBechdel, getUmEntry } from '#lib/server/data/sources.ts';
 
 const NO_FLAGS = {
 	noRape: true,

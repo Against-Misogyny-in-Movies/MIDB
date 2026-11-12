@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SourceIndexItem } from '$lib/media/utils/sourceIndex';
+	import type { SourceIndexItem } from '#lib/media/utils/sourceIndex.ts';
 
 	interface Props {
 		items: SourceIndexItem[];

@@ -1,7 +1,8 @@
-import { redirect, type Handle } from '@sveltejs/kit';
-import { emailFromClaims, verifyClaims } from '$lib/server/auth/hanko';
-import { requireRole } from '$lib/server/auth/guards';
-import { getOrCreateUser, type UserRow } from '$lib/server/data/user-queries';
+import { redirect } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { emailFromClaims, verifyClaims } from '#lib/server/auth/hanko.ts';
+import { requireRole } from '#lib/server/auth/guards.ts';
+import { getOrCreateUser, type UserRow } from '#lib/server/data/user-queries.ts';
 
 /** `/user` and `/user/*` only: `/users…` and `/username` are not account routes. */
 function isAccountPath(pathname: string): boolean {
@@ -16,6 +17,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Lazy and memoised: only routes that need the user (/user/*, /api/me) touch the DB,
 	// and at most once per request.
 	let user: Promise<UserRow | null> | undefined;
+
 	event.locals.getUser = () =>
 		(user ??= claims?.sub
 			? getOrCreateUser({ sub: claims.sub, email: emailFromClaims(claims) })

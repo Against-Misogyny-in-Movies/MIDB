@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { register } from '@teamhanko/hanko-elements';
-	import { PUBLIC_HANKO_API_URL } from '$env/static/public';
+	import { PUBLIC_HANKO_API_URL } from '$app/env/public';
 
 	interface Props {
 		onsessioncreated?: () => void;

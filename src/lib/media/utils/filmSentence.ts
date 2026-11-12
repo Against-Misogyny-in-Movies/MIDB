@@ -1,4 +1,4 @@
-import type { RatedFilm } from '$lib/media/types/catalogue';
+import type { RatedFilm } from '#lib/media/types/catalogue.ts';
 import { bechdelTone, safetyTierTone, type BadgeTone } from './tones';
 
 /** One highlighted clause of the landing sentence. */

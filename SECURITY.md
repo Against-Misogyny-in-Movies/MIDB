@@ -4,7 +4,7 @@ What the site stores and sends is in [PRIVACY.md](PRIVACY.md). This file names t
 
 ## Network
 
-- **Server-side requests:** the server calls TMDB (`api.themoviedb.org`) and Does the Dog Die (`www.doesthedogdie.com`), with keys that exist only on the server (`$lib/server/integrations/`). Nothing under `$lib/server/` can be imported by client code; SvelteKit enforces the boundary at build time.
+- **Server-side requests:** the server calls TMDB (`api.themoviedb.org`) and Does the Dog Die (`www.doesthedogdie.com`), with keys that exist only on the server (`#lib/server/integrations/`). Nothing under `#lib/server/` can be imported by client code; SvelteKit enforces the boundary at build time.
 - **Browser requests:** the browser calls MIDB's own `/api/*` endpoints, Hanko for sign-in, `image.tmdb.org` for posters, and Google Fonts.
 - **Caching:** public pages are cached by the CDN with a key that ignores cookies, so their loads never read the request's user (`src/lib/server/http/cache.ts`). Account data reaches the browser only through `private, no-store` responses: `/api/me` and the `/user` pages.
 - **Authorization:** every endpoint and page that needs an account checks it with `requireUser` / `requireRole` (`src/lib/server/auth/guards.ts`). Roles are read from the database, never from the session token.

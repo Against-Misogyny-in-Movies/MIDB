@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isHttpError, isRedirect, type RequestEvent } from '@sveltejs/kit';
 import type { JWTPayload } from 'jose';
-import type { UserRow } from '$lib/server/data/user-queries';
+import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 const verifyClaims = vi.fn<() => Promise<JWTPayload | null>>();
 const getOrCreateUser = vi.fn<() => Promise<UserRow>>();
 
-vi.mock('$lib/server/auth/hanko', () => ({
+vi.mock('#lib/server/auth/hanko.ts', () => ({
 	verifyClaims: () => verifyClaims(),
 	emailFromClaims: () => 'mary@example.com'
 }));
-vi.mock('$lib/server/data/user-queries', () => ({
+vi.mock('#lib/server/data/user-queries.ts', () => ({
 	getOrCreateUser: () => getOrCreateUser()
 }));
 

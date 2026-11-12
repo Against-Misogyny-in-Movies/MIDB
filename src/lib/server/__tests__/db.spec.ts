@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
 const env: Record<string, string | undefined> = {};
-vi.mock('$env/dynamic/private', () => ({ env }));
+vi.mock('$app/env/private', () => ({
+	get DB_CONNECTION() {
+		return env.DB_CONNECTION;
+	},
+	get TEST_DB_CONNECTION() {
+		return env.TEST_DB_CONNECTION;
+	}
+}));
 
 const createDb = vi.fn(() => ({ db: { marker: 'db' }, sql: { end: vi.fn() } }));
-vi.mock('$db/client', () => ({ createDb }));
+vi.mock('#db/client.ts', () => ({ createDb }));
 
-const { db, closeDb } = await import('$lib/server/db');
+const { db, closeDb } = await import('#lib/server/db.ts');
 
 afterEach(async () => {
 	await closeDb();
@@ -15,7 +22,7 @@ afterEach(async () => {
 	for (const key of Object.keys(env)) delete env[key];
 });
 
-describe('$lib/server/db', () => {
+describe('#lib/server/db.ts', () => {
 	it('opens no connection on import', () => {
 		expect(createDb).not.toHaveBeenCalled();
 	});

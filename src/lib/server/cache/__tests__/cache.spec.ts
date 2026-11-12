@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', () => ({ REDIS_URL: undefined }));
 
-const { getCached, incr, clearCache } = await import('$lib/server/cache');
+const { getCached, incr, clearCache } = await import('#lib/server/cache/index.ts');
 
 beforeEach(async () => {
 	vi.useFakeTimers();

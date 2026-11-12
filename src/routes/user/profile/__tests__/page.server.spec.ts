@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const updateProfile = vi.fn();
 
-vi.mock('$lib/server/auth/guards', () => ({
+vi.mock('#lib/server/auth/guards.ts', () => ({
 	requireUser: vi.fn(async () => ({ id: 'user-1' }))
 }));
-vi.mock('$lib/server/data/user-queries', () => ({
+vi.mock('#lib/server/data/user-queries.ts', () => ({
 	updateProfile: (...args: unknown[]) => updateProfile(...args),
 	toPublicUser: vi.fn((u: unknown) => u)
 }));

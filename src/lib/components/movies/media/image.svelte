@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { PUBLIC_TMDB_IMAGE_URL } from '$env/static/public';
+	import { PUBLIC_TMDB_IMAGE_URL } from '$app/env/public';
 	const sizes = [200, 300, 400, 500];
 </script>
 

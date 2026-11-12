@@ -6,7 +6,7 @@ import {
 	formatRuntime,
 	countryName,
 	languageName
-} from '$lib/media/utils/format';
+} from '#lib/media/utils/format.ts';
 
 describe('formatCurrency', () => {
 	test('returns — for 0', () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import LogoutButton from '$lib/components/auth/logoutButton.svelte';
-	import { session } from '$lib/media/utils/session.svelte.js';
+	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
+	import { session } from '#lib/media/utils/session.svelte.js';
 
 	// Below md the bar keeps only search, the account slot and the theme toggle; this menu
 	// carries the rest. Closes on outside pointerdown and Escape. Account links read the client

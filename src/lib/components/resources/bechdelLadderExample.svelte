@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BECHDEL_TIERS } from '$lib/media/utils/metrics';
+	import { BECHDEL_TIERS } from '#lib/media/utils/metrics.ts';
 
 	// The three cumulative criteria (levels 0–2); the fourth tier is the "passes" outcome.
 	const criteria = BECHDEL_TIERS.slice(0, 3);

@@ -1,8 +1,9 @@
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
+import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 import type { SearchResult } from './types';
-import { navigating } from '$app/stores';
+import { untrack } from 'svelte';
+import { navigating } from '$app/state';
 
 /**
  * Calls the `/api/search` endpoint and returns parsed search results. `DebouncedQuery`
@@ -53,20 +54,24 @@ export class MovieSearchState {
 		return item ? optionId(item.id, item.mediaType) : undefined;
 	}
 
-	/** Subscribe to SvelteKit navigation. Returns a teardown fn for `$effect` that also drops any pending query. */
+	/** Watches SvelteKit navigation. Returns a teardown fn for `$effect` that also drops any pending query. */
 	connect() {
 		// Clear pending navigation indicator once SvelteKit finishes (or aborts) navigation.
 		// If we initiated the navigation (a result was selected), also reset the box so the
 		// query/results don't linger on the destination page (e.g. the navbar search).
-		const navUnsub = navigating.subscribe((nav) => {
-			if (!nav) {
-				if (this.navigatingTo) this.reset();
-				this.navigatingTo = null;
-			}
+		const stopNavigation = $effect.root(() => {
+			$effect(() => {
+				if (navigating.to) return;
+				// Only `navigating.to` re-runs this: selecting a result sets `navigatingTo` before the navigation starts.
+				untrack(() => {
+					if (this.navigatingTo) this.reset();
+					this.navigatingTo = null;
+				});
+			});
 		});
 		return () => {
 			this.#query.cancel();
-			navUnsub();
+			stopNavigation();
 		};
 	}
 

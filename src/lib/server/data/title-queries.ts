@@ -1,7 +1,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { titles } from '$db/schema/titles';
-import { normalizeTitle } from '$db/lib/normalizeTitle';
+import { db } from '#lib/server/db.ts';
+import { titles } from '#db/schema/titles.ts';
+import { normalizeTitle } from '#db/lib/normalizeTitle.ts';
 import { isUniqueViolation } from './pg-errors';
 
 export type TitleRow = typeof titles.$inferSelect;

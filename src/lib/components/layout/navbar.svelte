@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import ThemeToggle from '$lib/components/theme/themeToggle.svelte';
-	import Avatar from '$lib/components/user/avatars/Avatar.svelte';
-	import { session } from '$lib/media/utils/session.svelte.js';
+	import { page } from '$app/state';
+	import ThemeToggle from '#lib/components/theme/themeToggle.svelte';
+	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
+	import { session } from '#lib/media/utils/session.svelte.js';
 	import NavbarSearch from './navbarSearch.svelte';
 	import NavbarMenu from './navbarMenu.svelte';
 
@@ -12,7 +12,7 @@
 		void session.load();
 	});
 
-	const showSearch = $derived($page.url.pathname !== '/');
+	const showSearch = $derived(page.url.pathname !== '/');
 	const canModerate = $derived(
 		session.user?.role === 'moderator' || session.user?.role === 'administrator'
 	);

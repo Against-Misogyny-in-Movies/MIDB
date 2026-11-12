@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Image from '$lib/components/movies/media/image.svelte';
-	import type { MediaDetail } from '$lib/media/types/media';
+	import Image from '#lib/components/movies/media/image.svelte';
+	import type { MediaDetail } from '#lib/media/types/media.ts';
 
 	interface Props {
 		media: MediaDetail;

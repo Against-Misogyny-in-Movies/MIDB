@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { titleHref } from '$lib/media/utils/titleHref';
+	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	let { data }: { data: PageData } = $props();
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // The Redis backend, with the optional `redis` package replaced by an in-test fake.
-vi.mock('$env/dynamic/private', () => ({ env: { REDIS_URL: 'redis://redis.test:6379' } }));
+vi.mock('$app/env/private', () => ({ REDIS_URL: 'redis://redis.test:6379' }));
 
 const client = {
 	on: vi.fn(),
@@ -14,7 +14,7 @@ const client = {
 };
 vi.mock('redis', () => ({ createClient: () => client }));
 
-const { incr } = await import('$lib/server/cache');
+const { incr } = await import('#lib/server/cache/index.ts');
 
 beforeEach(() => {
 	client.incr.mockReset();

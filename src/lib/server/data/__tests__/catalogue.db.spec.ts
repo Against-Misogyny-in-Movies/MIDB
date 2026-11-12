@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { titles } from '$db/schema/titles';
-import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
-import { db } from '$lib/server/db';
+import { titles } from '#db/schema/titles.ts';
+import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
+import { db } from '#lib/server/db.ts';
 import {
 	getCatalogueCounts,
 	getMostVotedRatedFilms,
 	getRandomRatedFilms
-} from '$lib/server/data/catalogue';
+} from '#lib/server/data/catalogue.ts';
 
 const FLAGS = {
 	noRape: false,

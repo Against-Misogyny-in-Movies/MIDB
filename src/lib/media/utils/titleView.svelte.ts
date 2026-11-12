@@ -1,7 +1,7 @@
-import type { Movie } from '$lib/media/types/movie';
-import type { Series } from '$lib/media/types/series';
-import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
-import type { UmEntry } from '$lib/media/types/um';
+import type { Movie } from '#lib/media/types/movie.ts';
+import type { Series } from '#lib/media/types/series.ts';
+import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
+import type { UmEntry } from '#lib/media/types/um.ts';
 import { umFlagCount } from './metrics';
 import {
 	scoreRepresentation,

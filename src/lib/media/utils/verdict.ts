@@ -1,5 +1,5 @@
-import type { GenderBreakdown, CastMember, CrewDepartment } from '$lib/media/types/media';
-import type { DddResult } from '$lib/media/types/ddd';
+import type { GenderBreakdown, CastMember, CrewDepartment } from '#lib/media/types/media.ts';
+import type { DddResult } from '#lib/media/types/ddd.ts';
 import { UM_FLAGS, type UmFlagKey } from './metrics';
 import { PRIORITY_DEPARTMENTS } from './departments';
 

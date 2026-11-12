@@ -1,5 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
-import type { UserRole, UserRow } from '$lib/server/data/user-queries';
+import type { UserRole, UserRow } from '#lib/server/data/user-queries.ts';
 
 type GuardOptions = {
 	/** Page loads redirect to /auth; actions and endpoints answer 401. */

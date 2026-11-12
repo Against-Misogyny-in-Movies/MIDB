@@ -61,7 +61,7 @@ Search the surrounding module before you accept a new helper, type, or branch. R
 
 - **Copies.** Two copies of the same logic are a finding. Three are a block.
 - **Constants.** A constant defined twice (a department list, an avatar key, a flag column) belongs where `.claude/rules/code-standards.md`, File organisation, puts it.
-- **Types.** A server type redeclared on the client instead of re-exported as a type from `$lib/media/types/*` is one type defined twice.
+- **Types.** A server type redeclared on the client instead of re-exported as a type from `#lib/media/types/*` is one type defined twice.
 - **Styles.** A stylesheet pattern copied into a second page is a component waiting to be extracted.
 - **Rules.** A rule copied from a rules file into an agent file, a plan or a doc is said twice.
 
@@ -87,7 +87,7 @@ Do not demand a shared abstraction for two lines that happen to look similar and
 Judge the diff against the file map in `docs/architecture.md`. A new top-level folder, or a file outside those homes, is a block.
 
 - **Route folders.** A route folder holding anything but `+page.svelte` / `+page.server.ts` / `+server.ts` is a finding, and so is logic shared by two routes living inside one of them.
-- **Imports.** Client code importing `$lib/server/**` is a block. A cross-folder relative import instead of `$lib` / `$db` is a finding.
+- **Imports.** Client code importing `#lib/server/**` is a block. A cross-folder relative import instead of `#lib` / `#db` is a finding.
 - **Database.** A schema change without its generated migration, or a hand-edited snapshot, is a block.
 - **Tests.** A spec left importing a moved function from its old path is a finding. A DB-touching test that is not a `*.db.spec.ts` is a finding.
 - **Committed files.** A committed `.env`, secret, database dump or generated build output is a block.

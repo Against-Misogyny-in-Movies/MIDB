@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { REDIS_URL } from '$app/env/private';
 
 /**
  * Server-side response cache with a swappable backend.
@@ -159,7 +159,7 @@ function createRedisBackend(url: string): Backend {
 
 // ── Backend selection ──────────────────────────────────────────────────────
 
-const backend: Backend = env.REDIS_URL ? createRedisBackend(env.REDIS_URL) : createMemoryBackend();
+const backend: Backend = REDIS_URL ? createRedisBackend(REDIS_URL) : createMemoryBackend();
 
 /**
  * Returns the cached value for `key`, or runs `fetcher`, stores its result for `ttlMs`,

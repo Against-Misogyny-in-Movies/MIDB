@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { PUBLIC_TMDB_IMAGE_URL } from '$env/static/public';
+	import { PUBLIC_TMDB_IMAGE_URL } from '$app/env/public';
 
 	// The thumbnail renders at 40x60 CSS px. TMDB's w92 (≈92px wide) covers that at
 	// 2x DPR without pulling the multi-megabyte `original` the shared Image component

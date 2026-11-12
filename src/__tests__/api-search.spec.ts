@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { error, type RequestEvent } from '@sveltejs/kit';
-import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
+import { SEARCH_QUERY_MAX_LENGTH } from '#lib/media/utils/search.ts';
 
 const searchTitles = vi.fn();
-vi.mock('$lib/server/integrations/tmdb', () => ({ searchTitles }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('#lib/server/integrations/tmdb/index.ts', () => ({ searchTitles }));
+vi.mock('$app/env/private', () => ({ REDIS_URL: undefined }));
 
 const { GET } = await import('../routes/api/search/+server');
-const { clearCache } = await import('$lib/server/cache');
+const { clearCache } = await import('#lib/server/cache/index.ts');
 
 const HIT = {
 	id: 603,

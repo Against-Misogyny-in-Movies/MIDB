@@ -1,11 +1,11 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { users } from '$db/schema/auth';
-import { communityBechdelRatings, communityUmReports, comments } from '$db/schema/community';
-import { titles } from '$db/schema/titles';
-import { AVATAR_KEYS } from '$lib/media/utils/avatars';
-import { umFlagCount } from '$lib/media/utils/metrics';
-import type { PublicUser } from '$lib/media/types/user';
+import { db } from '#lib/server/db.ts';
+import { users } from '#db/schema/auth.ts';
+import { communityBechdelRatings, communityUmReports, comments } from '#db/schema/community.ts';
+import { titles } from '#db/schema/titles.ts';
+import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
+import { umFlagCount } from '#lib/media/utils/metrics.ts';
+import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './pg-errors';
 
 export type UserRow = typeof users.$inferSelect;

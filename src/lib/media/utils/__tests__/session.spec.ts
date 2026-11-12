@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { PublicUser } from '$lib/media/types/user';
+import type { PublicUser } from '#lib/media/types/user.ts';
 
-vi.mock('$app/environment', () => ({ browser: true }));
+vi.mock('$app/env', () => ({ browser: true }));
 
-const { Session } = await import('$lib/media/utils/session.svelte.js');
+const { Session } = await import('#lib/media/utils/session.svelte.js');
 
 const MARY: PublicUser = { username: 'mary', avatarKey: null, role: 'user', displayName: 'mary' };
 

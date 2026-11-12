@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { UserRow } from '$lib/server/data/user-queries';
+import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 // toPublicUser is pure; stub the DB client so importing the module opens no connection.
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db.ts', () => ({ db: {} }));
 
-const { toPublicUser } = await import('$lib/server/data/user-queries');
+const { toPublicUser } = await import('#lib/server/data/user-queries.ts');
 
 function row(overrides: Partial<UserRow> = {}): UserRow {
 	return {

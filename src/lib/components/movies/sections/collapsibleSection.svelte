@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Badge from '$lib/components/ui/badge.svelte';
-	import type { BadgeTone } from '$lib/media/utils/tones';
+	import Badge from '#lib/components/ui/badge.svelte';
+	import type { BadgeTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
 		title: string;

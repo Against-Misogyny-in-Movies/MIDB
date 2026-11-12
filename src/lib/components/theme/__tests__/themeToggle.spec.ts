@@ -1,6 +1,6 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import ThemeToggle from '$lib/components/theme/themeToggle.svelte';
+import ThemeToggle from '#lib/components/theme/themeToggle.svelte';
 
 function stubMatchMedia(prefersDark: boolean) {
 	Object.defineProperty(window, 'matchMedia', {

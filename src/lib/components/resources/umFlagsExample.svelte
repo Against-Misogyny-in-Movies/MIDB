@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { UM_FLAGS } from '$lib/media/utils/metrics';
+	import { UM_FLAGS } from '#lib/media/utils/metrics.ts';
 </script>
 
 <figure class="example">

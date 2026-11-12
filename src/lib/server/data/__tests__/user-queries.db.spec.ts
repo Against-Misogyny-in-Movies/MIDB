@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
-import { users } from '$db/schema/auth';
-import { db } from '$lib/server/db';
-import { getOrCreateUser, isUsernameAvailable, updateProfile } from '$lib/server/data/user-queries';
+import { users } from '#db/schema/auth.ts';
+import { db } from '#lib/server/db.ts';
+import {
+	getOrCreateUser,
+	isUsernameAvailable,
+	updateProfile
+} from '#lib/server/data/user-queries.ts';
 
 const OLD = new Date('2020-01-01T00:00:00Z');
 

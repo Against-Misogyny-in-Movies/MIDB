@@ -6,8 +6,8 @@
 		formatRuntime,
 		countryName,
 		languageName
-	} from '$lib/media/utils/format';
-	import type { Movie } from '$lib/media/types/movie';
+	} from '#lib/media/utils/format.ts';
+	import type { Movie } from '#lib/media/types/movie.ts';
 
 	interface Props {
 		movie: Movie;

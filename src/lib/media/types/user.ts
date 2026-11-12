@@ -1,4 +1,4 @@
-import type { UserRole } from '$lib/server/data/user-queries';
+import type { UserRole } from '#lib/server/data/user-queries.ts';
 
 export type { UserRole };
 

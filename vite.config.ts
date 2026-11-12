@@ -1,10 +1,24 @@
+import adapter from '@sveltejs/adapter-vercel';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
+	plugins: [
+		tailwindcss(),
+		sveltekit({
+			// style: false — let @tailwindcss/vite handle <style> blocks;
+			// keeps lang="postcss" recognised by svelte-check without running
+			// a separate PostCSS pass that resolves tailwindcss from the package cache.
+			preprocess: vitePreprocess({ style: false }),
+
+			// Deployed on Vercel. See https://svelte.dev/docs/kit/adapter-vercel for its options.
+			adapter: adapter()
+		}),
+		svelteTesting()
+	],
 	test: {
 		globals: true,
 		projects: [

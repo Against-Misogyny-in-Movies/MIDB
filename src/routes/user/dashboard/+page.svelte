@@ -1,5 +1,5 @@
 <script>
-	import HankoProfile from '$lib/components/auth/hankoProfile.svelte';
+	import HankoProfile from '#lib/components/auth/hankoProfile.svelte';
 </script>
 
 <div class="account-page">

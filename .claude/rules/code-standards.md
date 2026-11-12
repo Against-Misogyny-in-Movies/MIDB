@@ -4,15 +4,16 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 ## Server / client boundary
 
-- `$lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and all DB access live here only.
-- To expose a server type to a client component, re-export it **as a type** from `$lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
+- `#lib/server/**` is a hard SvelteKit boundary: nothing client-reachable may import from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and all DB access live here only.
+- To expose a server type to a client component, re-export it **as a type** from `#lib/media/types/*`. Type-only imports are erased at build and do not leak runtime server code. See `media/types/ddd.ts` → `integrations/ddd-types.ts` as the pattern.
+- **Environment variables** are declared once in `src/env.ts` (`defineEnvVars`). Client code imports the public ones from `$app/env/public`, server code the private ones from `$app/env/private`; app code reads no setting from `process.env`.
 - `data/` = Postgres/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
   - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. The email reaches the client on `/user/profile` alone.
-  - Public pages (`PUBLIC_PAGE` from `$lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()` or read `locals.claims`.
+  - Public pages (`PUBLIC_PAGE` from `#lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()` or read `locals.claims`.
   - The navbar reads the client session (`session.svelte.js`).
-- **Authorize with the guards.** Every load, action and endpoint that needs a user calls `requireUser` / `requireRole` from `$lib/server/auth/guards.ts` (redirect for pages, 401/403 otherwise). The hook's `/user` gate is claims-only and does not cover form actions on public pages.
-- **Rate-limit with `rateLimit`** (`$lib/server/http/rate-limit.ts`):
+- **Authorize with the guards.** Every load, action and endpoint that needs a user calls `requireUser` / `requireRole` from `#lib/server/auth/guards.ts` (redirect for pages, 401/403 otherwise). The hook's `/user` gate is claims-only and does not cover form actions on public pages.
+- **Rate-limit with `rateLimit`** (`#lib/server/http/rate-limit.ts`):
   - Pass `{ userId }` only when the route already ran `requireUser`; otherwise it keys on the client IP.
   - Never read the user just to key a limit on a public or CDN-cached route.
   - Call it outside any `try` that would swallow the 429.
@@ -20,15 +21,15 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 ## Route folders are thin
 
 - Route folders (`src/routes/*/`) hold only `+page.svelte` / `+page.server.ts` / `+server.ts`. No `datasource.server.ts`.
-  - External clients live in `$lib/server/integrations/` (TMDB: `integrations/tmdb/`).
-  - The movie and TV pages share `loadTitle` (`$lib/server/titles/load-title.ts`) and `TitleView` (`$lib/media/utils/titleView.svelte.js`).
-- Logic shared by two or more routes goes in `$lib/server/` (server) or `$lib/media/` (client-safe). Never put shared logic inside a route folder.
+  - External clients live in `#lib/server/integrations/` (TMDB: `integrations/tmdb/`).
+  - The movie and TV pages share `loadTitle` (`#lib/server/titles/load-title.ts`) and `TitleView` (`#lib/media/utils/titleView.svelte.js`).
+- Logic shared by two or more routes goes in `#lib/server/` (server) or `#lib/media/` (client-safe). Never put shared logic inside a route folder.
 
 ## File organisation
 
-- **Use `$lib` and `$db` aliases** for all cross-folder imports. Relative `./` is for same-folder siblings only.
+- **Use `#lib` and `#db`** for all cross-folder imports: the subpath imports in package.json (`#lib/*` → `src/lib/*`, `#db/*` → `db/*`), with the file's extension (`#lib/media/utils/format.ts`, `#lib/components/ui/badge.svelte`). Relative `./` is for same-folder siblings only.
 - **The Node-run graph uses type stripping:** the entry points under `db/scripts/` and `scripts/` and what they import (`db/client.ts`, `db/schema/*`, `db/lib/*`, `db/test/global-setup.ts`), not Vitest specs.
-  - It uses relative `.ts` imports instead of `$lib`/`$db`, because Node cannot resolve the aliases.
+  - It uses relative `.ts` imports instead of `#lib`/`#db`, so it does not depend on the app's imports map.
   - Those imports look like `from '../client.ts'`, and the graph uses erasable syntax only (no enums, namespaces or parameter properties); `erasableSyntaxOnly` in `tsconfig.json` enforces it.
   - An entry point is guarded with `isMain(import.meta.url)` (`scripts/lib/is-main.ts`), and a script that reads `.env` is run with `--env-file-if-exists=.env`.
 - **One concern per file.** When a file mixes identity resolution, algorithm logic, and rendering, split it. Name files after what they do, not what they are adjacent to.
@@ -41,16 +42,16 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
   - Domain-specific query algorithms (e.g. UM disambiguation) → their own file (`um-candidates.ts`)
   - Public domain types with no runtime → `integrations/*-types.ts`, re-exported via `media/types/`
 - **Define a constant once.**
-  - Shared plain data lives in `$lib/media/utils/` (`departments.ts` `PRIORITY_DEPARTMENTS`, `avatars.ts` `AVATAR_DEFS`/`AVATAR_KEYS`), so server and client import the same value.
+  - Shared plain data lives in `#lib/media/utils/` (`departments.ts` `PRIORITY_DEPARTMENTS`, `avatars.ts` `AVATAR_DEFS`/`AVATAR_KEYS`), so server and client import the same value.
   - A `components/` module may hold only what needs components (the avatar key → component map).
   - Code shared by seeders and the app lives in `db/lib/` (`normalizeTitle.ts`), never in `db/scripts/`.
-- **Rune modules** (`.svelte.ts`) must be imported with an explicit `.js` extension or Vite resolves the Svelte component instead of the module. Pattern: `import { x } from './foo.svelte.js'`.
+- **Rune modules** (`.svelte.ts`) are imported as `.svelte.js` (`import { x } from '#lib/media/utils/foo.svelte.js'`, or `./foo.svelte.js` beside it). The component of the same name is imported as `foo.svelte`; the explicit extension is what tells them apart.
 
 ## Components
 
 - **`ui/` vs domain.**
   - Title-specific UI goes in domain folders (`movies/facts/`, `movies/sections/`, `movies/metrics/`, `movies/media/`, `landing/`, `search/`, …).
-  - A generic primitive goes in `$lib/components/ui/*` only once it has two real consumers (today: `badge`). Don't build unused primitives ahead of need.
+  - A generic primitive goes in `#lib/components/ui/*` only once it has two real consumers (today: `badge`). Don't build unused primitives ahead of need.
 - **Components own their styles.** A component's CSS classes should not leak into parent pages. If the same visual pattern appears in two pages, extract a component rather than duplicating the stylesheet.
 - **`@reference` depth.** `<style lang="postcss">` blocks need `@reference` pointing at `src/app.css`.
   - Count the folder depth: four `../` for components two levels deep under `movies/*`, `user/*` or `ui/*`; three for shallower ones (`layout/`, `search/`, `resources/`).
@@ -68,10 +69,10 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 ## Database
 
-- The DB layer lives in `db/` (outside `src/`), aliased as `$db/*`.
-- **App code gets `db` from `$lib/server/db` only.**
-  - It connects lazily from `DB_CONNECTION` in `$env/dynamic/private` and throws if unset.
-  - Never read the connection string at build time (no Vite `define`, no `$env/static/private`), and never add a localhost fallback.
+- The DB layer lives in `db/` (outside `src/`), imported by app code as `#db/*`.
+- **App code gets `db` from `#lib/server/db.ts` only.**
+  - It connects lazily from the dynamic `DB_CONNECTION` (`src/env.ts`, read from `$app/env/private`) and throws if unset.
+  - Never read the connection string at build time (no Vite `define`, and `DB_CONNECTION` is never `static` in `src/env.ts`), and never add a localhost fallback.
   - Scripts use `db/scripts/lib/db.ts` and close the pool when done.
 - GET routes use the **read-only** resolver `getTitleRow(kind, ref)`: page visits must never mutate the DB.
 - The write path `getOrCreateTitleRow(kind, ref)` is reserved for write endpoints (community ratings, comments).
@@ -88,7 +89,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 ## Testing
 
 - Unit tests: Vitest, co-located in `__tests__/` subfolders (`src/`, `db/`, `scripts/`). Playwright e2e specs live in top-level `e2e-tests/`.
-- **Anything touching Postgres gets a `*.db.spec.ts`**, run by `pnpm test:db` (the Vitest `db` project, a real Postgres at `TEST_DB_CONNECTION`, tables truncated before each test). Unit specs must not need a live DB: mock `$lib/server/db`.
+- **Anything touching Postgres gets a `*.db.spec.ts`**, run by `pnpm test:db` (the Vitest `db` project, a real Postgres at `TEST_DB_CONNECTION`, tables truncated before each test). Unit specs must not need a live DB: mock `#lib/server/db`.
 - When moving a function to a new file, update its test's import path. Don't leave a test importing from the old location.
 - A behaviour change ships with its test in the same change. A test that asserts the buggy result is a finding.
 

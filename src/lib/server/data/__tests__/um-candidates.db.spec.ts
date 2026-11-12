@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { umSource } from '$db/schema/sources';
-import { db } from '$lib/server/db';
-import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
+import { umSource } from '#db/schema/sources.ts';
+import { db } from '#lib/server/db.ts';
+import { getUnconsentingCandidates } from '#lib/server/data/um-candidates.ts';
 
 const FLAGS = {
 	noRape: false,

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import Avatar from '$lib/components/user/avatars/Avatar.svelte';
-	import LogoutButton from '$lib/components/auth/logoutButton.svelte';
-	import Badge from '$lib/components/ui/badge.svelte';
-	import AvatarPicker from '$lib/components/user/avatars/AvatarPicker.svelte';
-	import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
+	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
+	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
+	import Badge from '#lib/components/ui/badge.svelte';
+	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
+	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 
 	let { data, form } = $props();
 

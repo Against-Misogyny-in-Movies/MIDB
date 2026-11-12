@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # $env/static/* needs every variable defined; the placeholders are enough.
+      # Static env variables (src/env.ts) need every variable defined; the placeholders are enough.
       - name: Create .env from template
         run: cp .env.example .env
 
@@ -66,7 +66,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Unit specs mock $env/* and $lib/server/db, so no secrets, .env or database are needed.
+      # Unit specs mock $app/env/* and #lib/server/db.ts, so no secrets, .env or database are needed.
       - name: Run unit tests
         run: pnpm test:unit --run
 

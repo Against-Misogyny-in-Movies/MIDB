@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { flushSync } from 'svelte';
-import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
-import { EpisodeFilter, filterTagsByEpisode } from '$lib/media/utils/episodeFilter.svelte.js';
+import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
+import { EpisodeFilter, filterTagsByEpisode } from '#lib/media/utils/episodeFilter.svelte.js';
 
 function tag(topicItemId: number, season: number | null, episode: number | null): TriggerTag {
 	return {

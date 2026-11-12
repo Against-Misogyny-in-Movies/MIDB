@@ -1,5 +1,5 @@
-import { env } from '$env/dynamic/private';
-import { createDb, type Db } from '$db/client';
+import { DB_CONNECTION, TEST_DB_CONNECTION } from '$app/env/private';
+import { createDb, type Db } from '#db/client.ts';
 
 /**
  * The app's Drizzle client. The connection string is read from the runtime env on first use,
@@ -10,7 +10,7 @@ let client: ReturnType<typeof createDb> | undefined;
 
 function connectionUrl(): string {
 	const name = process.env.VITEST ? 'TEST_DB_CONNECTION' : 'DB_CONNECTION';
-	const url = env[name];
+	const url = process.env.VITEST ? TEST_DB_CONNECTION : DB_CONNECTION;
 	if (!url) throw new Error(`${name} is not set: the server has no database connection string.`);
 	return url;
 }

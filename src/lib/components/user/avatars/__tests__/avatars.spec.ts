@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, test } from 'vitest';
-import Avatar from '$lib/components/user/avatars/Avatar.svelte';
-import AvatarPicker from '$lib/components/user/avatars/AvatarPicker.svelte';
-import { AVATAR_COMPONENTS } from '$lib/components/user/avatars/avatars';
-import { AVATAR_DEFS, AVATAR_KEYS } from '$lib/media/utils/avatars';
+import Avatar from '#lib/components/user/avatars/Avatar.svelte';
+import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
+import { AVATAR_COMPONENTS } from '#lib/components/user/avatars/avatars.ts';
+import { AVATAR_DEFS, AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 
 import '@testing-library/jest-dom';
 

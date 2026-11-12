@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { titleHref } from '$lib/media/utils/titleHref';
+	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	let { data } = $props();
 </script>

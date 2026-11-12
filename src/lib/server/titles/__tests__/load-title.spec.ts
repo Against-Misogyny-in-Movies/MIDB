@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import type { UmEntry } from '$lib/media/types/um';
+import type { UmEntry } from '#lib/media/types/um.ts';
 
 const mocks = vi.hoisted(() => ({
 	getMovie: vi.fn(),
@@ -13,27 +13,27 @@ const mocks = vi.hoisted(() => ({
 	getTriggerTagsForSeries: vi.fn()
 }));
 
-vi.mock('$lib/server/integrations/tmdb', () => ({
+vi.mock('#lib/server/integrations/tmdb/index.ts', () => ({
 	getMovie: mocks.getMovie,
 	getSeries: mocks.getSeries
 }));
-vi.mock('$lib/server/integrations/ddd', () => ({
+vi.mock('#lib/server/integrations/ddd.ts', () => ({
 	getTriggerTagsLive: mocks.getTriggerTagsLive,
 	getTriggerTagsForSeries: mocks.getTriggerTagsForSeries
 }));
-vi.mock('$lib/server/data/title-queries', () => ({
+vi.mock('#lib/server/data/title-queries.ts', () => ({
 	getTitleRow: mocks.getTitleRow,
 	getOrCreateTitleRow: mocks.getOrCreateTitleRow
 }));
-vi.mock('$lib/server/data/sources', () => ({
+vi.mock('#lib/server/data/sources.ts', () => ({
 	getBechdel: mocks.getBechdel,
 	getUmEntry: mocks.getUmEntry
 }));
-vi.mock('$lib/server/data/um-candidates', () => ({
+vi.mock('#lib/server/data/um-candidates.ts', () => ({
 	getUnconsentingCandidates: mocks.getUnconsentingCandidates
 }));
 
-import { loadTitle } from '$lib/server/titles/load-title';
+import { loadTitle } from '#lib/server/titles/load-title.ts';
 
 const movie = { id: '603', tmdbId: '603', title: 'The Matrix', imdbId: 'tt0133093' };
 const series = { id: '1399', tmdbId: '1399', title: 'Game of Thrones', imdbId: 'tt0944947' };

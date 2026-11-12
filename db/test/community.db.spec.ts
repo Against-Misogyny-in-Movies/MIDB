@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { titles } from '$db/schema/titles';
-import { users } from '$db/schema/auth';
+import { titles } from '#db/schema/titles.ts';
+import { users } from '#db/schema/auth.ts';
 import {
 	comments,
 	communityBechdelRatings,
 	communityDddVotes,
 	communityUmReports
-} from '$db/schema/community';
-import { db } from '$lib/server/db';
+} from '#db/schema/community.ts';
+import { db } from '#lib/server/db.ts';
 
 const FLAGS = {
 	noRape: true,

@@ -1,5 +1,5 @@
 import { error, type RequestEvent } from '@sveltejs/kit';
-import { incr } from '$lib/server/cache';
+import { incr } from '#lib/server/cache/index.ts';
 
 /**
  * Fixed-window rate limit: allows `limit` requests per `windowMs` per client in `bucket`,

@@ -1,13 +1,13 @@
 import { and, count, desc, eq, isNotNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { titles } from '$db/schema/titles';
-import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
+import { db } from '#lib/server/db.ts';
+import { titles } from '#db/schema/titles.ts';
+import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
 import { toUmEntry } from './sources';
-import { umFlagCount } from '$lib/media/utils/metrics';
-import { scoreSafety } from '$lib/media/utils/verdict';
-import type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '$lib/media/types/catalogue';
+import { umFlagCount } from '#lib/media/utils/metrics.ts';
+import { scoreSafety } from '#lib/media/utils/verdict.ts';
+import type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '#lib/media/types/catalogue.ts';
 
-export type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '$lib/media/types/catalogue';
+export type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '#lib/media/types/catalogue.ts';
 
 /** Row counts of `title_bechdel` and `um_source`. */
 export async function getCatalogueCounts(): Promise<CatalogueCounts> {

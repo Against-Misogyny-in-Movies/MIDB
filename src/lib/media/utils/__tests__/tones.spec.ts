@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { bechdelTone, safetyTierTone, shareTone, umTone } from '$lib/media/utils/tones';
+import { bechdelTone, safetyTierTone, shareTone, umTone } from '#lib/media/utils/tones.ts';
 
 const NONE = {
 	noRape: false,

@@ -4,9 +4,6 @@
 		"noEmit": true
 	},
 	"include": [
-		".svelte-kit/ambient.d.ts",
-		".svelte-kit/non-ambient.d.ts",
-		".svelte-kit/types/**/$types.d.ts",
 		"src/**/*.ts",
 		"db/**/*.ts",
 		"scripts/**/*.ts",
