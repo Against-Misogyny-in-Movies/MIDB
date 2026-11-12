@@ -43,21 +43,15 @@ describe('toPublicUser', () => {
 		expect(toPublicUser(row({ username: 'mary' })).displayName).toBe('mary');
 	});
 
-	it('falls back to the email local-part without exposing the domain', () => {
+	it('never derives a name from the email', () => {
 		const pub = toPublicUser(row({ username: null, email: 'mary@example.com' }));
-		expect(pub.displayName).toBe('mary');
+		expect(pub.displayName).toBe('Account');
 		expect(JSON.stringify(pub)).not.toContain('@');
 	});
 
-	it('never shows the placeholder email of a passkey-only account', () => {
+	it('shows Account for a row with no username, a placeholder email included', () => {
 		const pub = toPublicUser(row({ username: null, email: 'abc-123@users.invalid' }));
 		expect(pub.displayName).toBe('Account');
 		expect(JSON.stringify(pub)).not.toMatch(/abc-123|invalid/);
-	});
-
-	it('treats an empty local-part as missing', () => {
-		expect(toPublicUser(row({ username: null, email: '@example.com' })).displayName).toBe(
-			'Account'
-		);
 	});
 });

@@ -4,15 +4,14 @@ import { sessions, users } from '#db/schema/auth.ts';
 import { communityBechdelRatings, communityUmReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
+import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import { umFlagCount } from '#lib/media/utils/metrics.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
-import { realEmail } from '#lib/server/auth/placeholder-email.ts';
 import { isUniqueViolation } from './db-errors.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
 
-const USERNAME_RE = /^[a-z0-9_]{3,32}$/;
 const RESERVED = new Set([
 	'admin',
 	'administrator',
@@ -25,9 +24,9 @@ const RESERVED = new Set([
 ]);
 
 /**
- * Map a row to the client-safe shape. The real email is used only for the display-name
- * fallback and never copied: it reaches the client on /user/profile alone. A placeholder email
- * (`realEmail` is null) never shows.
+ * Map a row to the client-safe shape. The email is never copied: it reaches the client on
+ * /user/profile alone. Every account has a generated or chosen username, which is its display
+ * name; only a row with none shows "Account".
  */
 export function toPublicUser(row: UserRow): PublicUser {
 	return {
@@ -35,7 +34,7 @@ export function toPublicUser(row: UserRow): PublicUser {
 		username: row.username,
 		avatarKey: row.avatarKey,
 		role: row.role,
-		displayName: row.username || realEmail(row)?.split('@')[0] || 'Account'
+		displayName: row.username || 'Account'
 	};
 }
 

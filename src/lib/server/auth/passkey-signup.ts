@@ -1,7 +1,7 @@
 import type { AuthEndpointContext } from './types.ts';
 import { placeholderEmail } from './placeholder-email.ts';
 
-/** The label a passkey-only account shows until a username is set. */
+/** The name the authenticator lists the passkey under; the account's public name is its generated username. */
 const NEW_ACCOUNT_NAME = 'MIDB account';
 
 type RegistrationUser = { id: string; name: string; displayName?: string };

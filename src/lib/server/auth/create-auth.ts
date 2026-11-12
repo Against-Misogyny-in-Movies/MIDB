@@ -2,12 +2,14 @@ import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { passkey } from '@better-auth/passkey';
+import { sql } from 'drizzle-orm';
 import type { Db } from '#db/client.ts';
 import { accounts, passkeys, sessions, users, verifications } from '#db/schema/auth.ts';
 import { adoptProviderEmail } from './link-email.ts';
 import { guardLastMethod } from './last-method.ts';
 import { guardPasskeySignUp } from './turnstile.ts';
 import { createPasskeyUser, resolveNewPasskeyUser } from './passkey-signup.ts';
+import { generateUsername } from './generate-username.ts';
 
 export type OAuthCredentials = { clientId: string; clientSecret: string };
 
@@ -132,6 +134,24 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 							throw new APIError('FORBIDDEN', { message: 'This account is banned.' });
 						}
 					}
+				}
+			},
+			user: {
+				create: {
+					// Every new account, whatever the sign-up path, gets a generated username. The
+					// reader changes it on /user/profile.
+					before: async (user) => ({
+						data: {
+							...user,
+							username: await generateUsername(async (candidate) => {
+								const taken = await db.query.users.findFirst({
+									where: sql`lower(${users.username}) = ${candidate}`,
+									columns: { id: true }
+								});
+								return Boolean(taken);
+							})
+						}
+					})
 				}
 			},
 			account: { create: { after: adoptProviderEmail } }

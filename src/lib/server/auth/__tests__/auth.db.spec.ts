@@ -6,6 +6,7 @@ import { accounts, sessions, users } from '#db/schema/auth.ts';
 import { userValues } from '#db/test/users.ts';
 import { db } from '#lib/server/db.ts';
 import { banUser } from '#lib/server/data/user-queries.ts';
+import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import { createAuth } from '../create-auth.ts';
 import { adoptProviderEmail } from '../link-email.ts';
 import { createPasskeyUser, resolveNewPasskeyUser } from '../passkey-signup.ts';
@@ -54,7 +55,7 @@ describe('passkey sign-up', () => {
 		expect(row.email).toBe(`${resolved.id}@users.invalid`);
 		expect(row.emailVerified).toBe(false);
 		expect(row.role).toBe('user');
-		expect(row.username).toBeNull();
+		expect(row.username).toMatch(USERNAME_RE);
 		expect(row.bannedAt).toBeNull();
 	});
 
@@ -63,6 +64,46 @@ describe('passkey sign-up', () => {
 		const result = await createPasskeyUser(asCtx(), { id: 'user-1', name: 'x' });
 		expect(result).toEqual({ userId: 'user-1' });
 		expect(await db.select().from(users)).toHaveLength(1);
+	});
+});
+
+describe('generated usernames', () => {
+	const oauthSignUp = async (providerId: string, email: string) =>
+		handleOAuthUserInfo(
+			{ context: await auth.$context } as unknown as Parameters<typeof handleOAuthUserInfo>[0],
+			{
+				userInfo: { id: `${providerId}-${email}`, email, emailVerified: true, name: 'Mary' },
+				account: { providerId, accountId: `${providerId}-${email}`, accessToken: 'at' }
+			}
+		);
+
+	it('gives a passkey sign-up a valid username', async () => {
+		const { userId } = await createPasskeyUser(asCtx(), resolveNewPasskeyUser());
+		const [row] = await db.select().from(users).where(eq(users.id, userId));
+		expect(row.username).toMatch(USERNAME_RE);
+	});
+
+	it.each(['google', 'discord'])('gives a %s sign-up a valid username', async (providerId) => {
+		const result = await oauthSignUp(providerId, `${providerId}@example.com`);
+		expect(result.error).toBeNull();
+		const [row] = await db.select().from(users);
+		expect(row.username).toMatch(USERNAME_RE);
+	});
+
+	it('gives every account its own username', async () => {
+		for (let i = 0; i < 20; i++) await createPasskeyUser(asCtx(), resolveNewPasskeyUser());
+		await oauthSignUp('google', 'a@example.com');
+		const names = (await db.select({ username: users.username }).from(users)).map((r) =>
+			r.username?.toLowerCase()
+		);
+		expect(new Set(names).size).toBe(21);
+	});
+
+	it('keeps a username that was already set', async () => {
+		await db.insert(users).values(userValues('user-1', { username: 'mary' }));
+		await createPasskeyUser(asCtx(), { id: 'user-1', name: 'x' });
+		const [row] = await db.select().from(users);
+		expect(row.username).toBe('mary');
 	});
 });
 

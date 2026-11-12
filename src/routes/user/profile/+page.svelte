@@ -56,11 +56,7 @@
 		<Avatar avatarKey={user?.avatarKey} size={64} />
 		<div class="profile-meta">
 			<h1 class="display">
-				{#if user?.username}
-					{user.username}
-				{:else}
-					<span class="prompt">Set a username</span>
-				{/if}
+				{user?.username ?? 'Account'}
 			</h1>
 			<p class="details">
 				{#if data.email}<span>{data.email}</span>{/if}
@@ -111,7 +107,7 @@
 				{#if availability === 'checking'}Checking…
 				{:else if availability === 'available'}Available
 				{:else if availability === 'taken'}Already taken
-				{:else}Lowercase letters, numbers and underscores.
+				{:else}Shown on comments. Change it here: lowercase letters, numbers and underscores.
 				{/if}
 			</p>
 		</div>
@@ -165,10 +161,6 @@
 	h1 {
 		@apply truncate;
 		font-size: 1.875rem;
-	}
-
-	.prompt {
-		@apply text-ink-muted;
 	}
 
 	.details {

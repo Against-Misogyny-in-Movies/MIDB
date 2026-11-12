@@ -21,14 +21,14 @@ Accounts are handled by MIDB itself with Better Auth, which runs inside MIDB's W
 - **MIDB's own database** (Cloudflare D1) stores, for each account:
   - the account id, a display name, and the email address (a passkey-only account has a placeholder address under `users.invalid` that is never shown or used);
   - the role (user, moderator or administrator) and any ban or mute;
-  - the username and avatar the account holder picks;
+  - the username and avatar the account holder picks (a new account starts with a generated username, a feminist figure's name and four digits, which the account holder can change);
   - each linked Google or Discord account: the account id, a display name, the email address, and the picture URL Google or Discord sent; the access and refresh tokens it returned, encrypted with a key derived from the site's secret; the ID token; their expiry and the granted scope;
   - each passkey: its public key and credential id, a label, the authenticator model (AAGUID), its type, whether it is backed up, its transports, a use counter, and when it was made. The private key stays on the reader's device. A new passkey is labelled with the browser and system it was made on, such as "Chrome on macOS", until the account holder renames it;
   - each session: a token, its expiry, the IP address and browser that started it.
 - **Cookies:** `better-auth.session_token` identifies the session and lasts seven days. `better-auth.session_data` holds a signed copy of the session for five minutes, so a request within that time skips the session lookup. A passkey or Google or Discord sign-in sets one more short-lived cookie while it runs. None of these can be read by page scripts. On HTTPS each of these names starts with `__Secure-`. `midb_hint` is a separate cookie that page scripts set while a reader is signed in, for seven days. Its value is `1`: it holds no identity, the server does not read it, and the page only uses it to draw the account button before the account is known. Signing out removes it.
 - **Bot check:** creating an account with a passkey can require a Cloudflare Turnstile check, which sees the reader's browser and IP address. Cloudflare's script loads from `challenges.cloudflare.com` only when a reader starts creating an account on the sign-in page, and only when a Turnstile site key is configured; no other page loads it.
 
-The email address is shown only on the account's own profile page. Other readers see only the username and avatar. Signing out ends the session and clears the cookies. Better Auth's telemetry is off, so nothing about the site is sent to its authors.
+The email address is shown only on the account's own profile page. Other readers see only the username and avatar. The username, generated or chosen, is public on the account's comments. Signing out ends the session and clears the cookies. Better Auth's telemetry is off, so nothing about the site is sent to its authors.
 
 ## Ratings and comments
 
