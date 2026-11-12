@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { bechdelTone, safetyTierTone, shareTone, umTone } from '#lib/media/utils/tones.ts';
+import {
+	bechdelTone,
+	commentStatusTone,
+	safetyTierTone,
+	shareTone,
+	umTone
+} from '#lib/media/utils/tones.ts';
 
 const NONE = {
 	noRape: false,
@@ -14,6 +20,12 @@ const NONE = {
 };
 
 describe('tones', () => {
+	test('commentStatusTone: awaiting review copper, rejected and hidden raspberry', () => {
+		expect(
+			(['pending', 'published', 'rejected', 'hidden', 'deleted'] as const).map(commentStatusTone)
+		).toEqual(['mid', 'pos', 'neg', 'neg', 'neutral']);
+	});
+
 	test('bechdelTone follows the verdict mapping', () => {
 		expect([3, 2, 1, 0].map(bechdelTone)).toEqual(['pos', 'mid', 'neg', 'neg']);
 	});

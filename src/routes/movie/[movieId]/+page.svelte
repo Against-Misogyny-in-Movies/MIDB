@@ -5,6 +5,7 @@
 	import SourceIndex from '#lib/components/movies/facts/sourceIndex.svelte';
 	import VerdictPanel from '#lib/components/movies/facts/verdictPanel.svelte';
 	import CastAndCrew from '#lib/components/movies/facts/castAndCrew.svelte';
+	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
@@ -81,6 +82,10 @@
 		<CollapsibleSection title="Details" icon="ri-film-fill" hue="var(--src-tmdb)">
 			<FactGrid {movie} />
 		</CollapsibleSection>
+
+		{#key movie.tmdbId}
+			<CommentsSection kind="movie" tmdbId={movie.tmdbId} />
+		{/key}
 	</div>
 </article>
 

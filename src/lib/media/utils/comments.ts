@@ -39,3 +39,25 @@ export const moderationAction = [
 
 /** Distinct open reports that move a published comment back to review. */
 export const REPORT_THRESHOLD = 3;
+
+/** The reason names a reader picks from, in the order the report form lists them. */
+export const REPORT_REASON_LABELS: Record<(typeof reportReason)[number], string> = {
+	hate: 'Hate or bigotry',
+	harassment: 'Harassment',
+	spam: 'Spam',
+	'sexual-content': 'Sexual content',
+	threat: 'Threat',
+	other: 'Other'
+};
+
+/** What a comment's status reads as to its author. */
+export const COMMENT_STATUS_LABELS: Record<(typeof commentStatus)[number], string> = {
+	pending: 'Awaiting review',
+	published: 'Published',
+	hidden: 'Hidden',
+	rejected: 'Rejected',
+	deleted: 'Deleted'
+};
+
+/** Hours without a successful source sync after which moderators see a warning. */
+export const STALE_SYNC_HOURS = 48;
