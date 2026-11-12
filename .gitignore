@@ -8,4 +8,10 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+.wrangler
+.dev.vars
+.dev.vars.*
+/test-results
+/playwright-report
+
 .vercel

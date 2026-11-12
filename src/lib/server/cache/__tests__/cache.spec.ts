@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
-
-const { getCached, incr, clearCache } = await import('$lib/server/cache');
+import { getCached, incr, clearCache } from '#lib/server/cache/index.ts';
 
 beforeEach(async () => {
 	vi.useFakeTimers();
@@ -10,6 +8,7 @@ beforeEach(async () => {
 });
 afterEach(() => vi.useRealTimers());
 
+// Node has no `caches`, so these run on the memory backend alone.
 describe('memory backend', () => {
 	it('getCached stores the fetched value for the TTL', async () => {
 		const fetcher = vi.fn(async () => 'v');
@@ -18,6 +17,14 @@ describe('memory backend', () => {
 		expect(fetcher).toHaveBeenCalledOnce();
 		vi.advanceTimersByTime(1000);
 		await getCached('k', 1000, fetcher);
+		expect(fetcher).toHaveBeenCalledTimes(2);
+	});
+
+	it('getCached takes the TTL from the fetched value when given a function', async () => {
+		const fetcher = vi.fn(async () => 'short');
+		await getCached('k', (value) => (value === 'short' ? 100 : 5000), fetcher);
+		vi.advanceTimersByTime(100);
+		await getCached('k', (value) => (value === 'short' ? 100 : 5000), fetcher);
 		expect(fetcher).toHaveBeenCalledTimes(2);
 	});
 

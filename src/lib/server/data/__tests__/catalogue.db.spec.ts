@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { titles } from '$db/schema/titles';
-import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
-import { db } from '$lib/server/db';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { titles } from '#db/schema/titles.ts';
+import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
+import { db } from '#lib/server/db.ts';
+import { clearCache } from '#lib/server/cache/index.ts';
 import {
 	getCatalogueCounts,
-	getMostVotedRatedFilms,
+	getPopularRatedFilms,
 	getRandomRatedFilms
-} from '$lib/server/data/catalogue';
+} from '#lib/server/data/catalogue.ts';
 
 const FLAGS = {
 	noRape: false,
@@ -20,12 +21,29 @@ const FLAGS = {
 	rapeOnScreen: false
 };
 
-async function film(title: string, numVotes: number, rating: number, tmdbId: number | null) {
+// The landing queries are cached for an hour; each test starts from an empty cache.
+beforeEach(() => clearCache());
+
+async function film(
+	title: string,
+	popularity: number | null,
+	rating: number,
+	tmdbId: number | null
+) {
 	const [row] = await db
 		.insert(titles)
-		.values({ kind: 'movie', title, cleanTitle: title.toLowerCase(), year: 2000, tmdbId })
+		.values({
+			kind: 'movie',
+			title,
+			cleanTitle: title.toLowerCase(),
+			year: 2000,
+			tmdbId,
+			popularity
+		})
 		.returning();
-	await db.insert(titleBechdel).values({ titleId: row.id, bechdelId: numVotes, rating, numVotes });
+	await db
+		.insert(titleBechdel)
+		.values({ titleId: row.id, bechdelId: Math.round(popularity ?? 0) + 1, rating });
 	return row;
 }
 
@@ -38,8 +56,8 @@ describe('getCatalogueCounts', () => {
 	});
 });
 
-describe('getMostVotedRatedFilms', () => {
-	it('orders by votes and reads the bound UM entry', async () => {
+describe('getPopularRatedFilms', () => {
+	it('orders by popularity and reads the bound UM entry', async () => {
 		await film('Quiet', 5, 1, null);
 		const loud = await film('Loud', 50, 3, 603);
 		await db.insert(umSource).values({
@@ -52,7 +70,7 @@ describe('getMostVotedRatedFilms', () => {
 		});
 		await db.insert(titleUm).values({ titleId: loud.id, umId: 9 });
 
-		const films = await getMostVotedRatedFilms(5);
+		const films = await getPopularRatedFilms(5);
 		expect(films).toEqual([
 			{
 				title: 'Loud',
@@ -87,7 +105,7 @@ describe('getMostVotedRatedFilms', () => {
 			{ titleId: b.id, umId: 2 }
 		]);
 
-		const films = await getMostVotedRatedFilms();
+		const films = await getPopularRatedFilms();
 		expect(films.map((f) => [f.title, f.umConcerns, f.umTier])).toEqual([
 			['Caution', 1, 'caution'],
 			['Clear', 0, 'safe']
@@ -100,16 +118,60 @@ describe('getMostVotedRatedFilms', () => {
 		await db.insert(umSource).values({ umId: 5, cleanName: 'b', cleanTitleKey: 'b', ...FLAGS });
 		await db.insert(titleUm).values({ titleId: bound.id, umId: 5 });
 
-		expect((await getMostVotedRatedFilms(5)).map((f) => f.title)).toEqual(['Unbound', 'Bound']);
-		expect((await getMostVotedRatedFilms(5, { requireUmEntry: true })).map((f) => f.title)).toEqual(
-			['Bound']
-		);
+		expect((await getPopularRatedFilms(5)).map((f) => f.title)).toEqual(['Unbound', 'Bound']);
+		expect((await getPopularRatedFilms(5, { requireUmEntry: true })).map((f) => f.title)).toEqual([
+			'Bound'
+		]);
+	});
+});
+
+describe('getPopularRatedFilms ordering', () => {
+	it('puts films without a popularity last', async () => {
+		await film('Unscored', null, 3, 1);
+		await film('Low', 1.5, 3, 2);
+		await film('High', 80.25, 3, 3);
+		expect((await getPopularRatedFilms(5)).map((f) => f.title)).toEqual([
+			'High',
+			'Low',
+			'Unscored'
+		]);
+	});
+});
+
+describe('landing queries are cached', () => {
+	it('serves counts and the hero pool from the cache until it is cleared', async () => {
+		await film('A', 10, 3, 1);
+		expect((await getCatalogueCounts()).bechdelRatings).toBe(1);
+		const row = await film('B', 20, 3, 2);
+		await db.insert(umSource).values({ umId: 9, cleanName: 'b', cleanTitleKey: 'b', ...FLAGS });
+		await db.insert(titleUm).values({ titleId: row.id, umId: 9 });
+		expect(await getRandomRatedFilms(6)).toHaveLength(1);
+
+		await film('C', 30, 3, 3);
+		expect((await getCatalogueCounts()).bechdelRatings).toBe(1);
+		await clearCache();
+		expect((await getCatalogueCounts()).bechdelRatings).toBe(3);
+	});
+
+	it('shuffles per call from one cached pool', async () => {
+		for (let i = 1; i <= 8; i++) {
+			const row = await film(`F${i}`, i, 3, i);
+			await db
+				.insert(umSource)
+				.values({ umId: i, cleanName: `f${i}`, cleanTitleKey: `f${i}`, ...FLAGS });
+			await db.insert(titleUm).values({ titleId: row.id, umId: i });
+		}
+		const orders = new Set<string>();
+		for (let i = 0; i < 12; i++) {
+			orders.add((await getRandomRatedFilms(8)).map((f) => f.title).join());
+		}
+		expect(orders.size).toBeGreaterThan(1);
 	});
 });
 
 describe('getRandomRatedFilms', () => {
-	async function bound(title: string, numVotes: number, tmdbId: number | null, umId: number) {
-		const row = await film(title, numVotes, 3, tmdbId);
+	async function bound(title: string, popularity: number, tmdbId: number | null, umId: number) {
+		const row = await film(title, popularity, 3, tmdbId);
 		await db.insert(umSource).values({ umId, cleanName: title, cleanTitleKey: title, ...FLAGS });
 		await db.insert(titleUm).values({ titleId: row.id, umId });
 	}
@@ -121,7 +183,7 @@ describe('getRandomRatedFilms', () => {
 		expect((await getRandomRatedFilms(6)).map((f) => f.title)).toEqual(['Linked']);
 	});
 
-	it('draws only from the most-voted pool, up to count', async () => {
+	it('draws only from the most popular pool, up to count', async () => {
 		await bound('Top', 30, 1, 1);
 		await bound('Second', 20, 2, 2);
 		await bound('Third', 10, 3, 3);

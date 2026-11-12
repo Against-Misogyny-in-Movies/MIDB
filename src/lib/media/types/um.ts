@@ -1,1 +1,1 @@
-export type { UmEntry, UmFlagKey } from '$lib/media/utils/metrics';
+export type { UmEntry, UmFlagKey } from '#lib/media/utils/metrics.ts';

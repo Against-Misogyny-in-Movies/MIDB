@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { filmSentence } from '$lib/media/utils/filmSentence';
-import type { RatedFilm } from '$lib/media/types/catalogue';
+import { filmSentence } from '#lib/media/utils/filmSentence.ts';
+import type { RatedFilm } from '#lib/media/types/catalogue.ts';
 
 const film = (over: Partial<RatedFilm>): RatedFilm => ({
 	title: 'X',

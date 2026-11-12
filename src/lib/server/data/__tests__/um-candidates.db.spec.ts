@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { umSource } from '$db/schema/sources';
-import { db } from '$lib/server/db';
-import { getUnconsentingCandidates } from '$lib/server/data/um-candidates';
+import { umSource } from '#db/schema/sources.ts';
+import { db } from '#lib/server/db.ts';
+import { getUnconsentingCandidates } from '#lib/server/data/um-candidates.ts';
 
 const FLAGS = {
 	noRape: false,
@@ -49,7 +49,7 @@ describe('getUnconsentingCandidates', () => {
 		await insertUm(1, 'dracula', 1931);
 		await insertUm(2, 'dracula', 1992);
 		const result = await getUnconsentingCandidates(ref('Dracula', ''));
-		expect(result.map((c) => c.umId).sort()).toEqual([1, 2]);
+		expect(result.map((c) => c.umId).sort((a, b) => a - b)).toEqual([1, 2]);
 	});
 
 	it('returns nothing when the year is known and no entry shares it', async () => {

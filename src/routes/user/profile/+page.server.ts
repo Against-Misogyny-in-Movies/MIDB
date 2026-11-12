@@ -1,19 +1,25 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { requireUser } from '$lib/server/auth/guards';
-import { toPublicUser, updateProfile } from '$lib/server/data/user-queries';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { realEmail } from '#lib/server/auth/placeholder-email.ts';
+import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 
 // The one page allowed to send the email to the client; everything else uses PublicUser.
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await requireUser(locals, { page: true });
-	return { email: user.email };
+	return { email: realEmail(user) };
 };
 
 export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {
 		const user = await requireUser(locals);
 		const data = await request.formData();
-		const username = (data.get('username') as string | null)?.trim() || undefined;
+		const rawUsername = data.get('username');
+		// A file part is not a username: fail like any other invalid one.
+		if (rawUsername !== null && typeof rawUsername !== 'string') {
+			return fail(422, { error: 'username-format' });
+		}
+		const username = rawUsername?.trim() || undefined;
 		const avatarKey = (data.get('avatarKey') as string | null) || undefined;
 
 		if (!username && !avatarKey) {

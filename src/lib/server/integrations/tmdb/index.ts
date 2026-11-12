@@ -1,7 +1,7 @@
-import type { Movie } from '$lib/media/types/movie';
-import type { Series } from '$lib/media/types/series';
-import type { SearchResult } from '$lib/components/search/types';
-import { getCached } from '$lib/server/cache';
+import type { Movie } from '#lib/media/types/movie.ts';
+import type { Series } from '#lib/media/types/series.ts';
+import type { SearchResult } from '#lib/components/search/types.ts';
+import { getCached } from '#lib/server/cache/index.ts';
 import { TMDB_SEARCH_TTL_MS, tmdbCached, tmdbFetch } from './client';
 import {
 	mapMovie,

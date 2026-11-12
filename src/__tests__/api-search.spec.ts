@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { error, type RequestEvent } from '@sveltejs/kit';
-import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
+import { SEARCH_QUERY_MAX_LENGTH } from '#lib/media/utils/search.ts';
 
 const searchTitles = vi.fn();
-vi.mock('$lib/server/integrations/tmdb', () => ({ searchTitles }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('#lib/server/integrations/tmdb/index.ts', () => ({ searchTitles }));
 
 const { GET } = await import('../routes/api/search/+server');
-const { clearCache } = await import('$lib/server/cache');
+const { clearCache } = await import('#lib/server/cache/index.ts');
 
 const HIT = {
 	id: 603,
@@ -33,7 +32,8 @@ beforeEach(async () => {
 describe('GET /api/search', () => {
 	it('returns the results with the public search cache-control', async () => {
 		const res = await call('  matrix ');
-		expect(res.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=600');
+		expect(res.headers.get('cache-control')).toBe('max-age=60');
+		expect(res.headers.get('cdn-cache-control')).toBe('max-age=600');
 		await expect(res.json()).resolves.toEqual({ results: [HIT] });
 		expect(searchTitles).toHaveBeenCalledWith('matrix');
 	});

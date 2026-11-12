@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SafetyVerdict, RepVerdict } from '$lib/media/utils/verdict';
+	import type { SafetyVerdict, RepVerdict } from '#lib/media/utils/verdict.ts';
 	import VerdictCard from './verdictCard.svelte';
 
 	interface Props {

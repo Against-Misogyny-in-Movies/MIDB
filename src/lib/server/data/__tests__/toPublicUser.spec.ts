@@ -1,34 +1,41 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { UserRow } from '$lib/server/data/user-queries';
+import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 // toPublicUser is pure; stub the DB client so importing the module opens no connection.
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db.ts', () => ({ db: {} }));
 
-const { toPublicUser } = await import('$lib/server/data/user-queries');
+const { toPublicUser } = await import('#lib/server/data/user-queries.ts');
 
 function row(overrides: Partial<UserRow> = {}): UserRow {
 	return {
-		id: 'hanko-sub-1',
+		id: 'user-1',
+		name: 'Mary',
 		email: 'mary@example.com',
+		emailVerified: true,
+		image: null,
 		role: 'user',
 		username: null,
 		avatarKey: null,
+		bannedAt: null,
+		banReason: null,
+		mutedUntil: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides
-	} as UserRow;
+	};
 }
 
 describe('toPublicUser', () => {
-	it('keeps only the public fields: no email, no id, no timestamps', () => {
+	it('keeps only the public fields: the opaque id, no email, no timestamps', () => {
 		const pub = toPublicUser(row({ username: 'mary', avatarKey: 'kahlo', role: 'moderator' }));
 		expect(pub).toEqual({
+			id: 'user-1',
 			username: 'mary',
 			avatarKey: 'kahlo',
 			role: 'moderator',
 			displayName: 'mary'
 		});
-		expect(Object.keys(pub).sort()).toEqual(['avatarKey', 'displayName', 'role', 'username']);
+		expect(Object.keys(pub).sort()).toEqual(['avatarKey', 'displayName', 'id', 'role', 'username']);
 		expect(JSON.stringify(pub)).not.toContain('example.com');
 	});
 
@@ -36,19 +43,15 @@ describe('toPublicUser', () => {
 		expect(toPublicUser(row({ username: 'mary' })).displayName).toBe('mary');
 	});
 
-	it('falls back to the email local-part without exposing the domain', () => {
+	it('never derives a name from the email', () => {
 		const pub = toPublicUser(row({ username: null, email: 'mary@example.com' }));
-		expect(pub.displayName).toBe('mary');
+		expect(pub.displayName).toBe('Account');
 		expect(JSON.stringify(pub)).not.toContain('@');
 	});
 
-	it('falls back to "Account" with neither username nor email', () => {
-		expect(toPublicUser(row({ username: null, email: null })).displayName).toBe('Account');
-	});
-
-	it('treats an empty local-part as missing', () => {
-		expect(toPublicUser(row({ username: null, email: '@example.com' })).displayName).toBe(
-			'Account'
-		);
+	it('shows Account for a row with no username, a placeholder email included', () => {
+		const pub = toPublicUser(row({ username: null, email: 'abc-123@users.invalid' }));
+		expect(pub.displayName).toBe('Account');
+		expect(JSON.stringify(pub)).not.toMatch(/abc-123|invalid/);
 	});
 });

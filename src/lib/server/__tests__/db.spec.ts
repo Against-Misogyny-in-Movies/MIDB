@@ -1,51 +1,49 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { env } from 'cloudflare:workers';
+import { resetCloudflareStub } from '#test/cloudflare-workers.stub.ts';
 
-const env: Record<string, string | undefined> = {};
-vi.mock('$env/dynamic/private', () => ({ env }));
+const createDb = vi.fn((d1: unknown) => ({ marker: 'db', d1 }));
+vi.mock('#db/client.ts', () => ({ createDb }));
 
-const createDb = vi.fn(() => ({ db: { marker: 'db' }, sql: { end: vi.fn() } }));
-vi.mock('$db/client', () => ({ createDb }));
+const { db, bindDb } = await import('#lib/server/db.ts');
 
-const { db, closeDb } = await import('$lib/server/db');
+const marker = () => (db as unknown as { marker: string }).marker;
+const d1 = (name: string) => ({ name }) as unknown as D1Database;
 
-afterEach(async () => {
-	await closeDb();
-	vi.unstubAllEnvs();
+beforeEach(() => {
+	resetCloudflareStub();
 	createDb.mockClear();
-	for (const key of Object.keys(env)) delete env[key];
 });
 
-describe('$lib/server/db', () => {
-	it('opens no connection on import', () => {
+afterEach(() => bindDb(undefined));
+
+describe('#lib/server/db.ts', () => {
+	it('builds no client on import', () => {
 		expect(createDb).not.toHaveBeenCalled();
 	});
 
-	it('throws a clear error on first use when DB_CONNECTION is unset', () => {
-		vi.stubEnv('VITEST', '');
-		expect(() => db.select).toThrow('DB_CONNECTION is not set');
+	it('throws a clear error on first use when the DB binding is missing', () => {
+		expect(() => db.select).toThrow('The D1 binding "DB" is not available');
 		expect(createDb).not.toHaveBeenCalled();
 	});
 
-	it('has no localhost fallback outside tests', () => {
-		vi.stubEnv('VITEST', '');
-		env.TEST_DB_CONNECTION = 'postgres://test';
-		expect(() => db.select).toThrow('DB_CONNECTION is not set');
-	});
-
-	it('connects lazily to DB_CONNECTION, once', () => {
-		vi.stubEnv('VITEST', '');
-		env.DB_CONNECTION = 'postgres://runtime';
-		expect((db as unknown as { marker: string }).marker).toBe('db');
-		expect((db as unknown as { marker: string }).marker).toBe('db');
+	it('builds the client lazily from env.DB, once per binding', () => {
+		const binding = d1('worker');
+		env.DB = binding;
+		expect(marker()).toBe('db');
+		expect(marker()).toBe('db');
 		expect(createDb).toHaveBeenCalledOnce();
-		expect(createDb).toHaveBeenCalledWith('postgres://runtime');
+		expect(createDb).toHaveBeenCalledWith(binding);
 	});
 
-	it('under Vitest reads TEST_DB_CONNECTION only, never DB_CONNECTION', () => {
-		env.DB_CONNECTION = 'postgres://dev';
-		expect(() => db.select).toThrow('TEST_DB_CONNECTION is not set');
-		env.TEST_DB_CONNECTION = 'postgres://test';
-		expect((db as unknown as { marker: string }).marker).toBe('db');
-		expect(createDb).toHaveBeenCalledWith('postgres://test');
+	it('bindDb overrides env.DB, and undefined restores it', () => {
+		env.DB = d1('worker');
+		const override = d1('override');
+		bindDb(override);
+		expect(marker()).toBe('db');
+		expect(createDb).toHaveBeenLastCalledWith(override);
+		bindDb(undefined);
+		expect(marker()).toBe('db');
+		expect(createDb).toHaveBeenLastCalledWith(env.DB);
 	});
 });

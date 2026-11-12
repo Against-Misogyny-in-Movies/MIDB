@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Badge from '$lib/components/ui/badge.svelte';
-	import type { BadgeTone } from '$lib/media/utils/tones';
+	import Badge from '#lib/components/ui/badge.svelte';
+	import type { BadgeTone } from '#lib/media/utils/tones.ts';
 
 	// Mirrors SAFETY_META / REP_META in verdict.ts (kept in sync by hand).
 	const groups: { axis: string; tiers: { label: string; tone: BadgeTone }[] }[] = [

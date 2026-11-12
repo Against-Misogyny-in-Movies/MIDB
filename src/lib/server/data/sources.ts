@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
-import type { UmEntry } from '$lib/media/types/um';
+import { db } from '#lib/server/db.ts';
+import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
+import type { UmEntry } from '#lib/media/types/um.ts';
 
 export type BechdelData = typeof titleBechdel.$inferSelect;
 type UmSourceRow = typeof umSource.$inferSelect;

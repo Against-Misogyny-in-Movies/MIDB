@@ -10,6 +10,8 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only token: pull requests from forks run with no write access. Actions are pinned to a
+# commit, not a movable tag; Dependabot (.github/dependabot.yml) proposes the updates.
 permissions:
   contents: read
 
@@ -19,45 +21,58 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          bun-version: 1.4.4
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      # $env/static/* needs every variable defined; the placeholders are enough.
+      # Static env variables (src/env.ts) need every variable defined; the placeholders are enough.
       - name: Create .env from template
         run: cp .env.example .env
 
       - name: Typecheck
-        run: bun run check
+        run: pnpm check
+
+      - name: Typecheck with TypeScript 7
+        run: pnpm typecheck
 
       - name: Lint
-        run: bun run lint
+        run: pnpm lint
 
       - name: Build
-        run: bun run build
+        run: pnpm build
 
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          bun-version: 1.4.4
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      # Unit specs mock $env/* and $lib/server/db, so no secrets, .env or database are needed.
+      # Specs mock $app/env/* and #lib/server/db.ts, so no secrets or database are needed, but the
+      # SvelteKit plugin validates the static public values (src/env.ts) when Vitest loads the config.
+      - name: Create .env from template
+        run: cp .env.example .env
+
       - name: Run unit tests
-        run: bun run test:unit --run
+        run: pnpm test:unit --run
 
   # Fails when a schema file changed without a committed migration. Needs no database;
   # a drizzle-kit prompt (rename vs create) also fails it, because CI has no TTY.
@@ -66,114 +81,152 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          bun-version: 1.4.4
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Generate migrations from the schema
-        run: bunx drizzle-kit generate --name drift_check
+        run: pnpm exec drizzle-kit generate --name drift_check
 
       - name: Fail on uncommitted migration changes
         run: |
           if [ -n "$(git status --porcelain db/migrations)" ]; then
-            echo "Schema changed without a committed migration (run bun run db:generate):"
+            echo "Schema changed without a committed migration (run pnpm db:generate):"
             git status --porcelain db/migrations
             git diff db/migrations
             exit 1
           fi
 
-  # Data-layer tests against a real Postgres. global-setup migrates the empty database
-  # from zero, so this job also proves the migration chain applies cleanly.
+  # Data-layer tests against a local D1 (Miniflare, through wrangler): no service and no secrets.
+  # global-setup migrates the empty state from zero, so this job also proves the migration chain
+  # applies cleanly.
   db:
     name: DB tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      TEST_DB_CONNECTION: postgres://postgres:postgres@localhost:5432/midb_test
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: midb_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          bun-version: 1.4.4
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      # The SvelteKit plugin validates the static public values (src/env.ts) when Vitest loads the config.
+      - name: Create .env from template
+        run: cp .env.example .env
 
       - name: Run DB tests
-        run: bun run test:db
+        run: pnpm test:db
 
-  # Disabled until the repo variable E2E_ENABLED is set to 'true' and the secrets
-  # below are configured (Settings → Secrets and variables → Actions).
+  # The built Worker on `wrangler dev` against a local D1 loaded with the sync fixtures. It needs
+  # no account. A pull request from a fork gets no secrets, so `TMDB_API_TOKEN` is empty there and
+  # the specs that need TMDB (film and series pages, comments on them, search, posters) skip with
+  # a reason; every other spec runs. Never `pull_request_target`: the specs run the pull
+  # request's own code, so they must not hold secrets on a fork.
   e2e:
     name: E2E tests
-    if: vars.E2E_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DB_CONNECTION: postgres://postgres:postgres@localhost:5432/midb
-      PUBLIC_HANKO_API_URL: ${{ vars.PUBLIC_HANKO_API_URL }}
-      PUBLIC_TMDB_API_URL: https://api.themoviedb.org
-      PUBLIC_TMDB_IMAGE_URL: https://image.tmdb.org/t/p
-      TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
-      DDD_API_KEY: ${{ secrets.DDD_API_KEY }}
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: midb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+      # Inlined into the build (`src/env.ts`); the origin is the one `wrangler dev` serves.
+      PUBLIC_ORIGIN: http://localhost:4173
+      PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          bun-version: 1.4.4
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      # The TMDB values are the deployed ones, read from `wrangler.jsonc`.
+      - name: Take the TMDB values from wrangler.jsonc
+        run: node scripts/ci/public-vars.ts production export PUBLIC_TMDB_API_URL PUBLIC_TMDB_IMAGE_URL >> "$GITHUB_ENV"
 
       - name: Install Playwright browser
-        run: bunx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
-      - name: Migrate database
-        run: bun run db:migrate
+      - name: Migrate the local database
+        run: pnpm db:migrate:local
 
-      # playwright.config.ts builds and starts `vite preview` itself (webServer).
+      # The trimmed Unconsenting Media, Bechdel Test and TMDB fixtures: no network, no keys.
+      - name: Load the fixtures
+        run: pnpm db:sync:all --local --fixtures
+
+      # `wrangler dev` reads the Worker's vars and secrets from .dev.vars, not from the job's
+      # environment, and a value here overrides `wrangler.jsonc`. The Google and Discord values
+      # are fakes: the specs only check that each button redirects to its provider. Comment
+      # moderation has no key, so new comments are pending until a moderator approves them.
+      # `TMDB_API_TOKEN` is the secret; it is empty on a fork.
+      - name: Write the Worker's vars
+        env:
+          TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
+        run: |
+          {
+            echo "PUBLIC_ORIGIN=$PUBLIC_ORIGIN"
+            echo "TMDB_API_TOKEN=$TMDB_API_TOKEN"
+            echo "GOOGLE_CLIENT_ID=e2e-fake-client-id"
+            echo "GOOGLE_CLIENT_SECRET=e2e-fake-client-secret"
+            echo "DISCORD_CLIENT_ID=e2e-fake-client-id"
+            echo "DISCORD_CLIENT_SECRET=e2e-fake-client-secret"
+          } > .dev.vars
+
+      # `playwright.config.ts` starts `pnpm preview` (build, then `wrangler dev` on 4173).
       - name: Run e2e tests
-        run: bun run test:integration
+        run: pnpm test:integration --trace off
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # The pull request title becomes the squash commit's subject (.claude/rules/commit-standards.md, Squash),
+  # so the title and every commit subject are checked.
+  commits:
+    name: Commit subjects
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Pull request title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/git/commit-message.ts "$TITLE"
+
+      - name: Commit subjects
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/git/commit-message.ts --range "$BASE..$HEAD"

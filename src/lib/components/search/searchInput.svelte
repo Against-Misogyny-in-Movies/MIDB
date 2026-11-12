@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
+	import { SEARCH_QUERY_MAX_LENGTH } from '#lib/media/utils/search.ts';
 
 	interface Props {
 		value: string;

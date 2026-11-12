@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { titles } from '$db/schema/titles';
-import { titleBechdel, titleUm, umSource } from '$db/schema/sources';
-import { db } from '$lib/server/db';
-import { getBechdel, getUmEntry } from '$lib/server/data/sources';
+import { titles } from '#db/schema/titles.ts';
+import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
+import { db } from '#lib/server/db.ts';
+import { getBechdel, getUmEntry } from '#lib/server/data/sources.ts';
 
 const NO_FLAGS = {
 	noRape: true,
@@ -29,10 +29,8 @@ describe('getBechdel', () => {
 	it('returns the seeded rating, or null', async () => {
 		const title = await insertTitle();
 		expect(await getBechdel(title.id)).toBeNull();
-		await db
-			.insert(titleBechdel)
-			.values({ titleId: title.id, bechdelId: 7, rating: 3, numVotes: 9 });
-		expect(await getBechdel(title.id)).toMatchObject({ bechdelId: 7, rating: 3, numVotes: 9 });
+		await db.insert(titleBechdel).values({ titleId: title.id, bechdelId: 7, rating: 3 });
+		expect(await getBechdel(title.id)).toMatchObject({ bechdelId: 7, rating: 3 });
 	});
 });
 

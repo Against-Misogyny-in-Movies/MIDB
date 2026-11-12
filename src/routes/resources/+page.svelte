@@ -1,16 +1,17 @@
 <script lang="ts">
-	import ResourceNav from '$lib/components/resources/resourceNav.svelte';
-	import MetricArticle from '$lib/components/resources/metricArticle.svelte';
-	import SubBlock from '$lib/components/resources/subBlock.svelte';
-	import BechdelLadderExample from '$lib/components/resources/bechdelLadderExample.svelte';
-	import UmFlagsExample from '$lib/components/resources/umFlagsExample.svelte';
-	import VerdictTierExample from '$lib/components/resources/verdictTierExample.svelte';
+	import ResourceNav from '#lib/components/resources/resourceNav.svelte';
+	import MetricArticle from '#lib/components/resources/metricArticle.svelte';
+	import SubBlock from '#lib/components/resources/subBlock.svelte';
+	import BechdelLadderExample from '#lib/components/resources/bechdelLadderExample.svelte';
+	import UmFlagsExample from '#lib/components/resources/umFlagsExample.svelte';
+	import VerdictTierExample from '#lib/components/resources/verdictTierExample.svelte';
 
 	const navItems = [
 		{ id: 'verdict', label: 'Verdicts' },
 		{ id: 'bechdel', label: 'Bechdel Test' },
 		{ id: 'unconsenting', label: 'Unconsenting Media' },
-		{ id: 'ddd', label: 'Does the Dog Die' }
+		{ id: 'ddd', label: 'Does the Dog Die' },
+		{ id: 'moderation', label: 'Moderation' }
 	];
 </script>
 
@@ -18,7 +19,7 @@
 	<title>Methodology · MIDB</title>
 	<meta
 		name="description"
-		content="MIDB scoring rules for content safety and representation, and what the Bechdel Test, Unconsenting Media and Does the Dog Die measure."
+		content="MIDB scoring rules for content safety and representation, what the Bechdel Test, Unconsenting Media and Does the Dog Die measure, and how comments are moderated."
 	/>
 </svelte:head>
 
@@ -27,7 +28,7 @@
 		<h1 class="display">Methodology</h1>
 		<p class="lede">
 			Each title page shows two verdicts, content safety and representation, built from the sources
-			below.
+			below. Comments are checked automatically before they appear.
 		</p>
 	</header>
 
@@ -92,8 +93,15 @@
 				</p>
 				<BechdelLadderExample />
 				<p>
-					Ratings come from BechdelTest.com, a community site, and are used as published. The rating
-					counts toward the representation verdict.
+					Ratings come from BechdelTest.com, a community site, and are used as published under the
+					<a
+						class="link"
+						href="https://creativecommons.org/licenses/by-nc/3.0/"
+						target="_blank"
+						rel="noopener noreferrer">CC BY-NC 3.0</a
+					> licence. New ratings and the last three years are copied daily, and every year weekly. A film's
+					page shows the date of the last full copy beside the source link. The rating counts toward the
+					representation verdict.
 				</p>
 			</MetricArticle>
 
@@ -112,8 +120,10 @@
 				</p>
 				<UmFlagsExample />
 				<p>
-					Entries are matched to titles by name and year. When several entries could match, the
-					title page lists them. The choice applies to that page view only and is not saved.
+					Entries are copied daily. A title page with an entry shows the date of the last copy
+					beside the source link. They are matched to titles by name and year. When several entries
+					could match, the title page lists them. The choice applies to that page view only and is
+					not saved.
 				</p>
 			</MetricArticle>
 
@@ -134,6 +144,65 @@
 					votes. The data is fetched from Does the Dog Die when a title page opens (films by IMDb
 					id, series by title) and cached for one hour.
 				</p>
+			</MetricArticle>
+
+			<MetricArticle
+				id="moderation"
+				title="Comments and moderation"
+				icon="ri-shield-check-fill"
+				hue="var(--brand)"
+				sourceLabel="src/lib/server/moderation"
+				sourceHref="https://github.com/Against-Misogyny-in-Movies/MIDB/tree/main/src/lib/server/moderation"
+			>
+				<p>
+					Every new or edited comment is checked automatically before it can appear. The check, its
+					policy and the blocklist are public in the site's source code.
+				</p>
+
+				<SubBlock label="Automatic check">
+					<p>
+						A short blocklist of words and phrases runs first. A match rejects the comment with no
+						further check. The site also keeps a private list that extends it.
+					</p>
+					<p>
+						Otherwise Claude Haiku 5.5, a model from Anthropic, reads the comment. Describing,
+						quoting, analysing and criticising misogyny, sexual violence or other harm in a film or
+						series is allowed, including a reader's own experience of it, and so are disagreement,
+						harsh criticism of a film and strong language. Endorsing or celebrating misogyny or
+						sexual violence, mocking or doubting survivors, attacking, insulting or harassing a
+						person or a group, slurs, threats, sexual content involving minors, explicit sexual
+						content, sharing personal information, and spam, advertising or links with no relation
+						to the title are not. The model answers with a decision, the categories that apply, a
+						severity from 0 to 3 and a reason.
+					</p>
+					<p>
+						Anthropic receives the comment text, the title's name and, for a reply, the comment it
+						answers. It never receives the author's email or account.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="Outcomes">
+					<p>
+						<strong>Published:</strong> the model allows the comment. It appears at once.
+					</p>
+					<p>
+						<strong>Awaiting review:</strong> the model asks for a person to look, or finds a clear break
+						below severity 2. The same applies when the check gives no verdict, or when the site has no
+						key for it. Only the author and moderators see the comment until a moderator decides.
+					</p>
+					<p>
+						<strong>Rejected:</strong> the blocklist matches, or the model finds a clear break of severity
+						2 or 3. The author sees the comment with the reason.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="Reviewed by people">
+					<p>
+						Moderators approve, hide or reject comments from a queue. Three different readers
+						reporting a published comment send it back to review. A moderator can also mute or ban
+						an account.
+					</p>
+				</SubBlock>
 			</MetricArticle>
 		</div>
 	</div>

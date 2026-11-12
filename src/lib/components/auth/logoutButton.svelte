@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { Hanko } from '@teamhanko/hanko-elements';
 	import { goto } from '$app/navigation';
-	import { PUBLIC_HANKO_API_URL } from '$env/static/public';
-	import { session } from '$lib/media/utils/session.svelte.js';
+	import { authClient } from '#lib/auth-client.ts';
+	import { session } from '#lib/media/utils/session.svelte.js';
 
 	interface Props {
 		/** `button` is a ghost button (the profile page); `menu` fills a row of the mobile menu. */
@@ -12,16 +11,14 @@
 	let { variant = 'button' }: Props = $props();
 
 	// Order matters: the cookie must be gone before /auth and any re-run load sees the request.
-	// The client is created on click, not with the component: Hanko needs `document`, and this
-	// button is server-rendered on /user/profile.
 	const logout = async () => {
 		try {
-			await new Hanko(PUBLIC_HANKO_API_URL).logout();
+			await authClient.signOut();
 		} catch {
-			// Already signed out or Hanko unreachable: still drop the local session below.
+			// Already signed out or unreachable: still drop the local session below.
 		}
 		session.clear();
-		await goto('/auth', { invalidateAll: true });
+		await goto('/auth', { refreshAll: true });
 	};
 </script>
 

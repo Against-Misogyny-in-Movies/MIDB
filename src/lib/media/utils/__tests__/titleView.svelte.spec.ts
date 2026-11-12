@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { flushSync } from 'svelte';
-import type { Movie } from '$lib/media/types/movie';
-import type { Series } from '$lib/media/types/series';
-import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
-import type { UmEntry } from '$lib/media/types/um';
-import { umFlagCount } from '$lib/media/utils/metrics';
-import { scoreRepresentation, scoreSafety } from '$lib/media/utils/verdict';
-import { TitleView, type TitleViewData } from '$lib/media/utils/titleView.svelte.js';
+import type { Movie } from '#lib/media/types/movie.ts';
+import type { Series } from '#lib/media/types/series.ts';
+import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
+import type { UmEntry } from '#lib/media/types/um.ts';
+import { umFlagCount } from '#lib/media/utils/metrics.ts';
+import { scoreRepresentation, scoreSafety } from '#lib/media/utils/verdict.ts';
+import { TitleView, type TitleViewData } from '#lib/media/utils/titleView.svelte.js';
 
 const ZERO = { female: 0, male: 0, nonBinary: 0, unknown: 0, total: 0 };
 

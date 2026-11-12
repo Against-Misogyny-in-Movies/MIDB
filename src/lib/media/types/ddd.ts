@@ -1,1 +1,1 @@
-export type { TriggerTag, DddResult } from '$lib/server/integrations/ddd-types';
+export type { TriggerTag, DddResult } from '#lib/server/integrations/ddd-types.ts';

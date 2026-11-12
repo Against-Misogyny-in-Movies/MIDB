@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { clearCache } from '$lib/server/cache';
-import movieFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/movie-603.json';
-import searchFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/search-matrix.json';
+import { env } from '#lib/server/env.ts';
+import { clearCache } from '#lib/server/cache/index.ts';
+import movieFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/movie-603.json';
+import searchFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/search-matrix.json';
 
-vi.mock('$env/static/public', () => ({ PUBLIC_TMDB_API_URL: 'https://tmdb.test' }));
-vi.mock('$env/static/private', () => ({ TMDB_API_TOKEN: 'test-token' }));
+vi.mock('$app/env/public', () => ({ PUBLIC_TMDB_API_URL: 'https://tmdb.test' }));
 
-import { TMDB_SEARCH_TTL_MS, tmdbFetch } from '$lib/server/integrations/tmdb/client';
-import { getMovie, searchTitles } from '$lib/server/integrations/tmdb';
+import { TMDB_SEARCH_TTL_MS, tmdbFetch } from '#lib/server/integrations/tmdb/client.ts';
+import { getMovie, searchTitles } from '#lib/server/integrations/tmdb/index.ts';
 
 const fetchMock = vi.fn();
 
@@ -18,12 +18,14 @@ function respond(body: unknown, status = 200, statusText = 'OK') {
 }
 
 beforeEach(async () => {
+	env.TMDB_API_TOKEN = 'test-token';
 	await clearCache();
 	fetchMock.mockReset();
 	vi.stubGlobal('fetch', fetchMock);
 });
 
 afterEach(() => {
+	delete env.TMDB_API_TOKEN;
 	vi.unstubAllGlobals();
 });
 

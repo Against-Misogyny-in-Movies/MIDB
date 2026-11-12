@@ -1,20 +1,29 @@
 <script lang="ts">
-	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
+	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import UmCandidates from './umCandidates.svelte';
 	import UmComment from './umComment.svelte';
-	import { UM_FLAGS } from '$lib/media/utils/metrics';
-	import { umTone } from '$lib/media/utils/tones';
-	import type { UmEntry } from '$lib/media/types/um';
+	import { UM_FLAGS } from '#lib/media/utils/metrics.ts';
+	import { umTone } from '#lib/media/utils/tones.ts';
+	import type { UmEntry } from '#lib/media/types/um.ts';
 
 	interface Props {
 		umData: UmEntry | null;
 		umCandidates: UmEntry[];
 		umFlagCount: number;
 		hasUmCandidates: boolean;
+		/** ISO time of the last Unconsenting Media sync, or null when none is recorded. */
+		updatedAt?: string | null;
 		onselect: (candidate: UmEntry) => void;
 	}
 
-	let { umData, umCandidates, umFlagCount, hasUmCandidates, onselect }: Props = $props();
+	let {
+		umData,
+		umCandidates,
+		umFlagCount,
+		hasUmCandidates,
+		updatedAt = null,
+		onselect
+	}: Props = $props();
 </script>
 
 <div id="unconsenting">
@@ -31,6 +40,7 @@
 		open={umData !== null || hasUmCandidates}
 		sourceLabel={umData ? 'UnconsentingMedia.org' : undefined}
 		sourceHref={umData ? `https://www.unconsentingmedia.org/items/${umData.umId}` : undefined}
+		{updatedAt}
 		learnHref="/resources#unconsenting"
 	>
 		{#if umData}
@@ -83,7 +93,7 @@
 		gap: 0 var(--spacing-lg);
 	}
 
-	/* Shared marker pattern: see .CLAUDE/architecture.md. */
+	/* Shared marker pattern: see docs/architecture.md, Shared marker pattern. */
 	.um-flag {
 		@apply flex items-center gap-sm text-sm text-ink-muted;
 		padding-block: var(--spacing-xs);

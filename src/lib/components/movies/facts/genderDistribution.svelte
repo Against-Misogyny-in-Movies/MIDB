@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { GenderBreakdown } from '$lib/media/types/media';
+	import type { GenderBreakdown } from '#lib/media/types/media.ts';
 
 	interface Props {
 		/** "Cast" or "Crew": labels the bar and the empty-state copy. */

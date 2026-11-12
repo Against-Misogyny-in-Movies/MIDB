@@ -1,0 +1,46 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "import", "unicorn", "oxc", "promise"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error"
+	},
+	"rules": {
+		"no-unused-vars": [
+			"error",
+			{
+				"argsIgnorePattern": "^_",
+				"varsIgnorePattern": "^_"
+			}
+		],
+		"typescript/no-explicit-any": "error",
+		"no-empty": "error",
+		"typescript/consistent-type-imports": "error",
+		"typescript/no-floating-promises": "error",
+		"typescript/no-misused-promises": "error",
+		"typescript/await-thenable": "error",
+		"typescript/no-unnecessary-type-assertion": "error",
+		"typescript/no-unsafe-type-assertion": "off", // deliberate casts at typed boundaries and in mocks
+		"typescript/no-unnecessary-type-parameters": "off", // the cache Backend.get<T> generic is deliberate
+		"typescript/unbound-method": "off", // getter tests on the db proxy
+		"typescript/require-array-sort-compare": "off", // every sort is on a fresh array
+		"unicorn/no-array-sort": "off", // every sort is on a fresh array
+		"unicorn/consistent-function-scoping": "off", // helpers are kept beside their callers
+		"unicorn/no-empty-file": "off", // Kit's src/lib/index.ts is empty
+		"unicorn/require-module-specifiers": "off", // `export {}` in app.d.ts
+		"import/no-unassigned-import": "off", // CSS and setup side-effect imports
+		"no-underscore-dangle": "off", // the ^_ unused convention
+		"no-shadow": "off", // harmless shadows
+		"typescript/consistent-return": "off", // never-returning guards and exhaustive switches
+		"promise/always-return": "off" // state-assigning .then
+	},
+	"ignorePatterns": [
+		".svelte-kit",
+		"build",
+		".wrangler",
+		"worker-configuration.d.ts",
+		"storybook-static",
+		".claude/skills/impeccable",
+		"db/migrations"
+	]
+}

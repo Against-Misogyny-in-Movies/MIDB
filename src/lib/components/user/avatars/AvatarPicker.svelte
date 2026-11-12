@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AVATAR_DEFS } from '$lib/media/utils/avatars';
+	import { AVATAR_DEFS } from '#lib/media/utils/avatars.ts';
 	import { AVATAR_COMPONENTS } from './avatars';
 
 	interface Props {

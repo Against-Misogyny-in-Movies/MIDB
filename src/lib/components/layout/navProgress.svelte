@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { navigating } from '$app/stores';
+	import { navigating } from '$app/state';
 
 	// Global navigation progress bar. SvelteKit navigation is blocking — the old
 	// page stays on screen while a route's `load` runs (TMDB + DB on the details
@@ -8,9 +8,9 @@
 	// search, browser back/forward) from one place.
 	//
 	// The bar eases toward ~90% while loading (it can't know real progress), then
-	// snaps to 100% and fades out once `$navigating` clears — the familiar
+	// snaps to 100% and fades out once `navigating.to` clears — the familiar
 	// top-loader feel. Fixed-position + opacity only, so it never shifts layout.
-	let active = $derived($navigating !== null);
+	let active = $derived(navigating.to !== null);
 
 	// Drive width off `active`: 90% while navigating, 100% on settle. Width is the
 	// only animated property; the CSS transition does the easing.

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import Avatar from '$lib/components/user/avatars/Avatar.svelte';
-	import LogoutButton from '$lib/components/auth/logoutButton.svelte';
-	import Badge from '$lib/components/ui/badge.svelte';
-	import AvatarPicker from '$lib/components/user/avatars/AvatarPicker.svelte';
-	import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
+	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
+	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
+	import Badge from '#lib/components/ui/badge.svelte';
+	import Notice from '#lib/components/ui/notice.svelte';
+	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
+	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 
 	let { data, form } = $props();
 
@@ -28,7 +29,7 @@
 				signal
 			});
 			if (!res.ok) return 'idle';
-			const { available } = await res.json();
+			const { available } = (await res.json()) as { available: boolean };
 			return available ? 'available' : 'taken';
 		},
 		(result) => (availability = result),
@@ -55,11 +56,7 @@
 		<Avatar avatarKey={user?.avatarKey} size={64} />
 		<div class="profile-meta">
 			<h1 class="display">
-				{#if user?.username}
-					{user.username}
-				{:else}
-					<span class="prompt">Set a username</span>
-				{/if}
+				{user?.username ?? 'Account'}
 			</h1>
 			<p class="details">
 				{#if data.email}<span>{data.email}</span>{/if}
@@ -71,7 +68,7 @@
 	</header>
 
 	{#if form?.error}
-		<p class="notice notice--error" role="alert">
+		<Notice tone="error">
 			{#if form.error === 'username-taken'}That username is already taken.
 			{:else if form.error === 'username-format'}A username is 3–32 characters: lowercase letters,
 				numbers and underscores.
@@ -79,11 +76,11 @@
 			{:else if form.error === 'avatar-invalid'}That avatar is not available. Choose another.
 			{:else}The profile could not be saved. Try again.
 			{/if}
-		</p>
+		</Notice>
 	{/if}
 
 	{#if form?.success}
-		<p class="notice notice--success" role="status">Profile saved.</p>
+		<Notice tone="success">Profile saved.</Notice>
 	{/if}
 
 	<form method="POST" action="?/updateProfile" use:enhance class="card profile-form">
@@ -95,6 +92,7 @@
 				id="username"
 				name="username"
 				type="text"
+				class="input"
 				value={usernameInput}
 				oninput={(e) => {
 					usernameInput = (e.target as HTMLInputElement).value;
@@ -109,7 +107,7 @@
 				{#if availability === 'checking'}Checking…
 				{:else if availability === 'available'}Available
 				{:else if availability === 'taken'}Already taken
-				{:else}Lowercase letters, numbers and underscores.
+				{:else}Shown on comments. Change it here: lowercase letters, numbers and underscores.
 				{/if}
 			</p>
 		</div>
@@ -128,8 +126,8 @@
 	</form>
 
 	<nav class="card account-nav" aria-label="Account">
-		<a href="/user/dashboard"
-			>Account settings <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+		<a href="/user/security"
+			>Sign-in methods <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
 		<a href="/user/comments"
 			>Comment history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
@@ -165,28 +163,8 @@
 		font-size: 1.875rem;
 	}
 
-	.prompt {
-		@apply text-ink-muted;
-	}
-
 	.details {
 		@apply flex flex-wrap items-center gap-x-md gap-y-xs text-sm text-ink-muted;
-	}
-
-	.notice {
-		@apply text-sm;
-		padding: 12px 16px;
-		border-radius: 12px;
-	}
-
-	.notice--error {
-		background-color: var(--danger-soft);
-		color: var(--danger);
-	}
-
-	.notice--success {
-		background-color: var(--success-soft);
-		color: var(--success);
 	}
 
 	.profile-form {
@@ -203,25 +181,6 @@
 	legend {
 		@apply font-medium text-ink p-0;
 		margin-bottom: var(--spacing-xs);
-	}
-
-	input[type='text'] {
-		@apply w-full text-ink bg-surface-raised;
-		height: 2.75rem;
-		padding-inline: 16px;
-		border-radius: 12px;
-		border: 1px solid var(--border-strong);
-		transition: border-color 0.15s ease;
-	}
-
-	input[type='text']:hover {
-		border-color: var(--ink-muted);
-	}
-
-	input[type='text']:focus-visible {
-		@apply outline-none;
-		border-color: var(--brand);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
 	}
 
 	.hint {

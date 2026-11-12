@@ -11,12 +11,16 @@ People deciding whether to watch something, often right before watching, often o
 - `/` landing: what MIDB is, a search field, what it checks. (Persuade, quiet.)
 - `/movie/[id]`, `/tv/[id]`: the title reference. (Read / Operate.)
 - `/resources`: how each metric works. (Read.)
-- `/user/*`, `/auth`: account. (Operate.)
+- Comments on `/movie/[id]` and `/tv/[id]`: readers discuss a title. A comment is reviewed before others see it; its author sees its status. (Operate.)
+- `/user/comments`: an account's own comments with their status. (Operate.)
+- `/user/moderation`: moderators and administrators review pending and reported comments, mute or ban an account, and read the action log. (Operate.)
+- `/auth`, `/user/*`: account. Readers sign in with a passkey, Google or Discord; there are no passwords. (Operate.)
+- Source freshness: a metric section shows when its source last synced ("Updated <date>"). A daily job refreshes the Bechdel Test, Unconsenting Media and TMDB popularity data, and moderators see a warning when a source is stale. (Read.)
 
 ## Commitments
 
 - Privacy first: no trackers, analytics or ad pixels.
 - Open source, community funded.
-- Copy is matter-of-fact, third person, essentials only, no slogans, no em dashes (see `AGENTS.md`).
+- Copy is matter-of-fact, third person, essentials only, no slogans, no em dashes (`.claude/rules/copy-standards.md`).
 - Claims are code-backed: copy that describes scoring mirrors `verdict.ts`.
 - The brand colour is the existing violet.

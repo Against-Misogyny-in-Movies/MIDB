@@ -1,0 +1,33 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(pnpm install)",
+			"Bash(pnpm install --frozen-lockfile)",
+			"Bash(pnpm check)",
+			"Bash(pnpm typecheck)",
+			"Bash(pnpm lint)",
+			"Bash(pnpm lint:fix)",
+			"Bash(pnpm format)",
+			"Bash(pnpm test:unit *)",
+			"Bash(pnpm test:db)",
+			"Bash(pnpm build)",
+			"Bash(pnpm docs:index)",
+			"Bash(pnpm docs:section *)",
+			"Bash(pnpm commit:check *)",
+			"Bash(pnpm exec vitest run *)",
+			"Bash(pnpm exec vitest related *)"
+		]
+	},
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+					}
+				]
+			}
+		]
+	}
+}

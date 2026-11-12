@@ -1,5 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
-import type { UserRole, UserRow } from '$lib/server/data/user-queries';
+import type { UserRole, UserRow } from '#lib/server/data/user-queries.ts';
 
 type GuardOptions = {
 	/** Page loads redirect to /auth; actions and endpoints answer 401. */
@@ -21,7 +21,7 @@ export async function requireUser(
 	error(401, 'Unauthorized');
 }
 
-/** Like `requireUser`, plus a DB-sourced role check (Hanko has no concept of MIDB roles). */
+/** Like `requireUser`, plus a DB-sourced role check (roles are MIDB's own, not Better Auth's). */
 export async function requireRole(
 	locals: App.Locals,
 	roles: readonly UserRole[],

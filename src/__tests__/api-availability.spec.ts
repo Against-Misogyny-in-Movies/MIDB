@@ -1,20 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { UserRow } from '$lib/server/data/user-queries';
+import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 const isUsernameAvailable = vi.fn(async () => true);
-vi.mock('$lib/server/data/user-queries', () => ({ isUsernameAvailable }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('#lib/server/data/user-queries.ts', () => ({ isUsernameAvailable }));
 
 const { GET } = await import('../routes/user/profile/availability/+server');
-const { clearCache } = await import('$lib/server/cache');
+const { clearCache } = await import('#lib/server/cache/index.ts');
 
 const user = (id: string) => ({ id, role: 'user' }) as UserRow;
 
 function call(signedIn: UserRow | null, username = 'zed', ip = '203.0.113.7') {
 	const event = {
 		url: new URL(`http://localhost/user/profile/availability?username=${username}`),
-		locals: { claims: signedIn ? { sub: signedIn.id } : null, getUser: async () => signedIn },
+		locals: { getUser: async () => signedIn },
 		getClientAddress: () => ip
 	} as unknown as RequestEvent;
 	return GET(event as Parameters<typeof GET>[0]);

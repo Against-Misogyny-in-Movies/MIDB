@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { displayTitle } from '$lib/media/utils/format';
-	import { filmSentence } from '$lib/media/utils/filmSentence';
-	import type { LinkedRatedFilm } from '$lib/media/types/catalogue';
+	import { displayTitle } from '#lib/media/utils/format.ts';
+	import { filmSentence } from '#lib/media/utils/filmSentence.ts';
+	import type { LinkedRatedFilm } from '#lib/media/types/catalogue.ts';
 
 	interface Props {
 		films: LinkedRatedFilm[];

@@ -1,16 +1,17 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import DetailHeader from '$lib/components/movies/facts/detailHeader.svelte';
-	import FactGrid from '$lib/components/movies/facts/factGrid.svelte';
-	import SourceIndex from '$lib/components/movies/facts/sourceIndex.svelte';
-	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
-	import CastAndCrew from '$lib/components/movies/facts/castAndCrew.svelte';
-	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
-	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
-	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
-	import { BECHDEL_TIERS } from '$lib/media/utils/metrics';
-	import { bechdelTone } from '$lib/media/utils/tones';
-	import { TitleView } from '$lib/media/utils/titleView.svelte.js';
+	import DetailHeader from '#lib/components/movies/facts/detailHeader.svelte';
+	import FactGrid from '#lib/components/movies/facts/factGrid.svelte';
+	import SourceIndex from '#lib/components/movies/facts/sourceIndex.svelte';
+	import VerdictPanel from '#lib/components/movies/facts/verdictPanel.svelte';
+	import CastAndCrew from '#lib/components/movies/facts/castAndCrew.svelte';
+	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
+	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
+	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
+	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
+	import { BECHDEL_TIERS } from '#lib/media/utils/metrics.ts';
+	import { bechdelTone } from '#lib/media/utils/tones.ts';
+	import { TitleView } from '#lib/media/utils/titleView.svelte.js';
 
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
 
@@ -43,6 +44,7 @@
 				open={bechdel !== null}
 				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
+				updatedAt={data.syncedAt.bechdel_sweep}
 				learnHref="/resources#bechdel"
 			>
 				{#if bechdel}
@@ -69,6 +71,7 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
+			updatedAt={data.syncedAt.um}
 			onselect={(c) => view.selectUm(c)}
 		/>
 
@@ -79,6 +82,10 @@
 		<CollapsibleSection title="Details" icon="ri-film-fill" hue="var(--src-tmdb)">
 			<FactGrid {movie} />
 		</CollapsibleSection>
+
+		{#key movie.tmdbId}
+			<CommentsSection kind="movie" tmdbId={movie.tmdbId} />
+		{/key}
 	</div>
 </article>
 
@@ -100,7 +107,7 @@
 		@apply text-ink-muted;
 	}
 
-	/* Shared marker pattern: see .CLAUDE/architecture.md. Brand, not a status tone: pass or fail
+	/* Shared marker pattern: see docs/architecture.md, Shared marker pattern. Brand, not a status tone: pass or fail
 	   already reads from the rating in the heading row. */
 	.bechdel-criteria {
 		@apply flex flex-col list-none m-0 p-0;

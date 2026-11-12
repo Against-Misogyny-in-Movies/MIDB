@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { sourceIndex } from '$lib/media/utils/sourceIndex';
+import { sourceIndex } from '#lib/media/utils/sourceIndex.ts';
 
 const base = {
 	kind: 'movie' as const,

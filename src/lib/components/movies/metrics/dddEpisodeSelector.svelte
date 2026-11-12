@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TriggerTag } from '$lib/media/types/ddd';
-	import type { Series } from '$lib/media/types/series';
+	import type { TriggerTag } from '#lib/media/types/ddd.ts';
+	import type { Series } from '#lib/media/types/series.ts';
 
 	interface Props {
 		seasons: Series['seasons'];

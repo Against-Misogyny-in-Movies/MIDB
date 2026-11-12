@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import MovieSearch from '$lib/components/search/movieSearch.svelte';
-	import FilmSentences from '$lib/components/landing/filmSentences.svelte';
+	import MovieSearch from '#lib/components/search/movieSearch.svelte';
+	import FilmSentences from '#lib/components/landing/filmSentences.svelte';
 
 	let { data }: { data: PageData } = $props();
 

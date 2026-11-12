@@ -8,7 +8,7 @@
 	let { children }: Props = $props();
 </script>
 
-<!-- Hanko's element renders its own heading and form; this only places it. -->
+<!-- The page renders its own heading and form; this only places it. -->
 <div class="card auth">
 	{@render children()}
 </div>

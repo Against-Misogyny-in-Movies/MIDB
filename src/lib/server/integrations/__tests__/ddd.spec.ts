@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { clearCache } from '$lib/server/cache';
-
-vi.mock('$env/static/private', () => ({ DDD_API_KEY: 'test-key' }));
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { env } from '#lib/server/env.ts';
+import { clearCache } from '#lib/server/cache/index.ts';
 
 // ── Shared mock helpers ────────────────────────────────────────────────────
 
@@ -25,9 +24,21 @@ describe('getTriggerTagsLive', () => {
 	beforeEach(() => vi.resetAllMocks());
 
 	it('returns EMPTY for null imdbId', async () => {
-		const { getTriggerTagsLive } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		const result = await getTriggerTagsLive(null);
 		expect(result).toEqual({ itemId: null, tags: [], isSeries: false });
+	});
+
+	it('sends the API key from the Worker env', async () => {
+		env.DDD_API_KEY = 'test-key';
+		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockSearchResponse([]));
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+		await getTriggerTagsLive('tt0000001');
+		delete env.DDD_API_KEY;
+		expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+			headers: { 'X-API-KEY': 'test-key', Accept: 'application/json' }
+		});
 	});
 
 	it('maps TopicId, index1→season, index2→episode correctly', async () => {
@@ -58,7 +69,7 @@ describe('getTriggerTagsLive', () => {
 				])
 			);
 
-		const { getTriggerTagsLive } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const result = await getTriggerTagsLive('tt0052080');
@@ -101,7 +112,7 @@ describe('getTriggerTagsLive', () => {
 				])
 			);
 
-		const { getTriggerTagsLive } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const result = await getTriggerTagsLive('tt1111111');
@@ -112,7 +123,7 @@ describe('getTriggerTagsLive', () => {
 	it('returns empty result when DDD search returns no items', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockSearchResponse([]));
 
-		const { getTriggerTagsLive } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const result = await getTriggerTagsLive('tt9999999');
@@ -138,7 +149,7 @@ describe('getTriggerTagsLive', () => {
 				])
 			);
 
-		const { getTriggerTagsLive } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const first = await getTriggerTagsLive('tt0052080');
@@ -180,7 +191,7 @@ describe('getTriggerTagsForSeries', () => {
 				)
 			);
 
-		const { getTriggerTagsForSeries } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const result = await getTriggerTagsForSeries({
@@ -203,7 +214,7 @@ describe('getTriggerTagsForSeries', () => {
 			)
 			.mockResolvedValueOnce(mockMediaResponse([]));
 
-		const { getTriggerTagsForSeries } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const result = await getTriggerTagsForSeries({
@@ -218,7 +229,7 @@ describe('getTriggerTagsForSeries', () => {
 	it('returns EMPTY with isSeries:true when no match found', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockSearchResponse([]));
 
-		const { getTriggerTagsForSeries } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const result = await getTriggerTagsForSeries({
@@ -238,7 +249,7 @@ describe('getTriggerTagsForSeries', () => {
 			)
 			.mockResolvedValueOnce(mockMediaResponse([]));
 
-		const { getTriggerTagsForSeries } = await import('$lib/server/integrations/ddd');
+		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
 		const series = { title: 'Game of Thrones', tmdbId: '1399', firstAirDate: '2011-04-17' };
@@ -246,6 +257,75 @@ describe('getTriggerTagsForSeries', () => {
 		const second = await getTriggerTagsForSeries(series);
 
 		expect(second).toEqual(first);
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+});
+
+// ── Failed upstream answers ──────────────────────────────────────────────
+
+describe('a non-OK upstream answer', () => {
+	const failed = { ok: false, status: 503, json: async () => ({}) } as Response;
+
+	beforeEach(() => {
+		vi.resetAllMocks();
+		vi.useFakeTimers();
+	});
+	afterEach(() => vi.useRealTimers());
+
+	it('is cached for 60 seconds, not an hour', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(failed)
+			.mockResolvedValueOnce(mockSearchResponse([]));
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+
+		await getTriggerTagsLive('tt0000009');
+		await getTriggerTagsLive('tt0000009');
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+		vi.advanceTimersByTime(61 * 1000);
+		await getTriggerTagsLive('tt0000009');
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+		// The retry succeeded (no items), so this answer lasts the full hour.
+		vi.advanceTimersByTime(30 * 60 * 1000);
+		await getTriggerTagsLive('tt0000009');
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+
+	it('covers a failed media request for a found item too', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 7 }]))
+			.mockResolvedValueOnce(failed)
+			.mockResolvedValueOnce(mockSearchResponse([{ id: 7 }]))
+			.mockResolvedValueOnce(mockMediaResponse([]));
+		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+
+		await getTriggerTagsLive('tt0000010');
+		vi.advanceTimersByTime(61 * 1000);
+		await getTriggerTagsLive('tt0000010');
+		expect(fetchSpy).toHaveBeenCalledTimes(4);
+	});
+
+	it('applies to a series search as well', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(failed)
+			.mockResolvedValueOnce(mockSearchResponse([]));
+		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
+		await clearCache();
+
+		const series = { title: 'X', tmdbId: '555', firstAirDate: '2020-01-01' };
+		await expect(getTriggerTagsForSeries(series)).resolves.toEqual({
+			itemId: null,
+			tags: [],
+			isSeries: true
+		});
+		vi.advanceTimersByTime(61 * 1000);
+		await getTriggerTagsForSeries(series);
 		expect(fetchSpy).toHaveBeenCalledTimes(2);
 	});
 });

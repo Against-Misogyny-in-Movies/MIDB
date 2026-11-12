@@ -1,6 +1,6 @@
 // Barrel: every schema file, so the Drizzle client registers all tables for `db.query.*`.
-export * from './columns';
-export * from './titles';
-export * from './sources';
-export * from './auth';
-export * from './community';
+export * from './columns.ts';
+export * from './titles.ts';
+export * from './sources.ts';
+export * from './auth.ts';
+export * from './community.ts';

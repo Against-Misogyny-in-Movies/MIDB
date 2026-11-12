@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { BadgeTone } from '$lib/media/utils/tones';
+	import type { BadgeTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
 		tone?: BadgeTone;

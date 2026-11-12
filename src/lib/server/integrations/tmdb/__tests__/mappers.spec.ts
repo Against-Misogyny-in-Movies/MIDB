@@ -11,10 +11,10 @@ import {
 	type TmdbMovieResponse,
 	type TmdbSearchResponse,
 	type TmdbSeriesResponse
-} from '$lib/server/integrations/tmdb/mappers';
-import movieFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/movie-603.json';
-import seriesFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/tv-1399.json';
-import searchFixture from '$lib/server/integrations/tmdb/__tests__/fixtures/search-matrix.json';
+} from '#lib/server/integrations/tmdb/mappers.ts';
+import movieFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/movie-603.json';
+import seriesFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/tv-1399.json';
+import searchFixture from '#lib/server/integrations/tmdb/__tests__/fixtures/search-matrix.json';
 
 const movieJson = movieFixture as TmdbMovieResponse;
 const seriesJson = seriesFixture as TmdbSeriesResponse;

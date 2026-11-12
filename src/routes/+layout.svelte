@@ -2,9 +2,9 @@
 	import type { Snippet } from 'svelte';
 	import 'remixicon/fonts/remixicon.css';
 	import '../app.css';
-	import Navbar from '$lib/components/layout/navbar.svelte';
-	import Footer from '$lib/components/layout/footer.svelte';
-	import NavProgress from '$lib/components/layout/navProgress.svelte';
+	import Navbar from '#lib/components/layout/navbar.svelte';
+	import Footer from '#lib/components/layout/footer.svelte';
+	import NavProgress from '#lib/components/layout/navProgress.svelte';
 
 	interface Props {
 		children: Snippet;

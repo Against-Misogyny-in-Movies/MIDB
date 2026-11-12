@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CastMember, GenderCategory } from '$lib/media/types/media';
+	import type { CastMember, GenderCategory } from '#lib/media/types/media.ts';
 
 	interface Props {
 		castMembers: CastMember[];

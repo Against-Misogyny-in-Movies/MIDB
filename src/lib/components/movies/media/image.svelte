@@ -1,6 +1,8 @@
 <script lang="ts" module>
-	import { PUBLIC_TMDB_IMAGE_URL } from '$env/static/public';
-	const sizes = [200, 300, 400, 500];
+	import { tmdbImageUrl, type TmdbImageSize } from '#lib/media/utils/tmdbImage.ts';
+
+	// Srcset widths, capped at w780: a 3x screen of the 224px poster needs 672px.
+	const sizes: readonly TmdbImageSize[] = ['w200', 'w300', 'w400', 'w500', 'w780'];
 </script>
 
 <script lang="ts">
@@ -8,42 +10,28 @@
 		src: string;
 		alt: string;
 		imgSizes?: string;
+		/** The image is the page's main picture: the browser fetches it first. */
+		priority?: boolean;
 	}
 
-	let { src, alt, imgSizes }: Props = $props();
+	let { src, alt, imgSizes, priority = false }: Props = $props();
 
-	function getLink(size: number | 'original' = 500) {
-		const parts: string[] = [
-			PUBLIC_TMDB_IMAGE_URL ?? '',
-			size === 'original' ? 'original' : `w${size}`,
-			src ?? ''
-		];
-
-		return parts
-			.map((part) => {
-				let newPath = part;
-				if (part.endsWith('/')) {
-					newPath = part.slice(0, -1);
-				}
-				if (part.startsWith('/')) {
-					newPath = part.slice(1);
-				}
-				return newPath;
-			})
-			.join('/');
-	}
-
-	function getSrcSet() {
-		const sets = sizes.map((size) => {
-			return `${getLink(size)} ${size}w`;
-		});
-		const sizeForOriginal = sizes[sizes.length - 1] + 200;
-		sets.push(`${getLink('original')} ${sizeForOriginal}w`);
-		return sets.join(', ');
-	}
+	const srcset = $derived(
+		sizes.map((size) => `${tmdbImageUrl(size, src)} ${size.slice(1)}w`).join(', ')
+	);
 </script>
 
-<img src={getLink(500)} srcset={getSrcSet()} sizes={imgSizes} {alt} decoding="async" />
+<!-- width and height give the 2:3 ratio of a TMDB poster; the parent's box sizes the image. -->
+<img
+	src={tmdbImageUrl('w500', src)}
+	{srcset}
+	sizes={imgSizes}
+	{alt}
+	width="500"
+	height="750"
+	fetchpriority={priority ? 'high' : undefined}
+	decoding="async"
+/>
 
 <style lang="postcss">
 	@reference "../../../../app.css";

@@ -1,17 +1,17 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { users } from '$db/schema/auth';
-import { communityBechdelRatings, communityUmReports, comments } from '$db/schema/community';
-import { titles } from '$db/schema/titles';
-import { AVATAR_KEYS } from '$lib/media/utils/avatars';
-import { umFlagCount } from '$lib/media/utils/metrics';
-import type { PublicUser } from '$lib/media/types/user';
-import { isUniqueViolation } from './pg-errors';
+import { desc, eq, sql } from 'drizzle-orm';
+import { db } from '#lib/server/db.ts';
+import { sessions, users } from '#db/schema/auth.ts';
+import { communityBechdelRatings, communityUmReports, comments } from '#db/schema/community.ts';
+import { titles } from '#db/schema/titles.ts';
+import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
+import { USERNAME_RE } from '#lib/media/utils/username.ts';
+import { umFlagCount } from '#lib/media/utils/metrics.ts';
+import type { PublicUser } from '#lib/media/types/user.ts';
+import { isUniqueViolation } from './db-errors.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
 
-const USERNAME_RE = /^[a-z0-9_]{3,32}$/;
 const RESERVED = new Set([
 	'admin',
 	'administrator',
@@ -24,58 +24,40 @@ const RESERVED = new Set([
 ]);
 
 /**
- * JIT-provision, read first. Steady state is one primary-key read and zero writes.
- * - Hit: return the row. If its email is null and the claim has one, backfill it once.
- * - Miss: INSERT … ON CONFLICT DO NOTHING; if a concurrent first request won the race,
- *   nothing is returned, so read the row it wrote.
- * Never bumps updated_at (the backfill pins it past `$onUpdate`); reserve that for profile edits.
- */
-export async function getOrCreateUser({
-	sub,
-	email
-}: {
-	sub: string;
-	email: string | null;
-}): Promise<UserRow> {
-	const existing = await getUserById(sub);
-	if (existing) {
-		if (existing.email !== null || !email) return existing;
-		const [updated] = await db
-			.update(users)
-			.set({ email, updatedAt: sql`${users.updatedAt}` })
-			.where(and(eq(users.id, sub), isNull(users.email)))
-			.returning();
-		return updated ?? existing;
-	}
-
-	const [inserted] = await db
-		.insert(users)
-		.values({ id: sub, email })
-		.onConflictDoNothing({ target: users.id })
-		.returning();
-	if (inserted) return inserted;
-
-	const raced = await getUserById(sub);
-	if (!raced) throw new Error(`getOrCreateUser: user ${sub} missing after insert conflict`);
-	return raced;
-}
-
-/**
- * Map a row to the client-safe shape. The email is used only for the display-name
- * fallback and never copied: it reaches the client on /user/profile alone.
+ * Map a row to the client-safe shape. The email is never copied: it reaches the client on
+ * /user/profile alone. Every account has a generated or chosen username, which is its display
+ * name; only a row with none shows "Account".
  */
 export function toPublicUser(row: UserRow): PublicUser {
 	return {
+		id: row.id,
 		username: row.username,
 		avatarKey: row.avatarKey,
 		role: row.role,
-		displayName: row.username || row.email?.split('@')[0] || 'Account'
+		displayName: row.username || 'Account'
 	};
 }
 
-/** Read-only user lookup by Hanko sub. */
+/** Read-only user lookup by Better Auth user id. */
 export async function getUserById(id: string): Promise<UserRow | null> {
 	return (await db.query.users.findFirst({ where: eq(users.id, id) })) ?? null;
+}
+
+/** The two statements of a ban, for a batch that also logs it (`moderation-actions.ts`). */
+export function banStatements(id: string, reason: string | null) {
+	return [
+		db.update(users).set({ bannedAt: new Date(), banReason: reason }).where(eq(users.id, id)),
+		db.delete(sessions).where(eq(sessions.userId, id))
+	] as const;
+}
+
+/**
+ * Bans a user and ends every session they hold, in one batch. The session cookie cache lets a
+ * session read as valid for a few minutes, so `locals.getUser` also re-reads `banned_at`; the
+ * `session.create` hook (`create-auth.ts`) refuses a new session.
+ */
+export async function banUser(id: string, reason: string | null): Promise<void> {
+	await db.batch(banStatements(id, reason));
 }
 
 type ProfileUpdate = { username?: string; avatarKey?: string };
@@ -123,20 +105,27 @@ export async function isUsernameAvailable(username: string, excludingId: string)
 /** The title fields a history row needs to link back to its detail page. */
 const titleRef = { kind: titles.kind, tmdbId: titles.tmdbId, title: titles.title };
 
-/** Comment history for the profile history view, newest first, with the title joined. */
+/**
+ * A reader's comments for the history page, newest first, in every status (the page badges
+ * each one), with the title joined.
+ */
 export async function getUserComments(userId: string) {
 	return db
 		.select({
 			id: comments.id,
 			body: comments.body,
 			status: comments.status,
+			moderationReason: comments.moderationReason,
+			parentId: comments.parentId,
+			replyCount: comments.replyCount,
 			createdAt: comments.createdAt,
+			editedAt: comments.editedAt,
 			...titleRef
 		})
 		.from(comments)
 		.innerJoin(titles, eq(comments.titleId, titles.id))
 		.where(eq(comments.userId, userId))
-		.orderBy(sql`${comments.createdAt} DESC`);
+		.orderBy(desc(comments.createdAt), desc(comments.id));
 }
 
 export type UserRating = {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import type { CrewDepartment, GenderBreakdown } from '$lib/media/types/media';
+	import type { CrewDepartment, GenderBreakdown } from '#lib/media/types/media.ts';
 
 	interface Props {
 		crewDepartments: CrewDepartment[];

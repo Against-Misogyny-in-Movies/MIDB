@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DebouncedQuery } from '$lib/media/utils/debouncedQuery.svelte.js';
+import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 
 /** A source whose calls stay pending until the test resolves them, one by one. */
 function controlledSource() {

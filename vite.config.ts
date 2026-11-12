@@ -1,32 +1,56 @@
+import adapter from '@sveltejs/adapter-cloudflare';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { svelteTesting } from '@testing-library/svelte/vite';
+import { fileURLToPath } from 'node:url';
+
+const workersStub = fileURLToPath(
+	new URL('./src/test/cloudflare-workers.stub.ts', import.meta.url)
+);
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
+	plugins: [
+		tailwindcss(),
+		sveltekit({
+			// style: false — let @tailwindcss/vite handle <style> blocks;
+			// keeps lang="postcss" recognised by svelte-check without running
+			// a separate PostCSS pass that resolves tailwindcss from the package cache.
+			preprocess: vitePreprocess({ style: false }),
+
+			// Deployed on Cloudflare Workers, configured by wrangler.jsonc.
+			adapter: adapter()
+		}),
+		svelteTesting()
+	],
 	test: {
 		globals: true,
+		// `cloudflare:workers` exists only in the Workers runtime; specs get a stub.
+		alias: { 'cloudflare:workers': workersStub },
 		projects: [
 			{
 				extends: true,
 				test: {
 					name: 'unit',
-					include: ['src/**/*.{test,spec}.{js,ts}', 'db/**/*.spec.ts'],
+					include: ['src/**/*.{test,spec}.{js,ts}', 'db/**/*.spec.ts', 'scripts/**/*.spec.ts'],
 					exclude: ['src/**/*.db.spec.ts', 'db/**/*.db.spec.ts'],
 					environment: 'jsdom'
 				}
 			},
 			{
-				// Real Postgres at TEST_DB_CONNECTION, migrated from zero once per run.
-				extends: true,
+				// A local D1 (Miniflare, through wrangler), migrated from zero once per run. It does
+				// not extend the root config: the Svelte plugins add the `browser` export condition,
+				// which makes Miniflare load the browser build of `ws`.
+				resolve: { alias: { 'cloudflare:workers': workersStub } },
 				test: {
 					name: 'db',
+					globals: true,
 					include: ['src/**/*.db.spec.ts', 'db/**/*.db.spec.ts'],
 					environment: 'node',
 					fileParallelism: false,
 					globalSetup: 'db/test/global-setup.ts',
-					setupFiles: ['db/test/reset.ts']
+					setupFiles: ['db/test/setup.ts']
 				}
 			}
 		]

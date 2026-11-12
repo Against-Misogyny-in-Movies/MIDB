@@ -1,15 +1,16 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import DetailHeader from '$lib/components/movies/facts/detailHeader.svelte';
-	import SeriesFactGrid from '$lib/components/movies/facts/seriesFactGrid.svelte';
-	import SourceIndex from '$lib/components/movies/facts/sourceIndex.svelte';
-	import VerdictPanel from '$lib/components/movies/facts/verdictPanel.svelte';
-	import CastAndCrew from '$lib/components/movies/facts/castAndCrew.svelte';
-	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
-	import DddEpisodeSelector from '$lib/components/movies/metrics/dddEpisodeSelector.svelte';
-	import UmMetricSection from '$lib/components/movies/metrics/umMetricSection.svelte';
-	import DddMetricSection from '$lib/components/movies/metrics/dddMetricSection.svelte';
-	import { TitleView } from '$lib/media/utils/titleView.svelte.js';
+	import DetailHeader from '#lib/components/movies/facts/detailHeader.svelte';
+	import SeriesFactGrid from '#lib/components/movies/facts/seriesFactGrid.svelte';
+	import SourceIndex from '#lib/components/movies/facts/sourceIndex.svelte';
+	import VerdictPanel from '#lib/components/movies/facts/verdictPanel.svelte';
+	import CastAndCrew from '#lib/components/movies/facts/castAndCrew.svelte';
+	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
+	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
+	import DddEpisodeSelector from '#lib/components/movies/metrics/dddEpisodeSelector.svelte';
+	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
+	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
+	import { TitleView } from '#lib/media/utils/titleView.svelte.js';
 
 	let { data }: { data: PageData } = $props();
 	const view = new TitleView(() => data, 'tv');
@@ -36,6 +37,7 @@
 			umCandidates={view.umCandidates}
 			umFlagCount={view.flagCount}
 			hasUmCandidates={view.hasUmCandidates}
+			updatedAt={data.syncedAt.um}
 			onselect={(c) => view.selectUm(c)}
 		/>
 
@@ -59,6 +61,10 @@
 		<CollapsibleSection title="Details" icon="ri-tv-2-fill" hue="var(--src-tmdb)">
 			<SeriesFactGrid {series} />
 		</CollapsibleSection>
+
+		{#key series.tmdbId}
+			<CommentsSection kind="tv" tmdbId={series.tmdbId} />
+		{/key}
 	</div>
 </article>
 

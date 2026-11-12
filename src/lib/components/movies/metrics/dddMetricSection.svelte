@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
+	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import DddTags from './dddTags.svelte';
 	import DddCategoryFilter from './dddCategoryFilter.svelte';
-	import { dddUrl } from '$lib/media/utils/metrics';
-	import type { DddResult, TriggerTag } from '$lib/media/types/ddd';
+	import { dddUrl } from '#lib/media/utils/metrics.ts';
+	import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
 
 	interface Props {
 		ddd: DddResult | null;

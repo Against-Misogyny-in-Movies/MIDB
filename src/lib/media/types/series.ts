@@ -1,6 +1,6 @@
-import type { MediaDetail } from '$lib/media/types/media';
+import type { MediaDetail } from '#lib/media/types/media.ts';
 
-export type { GenderBreakdown } from '$lib/media/types/media';
+export type { GenderBreakdown } from '#lib/media/types/media.ts';
 
 export interface Series extends MediaDetail {
 	firstAirDate: string;

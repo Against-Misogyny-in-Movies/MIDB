@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { titles } from '$db/schema/titles';
-import { users } from '$db/schema/auth';
+import { titles } from '#db/schema/titles.ts';
+import { users } from '#db/schema/auth.ts';
+import { userValues } from './users.ts';
 import {
 	comments,
 	communityBechdelRatings,
 	communityDddVotes,
 	communityUmReports
-} from '$db/schema/community';
-import { db } from '$lib/server/db';
+} from '#db/schema/community.ts';
+import { db } from '#lib/server/db.ts';
 
 const FLAGS = {
 	noRape: true,
@@ -25,7 +26,7 @@ let titleId: string;
 const userId = 'sub-1';
 
 beforeEach(async () => {
-	await db.insert(users).values({ id: userId });
+	await db.insert(users).values(userValues(userId));
 	const [title] = await db
 		.insert(titles)
 		.values({ kind: 'movie', title: 'Alien', cleanTitle: 'alien', tmdbId: 348 })
@@ -81,12 +82,12 @@ describe('community_ddd_votes', () => {
 });
 
 describe('comments', () => {
-	it('defaults status to visible and rejects an empty or oversized body', async () => {
+	it('defaults status to pending and rejects an empty or oversized body', async () => {
 		const [row] = await db
 			.insert(comments)
 			.values({ userId, titleId, body: 'Useful.' })
 			.returning();
-		expect(row.status).toBe('visible');
+		expect(row.status).toBe('pending');
 		await expect(db.insert(comments).values({ userId, titleId, body: '' })).rejects.toThrow();
 		await expect(
 			db.insert(comments).values({ userId, titleId, body: 'x'.repeat(5001) })

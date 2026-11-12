@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { navigating } from '$app/stores';
-	import SearchResults from '$lib/components/search/searchResults.svelte';
-	import { MovieSearchState } from '$lib/components/search/movieSearch.svelte.js';
-	import { SEARCH_QUERY_MAX_LENGTH } from '$lib/media/utils/search';
+	import { navigating } from '$app/state';
+	import SearchResults from '#lib/components/search/searchResults.svelte';
+	import { MovieSearchState } from '#lib/components/search/movieSearch.svelte.js';
+	import { SEARCH_QUERY_MAX_LENGTH } from '#lib/media/utils/search.ts';
 
 	// Own MovieSearchState instance — the navbar search is fully independent of the
 	// landing hero search. Reuses the search lifecycle/keyboard model and the
@@ -29,7 +29,7 @@
 	$effect(() => {
 		if (search.navigatingTo) {
 			navigationInFlight = true;
-		} else if (navigationInFlight && !$navigating) {
+		} else if (navigationInFlight && !navigating.to) {
 			navigationInFlight = false;
 			expanded = false;
 		}

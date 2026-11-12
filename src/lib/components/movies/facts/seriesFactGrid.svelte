@@ -1,7 +1,7 @@
 <script lang="ts">
 	import FactList from './factList.svelte';
-	import { countryName, formatDate, formatRuntime, languageName } from '$lib/media/utils/format';
-	import type { Series } from '$lib/media/types/series';
+	import { countryName, formatDate, formatRuntime, languageName } from '#lib/media/utils/format.ts';
+	import type { Series } from '#lib/media/types/series.ts';
 
 	interface Props {
 		series: Series;

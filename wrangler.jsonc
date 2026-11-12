@@ -1,0 +1,85 @@
+// Cloudflare Workers config. It holds no secrets: those go through `wrangler secret put`
+// (see .env.example for the names). Every REPLACE-WITH-... value below is an account-bound
+// placeholder to replace before the first deploy; local dev and `pnpm build` work without it.
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "midb",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+	"compatibility_date": "2026-11-01",
+	"compatibility_flags": ["nodejs_compat"],
+
+	// The custom domain serves the Worker; Cloudflare creates its DNS record and certificate.
+	"routes": [{ "pattern": "againstmisogyny.org", "custom_domain": true }],
+
+	// Workers Caching: Cloudflare serves cache hits without running the Worker.
+	"cache": { "enabled": true },
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "midb",
+			// Output of `wrangler d1 create midb`.
+			"database_id": "d92a0d2c-387e-4e36-9178-696e62fe6dc4",
+			"migrations_dir": "db/migrations"
+		}
+	],
+
+	// Each `namespace_id` must be unique in the Cloudflare account.
+	"ratelimits": [
+		{ "name": "RL_SEARCH", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+		{ "name": "RL_AVAILABILITY", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
+		{ "name": "RL_AUTH", "namespace_id": "1003", "simple": { "limit": 30, "period": 60 } },
+		{ "name": "RL_COMMENT", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } },
+		{ "name": "RL_VOTE", "namespace_id": "1005", "simple": { "limit": 30, "period": 60 } },
+		{ "name": "RL_REPORT", "namespace_id": "1006", "simple": { "limit": 10, "period": 60 } },
+		{ "name": "RL_MODERATE", "namespace_id": "1007", "simple": { "limit": 60, "period": 60 } }
+	],
+
+	"vars": {
+		// Production origin: the custom domain. Local dev takes its value from `.env`.
+		"PUBLIC_ORIGIN": "https://againstmisogyny.org",
+		"PUBLIC_TMDB_API_URL": "https://api.themoviedb.org",
+		"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
+		"MODERATION_MODEL": "claude-haiku-5-5",
+		// Cloudflare's always-passes test key. Replace it with the site key of a Turnstile widget.
+		"PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAF-lHA8u8aUccdsQ"
+	},
+
+	// Preview deploys. Wrangler does not inherit bindings or vars into an environment, so
+	// each one is repeated, with its own D1 database and rate-limit namespaces.
+	"env": {
+		"preview": {
+			"routes": [{ "pattern": "preview.againstmisogyny.org", "custom_domain": true }],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "midb-preview",
+					"database_id": "873247f6-c523-4dd9-84a6-5608c4c5b8d4",
+					"migrations_dir": "db/migrations"
+				}
+			],
+			"ratelimits": [
+				{ "name": "RL_SEARCH", "namespace_id": "2001", "simple": { "limit": 60, "period": 60 } },
+				{
+					"name": "RL_AVAILABILITY",
+					"namespace_id": "2002",
+					"simple": { "limit": 30, "period": 60 }
+				},
+				{ "name": "RL_AUTH", "namespace_id": "2003", "simple": { "limit": 30, "period": 60 } },
+				{ "name": "RL_COMMENT", "namespace_id": "2004", "simple": { "limit": 5, "period": 60 } },
+				{ "name": "RL_VOTE", "namespace_id": "2005", "simple": { "limit": 30, "period": 60 } },
+				{ "name": "RL_REPORT", "namespace_id": "2006", "simple": { "limit": 10, "period": 60 } },
+				{ "name": "RL_MODERATE", "namespace_id": "2007", "simple": { "limit": 60, "period": 60 } }
+			],
+			"vars": {
+				"PUBLIC_ORIGIN": "https://preview.againstmisogyny.org",
+				"PUBLIC_TMDB_API_URL": "https://api.themoviedb.org",
+				"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
+				"MODERATION_MODEL": "claude-haiku-5-5",
+				// The preview build takes this from the repository variable PREVIEW_TURNSTILE_SITE_KEY.
+				"PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAF-l093k7Pl9D0sd"
+			}
+		}
+	}
+}

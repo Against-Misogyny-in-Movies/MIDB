@@ -1,72 +1,34 @@
-import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import sveltePlugin from 'eslint-plugin-svelte';
-import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
 
-const tsRecommended = tsPlugin.configs['flat/recommended'];
-
+// Oxlint lints TS and JS (`.oxlintrc.json`); ESLint adds `eslint-plugin-svelte` for Svelte templates and
+// `.svelte` rune modules (`.svelte.ts`, `.svelte.js`). Its recommended config also covers plain `.js` files.
 export default [
-	// TypeScript recommended (flat)
-	...(Array.isArray(tsRecommended) ? tsRecommended : [tsRecommended]),
-
-	// Svelte recommended (flat)
+	// Svelte recommended (flat): the plugin's rules for `.svelte` and `.svelte.{js,ts}`, plus its `.js` base config
 	...sveltePlugin.configs['flat/recommended'],
 
-	// Prettier disables formatting rules — must come last among rule configs
+	// Prettier disables formatting rules: must come last among rule configs
 	prettier,
 
-	// Global ignores (migrated from .eslintignore)
+	// Global ignores
 	{
 		ignores: [
 			'.svelte-kit/**',
 			'build/**',
-			'.vercel/**',
+			'.wrangler/**',
+			'worker-configuration.d.ts',
 			'node_modules/**',
 			'package/**',
 			'.claude/skills/impeccable/**',
-			'.env',
-			'.env.*',
-			'!.env.example',
-			'pnpm-lock.yaml',
-			'package-lock.json',
-			'yarn.lock',
 			'**/*.stories.svelte'
 		]
 	},
 
-	// Global rule overrides
+	// Svelte files and rune modules: scripts are parsed as TypeScript
 	{
-		rules: {
-			'@typescript-eslint/no-unused-vars': [
-				'error',
-				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
-			]
-		}
-	},
-
-	// Base JS/TS config
-	{
-		files: ['**/*.{js,ts}'],
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
-			parser: tsParser,
-			parserOptions: {
-				sourceType: 'module',
-				ecmaVersion: 2020
-			},
-			globals: {
-				browser: true,
-				es2017: true,
-				node: true
-			}
-		}
-	},
-
-	// Svelte files
-	{
-		files: ['**/*.svelte'],
-		languageOptions: {
-			parser: svelteParser,
 			parserOptions: {
 				parser: tsParser
 			}

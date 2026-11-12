@@ -1,23 +1,21 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	// Renders inside the root +layout's <main>, so the navbar/footer chrome stays.
 	// 404 gets a bespoke message; other statuses fall back to the framework message.
-	const is404 = $derived($page.status === 404);
+	const is404 = $derived(page.status === 404);
 	const heading = $derived(is404 ? 'Page not found' : 'Something went wrong');
 	const detail = $derived(
 		is404
 			? 'No title or page at this address.'
-			: ($page.error?.message ?? 'The page could not be loaded. Try again.')
+			: (page.error?.message ?? 'The page could not be loaded. Try again.')
 	);
 </script>
 
-<svelte:head>
-	<title>{$page.status} · {heading} · MIDB</title>
-</svelte:head>
+<svelte:head><title>{page.status} · {heading} · MIDB</title></svelte:head>
 
 <section class="error">
-	<p class="code display">{$page.status}</p>
+	<p class="code display">{page.status}</p>
 	<h1 class="display">{heading}</h1>
 	<p class="detail">{detail}</p>
 	<a class="btn btn--brand" href="/">Search for a title</a>

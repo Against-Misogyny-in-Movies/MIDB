@@ -1,5 +1,5 @@
 // Plain avatar data, safe for the server (profile validation) and the client.
-// The key → component map lives in $lib/components/user/avatars/avatars.ts.
+// The key → component map lives in #lib/components/user/avatars/avatars.ts.
 export interface AvatarDef {
 	key: string;
 	name: string;

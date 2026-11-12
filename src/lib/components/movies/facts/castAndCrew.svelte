@@ -1,11 +1,11 @@
 <script lang="ts">
-	import CollapsibleSection from '$lib/components/movies/sections/collapsibleSection.svelte';
+	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import GenderDistribution from './genderDistribution.svelte';
 	import CastRepresentation from './castRepresentation.svelte';
 	import CrewRepresentation from './crewRepresentation.svelte';
 	import RepresentationDisclosure from './representationDisclosure.svelte';
-	import { shareTone } from '$lib/media/utils/tones';
-	import type { MediaDetail } from '$lib/media/types/media';
+	import { shareTone } from '#lib/media/utils/tones.ts';
+	import type { MediaDetail } from '#lib/media/types/media.ts';
 
 	interface Props {
 		media: MediaDetail;

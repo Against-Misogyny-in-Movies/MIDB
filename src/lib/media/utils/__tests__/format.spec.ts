@@ -6,7 +6,7 @@ import {
 	formatRuntime,
 	countryName,
 	languageName
-} from '$lib/media/utils/format';
+} from '#lib/media/utils/format.ts';
 
 describe('formatCurrency', () => {
 	test('returns — for 0', () => {
@@ -71,6 +71,10 @@ describe('formatDate', () => {
 		expect(formatDate('2015-05-13')).toBe('May 13, 2015');
 	});
 
+	test('reads a full timestamp in UTC, so a late-evening sync keeps its day', () => {
+		expect(formatDate('2026-11-12T23:59:00.000Z')).toBe('November 12, 2026');
+	});
+
 	test('returns — for an empty or invalid value', () => {
 		expect(formatDate('')).toBe('—');
 		expect(formatDate('not a date')).toBe('—');
@@ -80,6 +84,8 @@ describe('formatDate', () => {
 describe('displayTitle', () => {
 	test('moves a trailing article to the front', () => {
 		expect(displayTitle('Matrix, The')).toBe('The Matrix');
+		expect(displayTitle('Call, The')).toBe('The Call');
+		expect(displayTitle('The Call')).toBe('The Call');
 		expect(displayTitle('Lord of the Rings: The Return of the King, The')).toBe(
 			'The Lord of the Rings: The Return of the King'
 		);

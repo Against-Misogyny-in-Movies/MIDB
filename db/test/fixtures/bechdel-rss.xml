@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<rdf:RDF
+ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+ xmlns="http://purl.org/rss/1.0/"
+ xmlns:dc="http://purl.org/dc/elements/1.1/"
+>
+
+<channel rdf:about="https://bechdeltest.com/">
+<title>Bechdel Test Movie List</title>
+<link>https://bechdeltest.com/</link>
+<description>The last 50 movies added to the list.</description>
+<items>
+ <rdf:Seq>
+<rdf:li rdf:resource="https://bechdeltest.com/view/12440/digger"/>
+<rdf:li rdf:resource="https://bechdeltest.com/view/12437/witches_in_stitches"/>
+<rdf:li rdf:resource="https://bechdeltest.com/view/12434/practical_magic_2"/>
+<rdf:li rdf:resource="https://bechdeltest.com/view/12431/starve_acre"/>
+</rdf:Seq>
+</items>
+</channel>
+
+<item rdf:about="https://bechdeltest.com/view/12440/digger">
+<title>Digger (2026)</title>
+<link>https://bechdeltest.com/view/12440/digger</link>
+<description>Passed 1 of 3 tests; 1 comment and 0 links to reviews available.</description>
+<dc:date>2026-10-15T21:58:46+02:00</dc:date>
+</item>
+<item rdf:about="https://bechdeltest.com/view/12437/witches_in_stitches">
+<title>Witches in Stitches (1997)</title>
+<link>https://bechdeltest.com/view/12437/witches_in_stitches</link>
+<description>Passed 3 of 3 tests; 1 comment and 0 links to reviews available.</description>
+<dc:date>2026-10-15T21:58:46+02:00</dc:date>
+</item>
+<item rdf:about="https://bechdeltest.com/view/12434/practical_magic_2">
+<title>Practical Magic 2 (2026)</title>
+<link>https://bechdeltest.com/view/12434/practical_magic_2</link>
+<description>Passed 3 of 3 tests; 1 comment and 0 links to reviews available.</description>
+<dc:date>2026-10-15T21:58:46+02:00</dc:date>
+</item>
+<item rdf:about="https://bechdeltest.com/view/12431/starve_acre">
+<title>Starve Acre (2023)</title>
+<link>https://bechdeltest.com/view/12431/starve_acre</link>
+<description>Passed 3 of 3 tests; 1 comment and 0 links to reviews available.</description>
+<dc:date>2026-10-15T21:58:46+02:00</dc:date>
+</item>
+</rdf:RDF>

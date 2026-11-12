@@ -1,11 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { isHttpError, isRedirect } from '@sveltejs/kit';
-import { requireRole, requireUser } from '$lib/server/auth/guards';
-import type { UserRow } from '$lib/server/data/user-queries';
+import { requireRole, requireUser } from '#lib/server/auth/guards.ts';
+import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 function locals(user: Partial<UserRow> | null): App.Locals {
 	return {
-		claims: user ? { sub: 'sub-1' } : null,
 		getUser: async () => (user ? ({ id: 'sub-1', role: 'user', ...user } as UserRow) : null)
 	};
 }

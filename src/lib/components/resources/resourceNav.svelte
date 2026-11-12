@@ -102,6 +102,13 @@
 		background-color: var(--brand-wash);
 	}
 
+	@media (pointer: coarse) {
+		a {
+			@apply flex items-center;
+			min-height: 2.75rem;
+		}
+	}
+
 	/* Phones: a plain list of the four sections under the intro; nothing pins. */
 	@media (max-width: 767px) {
 		ul {

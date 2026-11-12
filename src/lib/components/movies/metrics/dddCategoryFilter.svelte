@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TriggerTag } from '$lib/media/types/ddd';
+	import type { TriggerTag } from '#lib/media/types/ddd.ts';
 
 	interface Props {
 		tags: TriggerTag[];

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Badge from '$lib/components/ui/badge.svelte';
-	import type { TriggerTag } from '$lib/media/types/ddd';
+	import Badge from '#lib/components/ui/badge.svelte';
+	import type { TriggerTag } from '#lib/media/types/ddd.ts';
 
 	interface Props {
 		tags: TriggerTag[];

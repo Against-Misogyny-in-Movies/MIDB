@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, stripTrailingYear } from '$db/lib/normalizeTitle';
+import { normalizeTitle, stripTrailingYear } from '#db/lib/normalizeTitle.ts';
 
 describe('normalizeTitle', () => {
 	it('lowercases and trims', () => {

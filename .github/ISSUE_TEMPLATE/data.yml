@@ -1,0 +1,30 @@
+name: Source data or match problem
+description: A Bechdel Test rating, an Unconsenting Media entry or a Does the Dog Die warning that shows on the wrong title, is missing, or reads differently from its source.
+labels: [data]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Page
+      description: The MIDB film or series page.
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options:
+        - Bechdel Test
+        - Unconsenting Media
+        - Does the Dog Die
+        - TMDB (title, cast, crew, poster)
+        - The MIDB verdict
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What MIDB shows and what the source says
+      description: Link the entry on the source's own site. MIDB does not change a source's values; a wrong value is corrected at the source, a wrong match here.
+    validations:
+      required: true

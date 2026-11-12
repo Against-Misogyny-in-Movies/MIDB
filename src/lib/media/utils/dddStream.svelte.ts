@@ -1,4 +1,4 @@
-import type { DddResult } from '$lib/media/types/ddd';
+import type { DddResult } from '#lib/media/types/ddd.ts';
 
 const EMPTY_MOVIE: DddResult = { itemId: null, tags: [], isSeries: false };
 const EMPTY_SERIES: DddResult = { itemId: null, tags: [], isSeries: true };
@@ -9,7 +9,7 @@ export function createDddState(getPromise: () => Promise<DddResult>, isSeries: b
 	$effect(() => {
 		let cancelled = false;
 		current = null;
-		getPromise()
+		void getPromise()
 			.catch((): DddResult => (isSeries ? EMPTY_SERIES : EMPTY_MOVIE))
 			.then((result) => {
 				if (!cancelled) current = result;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { session } from '$lib/media/utils/session.svelte.js';
+	import { session } from '#lib/media/utils/session.svelte.js';
 	import type { LayoutData } from './$types';
 
 	interface Props {

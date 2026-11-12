@@ -1,8 +1,8 @@
 import { eq, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { umSource } from '$db/schema/sources';
-import { normalizeTitle, stripTrailingYear } from '$db/lib/normalizeTitle';
-import type { UmEntry } from '$lib/media/types/um';
+import { db } from '#lib/server/db.ts';
+import { umSource } from '#db/schema/sources.ts';
+import { normalizeTitle, stripTrailingYear } from '#db/lib/normalizeTitle.ts';
+import type { UmEntry } from '#lib/media/types/um.ts';
 import type { TitleRef } from './title-queries';
 import { toUmEntry } from './sources';
 
