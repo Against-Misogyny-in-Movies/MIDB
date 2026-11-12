@@ -39,40 +39,40 @@ Each agent reads its own file.
 
 Read the sections your task touches.
 
-- `README.md` — MIDB (~1.0K tok)
+- `README.md` — MIDB (~1.1K tok)
 - `PRODUCT.md` — Product (~390 tok)
 - `DESIGN.md` — Design (~3.0K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~44.7K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~45.5K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–250 Directory layout (~6.9K)
-    - 241–250 File-organisation conventions (~450)
-  - 251–264 Styling & theming (~950)
-  - 265–277 Copy & voice (~570) ← 1
-  - 278–307 Routes (~9.4K)
-  - 308–345 User & roles (~2.1K)
-    - 338–345 Migrations (~350)
-  - 346–375 Source sync (~1.8K) ← 3
-  - 376–441 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 442–460 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~1.4K)
-  - 461–480 UM Disambiguation (~630)
-  - 481–489 UM flag rendering (~250)
-  - 490–501 Shared marker pattern (metric row markers) (~410) ← 4
-  - 502–542 Component library (`src/lib/components/`) (~5.6K)
-  - 543–553 Live search (`src/lib/components/search/`) (~710)
-  - 554–567 Server cache (`src/lib/server/cache/`) (~690)
-  - 568–583 TMDB integration (~810)
-  - 584–602 Auth flow (Better Auth) (~1.9K)
-  - 603–621 Caching policy (~1.2K) ← 5
-  - 622–667 Configuration & environment (~2.3K)
-    - 638–650 Local run sequence (~130)
-    - 651–654 npm scripts (~200)
-    - 655–667 CI (`.github/workflows/tests.yml`) (~400)
-  - 668–683 Testing (~860)
-    - 678–683 Verification baseline (~80)
-  - 684–693 Known gaps / TODO (~280)
-  - 694–702 Related docs (~160)
+  - 68–255 Directory layout (~7.1K)
+    - 246–255 File-organisation conventions (~450)
+  - 256–269 Styling & theming (~950)
+  - 270–282 Copy & voice (~570) ← 1
+  - 283–312 Routes (~9.4K)
+  - 313–350 User & roles (~2.1K)
+    - 343–350 Migrations (~350)
+  - 351–380 Source sync (~1.8K) ← 3
+  - 381–446 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 447–471 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~1.8K) ← 1
+  - 472–491 UM Disambiguation (~630)
+  - 492–500 UM flag rendering (~250)
+  - 501–512 Shared marker pattern (metric row markers) (~410) ← 4
+  - 513–553 Component library (`src/lib/components/`) (~5.6K)
+  - 554–564 Live search (`src/lib/components/search/`) (~710)
+  - 565–578 Server cache (`src/lib/server/cache/`) (~690)
+  - 579–594 TMDB integration (~810)
+  - 595–613 Auth flow (Better Auth) (~1.9K)
+  - 614–632 Caching policy (~1.2K) ← 5
+  - 633–678 Configuration & environment (~2.5K)
+    - 649–661 Local run sequence (~130)
+    - 662–665 npm scripts (~200)
+    - 666–678 CI (`.github/workflows/tests.yml`) (~400)
+  - 679–694 Testing (~860)
+    - 689–694 Verification baseline (~80)
+  - 695–704 Known gaps / TODO (~280)
+  - 705–713 Related docs (~160)
 
 ## Phases
 
@@ -104,10 +104,10 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~1.9K tok)
-- `PRIVACY.md` — Privacy (~1.9K tok)
+- `SECURITY.md` — Security (~2.1K tok)
+- `PRIVACY.md` — Privacy (~2.1K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
-- `THIRD_PARTY_NOTICES.md` — Third-party notices (~830 tok)
+- `THIRD_PARTY_NOTICES.md` — Third-party notices (~1.0K tok)
 
 ## Code to docs
 
@@ -116,5 +116,5 @@ The sections each area's comments cite, most cited first. Read these before chan
 - `scripts/checks`: .claude/rules/code-standards.md, File organisation (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
-- `src/lib`: docs/architecture.md, Caching policy (2); docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Source sync (1)
+- `src/lib`: docs/architecture.md, Caching policy (2); docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (1); docs/architecture.md, Source sync (1)
 - `src/routes`: docs/architecture.md, Shared marker pattern (metric row markers) (1)
