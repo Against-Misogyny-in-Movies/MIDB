@@ -107,7 +107,7 @@
 	/* The project's violet: links, focus, active states and the "women" data series only. */
 	--brand: light-dark(#7400b8, #c49cf2);
 	--brand-strong: light-dark(#4a0080, #dcc6f8);
-	/* Suffragette green: the non-binary data series and avatar accents. */
+	/* Suffragette green: the non-binary data series. */
 	--accent: light-dark(#1f8a66, #4fc79c);
 	/* Gender data series. Men are a neutral, so the chart carries no value judgment by colour;
 	   unknown is a step darker than the bar track so it stays visible on it. */
@@ -140,6 +140,16 @@
 	--src-um: light-dark(#4a0080, #e2c4f8);
 	--src-ddd: light-dark(#a030d8, #a56ae0);
 	--src-tmdb: light-dark(#2d0050, #d4aef4);
+
+	/* Avatar portraits (user/avatars): a violet ramp from plate to hair. Every face takes the same
+	   tone; light (a cap, a collar) stays near white in both themes. */
+	--avatar-plate: light-dark(#e6d6f6, #5b3f80);
+	--avatar-face: light-dark(#f7f0fc, #ecdff8);
+	--avatar-hair: light-dark(#2d0050, #1d0a33);
+	--avatar-dress: light-dark(#7400b8, #a77ee0);
+	--avatar-mark: light-dark(#a030d8, #e2c4f8);
+	--avatar-light: light-dark(#ffffff, #faf6fd);
+	--avatar-line: #2d0050;
 
 	/* Elevation: hairlines do the separation; shadows are for floating things. */
 	--shadow-subtle: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.4));

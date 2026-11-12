@@ -42,16 +42,16 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~470 tok)
-- `DESIGN.md` — Design (~3.1K tok)
+- `DESIGN.md` — Design (~3.4K tok)
   - 5–8 Idea (~70)
-  - 9–23 Colour (~670)
-  - 24–30 Type (~150)
-  - 31–35 Shapes and elevation (~80)
-  - 36–59 Components (~1.4K)
-  - 60–66 Pages (~410)
-  - 67–70 Motion (~90)
-  - 71–74 Browser surfaces (~50)
-  - 75–78 Avoid (~90)
+  - 9–24 Colour (~880) ← 1
+  - 25–31 Type (~150)
+  - 32–36 Shapes and elevation (~80)
+  - 37–61 Components (~1.5K)
+  - 62–68 Pages (~410)
+  - 69–72 Motion (~90)
+  - 73–76 Browser surfaces (~50)
+  - 77–80 Avoid (~90)
 - `docs/architecture.md` — MIDB — Architecture Reference (~46.9K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
@@ -69,7 +69,7 @@ Read the sections your task touches.
   - 475–494 UM Disambiguation (~630)
   - 495–503 UM flag rendering (~250)
   - 504–515 Shared marker pattern (metric row markers) (~410) ← 4
-  - 516–556 Component library (`src/lib/components/`) (~5.6K)
+  - 516–556 Component library (`src/lib/components/`) (~5.6K) ← 1
   - 557–567 Live search (`src/lib/components/search/`) (~710)
   - 568–581 Server cache (`src/lib/server/cache/`) (~690)
   - 582–597 TMDB integration (~810)
@@ -90,6 +90,12 @@ Read the sections your task touches.
 STATUS.md, then the live plan section for the active phase.
 
 - `docs/phases/STATUS.md` — Phase status (~2.1K tok)
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-avatars.md` — Plan: avatar portraits and username pool (~380 tok)
 
 ## Policies
 

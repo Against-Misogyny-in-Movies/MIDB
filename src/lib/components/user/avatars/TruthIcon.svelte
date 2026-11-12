@@ -1,24 +1,34 @@
 <script lang="ts">
+	import Portrait from './Portrait.svelte';
+
 	interface Props {
 		size?: number;
 	}
 	let { size = 40 }: Props = $props();
 </script>
 
-<svg
-	width={size}
-	height={size}
-	viewBox="0 0 40 40"
-	fill="none"
-	xmlns="http://www.w3.org/2000/svg"
-	aria-hidden="true"
->
-	<circle cx="20" cy="20" r="20" fill="var(--brand)" opacity="0.12" />
-	<ellipse cx="20" cy="14" rx="6" ry="7" fill="var(--brand)" />
-	<path d="M8 36c0-6.627 5.373-12 12-12s12 5.373 12 12" fill="var(--brand)" opacity="0.7" />
-	<path
-		d="M20 5l1.5 4h4l-3.5 2.5 1.5 4L20 13l-3.5 2.5 1.5-4L14.5 9h4z"
-		fill="var(--surface)"
-		opacity="0.9"
-	/>
-</svg>
+<!-- Sojourner Truth: a white cap, a white shawl crossed over a dark dress, small round glasses. -->
+<Portrait {size}>
+	{#snippet dress()}
+		<path d="M5 42C5 32 11 28.5 20 28.5S35 32 35 42Z" fill="var(--avatar-hair)" /><path
+			d="M11 30.6L20 38L29 30.6L33 33L20 42L7 33Z"
+			fill="var(--avatar-light)"
+		/>
+	{/snippet}
+	{#snippet front()}
+		<path
+			d="M13.4 17C13 10.4 16.2 8 20 8S27 10.4 26.6 17C26 14 24.4 12.6 20 12.6S14 14 13.4 17Z"
+			fill="var(--avatar-light)"
+			stroke="var(--avatar-line)"
+			stroke-width="0.4"
+			stroke-opacity="0.4"
+		/>
+	{/snippet}
+	{#snippet detail()}
+		<g stroke="var(--avatar-line)" stroke-width="0.5" fill="none"
+			><circle cx="17.7" cy="17.8" r="1.7" /><circle cx="22.3" cy="17.8" r="1.7" /><path
+				d="M19.4 17.6Q20 17.2 20.6 17.6"
+			/></g
+		>
+	{/snippet}
+</Portrait>

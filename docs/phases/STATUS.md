@@ -29,6 +29,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 4     | Comments               | completed | 2026-11-12.                                                                                                 |
 | 5     | AI moderation          | completed | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items). |
 | 6     | CI, deploy, docs       | completed | 2026-11-12. The workflows have not run against a real account (Open items).                                 |
+| 7     | Avatars and usernames  | active    | 2026-11-12. `docs/plans/plan-avatars.md`.                                                                   |
 
 ## Open items
 
