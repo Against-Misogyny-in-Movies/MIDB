@@ -15,11 +15,13 @@ describe('getSourceSyncDates', () => {
 	it('maps each synced source to an ISO timestamp', async () => {
 		await db.insert(sourceSync).values([
 			{ source: 'um', lastSuccessAt: new Date('2026-11-12T09:30:00Z'), rowsChanged: 3 },
-			{ source: 'bechdel', lastSuccessAt: new Date('2026-11-11T09:31:00Z'), rowsChanged: 0 }
+			{ source: 'bechdel', lastSuccessAt: new Date('2026-11-11T09:31:00Z'), rowsChanged: 0 },
+			{ source: 'bechdel_sweep', lastSuccessAt: new Date('2026-11-08T09:35:00Z'), rowsChanged: 2 }
 		]);
 		expect(await getSourceSyncDates()).toEqual({
 			um: '2026-11-12T09:30:00.000Z',
-			bechdel: '2026-11-11T09:31:00.000Z'
+			bechdel: '2026-11-11T09:31:00.000Z',
+			bechdel_sweep: '2026-11-08T09:35:00.000Z'
 		});
 	});
 });

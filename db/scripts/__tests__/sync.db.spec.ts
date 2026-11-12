@@ -36,7 +36,7 @@ async function bindingsByTitle() {
 	return Object.fromEntries(rows.map((r) => [r.title, r.umId]));
 }
 
-async function stamp(source: 'um' | 'bechdel' | 'popularity') {
+async function stamp(source: 'um' | 'bechdel' | 'bechdel_sweep' | 'popularity') {
 	const [row] = await db.select().from(sourceSync).where(eq(sourceSync.source, source));
 	return row;
 }
@@ -120,6 +120,7 @@ describe('source sync (fixtures)', () => {
 			rowsChanged: 34
 		});
 		expect(await stamp('um')).toEqual({ source: 'um', lastSuccessAt: NOW, rowsChanged: 31 });
+		expect(await stamp('bechdel_sweep')).toMatchObject({ lastSuccessAt: NOW, rowsChanged: 34 });
 
 		const later = new Date('2026-11-13T10:00:00Z');
 		await syncUm(db, await sources.umFeed(), { now: later, log: () => {} });
@@ -287,6 +288,24 @@ describe('source sync (fixtures)', () => {
 		expect(asked).toEqual([1997, 2023, 2024, 2025, 2026]);
 		expect(result).toMatchObject({ full: false, years: 5, films: 1, titlesInserted: 1 });
 		expect(await tally()).toMatchObject({ titles: 18, bechdel: 18 });
+	});
+
+	it('stamps the full-sweep date only after a full sweep', async () => {
+		await syncBechdel(db, sources, quiet);
+		const swept = new Date('2026-11-13T10:00:00Z');
+		const daily: BechdelSources = {
+			bechdelRss: sources.bechdelRss,
+			bechdelYear: async (year) =>
+				year === 2026
+					? yearPage(2026, [{ bechdelId: 12440, imdbId: 'tt9999999', title: 'Digger', rating: 1 }])
+					: null
+		};
+		await syncBechdel(db, daily, { now: swept, log: () => {}, full: false });
+		expect((await stamp('bechdel')).lastSuccessAt).toEqual(swept);
+		expect((await stamp('bechdel_sweep')).lastSuccessAt).toEqual(NOW);
+
+		await syncBechdel(db, sources, { now: swept, log: () => {}, full: true });
+		expect((await stamp('bechdel_sweep')).lastSuccessAt).toEqual(swept);
 	});
 
 	it('scores titles from the TMDB exports and writes only changed scores', async () => {

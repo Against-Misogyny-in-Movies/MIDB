@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "43e4f354-9780-4666-956b-ef85b1a35278",
+  "id": "93cae4df-ce01-4159-9c4f-3321d4bb53ca",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "user": {
@@ -717,7 +717,7 @@
       "checkConstraints": {
         "source_sync_source_check": {
           "name": "source_sync_source_check",
-          "value": "\"source_sync\".\"source\" IN ('bechdel', 'um', 'popularity')"
+          "value": "\"source_sync\".\"source\" IN ('bechdel', 'bechdel_sweep', 'um', 'popularity')"
         }
       }
     },

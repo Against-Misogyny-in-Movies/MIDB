@@ -43,7 +43,7 @@
 				open={bechdel !== null}
 				sourceLabel={bechdel ? 'BechdelTest.com' : undefined}
 				sourceHref={bechdel ? `https://bechdeltest.com/view/${bechdel.bechdelId}` : undefined}
-				updatedAt={data.syncedAt.bechdel}
+				updatedAt={data.syncedAt.bechdel_sweep}
 				learnHref="/resources#bechdel"
 			>
 				{#if bechdel}

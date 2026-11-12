@@ -102,7 +102,7 @@ CREATE TABLE `source_sync` (
 	`source` text PRIMARY KEY NOT NULL,
 	`last_success_at` integer NOT NULL,
 	`rows_changed` integer NOT NULL,
-	CONSTRAINT "source_sync_source_check" CHECK("source_sync"."source" IN ('bechdel', 'um', 'popularity'))
+	CONSTRAINT "source_sync_source_check" CHECK("source_sync"."source" IN ('bechdel', 'bechdel_sweep', 'um', 'popularity'))
 );
 --> statement-breakpoint
 CREATE TABLE `title_bechdel` (

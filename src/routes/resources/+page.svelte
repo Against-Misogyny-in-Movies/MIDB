@@ -98,8 +98,9 @@
 						href="https://creativecommons.org/licenses/by-nc/3.0/"
 						target="_blank"
 						rel="noopener noreferrer">CC BY-NC 3.0</a
-					> licence. They are copied daily, and each title page shows the date of the last copy. The rating
-					counts toward the representation verdict.
+					> licence. New ratings and the last three years are copied daily, and every year weekly. A film's
+					page shows the date of the last full copy beside the source link. The rating counts toward the
+					representation verdict.
 				</p>
 			</MetricArticle>
 
@@ -118,9 +119,10 @@
 				</p>
 				<UmFlagsExample />
 				<p>
-					Entries are copied daily, and each title page shows the date of the last copy. They are
-					matched to titles by name and year. When several entries could match, the title page lists
-					them. The choice applies to that page view only and is not saved.
+					Entries are copied daily. A title page with an entry shows the date of the last copy
+					beside the source link. They are matched to titles by name and year. When several entries
+					could match, the title page lists them. The choice applies to that page view only and is
+					not saved.
 				</p>
 			</MetricArticle>
 

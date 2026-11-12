@@ -35,7 +35,7 @@ export interface BechdelSyncResult {
 /**
  * Syncs `titles` (films, keyed by IMDb id) and `title_bechdel` to the Bechdel Test site, writing
  * only what differs. The daily run reads the recent-additions feed and the last three year
- * pages; the full sweep reads every year from the first. A database that has never synced
+ * pages; the full sweep reads every year from the first. A database that has never swept
  * sweeps in full. Everything is read before anything is written, and a run that reads no
  * films throws, so a changed site cannot empty or half-fill the tables.
  */
@@ -48,7 +48,7 @@ export async function syncBechdel(
 		log = console.log
 	}: { full?: boolean; now?: Date; log?: (line: string) => void } = {}
 ): Promise<BechdelSyncResult> {
-	const sweep = full || (await lastSync(db, 'bechdel')) === null;
+	const sweep = full || (await lastSync(db, 'bechdel_sweep')) === null;
 	const thisYear = now.getUTCFullYear();
 
 	let years: number[];
@@ -159,7 +159,9 @@ export async function syncBechdel(
 		titlesUpdated: retitled.length,
 		ratingsWritten: ratings.length
 	};
-	await stampSync(db, 'bechdel', newTitles.length + retitled.length + ratings.length, now);
+	const changed = newTitles.length + retitled.length + ratings.length;
+	await stampSync(db, 'bechdel', changed, now);
+	if (sweep) await stampSync(db, 'bechdel_sweep', changed, now);
 	log(
 		`Bechdel Test (${sweep ? 'full sweep' : 'recent years'}, ${result.years} years): ` +
 			`${result.films} films read; ${result.titlesInserted} added, ${result.titlesUpdated} retitled, ` +

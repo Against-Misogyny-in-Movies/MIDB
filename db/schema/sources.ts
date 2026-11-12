@@ -48,7 +48,8 @@ export const titleUm = sqliteTable('title_um', {
 	createdAt: createdAt()
 });
 
-export const syncSource = ['bechdel', 'um', 'popularity'] as const;
+/** `bechdel` is the last run of any kind; `bechdel_sweep` the last full sweep of every year. */
+export const syncSource = ['bechdel', 'bechdel_sweep', 'um', 'popularity'] as const;
 
 /** When each source last synced successfully, and how many rows that run changed. */
 export const sourceSync = sqliteTable(
