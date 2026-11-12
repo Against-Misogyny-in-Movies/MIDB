@@ -22,8 +22,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | T2    | TypeScript 6 + TS 7    | completed   | 2026-11-12.                                                                          |
 | T3    | Oxlint + ESLint Svelte | completed   | 2026-11-12.                                                                          |
 | 0     | SvelteKit 3 upgrade    | completed   | 2026-11-12. Storybook builds on Kit 3; a story rendering in a browser is unverified. |
-| 1     | Cloudflare platform    | active      | 2026-11-12: implementer running.                                                     |
-| 2     | SQLite / D1 data layer | not started |                                                                                      |
+| 1     | Cloudflare platform    | completed   | 2026-11-12. Workers Caching checks wait for the first preview deploy (Open items).   |
+| 2     | SQLite / D1 data layer | active      | 2026-11-12: implementer running.                                                     |
 | 2b    | Daily source sync      | not started |                                                                                      |
 | 3     | Auth (Better Auth)     | not started |                                                                                      |
 | 4     | Comments               | not started |                                                                                      |
@@ -35,6 +35,13 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **UX:**
   - A film or series page that fails to load from TMDB shows the generic "Something went wrong" heading (`src/routes/+error.svelte`); name what failed.
   - Enter in the navbar search does nothing unless a row is highlighted; the landing search opens the first result.
+- **Cloudflare:**
+  - Replace the `REPLACE-WITH-…` values in `wrangler.jsonc` (D1 ids, origins, Turnstile site key) and check the rate-limit `namespace_id`s are unique in the account.
+  - On the first preview deploy, check that a second request for a title page and for an image is a cache hit with the Worker not invoked (`wrangler tail`), and that a new comment purges its list.
+- **Auth:**
+  - Drop the `jose` types and `locals.claims` from `src/app.d.ts` with Hanko in Phase 3.
+- **Attribution:**
+  - The footer carries the TMDB notice as text; add the official TMDB logo asset.
 - **Docs:**
   - Decide whether `docs/plans/done/` moves to the new public repository or is deleted (`.claude/rules/docs-standards.md`, Plans).
 - **Sources:**
@@ -54,6 +61,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).
   - TypeScript 6.0.3 serves the tooling and TypeScript 7 runs `typecheck`, until svelte-check supports TypeScript 7 (user decision, 2026-11-12).
   - Oxlint lints TS and JS; ESLint is kept for Svelte templates only (user decision, 2026-11-12).
+- **Local preview:**
+  - `pnpm preview` and e2e run the built Worker on `wrangler dev`, because adapter-cloudflare 8 emulates `cloudflare:workers` only in `vite dev` (user decision, 2026-11-12).
 - **Sources and repository:**
   - Landing popularity comes from TMDB's daily export, not IMDb (user decision, 2026-11-12).
   - The code is published as a new open-source repository, so git history does not carry over (user decision, 2026-11-11).
