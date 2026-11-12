@@ -83,7 +83,7 @@
 		gap: 0 var(--spacing-lg);
 	}
 
-	/* Shared marker pattern: see .CLAUDE/architecture.md. */
+	/* Shared marker pattern: see docs/architecture.md, Shared marker pattern. */
 	.um-flag {
 		@apply flex items-center gap-sm text-sm text-ink-muted;
 		padding-block: var(--spacing-xs);

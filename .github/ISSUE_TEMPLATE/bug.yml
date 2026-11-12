@@ -1,0 +1,30 @@
+name: Site bug
+description: A page that breaks, a layout problem or anything else that is not a data question.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page
+      description: The URL, for example https://…/movie/603.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      description: The browser and its version, and the device or screen size.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors or screenshots
+      render: text

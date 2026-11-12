@@ -1,6 +1,6 @@
 # Plan: SvelteKit 3 on Cloudflare + D1, Better Auth (SSO + passkeys), comments with AI moderation
 
-> The first implementation commit copies this file to `.CLAUDE/plans/plan-cloudflare-d1-comments.md` (AGENTS.md: plans live there).
+> The live plan. Its phases are the rows of `docs/phases/STATUS.md`; the rules it changes live in `.claude/rules/` (`.claude/rules/authority.md` names the owners).
 
 ## Context
 
@@ -28,6 +28,7 @@ MIDB runs on Vercel with Postgres (postgres-js + Drizzle), Hanko for auth, and a
   - The data starts fresh: source tables are loaded by the daily source sync (Phase 2b), and no users carry over.
 
 What exists today:
+
 - `comments` table: no threading, never written.
 - `/user/comments`: read-only.
 - Hanko seam: `hooks.server.ts`, then `locals.getUser()`, then `guards.ts`.
@@ -114,7 +115,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
 - **One migration:** a single SQLite baseline, `db/migrations/0000_init.sql` with its snapshot and journal, generated once all schema work is final. Phases regenerate it (delete, then `db:generate`) rather than stacking migrations. The Postgres chain is deleted.
 - **No shims:** every Hanko, Vercel, Postgres, Redis and docker artefact is removed.
 - **Old plans:**
-  - `plan-user-schema-auth-flow.md`, `plan-migrate-on-deploy.md` and `major-version-upgrade.md` move to `.CLAUDE/plans/archive/`.
+  - The plans finished before the docs standards are in `docs/plans/done/`; whether they move to the new repository is an open item in `docs/phases/STATUS.md`.
   - Plans whose decisions still hold stay.
 - **Branch:** work is committed and pushed to `ccr-15978aa5-gk22gk`. The owner moves it to the new repo.
 
@@ -136,6 +137,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
   - The Google and Discord buttons appear only when their credentials are set.
   - With no `ANTHROPIC_API_KEY`, comments go to `pending`. A dev-only `MODERATION_DEV_AUTO_APPROVE=1` overrides that, and only on localhost.
   - Tests need no secrets and no network.
+
 - **CI and forks:**
   - Fork PRs run tests only.
   - Previews deploy from same-repo branches only.
@@ -148,11 +150,12 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
   - bans.
 
   A private `MODERATION_EXTRA_TERMS` secret extends the blocklist at runtime.
+
 - **Disclosure:** `/resources` gets a "Comments and moderation" part. It says what the AI checks, that the comment text, title and parent comment go to Anthropic (never the email), and what is automatic and what is reviewed by people. It mirrors `policy.ts`.
 - **Repo files:**
-  - Add `SECURITY.md` (GitHub Security Advisories).
+  - Each phase updates `PRIVACY.md`, `SECURITY.md`, `ACCESSIBILITY.md` and `THIRD_PARTY_NOTICES.md` for what it changes: Cloudflare in place of Vercel, Better Auth and its cookies in place of Hanko, comments and their moderation through Anthropic, the daily source sync.
   - Add a "Deploy your own" section to the README.
-  - Add the TMDB attribution to the footer or `/resources` if it's missing.
+  - Show the TMDB attribution (logo and notice) on the site, in the footer or on `/resources`. `THIRD_PARTY_NOTICES.md` already carries the notice.
 
 ## Phase 0: SvelteKit 3 upgrade (on the current stack, before anything else)
 
@@ -169,7 +172,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
    - Change `error()` calls to string messages.
    - Change `goto(..., { invalidateAll })` (in `logoutButton`) to `refreshAll`.
    - Make tsconfig extend `$app/tsconfig`.
-2. Rewrite AGENTS.md rules that the upgrade breaks: "Use `#lib` and `#db`", the `.svelte.js` rune-import rule (check it still applies), and the `@reference` depth rule (unchanged).
+2. Rewrite the rules the upgrade breaks, in `.claude/rules/code-standards.md` (File organisation): "Use `#lib` and `#db`", the `.svelte.js` rune-import rule (check it still applies), and the `@reference` depth rule (unchanged).
 3. Run the full baseline on the current Postgres stack and commit that on its own, so later failures can't be confused with upgrade fallout.
 
 ## Phase 1: Cloudflare platform
@@ -318,6 +321,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
      4. re-run the existing binding step (`seedUnconsenting`'s matcher) for new or renamed items.
 
      It also writes the unmatched report to the job log, not the repo.
+
    - `sync-bechdel.ts`:
      - **Daily:** the RSS feed plus the year pages for the current year and the two before it.
      - **Weekly (Sundays):** the full sweep, every year page from 1874 to now (about 150 requests, 1 per second).
@@ -325,6 +329,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
      - New titles get their `tmdb_id` through `backfillTmdb` (TMDB `/find`).
    - `sync-popularity.ts`: stream today's TMDB movie and TV export files and update `titles.popularity` for titles that have a `tmdb_id`. Only rows we hold are written: the export is read, not stored.
    - Every request uses the `MIDB-sync` User-Agent, a timeout, and one retry. On a fetch or parse failure the job exits non-zero and changes nothing.
+
 3. **First load in a fresh database** runs the same scripts. `bun run db:sync:all --local|--remote` replaces `db:seed:movies` / `db:seed:um`.
    - Delete `db/seeds/sources/*.csv` and `unconsenting_unmatched.txt`.
    - Delete `seedMovies.ts` / `seedUnconsenting.ts`; their upsert and matching code moves into the sync scripts.
@@ -370,7 +375,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 5. **`user-queries.ts`.**
    - Delete `getOrCreateUser`.
    - Keep the rest.
-   - `PublicUser` gains an opaque `id`, needed to recognise one's own comments in cookie-blind lists. Update the type doc, the `toPublicUser` / `api-me` specs and the AGENTS.md wording.
+   - `PublicUser` gains an opaque `id`, needed to recognise one's own comments in cookie-blind lists. Update the type doc, the `toPublicUser` / `api-me` specs and `.claude/rules/code-standards.md`, Server / client boundary.
 6. **Client.**
    - Delete:
      - `components/auth/hanko*.svelte`
@@ -430,7 +435,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - `PATCH|DELETE /api/comments/[id]`: owner only.
    - `PUT|DELETE /api/comments/[id]/vote`: no voting on your own comment.
    - `POST /api/comments/[id]/report`
-4. **UI** (`$lib/components/comments/`, designed through `/impeccable`, with AGENTS.md copy rules).
+4. **UI** (`$lib/components/comments/`, designed through `/impeccable`, with `.claude/rules/copy-standards.md`).
    - Components:
      - `commentsSection.svelte`: a `CollapsibleSection` at the end of `.sections` on the movie and TV pages, with no icon disk;
      - `commentList`, `commentItem`, `commentComposer` and `commentReportForm`;
@@ -489,20 +494,20 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - A scheduled job runs the orphan-user cleanup.
    - Secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 3. **Docs:**
-   - **AGENTS.md:**
+   - **`.claude/rules/` (code, deploy and docs standards, and `AGENTS.md`'s Commands):**
      - Database: D1, the `db` resolution, batches instead of transactions, the 100-parameter chunking, migrate-first through the workflow, and `defer_foreign_keys`.
      - Testing: local D1, no docker. Verification baseline: drop `docker compose`.
      - Server/client boundary: Better Auth, `PublicUser.id`, no `locals.claims`.
      - Caching: Workers Caching, cache header sets, `Cache-Tag` purges, and the hook's safe default (no header or `Set-Cookie` → `private, no-store`).
      - Aliases: `#lib`, `#db`.
      - Bindings: from `cloudflare:workers` through `#lib/server/env.ts`.
-   - **`.CLAUDE/architecture.md`:** file map, auth flow, caching policy, env table, and the comments and moderation sections. Remove the Hanko, Vercel, Postgres and Redis text.
+   - **`docs/architecture.md`:** file map, auth flow, caching policy, env table, and the comments and moderation sections. Remove the Hanko, Vercel, Postgres and Redis text.
    - **Other files:**
      - `README.md`: setup and "Deploy your own".
      - `DESIGN.md`: comment and moderation patterns; Hanko theming removed.
      - `PRODUCT.md`: new surfaces.
      - Add `SECURITY.md`.
-     - Copy this plan into `.CLAUDE/plans/`.
+     - Delete this plan once its last phase is completed (`.claude/rules/docs-standards.md`, Plans).
 
 ## Verification
 

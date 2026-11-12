@@ -1,0 +1,21 @@
+# Weekly update pull requests. Actions are pinned by commit in .github/workflows, and Dependabot moves
+# the pin and its version comment together. Package updates are grouped so one pull request carries a
+# week's minor and patch bumps; majors arrive one at a time.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'repo:'
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'repo:'
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]

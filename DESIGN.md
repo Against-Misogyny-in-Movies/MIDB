@@ -1,6 +1,6 @@
 # Design
 
-The visual system of MIDB, as built. Tokens and shared classes live in `src/app.css`; the rules agents follow are in `AGENTS.md` (_Components_, _Styling_).
+The visual system of MIDB, as built. Tokens and shared classes live in `src/app.css`; the rules agents follow are in `.claude/rules/style-standards.md` and `.claude/rules/code-standards.md` (Components).
 
 ## Idea
 

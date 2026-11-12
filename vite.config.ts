@@ -12,7 +12,7 @@ export default defineConfig({
 				extends: true,
 				test: {
 					name: 'unit',
-					include: ['src/**/*.{test,spec}.{js,ts}', 'db/**/*.spec.ts'],
+					include: ['src/**/*.{test,spec}.{js,ts}', 'db/**/*.spec.ts', 'scripts/**/*.spec.ts'],
 					exclude: ['src/**/*.db.spec.ts', 'db/**/*.db.spec.ts'],
 					environment: 'jsdom'
 				}

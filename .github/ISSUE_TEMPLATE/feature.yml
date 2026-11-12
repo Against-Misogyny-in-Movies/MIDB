@@ -1,0 +1,11 @@
+name: Feature request
+description: Suggest something new. Check PRODUCT.md for what the site is for first.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you would like
+      description: The problem it solves and how you picture it working.
+    validations:
+      required: true

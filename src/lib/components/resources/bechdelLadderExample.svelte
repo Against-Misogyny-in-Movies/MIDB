@@ -28,7 +28,7 @@
 		@apply flex flex-col list-none m-0 p-0;
 	}
 
-	/* Shared marker pattern: see .CLAUDE/architecture.md. */
+	/* Shared marker pattern: see docs/architecture.md, Shared marker pattern. */
 	li {
 		@apply flex items-center gap-sm text-sm text-ink font-medium;
 		padding-block: var(--spacing-xs);
