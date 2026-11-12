@@ -130,7 +130,7 @@ So:
 - **TypeScript 6.** `typescript` becomes `~6.0.3`, the newest version the Svelte tooling, the editor and typescript-eslint's parser can load. `svelte-check` (`pnpm check`) keeps checking everything, `.svelte` included.
 - **TypeScript 7.**
   - Add `"typescript7": "npm:typescript@7.0.2"` as a dev dependency. The alias avoids a clash with the package name, and its platform binaries come through its optionalDependencies.
-  - New script: `"typecheck": "svelte-kit sync && node node_modules/typescript7/bin/tsc -p tsconfig.typecheck.json"`. The script calls the alias's `bin/tsc` directly, so the two `tsc` bins never collide.
+  - New script: `"typecheck": "svelte-kit sync && node node_modules/typescript7/bin/tsc -p tsconfig.typecheck.json"`. The script calls the alias's `bin/tsc` directly. pnpm links the alias's `tsc` over TypeScript 6's, so `pnpm exec tsc` runs 7.0.2, while the `typescript` module that `svelte-check`, typescript-eslint and the editor load is 6.0.3 (its compiler: `node node_modules/typescript/bin/tsc`).
 - **`tsconfig.typecheck.json`:**
   - It `extends: "./tsconfig.json"` and sets `"noEmit": true`.
   - It includes `src/**/*.ts`, `db/**/*.ts`, `scripts/**/*.ts`, `e2e-tests/**/*.ts` and `*.config.ts`, and excludes `.svelte-kit/output`.
@@ -203,7 +203,7 @@ The ESLint run takes about 6.7 s over 183 files, so speed is not the reason for 
    - a test commit is refused by the hook.
 5. **No Bun left.** `grep -rn "bun" --exclude-dir={node_modules,.git,docs/plans/done,.claude/skills}` finds nothing but `pnpm-lock.yaml` noise (for example `bun-types` in unrelated packages, if any).
 6. **TypeScript.**
-   - `pnpm exec tsc --version` → 6.0.3.
+   - `pnpm exec tsc --version` → 7.0.2 (the alias's bin wins); `node node_modules/typescript/bin/tsc --version` → 6.0.3.
    - `node node_modules/typescript7/bin/tsc --version` → 7.0.2.
    - `pnpm typecheck` → 0 errors; record its time next to `pnpm check`'s.
    - Plant a deliberate type error in a scratch copy of a `.ts` file and confirm both `pnpm check` and `pnpm typecheck` fail on it, then revert.

@@ -4,9 +4,6 @@
 		"noEmit": true
 	},
 	"include": [
-		"ambient.d.ts",
-		"env.d.ts",
-		"non-ambient.d.ts",
 		".svelte-kit/ambient.d.ts",
 		".svelte-kit/non-ambient.d.ts",
 		".svelte-kit/types/**/$types.d.ts",
@@ -14,7 +11,8 @@
 		"db/**/*.ts",
 		"scripts/**/*.ts",
 		"e2e-tests/**/*.ts",
+		".storybook/**/*.ts",
 		"*.config.ts"
 	],
-	"exclude": ["node_modules", ".svelte-kit/output", "db/migrations"]
+	"exclude": ["node_modules", "db/migrations"]
 }

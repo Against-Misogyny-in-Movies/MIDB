@@ -34,9 +34,9 @@ Read the sections your task touches.
 - `README.md` — MIDB (~660 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~1.9K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~33.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~33.7K tok)
   - 7–16 What it is (~410)
-  - 17–36 Tech stack (~1.0K)
+  - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
   - 68–204 Directory layout (~4.1K)
     - 195–204 File-organisation conventions (~410)
@@ -98,10 +98,10 @@ Read when a task names the plan.
     - 55–81 2. Scripts run on Node (~590)
     - 82–99 3. CI, hosting, hooks (~340)
     - 100–120 4. Docs (current state only, per `.claude/rules/docs-standards.md`) (~390)
-    - 121–140 5. TypeScript: 6.0.3 for the tooling, 7.0.2 as a fast typecheck (user decision, 2026-11-12) (~470)
+    - 121–140 5. TypeScript: 6.0.3 for the tooling, 7.0.2 as a fast typecheck (user decision, 2026-11-12) (~520)
     - 141–171 6. Lint: Oxlint for TS/JS, ESLint only for Svelte templates (user decision, 2026-11-12) (~610)
     - 172–185 7. Docs for sections 5–6 (~270)
-  - 186–222 Verification (~600)
+  - 186–222 Verification (~620)
 
 ## Policies
 
