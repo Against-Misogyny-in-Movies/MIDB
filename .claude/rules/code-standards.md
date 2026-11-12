@@ -20,6 +20,11 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
   - Call it outside any `try` that would swallow the 429.
   - `bucket` names a binding in `wrangler.jsonc`; a new limit adds the binding there, to `RateLimitBucket` and to its memory fallback in the same change.
 
+## Caching
+
+- A response is cached only by opting in: set a header set from `#lib/server/http/cache.ts` (`PUBLIC_PAGE`, `PUBLIC_COMMENTS`, …). The request hook makes any response without `cache-control`, or with `Set-Cookie`, `private, no-store`, so a route never publishes by forgetting. Set the policy only after the lookup succeeded.
+- A write that changes a cached list purges its `Cache-Tag` (`docs/architecture.md`, Caching policy).
+
 ## Route folders are thin
 
 - Route folders (`src/routes/*/`) hold only `+page.svelte` / `+page.server.ts` / `+server.ts`. No `datasource.server.ts`.
@@ -94,7 +99,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 ## Testing
 
-- Unit tests: Vitest, co-located in `__tests__/` subfolders (`src/`, `db/`, `scripts/`). Playwright e2e specs live in top-level `e2e-tests/`.
+- Unit tests: Vitest, co-located in `__tests__/` subfolders (`src/`, `db/`, `scripts/`). Playwright e2e specs live in top-level `e2e-tests/` and run against the built Worker on `wrangler dev` (`pnpm preview`) with a local D1.
 - **Anything touching the database gets a `*.db.spec.ts`**, run by `pnpm test:db` (the Vitest `db` project, on a local D1 in Miniflare that needs no Docker, secrets or network; every table is emptied before each test). Unit specs must not need a live DB: mock `#lib/server/db`.
 - When moving a function to a new file, update its test's import path. Don't leave a test importing from the old location.
 - A behaviour change ships with its test in the same change. A test that asserts the buggy result is a finding.

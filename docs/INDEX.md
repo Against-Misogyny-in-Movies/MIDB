@@ -10,18 +10,19 @@ Read whole.
 
 - `AGENTS.md` — MIDB: agent rules (~740 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~3.5K tok)
+- `.claude/rules/code-standards.md` — Code standards (~3.6K tok)
   - 5–22 Server / client boundary (~620) ← 2
-  - 23–29 Route folders are thin (~130)
-  - 30–51 File organisation (~640) ← 4
-  - 52–71 Components (~460) ← 3
-  - 72–94 Database (~700) ← 1
-  - 95–101 Testing (~170) ← 1
-  - 102–114 Making a change (~440) ← 3
-  - 115–131 Checking a change (~230) ← 6
+  - 23–27 Caching (~110)
+  - 28–34 Route folders are thin (~130)
+  - 35–56 File organisation (~640) ← 4
+  - 57–76 Components (~460) ← 3
+  - 77–99 Database (~700) ← 1
+  - 100–106 Testing (~190) ← 1
+  - 107–119 Making a change (~440) ← 3
+  - 120–136 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
-- `.claude/rules/deploy-standards.md` — Deploy standards (~410 tok)
+- `.claude/rules/deploy-standards.md` — Deploy standards (~540 tok)
 - `.claude/rules/docs-standards.md` — Docs standards (~1.1K tok)
 - `.claude/rules/style-standards.md` — Style standards (~1.3K tok)
 
@@ -39,8 +40,8 @@ Each agent reads its own file.
 
 Read the sections your task touches.
 
-- `README.md` — MIDB (~1.1K tok)
-- `PRODUCT.md` — Product (~390 tok)
+- `README.md` — MIDB (~2.2K tok)
+- `PRODUCT.md` — Product (~470 tok)
 - `DESIGN.md` — Design (~3.1K tok)
   - 5–8 Idea (~70)
   - 9–23 Colour (~670)
@@ -51,7 +52,7 @@ Read the sections your task touches.
   - 67–70 Motion (~90)
   - 71–74 Browser surfaces (~50)
   - 75–78 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~46.6K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~46.5K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -78,11 +79,11 @@ Read the sections your task touches.
     - 651–663 Local run sequence (~130)
     - 664–667 npm scripts (~200)
     - 668–678 CI (`.github/workflows/tests.yml`) (~450)
-    - 679–689 Deploy (`.github/workflows/deploy.yml`) (~380)
+    - 679–689 Deploy (`.github/workflows/deploy.yml`) (~380) ← 1
   - 690–705 Testing (~1.2K)
     - 700–705 Verification baseline (~80)
-  - 706–715 Known gaps / TODO (~280)
-  - 716–724 Related docs (~160)
+  - 706–714 Known gaps / TODO (~240)
+  - 715–723 Related docs (~140)
 
 ## Phases
 
@@ -114,7 +115,7 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~2.1K tok)
+- `SECURITY.md` — Security (~2.4K tok)
 - `PRIVACY.md` — Privacy (~2.1K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
