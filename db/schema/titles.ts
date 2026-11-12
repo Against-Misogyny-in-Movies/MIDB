@@ -8,7 +8,7 @@ import {
 	check
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamps } from './columns.ts';
+import { enumCheck, timestamps } from './columns.ts';
 
 export const titleKind = ['movie', 'tv'] as const;
 
@@ -38,6 +38,8 @@ export const titles = sqliteTable(
 	(t) => [
 		uniqueIndex('titles_kind_tmdb_idx').on(t.kind, t.tmdbId),
 		index('titles_popularity_idx').on(t.popularity),
-		check('titles_kind_check', sql`${t.kind} IN ('movie', 'tv')`)
+		enumCheck('titles_kind_check', t.kind, titleKind),
+		check('titles_title_length', sql`length(${t.title}) <= 255`),
+		check('titles_clean_title_length', sql`length(${t.cleanTitle}) <= 255`)
 	]
 );

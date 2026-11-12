@@ -10,7 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { titles } from './titles.ts';
 import { users } from './auth.ts';
-import { timestamps, umFlagColumns } from './columns.ts';
+import { enumCheck, timestamps, umFlagColumns } from './columns.ts';
 
 // One table per metric shape, so each can hold what it names.
 
@@ -102,6 +102,6 @@ export const comments = sqliteTable(
 		index('comments_title_idx').on(t.titleId, t.createdAt),
 		index('comments_user_idx').on(t.userId, t.createdAt),
 		check('comments_body_length', sql`length(${t.body}) BETWEEN 1 AND 5000`),
-		check('comments_status_check', sql`${t.status} IN ('visible', 'hidden', 'deleted')`)
+		enumCheck('comments_status_check', t.status, commentStatus)
 	]
 );

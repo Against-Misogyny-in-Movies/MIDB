@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "da921c25-806c-414a-a2ce-dc0dce67e876",
+  "id": "43e4f354-9780-4666-956b-ef85b1a35278",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "user": {
@@ -81,6 +81,14 @@
         "user_role_check": {
           "name": "user_role_check",
           "value": "\"user\".\"role\" IN ('user', 'moderator', 'administrator')"
+        },
+        "user_username_length": {
+          "name": "user_username_length",
+          "value": "length(\"user\".\"username\") <= 32"
+        },
+        "user_avatar_key_length": {
+          "name": "user_avatar_key_length",
+          "value": "length(\"user\".\"avatar_key\") <= 48"
         }
       }
     },
@@ -666,6 +674,14 @@
         "titles_kind_check": {
           "name": "titles_kind_check",
           "value": "\"titles\".\"kind\" IN ('movie', 'tv')"
+        },
+        "titles_title_length": {
+          "name": "titles_title_length",
+          "value": "length(\"titles\".\"title\") <= 255"
+        },
+        "titles_clean_title_length": {
+          "name": "titles_clean_title_length",
+          "value": "length(\"titles\".\"clean_title\") <= 255"
         }
       }
     },

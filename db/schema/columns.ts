@@ -1,4 +1,11 @@
-import { integer } from 'drizzle-orm/sqlite-core';
+import { sql, type SQL } from 'drizzle-orm';
+import { check, integer, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+
+/** A `created_at` column on tables that are written once. */
+export const createdAt = () =>
+	integer('created_at', { mode: 'timestamp_ms' })
+		.notNull()
+		.$defaultFn(() => new Date());
 
 /**
  * `created_at` / `updated_at` as epoch milliseconds. The app fills both on insert and Drizzle
@@ -6,20 +13,12 @@ import { integer } from 'drizzle-orm/sqlite-core';
  * not an edit.
  */
 export const timestamps = () => ({
-	createdAt: integer('created_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.$defaultFn(() => new Date()),
+	createdAt: createdAt(),
 	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
 		.notNull()
 		.$defaultFn(() => new Date())
 		.$onUpdate(() => new Date())
 });
-
-/** A `created_at` column on tables that are written once. */
-export const createdAt = () =>
-	integer('created_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.$defaultFn(() => new Date());
 
 /** The nine Unconsenting Media flags, shared by `um_source` and `community_um_reports`. */
 export const umFlagColumns = () => ({
@@ -33,3 +32,14 @@ export const umFlagColumns = () => ({
 	rapeOffScrn: integer('rape_off_scrn', { mode: 'boolean' }).notNull(),
 	rapeOnScreen: integer('rape_on_screen', { mode: 'boolean' }).notNull()
 });
+
+/** A CHECK that `column` holds one of `values`, so the constraint is built from the enum tuple. */
+export function enumCheck(
+	name: string,
+	column: AnySQLiteColumn,
+	values: readonly string[]
+): ReturnType<typeof check> {
+	// A CHECK in DDL cannot bind parameters, so the values are inlined as quoted literals.
+	const list: SQL = sql.raw(values.map((v) => `'${v.replaceAll("'", "''")}'`).join(', '));
+	return check(name, sql`${column} IN (${list})`);
+}

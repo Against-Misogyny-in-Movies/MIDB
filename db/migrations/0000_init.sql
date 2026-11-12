@@ -6,7 +6,9 @@ CREATE TABLE `user` (
 	`avatar_key` text(48),
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
-	CONSTRAINT "user_role_check" CHECK("user"."role" IN ('user', 'moderator', 'administrator'))
+	CONSTRAINT "user_role_check" CHECK("user"."role" IN ('user', 'moderator', 'administrator')),
+	CONSTRAINT "user_username_length" CHECK(length("user"."username") <= 32),
+	CONSTRAINT "user_avatar_key_length" CHECK(length("user"."avatar_key") <= 48)
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `user_username_lower_idx` ON `user` (lower("username"));--> statement-breakpoint
@@ -88,7 +90,9 @@ CREATE TABLE `titles` (
 	`popularity_at` integer,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
-	CONSTRAINT "titles_kind_check" CHECK("titles"."kind" IN ('movie', 'tv'))
+	CONSTRAINT "titles_kind_check" CHECK("titles"."kind" IN ('movie', 'tv')),
+	CONSTRAINT "titles_title_length" CHECK(length("titles"."title") <= 255),
+	CONSTRAINT "titles_clean_title_length" CHECK(length("titles"."clean_title") <= 255)
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `titles_imdb_id_unique` ON `titles` (`imdb_id`);--> statement-breakpoint

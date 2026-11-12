@@ -1,6 +1,6 @@
 import { sqliteTable, text, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { timestamps } from './columns.ts';
+import { enumCheck, timestamps } from './columns.ts';
 
 export const userRole = ['user', 'moderator', 'administrator'] as const;
 
@@ -17,6 +17,8 @@ export const users = sqliteTable(
 	(t) => [
 		uniqueIndex('user_username_lower_idx').on(sql`lower(${t.username})`),
 		index('user_role_idx').on(t.role),
-		check('user_role_check', sql`${t.role} IN ('user', 'moderator', 'administrator')`)
+		enumCheck('user_role_check', t.role, userRole),
+		check('user_username_length', sql`length(${t.username}) <= 32`),
+		check('user_avatar_key_length', sql`length(${t.avatarKey}) <= 48`)
 	]
 );

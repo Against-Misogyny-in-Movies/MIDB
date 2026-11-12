@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, check, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { titles } from './titles.ts';
-import { createdAt, umFlagColumns } from './columns.ts';
+import { createdAt, enumCheck, umFlagColumns } from './columns.ts';
 
 /** Synced BechdelTest.com rating, one per title. */
 export const titleBechdel = sqliteTable(
@@ -58,5 +58,5 @@ export const sourceSync = sqliteTable(
 		lastSuccessAt: integer('last_success_at', { mode: 'timestamp_ms' }).notNull(),
 		rowsChanged: integer('rows_changed').notNull()
 	},
-	(t) => [check('source_sync_source_check', sql`${t.source} IN ('bechdel', 'um', 'popularity')`)]
+	(t) => [enumCheck('source_sync_source_check', t.source, syncSource)]
 );

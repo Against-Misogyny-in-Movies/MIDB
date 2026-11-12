@@ -36,6 +36,18 @@ describe('D1 through Drizzle', () => {
 		).rejects.toThrow();
 	});
 
+	it('rejects text over the length limits the schema keeps from Postgres', async () => {
+		const long = (n: number) => 'x'.repeat(n);
+		await expect(db.insert(titles).values({ ...movie(1), title: long(256) })).rejects.toThrow();
+		await expect(
+			db.insert(titles).values({ ...movie(1), cleanTitle: long(256) })
+		).rejects.toThrow();
+		await db.insert(titles).values({ ...movie(1), title: long(255), cleanTitle: long(255) });
+		await expect(db.insert(users).values({ id: 'u1', username: long(33) })).rejects.toThrow();
+		await expect(db.insert(users).values({ id: 'u1', avatarKey: long(49) })).rejects.toThrow();
+		await db.insert(users).values({ id: 'u1', username: long(32), avatarKey: long(48) });
+	});
+
 	it('enforces foreign keys and cascades deletes', async () => {
 		await expect(
 			db.insert(communityBechdelRatings).values({ userId: 'nobody', titleId: 'none', rating: 1 })
