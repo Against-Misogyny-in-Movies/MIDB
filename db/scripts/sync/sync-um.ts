@@ -1,20 +1,36 @@
-import { eq, getTableColumns, inArray, sql } from 'drizzle-orm';
+import { eq, getTableColumns, inArray, sql, type SQL } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { Db } from '../../client.ts';
 import { titles } from '../../schema/titles.ts';
 import { titleUm, umSource } from '../../schema/sources.ts';
 import { chunkForD1 } from '../../lib/chunkForD1.ts';
-import { parseUmFeed, type UmSourceRow } from '../../lib/sources/um-feed.ts';
+import { parseUmFeed, UM_FLAG_KEYS, type UmSourceRow } from '../../lib/sources/um-feed.ts';
 import { buildCleanTitleIndex, matchUmFilm } from '../../lib/sources/um-match.ts';
 import { isMain } from '../../../scripts/lib/is-main.ts';
 import { runBatches } from './lib/batch.ts';
-import { runSync } from './lib/args.ts';
+import { runSync } from './lib/run.ts';
 import { stampSync } from './lib/stamp.ts';
 
 // A row binds every column of its table, defaults included.
 const SOURCE_COLUMNS = Object.keys(getTableColumns(umSource)).length;
 const BINDING_COLUMNS = Object.keys(getTableColumns(titleUm)).length;
 const UNMATCHED_LINES_SHOWN = 200;
+/** A run that would delete a larger share of the stored `um_source` rows than this is refused. */
+export const MAX_DELETED_SHARE = 0.1;
+
+// Columns the upsert overwrites from the incoming row, as `excluded.<column>` assignments.
+const UPSERT_KEYS = [
+	'cleanName',
+	'cleanTitleKey',
+	'year',
+	...UM_FLAG_KEYS,
+	'comment',
+	'sourceUpdatedAt'
+] as const;
+const sourceColumns = getTableColumns(umSource);
+const UPSERT_SET = Object.fromEntries(
+	UPSERT_KEYS.map((key) => [key, sql.raw(`excluded.${sourceColumns[key].name}`)])
+) as Record<(typeof UPSERT_KEYS)[number], SQL>;
 
 export interface UmSyncResult {
 	/** Films and series in the feed. */
@@ -34,12 +50,15 @@ export interface UmSyncResult {
 /**
  * Syncs `um_source` and `title_um` to the UM feed, writing only what differs:
  *
- * - rows are upserted when the feed's `updatedAt` is newer than the stored `source_updated_at`;
+ * - rows are upserted when the feed's `updatedAt` is newer than the stored `source_updated_at`,
+ *   or when a column MIDB derives (`clean_name`, `clean_title_key`, `year`) differs;
  * - rows missing from the feed are deleted, their bindings first (`title_um.um_id` has no cascade);
  * - bindings are recomputed for every UM film against the film titles and diffed, so a new or
  *   renamed item, or a film added by the Bechdel sync, is bound without a separate pass.
  *
- * A feed with no films or series throws before anything is read from or written to the database.
+ * Before any write, a feed with no films, no series, or one that would remove more than
+ * `MAX_DELETED_SHARE` of the stored rows throws, so a renamed item type or a partial feed
+ * cannot empty the table or stamp a success.
  */
 export async function syncUm(
 	db: Db,
@@ -54,17 +73,48 @@ export async function syncUm(
 		(a, b) => a.umId - b.umId
 	);
 
+	for (const kind of ['movie', 'tv'] as const) {
+		if (!rows.some((row) => row.kind === kind)) {
+			throw new Error(
+				`The Unconsenting Media feed has no ${kind === 'movie' ? 'films' : 'series'}; nothing was changed.`
+			);
+		}
+	}
+
 	const stored = new Map(
-		(await db.select({ umId: umSource.umId, at: umSource.sourceUpdatedAt }).from(umSource)).map(
-			(r) => [r.umId, r.at]
-		)
+		(
+			await db
+				.select({
+					umId: umSource.umId,
+					at: umSource.sourceUpdatedAt,
+					cleanName: umSource.cleanName,
+					cleanTitleKey: umSource.cleanTitleKey,
+					year: umSource.year
+				})
+				.from(umSource)
+		).map((r) => [r.umId, r])
 	);
 	const inFeed = new Set(rows.map((r) => r.umId));
-	const upserts = rows.filter((row) => {
-		const at = stored.get(row.umId);
-		return at === undefined || at === null || row.sourceUpdatedAt.getTime() > at.getTime();
-	});
 	const deletedIds = [...stored.keys()].filter((id) => !inFeed.has(id));
+	if (deletedIds.length > stored.size * MAX_DELETED_SHARE) {
+		throw new Error(
+			`The Unconsenting Media feed would remove ${deletedIds.length} of ${stored.size} stored ` +
+				`entries, over the ${MAX_DELETED_SHARE * 100}% limit; nothing was changed.`
+		);
+	}
+	// A row is written when the feed's `updatedAt` is newer, or when a column MIDB computes from
+	// the feed's name and year differs, so a matcher fix reaches rows the feed has not touched.
+	const upserts = rows.filter((row) => {
+		const have = stored.get(row.umId);
+		if (!have) return true;
+		return (
+			have.at === null ||
+			row.sourceUpdatedAt.getTime() > have.at.getTime() ||
+			have.cleanName !== row.cleanName ||
+			have.cleanTitleKey !== row.cleanTitleKey ||
+			have.year !== row.year
+		);
+	});
 
 	const bindings = await planBindings(db, rows);
 	const statements: BatchItem<'sqlite'>[] = [];
@@ -84,28 +134,10 @@ export async function syncUm(
 	}
 	for (const chunk of chunkForD1(upserts, SOURCE_COLUMNS)) {
 		statements.push(
-			db
-				.insert(umSource)
-				.values(chunk.map(toSourceInsert))
-				.onConflictDoUpdate({
-					target: umSource.umId,
-					set: {
-						cleanName: sql`excluded.clean_name`,
-						cleanTitleKey: sql`excluded.clean_title_key`,
-						year: sql`excluded.year`,
-						noRape: sql`excluded.no_rape`,
-						rapeMenDisImp: sql`excluded.rape_men_dis_imp`,
-						sexHarOnScrn: sql`excluded.sex_har_on_scrn`,
-						sexAdultTeen: sql`excluded.sex_adult_teen`,
-						childSexAbuse: sql`excluded.child_sex_abuse`,
-						incest: sql`excluded.incest`,
-						attemptedRape: sql`excluded.attempted_rape`,
-						rapeOffScrn: sql`excluded.rape_off_scrn`,
-						rapeOnScreen: sql`excluded.rape_on_screen`,
-						comment: sql`excluded.comment`,
-						sourceUpdatedAt: sql`excluded.source_updated_at`
-					}
-				})
+			db.insert(umSource).values(chunk.map(toSourceInsert)).onConflictDoUpdate({
+				target: umSource.umId,
+				set: UPSERT_SET
+			})
 		);
 	}
 	for (const chunk of chunkForD1(bindings.toWrite, BINDING_COLUMNS)) {

@@ -13,7 +13,7 @@ import {
 } from '../../lib/sources/bechdel-html.ts';
 import { isMain } from '../../../scripts/lib/is-main.ts';
 import { runBatches } from './lib/batch.ts';
-import { runSync } from './lib/args.ts';
+import { runSync } from './lib/run.ts';
 import type { SyncSources } from './lib/sources.ts';
 import { lastSync, stampSync } from './lib/stamp.ts';
 

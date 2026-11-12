@@ -1,53 +1,41 @@
 import { z } from 'zod';
+import { umFlagColumns } from '../../schema/columns.ts';
+import type { umSource } from '../../schema/sources.ts';
 import { normalizeTitle, stripTrailingYear } from '../normalizeTitle.ts';
 
-/** The public feed of the Unconsenting Media catalogue, one request a day. */
+/** The public feed of the Unconsenting Media catalogue, fetched once a day. */
 export const UM_FEED_URL = 'https://www.unconsentingmedia.org/list.json';
 
 export type UmKind = 'movie' | 'tv';
 
+/** The nine flag keys of `um_source`, as `umFlagColumns()` declares them. */
+export type UmFlagKey = keyof ReturnType<typeof umFlagColumns>;
+export const UM_FLAG_KEYS = Object.keys(umFlagColumns()) as UmFlagKey[];
+
 /** One UM item as `um_source` stores it, plus the kind the binding step needs. */
-export interface UmSourceRow {
-	umId: number;
+export type UmSourceRow = Required<typeof umSource.$inferInsert> & {
 	kind: UmKind;
-	cleanName: string;
-	cleanTitleKey: string;
-	/** null = unknown */
-	year: number | null;
-	noRape: boolean;
-	rapeMenDisImp: boolean;
-	sexHarOnScrn: boolean;
-	sexAdultTeen: boolean;
-	childSexAbuse: boolean;
-	incest: boolean;
-	attemptedRape: boolean;
-	rapeOffScrn: boolean;
-	rapeOnScreen: boolean;
-	comment: string | null;
 	sourceUpdatedAt: Date;
-}
+};
 
 // The feed's `itemType` values for the kinds MIDB covers; books, games and podcasts are skipped.
 const ITEM_TYPES: Record<string, UmKind> = { movie: 'movie', 'tv show': 'tv' };
 
 const text = z.string().nullish();
 
+const flagShape = Object.fromEntries(UM_FLAG_KEYS.map((key) => [key, z.boolean()])) as Record<
+	UmFlagKey,
+	z.ZodBoolean
+>;
+
 const itemSchema = z.object({
+	...flagShape,
 	id: z.number().int(),
 	name: text,
 	cleanName: text,
 	cleanNameArticles: text,
 	yearOfRelease: z.number().nullish(),
 	comment: text,
-	noRape: z.boolean(),
-	rapeMenDisImp: z.boolean(),
-	sexHarOnScrn: z.boolean(),
-	sexAdultTeen: z.boolean(),
-	childSexAbuse: z.boolean(),
-	incest: z.boolean(),
-	attemptedRape: z.boolean(),
-	rapeOffScrn: z.boolean(),
-	rapeOnScreen: z.boolean(),
 	updatedAt: z.string().transform((value, ctx) => {
 		const date = new Date(value);
 		if (Number.isNaN(date.getTime())) {
@@ -100,15 +88,10 @@ export function parseUmFeed(json: unknown): UmSourceRow[] {
 			cleanTitleKey: key,
 			// UM writes "0" for "year unknown", so a non-positive year is null, never 0.
 			year: embeddedYear ?? (feedYear !== null && feedYear > 0 ? feedYear : null),
-			noRape: item.noRape,
-			rapeMenDisImp: item.rapeMenDisImp,
-			sexHarOnScrn: item.sexHarOnScrn,
-			sexAdultTeen: item.sexAdultTeen,
-			childSexAbuse: item.childSexAbuse,
-			incest: item.incest,
-			attemptedRape: item.attemptedRape,
-			rapeOffScrn: item.rapeOffScrn,
-			rapeOnScreen: item.rapeOnScreen,
+			...(Object.fromEntries(UM_FLAG_KEYS.map((key) => [key, item[key]])) as Record<
+				UmFlagKey,
+				boolean
+			>),
 			comment: item.comment?.trim() || null,
 			sourceUpdatedAt: item.updatedAt
 		});

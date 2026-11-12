@@ -1,6 +1,6 @@
 import { isMain } from '../../../scripts/lib/is-main.ts';
 import { backfillTmdb } from '../backfillTmdb.ts';
-import { runSync } from './lib/args.ts';
+import { runSync } from './lib/run.ts';
 import { syncBechdel } from './sync-bechdel.ts';
 import { syncPopularity } from './sync-popularity.ts';
 import { syncUm } from './sync-um.ts';

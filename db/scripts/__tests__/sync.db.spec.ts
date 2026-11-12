@@ -3,7 +3,7 @@ import { count, eq, lte } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { titles } from '#db/schema/titles.ts';
 import { sourceSync, titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
-import { syncUm } from '#db/scripts/sync/sync-um.ts';
+import { MAX_DELETED_SHARE, syncUm } from '#db/scripts/sync/sync-um.ts';
 import { syncBechdel } from '#db/scripts/sync/sync-bechdel.ts';
 import { syncPopularity } from '#db/scripts/sync/sync-popularity.ts';
 import { fixtureSources, type SyncSources } from '#db/scripts/sync/lib/sources.ts';
@@ -160,6 +160,20 @@ describe('source sync (fixtures)', () => {
 		await syncUm(db, older, quiet);
 		const [kept] = await db.select().from(umSource).where(eq(umSource.umId, 6561));
 		expect(kept.rapeOnScreen).toBe(true);
+	});
+
+	it('rewrites a row whose derived columns differ from the stored ones, though the feed is unchanged', async () => {
+		await loadAll();
+		await db
+			.update(umSource)
+			.set({ cleanTitleKey: 'stale key', year: 1900, cleanName: 'stale name' })
+			.where(eq(umSource.umId, 6561));
+		const um = await syncUm(db, await feed(), quiet);
+		expect(um).toMatchObject({ inserted: 0, updated: 1 });
+		const [row] = await db.select().from(umSource).where(eq(umSource.umId, 6561));
+		expect(row.cleanTitleKey).not.toBe('stale key');
+		expect(row.year).not.toBe(1900);
+		expect(row.cleanName).not.toBe('stale name');
 	});
 
 	it('deletes UM rows missing from the feed, removing their bindings first', async () => {
@@ -345,6 +359,36 @@ describe('source sync failures change nothing', () => {
 		const books = (await feed()).filter((i) => i.itemType === 'book');
 		await expect(syncUm(db, books, quiet)).rejects.toThrow(/no films or series/);
 		await expect(syncUm(db, { not: 'a list' }, quiet)).rejects.toThrow(/not an array/);
+		expect(await tally()).toEqual(before);
+	});
+
+	it('a feed that would remove most stored entries is refused, with nothing written or stamped', async () => {
+		await loadAll();
+		const stampedBefore = await stamp('um');
+		const before = await tally();
+
+		// A renamed item type drops every film from the parsed feed; the series alone remain.
+		const renamed = (await feed()).map((i) =>
+			i.itemType === 'movie' ? { ...i, itemType: 'film' } : i
+		);
+		await expect(syncUm(db, renamed, quiet)).rejects.toThrow(/no films/);
+
+		// A partial feed keeps both kinds but loses far more than the limit.
+		const items = await feed();
+		const films = items.filter((i) => i.itemType === 'movie');
+		const partial = items.filter((i) => i.itemType !== 'movie' || i.id === films[0].id);
+		expect((items.length - partial.length) / before.um).toBeGreaterThan(MAX_DELETED_SHARE);
+		await expect(syncUm(db, partial, quiet)).rejects.toThrow(/limit/);
+
+		expect(await tally()).toEqual(before);
+		expect(await stamp('um')).toEqual(stampedBefore);
+	});
+
+	it('a feed without series is refused before any write', async () => {
+		await loadAll();
+		const before = await tally();
+		const noSeries = (await feed()).filter((i) => i.itemType !== 'TV show');
+		await expect(syncUm(db, noSeries, quiet)).rejects.toThrow(/no series/);
 		expect(await tally()).toEqual(before);
 	});
 

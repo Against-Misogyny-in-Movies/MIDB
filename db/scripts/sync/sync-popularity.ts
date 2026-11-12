@@ -5,7 +5,7 @@ import { titles, titleKind } from '../../schema/titles.ts';
 import { readTmdbExport } from '../../lib/sources/tmdb-export.ts';
 import { isMain } from '../../../scripts/lib/is-main.ts';
 import { runBatches } from './lib/batch.ts';
-import { runSync } from './lib/args.ts';
+import { runSync } from './lib/run.ts';
 import type { SyncSources } from './lib/sources.ts';
 import { stampSync } from './lib/stamp.ts';
 
