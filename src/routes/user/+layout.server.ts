@@ -4,7 +4,7 @@ import { PRIVATE_NO_STORE } from '#lib/server/http/cache.ts';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals, setHeaders }) => {
-	setHeaders({ 'cache-control': PRIVATE_NO_STORE });
+	setHeaders({ ...PRIVATE_NO_STORE });
 	const user = await requireUser(locals, { page: true });
 	return { me: toPublicUser(user) };
 };

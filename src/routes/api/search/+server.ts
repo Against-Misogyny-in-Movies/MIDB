@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 
 	try {
 		const results = await searchTitles(q);
-		return Response.json({ results }, { headers: { 'cache-control': PUBLIC_SEARCH } });
+		return Response.json({ results }, { headers: PUBLIC_SEARCH });
 	} catch (err) {
 		// TMDB error status or network failure: answer "no results" without the public
 		// cache header, so neither the CDN nor the browser holds on to the outage.

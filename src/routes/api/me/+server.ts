@@ -6,6 +6,6 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ locals }) => {
 	const user = await locals.getUser();
 	return Response.json(user ? toPublicUser(user) : null, {
-		headers: { 'cache-control': PRIVATE_NO_STORE }
+		headers: PRIVATE_NO_STORE
 	});
 };

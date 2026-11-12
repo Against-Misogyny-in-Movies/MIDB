@@ -32,7 +32,8 @@ beforeEach(async () => {
 describe('GET /api/search', () => {
 	it('returns the results with the public search cache-control', async () => {
 		const res = await call('  matrix ');
-		expect(res.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=600');
+		expect(res.headers.get('cache-control')).toBe('max-age=60');
+		expect(res.headers.get('cdn-cache-control')).toBe('max-age=600');
 		await expect(res.json()).resolves.toEqual({ results: [HIT] });
 		expect(searchTitles).toHaveBeenCalledWith('matrix');
 	});

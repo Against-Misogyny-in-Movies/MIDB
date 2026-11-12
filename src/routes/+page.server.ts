@@ -3,7 +3,7 @@ import { PUBLIC_NO_STORE } from '#lib/server/http/cache.ts';
 import { getCatalogueCounts, getRandomRatedFilms } from '#lib/server/data/catalogue.ts';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
-	setHeaders({ 'cache-control': PUBLIC_NO_STORE });
+	setHeaders({ ...PUBLIC_NO_STORE });
 	// Seeded data only: user-agnostic, with six random films per request, so nothing caches it.
 	// The page still renders (search and sources) when the database is unreachable, without the
 	// counts and the hero films.

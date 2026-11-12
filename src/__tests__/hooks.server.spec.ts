@@ -111,3 +111,48 @@ describe('handle', () => {
 		}
 	);
 });
+
+describe('handle cache headers', () => {
+	async function respond(init: Response) {
+		verifyClaims.mockResolvedValue(null);
+		return handle({ event: event('/x'), resolve: async () => init });
+	}
+
+	it('makes a response without cache-control private, no-store', async () => {
+		const res = await respond(new Response('ok'));
+		expect(res.headers.get('cache-control')).toBe('private, no-store');
+	});
+
+	it('keeps the cache headers a route set', async () => {
+		const res = await respond(
+			new Response('ok', {
+				headers: { 'cache-control': 'public, max-age=0', 'cdn-cache-control': 'max-age=3600' }
+			})
+		);
+		expect(res.headers.get('cache-control')).toBe('public, max-age=0');
+		expect(res.headers.get('cdn-cache-control')).toBe('max-age=3600');
+	});
+
+	it('forces a response that sets a cookie to private, no-store and drops the edge directive', async () => {
+		const res = await respond(
+			new Response('ok', {
+				headers: {
+					'cache-control': 'public, max-age=0',
+					'cdn-cache-control': 'max-age=3600',
+					'cloudflare-cdn-cache-control': 'max-age=3600',
+					'set-cookie': 'a=b; Path=/'
+				}
+			})
+		);
+		expect(res.headers.get('cache-control')).toBe('private, no-store');
+		expect(res.headers.has('cdn-cache-control')).toBe(false);
+		expect(res.headers.has('cloudflare-cdn-cache-control')).toBe(false);
+		expect(res.headers.get('set-cookie')).toBe('a=b; Path=/');
+	});
+
+	it('copes with a response whose headers are immutable', async () => {
+		const res = await respond(Response.redirect('http://localhost/y', 302));
+		expect(res.status).toBe(302);
+		expect(res.headers.get('cache-control')).toBe('private, no-store');
+	});
+});
