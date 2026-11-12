@@ -5,7 +5,12 @@
  */
 
 import { UM_FLAGS, type UmFlagKey } from '#lib/media/utils/metrics.ts';
-import type { reportFraming, reportLevel, objectificationLevel } from '#db/lib/readerReports.ts';
+import type {
+	contentReportStatus,
+	reportFraming,
+	reportLevel,
+	objectificationLevel
+} from '#db/lib/readerReports.ts';
 
 export {
 	contentReportStatus,
@@ -18,6 +23,7 @@ export {
 export type ReportLevel = (typeof reportLevel)[number];
 export type ObjectificationLevel = (typeof objectificationLevel)[number];
 export type ReportFraming = (typeof reportFraming)[number];
+export type ContentReportStatus = (typeof contentReportStatus)[number];
 
 /** The eight Unconsenting Media concern flags a report can answer: every flag except `noRape`. */
 export type ConcernFlagKey = Exclude<UmFlagKey, 'noRape'>;
@@ -124,3 +130,10 @@ export function sexualLevelFromFlags(
 	if (MENTIONED_FLAGS.some((k) => flags[k] === true)) return 'mentioned';
 	return CONCERN_FLAGS.every((f) => flags[f.key] === false) ? 'none' : null;
 }
+
+/** What a report's status reads as to its author. */
+export const STATUS_LABELS: Record<ContentReportStatus, string> = {
+	counted: 'Counted',
+	held: 'Waiting for review',
+	rejected: 'Not counted'
+};

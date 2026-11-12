@@ -29,6 +29,7 @@ const facts = (over: Partial<HoldFacts> = {}): HoldFacts => ({
 	flags: {},
 	um: null,
 	othersInWindow: 0,
+	createdInWindow: true,
 	accountAgeDays: 100,
 	accountOtherReports: 0,
 	...over
@@ -68,6 +69,12 @@ describe('isBurst', () => {
 	it('holds the report that makes BURST_COUNT in the window', () => {
 		expect(isBurst(facts({ othersInWindow: BURST_COUNT - 1 }))).toBe(true);
 		expect(isBurst(facts({ othersInWindow: BURST_COUNT - 2 }))).toBe(false);
+	});
+
+	it('does not count a report created outside the window', () => {
+		const old = { createdInWindow: false };
+		expect(isBurst(facts({ ...old, othersInWindow: BURST_COUNT - 1 }))).toBe(false);
+		expect(isBurst(facts({ ...old, othersInWindow: BURST_COUNT }))).toBe(true);
 	});
 });
 

@@ -19,6 +19,8 @@ export type HoldFacts = {
 	um: Record<ConcernFlagKey, boolean> | null;
 	/** Reports on the title from other accounts, not rejected, inside the burst window. */
 	othersInWindow: number;
+	/** Whether this report was created (now, for an insert) inside the burst window. */
+	createdInWindow: boolean;
 	/** The account's age in days. */
 	accountAgeDays: number;
 	/** The account's reports on other titles, not rejected. */
@@ -35,9 +37,12 @@ export function contradictsSource(f: HoldFacts): boolean {
 	return CONCERN_FLAGS.some((c) => f.um?.[c.key] === true && f.flags[c.key] === false);
 }
 
-/** The report is the `BURST_COUNT`th (or later) on its title inside the window. */
+/**
+ * The report is the `BURST_COUNT`th (or later) on its title inside the window. It counts
+ * itself only when it was created inside the window, so an edit of an old report is not held.
+ */
 export function isBurst(f: HoldFacts): boolean {
-	return f.othersInWindow + 1 >= BURST_COUNT;
+	return f.othersInWindow + (f.createdInWindow ? 1 : 0) >= BURST_COUNT;
 }
 
 /** A young account that has made more than `NEW_ACCOUNT_REPORT_MAX` reports, this one included. */

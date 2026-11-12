@@ -17,6 +17,7 @@ import { getUserRatings } from '#lib/server/data/user-queries.ts';
 import type { TitleRef } from '#lib/server/data/title-queries.ts';
 import {
 	BURST_COUNT,
+	BURST_WINDOW_HOURS,
 	NEW_ACCOUNT_REPORT_MAX,
 	REPORT_ACCOUNT_MIN_AGE_DAYS
 } from '#lib/media/utils/readerReports.ts';
@@ -119,6 +120,19 @@ describe('upsertReport', () => {
 		expect(again.status).toBe('held');
 	});
 
+	it('does not hold an edit of a report created outside the burst window as a burst', async () => {
+		for (let i = 0; i < BURST_COUNT - 1; i++) {
+			await addUser(`b${i}`);
+			await upsertReport(`b${i}`, 'movie', REF, answers());
+		}
+		const old = new Date(Date.now() - (BURST_WINDOW_HOURS + 1) * 3_600_000);
+		await db
+			.insert(communityContentReports)
+			.values({ userId: 'reader', titleId, createdAt: old, updatedAt: old });
+		const edited = await upsertReport('reader', 'movie', REF, answers({ framing: null }));
+		expect(edited).toMatchObject({ status: 'counted', holdReason: null });
+	});
+
 	it('holds a busy new account', async () => {
 		await addUser('fresh', 2);
 		for (let i = 0; i < NEW_ACCOUNT_REPORT_MAX; i++) {
@@ -217,11 +231,25 @@ describe('getReportCounts', () => {
 });
 
 describe('getUserRatings', () => {
+	it('gives a young account its counts-from date and flags a muted or banned one', async () => {
+		await addUser('young', 2);
+		await addUser('muted', 100, { mutedUntil: new Date(Date.now() + DAY) });
+		await addUser('banned', 100, { bannedAt: new Date() });
+		for (const id of ['young', 'muted', 'banned']) await upsertReport(id, 'movie', REF, answers());
+		const [young] = await getUserRatings('young');
+		expect(young.countsFrom.getTime()).toBeGreaterThan(Date.now());
+		expect(young.restricted).toBe(false);
+		expect((await getUserRatings('muted'))[0].restricted).toBe(true);
+		expect((await getUserRatings('banned'))[0].restricted).toBe(true);
+	});
+
 	it('lists the reader reports with their status, newest first', async () => {
 		await upsertReport('reader', 'movie', REF, answers());
 		const rows = await getUserRatings('reader');
 		expect(rows).toHaveLength(1);
 		expect(rows[0]).toMatchObject({ status: 'counted', title: 'Alien', kind: 'movie' });
+		expect(rows[0].countsFrom.getTime()).toBeLessThan(Date.now());
+		expect(rows[0].restricted).toBe(false);
 		expect(await getUserRatings('nobody')).toEqual([]);
 	});
 });

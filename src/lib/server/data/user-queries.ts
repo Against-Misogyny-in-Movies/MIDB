@@ -7,6 +7,7 @@ import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
+import { countsFromDate } from './reader-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -134,19 +135,33 @@ export type UserRating = {
 	tmdbId: number | null;
 	title: string;
 	updatedAt: Date;
+	/** When the report starts counting: the account is old enough from this date. */
+	countsFrom: Date;
+	/** The account is banned or muted, so none of its reports count. */
+	restricted: boolean;
 };
 
 /** A reader's reader reports, newest first, in every status, with the title joined. */
 export async function getUserRatings(userId: string): Promise<UserRating[]> {
-	return db
+	const now = Date.now();
+	const rows = await db
 		.select({
 			status: communityContentReports.status,
 			titleId: communityContentReports.titleId,
 			updatedAt: communityContentReports.updatedAt,
+			accountCreatedAt: users.createdAt,
+			bannedAt: users.bannedAt,
+			mutedUntil: users.mutedUntil,
 			...titleRef
 		})
 		.from(communityContentReports)
 		.innerJoin(titles, eq(communityContentReports.titleId, titles.id))
+		.innerJoin(users, eq(communityContentReports.userId, users.id))
 		.where(eq(communityContentReports.userId, userId))
 		.orderBy(desc(communityContentReports.updatedAt), desc(communityContentReports.titleId));
+	return rows.map(({ accountCreatedAt, bannedAt, mutedUntil, ...row }) => ({
+		...row,
+		countsFrom: countsFromDate(accountCreatedAt),
+		restricted: bannedAt !== null || (mutedUntil !== null && mutedUntil.getTime() > now)
+	}));
 }

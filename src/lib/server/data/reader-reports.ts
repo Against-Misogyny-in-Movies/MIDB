@@ -1,4 +1,4 @@
-import { and, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, ne, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { communityContentReports as reports } from '#db/schema/community.ts';
@@ -8,15 +8,18 @@ import {
 	CONCERN_FLAGS,
 	REPORT_ACCOUNT_MIN_AGE_DAYS,
 	REPORT_CATEGORIES,
+	objectificationLevel,
+	reportFraming,
+	reportLevel,
 	sexualLevelFromFlags,
 	type ConcernFlagKey,
+	type ContentReportStatus,
 	type ObjectificationLevel,
 	type ReportCategory,
 	type ReportFraming,
 	type ReportLevel
 } from '#lib/media/utils/readerReports.ts';
-import type { contentReportStatus } from '#lib/media/utils/readerReports.ts';
-import { holdReasonFor, type HoldReason } from './reader-report-holds.ts';
+import { holdReasonFor, type HoldFacts, type HoldReason } from './reader-report-holds.ts';
 import {
 	getOrCreateTitleRow,
 	type TitleKind,
@@ -26,8 +29,6 @@ import {
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
-
-type ContentReportStatus = (typeof contentReportStatus)[number];
 
 /** A reader's answers: a null level, flag or framing is "not sure" or "not answered". */
 export type ReportAnswers = {
@@ -55,10 +56,73 @@ export type ReportWriteResult = {
 	holdReason: HoldReason | null;
 };
 
+/** When a report from an account created at `createdAt` starts counting. */
+export function countsFromDate(createdAt: Date): Date {
+	return new Date(createdAt.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS);
+}
+
+/** The title's Unconsenting Media concern flags, selected by `CONCERN_FLAGS`. */
+const umFlagSelect = Object.fromEntries(
+	CONCERN_FLAGS.map((f) => [f.key, umSource[f.key]])
+) as Record<ConcernFlagKey, (typeof umSource)[ConcernFlagKey]>;
+
+/** Loads what the hold rules read for a report that is about to be written. */
+async function loadHoldFacts(
+	userId: string,
+	titleId: string,
+	answers: ReportAnswers,
+	sexualPresent: ReportLevel | null,
+	now: number
+): Promise<HoldFacts> {
+	const [[account], [existing], [window], [other], [um]] = await Promise.all([
+		db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)),
+		db
+			.select({ createdAt: reports.createdAt })
+			.from(reports)
+			.where(and(eq(reports.userId, userId), eq(reports.titleId, titleId))),
+		db
+			.select({ n: sql<number>`count(*)` })
+			.from(reports)
+			.where(
+				and(
+					eq(reports.titleId, titleId),
+					ne(reports.userId, userId),
+					ne(reports.status, 'rejected'),
+					gt(reports.createdAt, new Date(now - BURST_WINDOW_HOURS * HOUR_MS))
+				)
+			),
+		db
+			.select({ n: sql<number>`count(*)` })
+			.from(reports)
+			.where(
+				and(
+					eq(reports.userId, userId),
+					ne(reports.titleId, titleId),
+					ne(reports.status, 'rejected')
+				)
+			),
+		db
+			.select({ ...umFlagSelect })
+			.from(titleUm)
+			.innerJoin(umSource, eq(titleUm.umId, umSource.umId))
+			.where(eq(titleUm.titleId, titleId))
+	]);
+	return {
+		sexualPresent,
+		flags: answers.flags,
+		um: um ?? null,
+		othersInWindow: window?.n ?? 0,
+		createdInWindow: !existing || existing.createdAt.getTime() > now - BURST_WINDOW_HOURS * HOUR_MS,
+		accountAgeDays: account ? (now - account.createdAt.getTime()) / DAY_MS : 0,
+		accountOtherReports: other?.n ?? 0
+	};
+}
+
 /**
  * Stores a reader's report of a title (one per account per title; a second call overwrites the
  * first) and decides whether it counts: the three hold rules run on every write, an edit
- * included. A `rejected` report stays rejected and holds no reason.
+ * included. A `rejected` report stays rejected and holds no reason; the write statement itself
+ * keeps it so, so a moderator's rejection cannot be undone by a concurrent edit.
  */
 export async function upsertReport(
 	userId: string,
@@ -71,57 +135,11 @@ export async function upsertReport(
 		answers.sexualPresent === undefined
 			? sexualLevelFromFlags(answers.flags)
 			: answers.sexualPresent;
-	const now = Date.now();
 
-	const [existing] = await db
-		.select({ status: reports.status })
-		.from(reports)
-		.where(and(eq(reports.userId, userId), eq(reports.titleId, title.id)));
-
-	let status: ContentReportStatus = 'rejected';
-	let reason: HoldReason | null = null;
-	if (existing?.status !== 'rejected') {
-		const [account] = await db
-			.select({ createdAt: users.createdAt })
-			.from(users)
-			.where(eq(users.id, userId));
-		const [window] = await db
-			.select({ n: sql<number>`count(*)` })
-			.from(reports)
-			.where(
-				and(
-					eq(reports.titleId, title.id),
-					ne(reports.userId, userId),
-					ne(reports.status, 'rejected'),
-					gt(reports.createdAt, new Date(now - BURST_WINDOW_HOURS * HOUR_MS))
-				)
-			);
-		const [other] = await db
-			.select({ n: sql<number>`count(*)` })
-			.from(reports)
-			.where(
-				and(
-					eq(reports.userId, userId),
-					ne(reports.titleId, title.id),
-					ne(reports.status, 'rejected')
-				)
-			);
-		const [um] = await db
-			.select({ ...umFlagSelect })
-			.from(titleUm)
-			.innerJoin(umSource, eq(titleUm.umId, umSource.umId))
-			.where(eq(titleUm.titleId, title.id));
-
-		reason = holdReasonFor({
-			sexualPresent,
-			flags: answers.flags,
-			um: um ?? null,
-			othersInWindow: window?.n ?? 0,
-			accountAgeDays: account ? (now - account.createdAt.getTime()) / DAY_MS : 0,
-			accountOtherReports: other?.n ?? 0
-		});
-		status = reason ? 'held' : 'counted';
-	}
+	const reason = holdReasonFor(
+		await loadHoldFacts(userId, title.id, answers, sexualPresent, Date.now())
+	);
+	const status: ContentReportStatus = reason ? 'held' : 'counted';
 
 	const values = {
 		sexualPresent,
@@ -130,30 +148,23 @@ export async function upsertReport(
 		stalkingLevel: answers.stalkingLevel,
 		objectificationLevel: answers.objectificationLevel,
 		...flagValues(answers.flags),
-		framing: answers.framing,
-		status,
-		holdReason: reason
+		framing: answers.framing
 	};
-	await db
+	const [row] = await db
 		.insert(reports)
-		.values({ userId, titleId: title.id, ...values })
+		.values({ userId, titleId: title.id, ...values, status, holdReason: reason })
 		.onConflictDoUpdate({
 			target: [reports.userId, reports.titleId],
-			set: { ...values, updatedAt: new Date() }
-		});
-	return { title, status, holdReason: reason };
+			set: {
+				...values,
+				status: sql`CASE WHEN ${reports.status} = 'rejected' THEN 'rejected' ELSE ${status} END`,
+				holdReason: sql`CASE WHEN ${reports.status} = 'rejected' THEN NULL ELSE ${reason} END`,
+				updatedAt: new Date()
+			}
+		})
+		.returning({ status: reports.status, holdReason: reports.holdReason });
+	return { title, status: row.status, holdReason: row.holdReason };
 }
-
-const umFlagSelect = {
-	rapeMenDisImp: umSource.rapeMenDisImp,
-	sexHarOnScrn: umSource.sexHarOnScrn,
-	sexAdultTeen: umSource.sexAdultTeen,
-	childSexAbuse: umSource.childSexAbuse,
-	incest: umSource.incest,
-	attemptedRape: umSource.attemptedRape,
-	rapeOffScrn: umSource.rapeOffScrn,
-	rapeOnScreen: umSource.rapeOnScreen
-};
 
 /** Deletes the reader's report of a title; true when there was one. */
 export async function deleteReport(userId: string, titleId: string): Promise<boolean> {
@@ -183,11 +194,12 @@ export async function getViewerReport(
 	const { userId: _u, titleId: _t, ...rest } = row.report;
 	return {
 		...rest,
-		countsFrom: new Date(row.accountCreatedAt.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS)
+		countsFrom: countsFromDate(row.accountCreatedAt)
 	};
 }
 
-export type LevelCounts = Record<string, number>;
+/** A count per level of a category's level set, and `unsure` for a null answer. */
+export type LevelCounts = Partial<Record<ReportLevel | ObjectificationLevel | 'unsure', number>>;
 
 export type ReportCounts = {
 	total: number;
@@ -199,22 +211,11 @@ export type ReportCounts = {
 	framing: Record<ReportFraming, number>;
 };
 
-const count = (cond: ReturnType<typeof sql>) =>
-	sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 ELSE 0 END), 0)`;
+/** The level values of a category's level set. */
+const levelsOf = (set: 'violence' | 'objectification') =>
+	set === 'violence' ? reportLevel : objectificationLevel;
 
-const LEVELS: Record<ReportCategory, readonly string[]> = {
-	sexual: ['none', 'mentioned', 'on_screen'],
-	partner: ['none', 'mentioned', 'on_screen'],
-	physical: ['none', 'mentioned', 'on_screen'],
-	stalking: ['none', 'mentioned', 'on_screen'],
-	objectification: ['none', 'some_scenes', 'throughout']
-};
-const FRAMINGS: readonly ReportFraming[] = [
-	'condemned',
-	'unclear',
-	'played_for_laughs',
-	'glamorised_or_justified'
-];
+const count = (cond: SQL) => sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 ELSE 0 END), 0)`;
 
 /**
  * The counts for a title: only reports that are `counted`, whose account is at least
@@ -231,25 +232,19 @@ export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 		sql`${users.bannedAt} IS NULL`,
 		sql`(${users.mutedUntil} IS NULL OR ${users.mutedUntil} <= ${now})`
 	);
-	const columns = {
-		sexual: reports.sexualPresent,
-		partner: reports.partnerLevel,
-		physical: reports.physicalLevel,
-		stalking: reports.stalkingLevel,
-		objectification: reports.objectificationLevel
-	};
 
-	const selection: Record<string, ReturnType<typeof count>> = {
+	const selection: Record<string, SQL<number>> = {
 		total: count(sql`1 = 1`)
 	};
-	for (const { key } of REPORT_CATEGORIES) {
-		for (const level of LEVELS[key])
-			selection[`${key}:${level}`] = count(sql`${columns[key]} = ${level}`);
-		selection[`${key}:unsure`] = count(sql`${columns[key]} IS NULL`);
+	for (const category of REPORT_CATEGORIES) {
+		const column = reports[category.field];
+		for (const level of levelsOf(category.levels))
+			selection[`${category.key}:${level}`] = count(sql`${column} = ${level}`);
+		selection[`${category.key}:unsure`] = count(sql`${column} IS NULL`);
 	}
-	for (const f of FRAMINGS) selection[`framing:${f}`] = count(sql`${reports.framing} = ${f}`);
+	for (const f of reportFraming) selection[`framing:${f}`] = count(sql`${reports.framing} = ${f}`);
 
-	const flagSelection: Record<string, ReturnType<typeof count>> = {};
+	const flagSelection: Record<string, SQL<number>> = {};
 	for (const { key } of CONCERN_FLAGS) {
 		flagSelection[`${key}:yes`] = count(sql`${reports[key]} = 1`);
 		flagSelection[`${key}:no`] = count(sql`${reports[key]} = 0`);
@@ -266,9 +261,9 @@ export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 	]);
 
 	const categories = {} as Record<ReportCategory, LevelCounts>;
-	for (const { key } of REPORT_CATEGORIES) {
+	for (const { key, levels } of REPORT_CATEGORIES) {
 		categories[key] = Object.fromEntries(
-			[...LEVELS[key], 'unsure'].map((l) => [l, main[`${key}:${l}`]])
+			[...levelsOf(levels), 'unsure'].map((l) => [l, main[`${key}:${l}`]])
 		);
 	}
 	const flags = {} as ReportCounts['flags'];
@@ -279,7 +274,7 @@ export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 			unsure: flagRow[`${key}:unsure`]
 		};
 	}
-	const framing = Object.fromEntries(FRAMINGS.map((f) => [f, main[`framing:${f}`]])) as Record<
+	const framing = Object.fromEntries(reportFraming.map((f) => [f, main[`framing:${f}`]])) as Record<
 		ReportFraming,
 		number
 	>;

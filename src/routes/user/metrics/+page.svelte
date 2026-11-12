@@ -1,14 +1,18 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { STATUS_LABELS } from '#lib/media/utils/readerReports.ts';
 
 	let { data }: { data: PageData } = $props();
 
-	const STATUS_LABELS = {
-		counted: 'Counted',
-		held: 'Waiting for review',
-		rejected: 'Not counted'
-	} as const;
+	/** What a report's standing reads as: a counted one may not count yet, or at all. */
+	function standing(row: PageData['ratings'][number]): string {
+		if (row.status !== 'counted') return STATUS_LABELS[row.status];
+		if (row.restricted) return STATUS_LABELS.rejected;
+		if (row.countsFrom.getTime() > Date.now())
+			return `Counts from ${row.countsFrom.toLocaleDateString()}`;
+		return STATUS_LABELS.counted;
+	}
 </script>
 
 <div class="account-page">
@@ -28,7 +32,7 @@
 					<a href={titleHref(row.kind, row.tmdbId)}>
 						<span class="title">{row.title}</span>
 						<span class="meta">
-							Reader report · {STATUS_LABELS[row.status]} ·
+							{standing(row)} ·
 							<time datetime={row.updatedAt.toISOString()}
 								>{row.updatedAt.toLocaleDateString()}</time
 							>
