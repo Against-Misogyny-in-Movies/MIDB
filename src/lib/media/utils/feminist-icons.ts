@@ -54,7 +54,6 @@ export const FEMINIST_ICONS = [
 	'adrienne_rich',
 	'betty_friedan',
 	'kimberle_crenshaw',
-	'marsha_p_johnson',
 	'vandana_shiva',
 	'wilma_mankiller',
 	'gerda_lerner',
@@ -66,7 +65,6 @@ export const FEMINIST_ICONS = [
 	'funmilayo_ransome_kuti',
 	'shirin_ebadi',
 	'tarana_burke',
-	'sylvia_rivera',
 	// Scientists and mathematicians
 	'marie_curie',
 	'rosalind_franklin',
