@@ -32,7 +32,13 @@ The email address is shown only on the account's own profile page. Other readers
 
 ## Ratings and comments
 
-The database has tables for community ratings and comments, but the site has no way to submit them yet. When it does, this file will say what is stored and who can see it.
+Community ratings are not submitted yet. Comments are, through the site's own endpoints, by a signed-in account that is not muted or banned.
+
+- **What MIDB stores for a comment:** its text, the film or series it is on, the comment it answers if it is a reply, when it was written and last edited, its status (awaiting review, published, hidden, rejected or deleted), and why a moderator or the site's checks gave it that status. Editing replaces the text; the earlier text is not kept. Deleting a comment keeps its row, so replies stay in their thread; the text is no longer shown.
+- **Votes and reports:** each up or down vote is stored with the account and the comment, so a vote can be changed or removed. A report stores the account, the comment, a reason and an optional note. Three open reports from different accounts send a published comment back to review.
+- **Moderation log:** each moderator action (approve, hide, reject, restore, dismiss, mute, ban) is stored with the moderator, the comment or account it applied to, a reason and the time. It stays after what it applied to is removed.
+- **Who sees what:** everyone sees the published comments of a title, with the author's username and avatar and the comment's score; a comment that is not published is not shown, though a placeholder with no text and no author stays where it has published replies. The author sees their own comments in every status, and the reason for a rejection. Moderators see the queue and the log. Reports and votes are not shown to other readers.
+- **Caching:** the published list of a title is kept by Cloudflare's cache for a short time and cleared when someone comments, edits or deletes, or a moderator acts (`src/lib/server/http/cache.ts` holds the times). Scores can lag by that time. The list carries no account data.
 
 ## Contact
 

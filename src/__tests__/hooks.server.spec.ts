@@ -15,6 +15,7 @@ vi.mock('#lib/server/data/user-queries.ts', () => ({
 }));
 
 const { handle } = await import('../hooks.server');
+const { commentsHeaders } = await import('#lib/server/http/cache.ts');
 
 const SESSION_COOKIE = 'better-auth.session_token=abc.def';
 
@@ -187,6 +188,13 @@ describe('handle cache headers', () => {
 		);
 		expect(res.headers.get('cache-control')).toBe('public, max-age=0');
 		expect(res.headers.get('cdn-cache-control')).toBe('max-age=3600');
+	});
+
+	it("keeps the comment list's public headers and its cache tag", async () => {
+		const res = await respond(Response.json([], { headers: commentsHeaders('movie', 348) }));
+		expect(res.headers.get('cache-control')).toBe('public, max-age=0');
+		expect(res.headers.get('cdn-cache-control')).toBe('max-age=600, stale-while-revalidate=60');
+		expect(res.headers.get('cache-tag')).toBe('comments:movie:348');
 	});
 
 	it('forces a response that sets a cookie to private, no-store and drops the edge directive', async () => {

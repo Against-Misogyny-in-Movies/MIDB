@@ -42,36 +42,37 @@ Read the sections your task touches.
 - `README.md` — MIDB (~1.0K tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~2.3K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~39.7K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~42.4K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–234 Directory layout (~6.0K)
-    - 225–234 File-organisation conventions (~450)
-  - 235–248 Styling & theming (~950)
-  - 249–261 Copy & voice (~570) ← 1
-  - 262–288 Routes (~7.9K)
-  - 289–323 User & roles (~1.8K)
-    - 316–323 Migrations (~350)
-  - 324–353 Source sync (~1.8K) ← 2
-  - 354–419 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 420–439 UM Disambiguation (~630)
-  - 440–448 UM flag rendering (~250)
-  - 449–460 Shared marker pattern (metric row markers) (~410) ← 4
-  - 461–497 Component library (`src/lib/components/`) (~5.1K)
-  - 498–508 Live search (`src/lib/components/search/`) (~710)
-  - 509–522 Server cache (`src/lib/server/cache/`) (~690)
-  - 523–538 TMDB integration (~810)
-  - 539–557 Auth flow (Better Auth) (~1.8K)
-  - 558–575 Caching policy (~1.1K) ← 5
-  - 576–621 Configuration & environment (~2.3K)
-    - 592–604 Local run sequence (~130)
-    - 605–608 npm scripts (~200)
-    - 609–621 CI (`.github/workflows/tests.yml`) (~400)
-  - 622–637 Testing (~860)
-    - 632–637 Verification baseline (~80)
-  - 638–648 Known gaps / TODO (~340)
-  - 649–657 Related docs (~160)
+  - 68–245 Directory layout (~6.5K)
+    - 236–245 File-organisation conventions (~450)
+  - 246–259 Styling & theming (~950)
+  - 260–272 Copy & voice (~570) ← 1
+  - 273–301 Routes (~8.9K)
+  - 302–339 User & roles (~2.1K)
+    - 332–339 Migrations (~350)
+  - 340–369 Source sync (~1.8K) ← 2
+  - 370–435 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 436–448 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~700)
+  - 449–468 UM Disambiguation (~630)
+  - 469–477 UM flag rendering (~250)
+  - 478–489 Shared marker pattern (metric row markers) (~410) ← 4
+  - 490–526 Component library (`src/lib/components/`) (~5.1K)
+  - 527–537 Live search (`src/lib/components/search/`) (~710)
+  - 538–551 Server cache (`src/lib/server/cache/`) (~690)
+  - 552–567 TMDB integration (~810)
+  - 568–586 Auth flow (Better Auth) (~1.8K)
+  - 587–605 Caching policy (~1.2K) ← 5
+  - 606–651 Configuration & environment (~2.3K)
+    - 622–634 Local run sequence (~130)
+    - 635–638 npm scripts (~200)
+    - 639–651 CI (`.github/workflows/tests.yml`) (~400)
+  - 652–667 Testing (~860)
+    - 662–667 Verification baseline (~80)
+  - 668–678 Known gaps / TODO (~330)
+  - 679–687 Related docs (~160)
 
 ## Phases
 
@@ -103,8 +104,8 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~1.5K tok)
-- `PRIVACY.md` — Privacy (~1.3K tok)
+- `SECURITY.md` — Security (~1.7K tok)
+- `PRIVACY.md` — Privacy (~1.7K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~830 tok)
 
