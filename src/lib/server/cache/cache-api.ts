@@ -1,3 +1,4 @@
+import { waitUntil } from 'cloudflare:workers';
 import type { Backend } from '#lib/server/cache/backend.ts';
 
 /** Synthetic origin for the Cache API keys: nothing is ever fetched from it. */
@@ -15,7 +16,8 @@ function keyUrl(key: string): string {
  * the next one on another isolate; the memory level answers repeats without a Cache API call.
  *
  * Values are stored as JSON, so they must survive `JSON.stringify` (the TMDB and DDD results
- * do). A Cache API failure counts as a miss, never as a failed request.
+ * do); one that does not is simply not stored. The write runs after the response (`waitUntil`),
+ * and a Cache API failure counts as a miss, never as a failed request.
  *
  * The Cache API has no atomic increment, so counters stay in the memory level: they count per
  * isolate (best effort), and `clear` empties the memory level only.
@@ -40,19 +42,22 @@ export function createCacheApiBackend(cache: Cache, l1: Backend): Backend {
 		},
 		async set<T>(key: string, value: T, ttlMs: number): Promise<void> {
 			await l1.set(key, value, ttlMs);
-			const body = JSON.stringify(value);
-			if (body === undefined) return;
 			try {
-				await cache.put(
-					keyUrl(key),
-					new Response(body, {
-						headers: {
-							'content-type': 'application/json',
-							'cache-control': `max-age=${Math.max(1, Math.ceil(ttlMs / 1000))}`,
-							[EXPIRES_HEADER]: String(Date.now() + ttlMs)
-						}
-					})
-				);
+				const body = JSON.stringify(value);
+				if (body === undefined) return;
+				const put = cache
+					.put(
+						keyUrl(key),
+						new Response(body, {
+							headers: {
+								'content-type': 'application/json',
+								'cache-control': `max-age=${Math.max(1, Math.ceil(ttlMs / 1000))}`,
+								[EXPIRES_HEADER]: String(Date.now() + ttlMs)
+							}
+						})
+					)
+					.catch((err: unknown) => console.error('[cache] cache api put failed', err));
+				waitUntil(put);
 			} catch (err) {
 				console.error('[cache] cache api put failed', err);
 			}
