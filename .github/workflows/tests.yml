@@ -66,7 +66,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Unit specs mock $app/env/* and #lib/server/db.ts, so no secrets, .env or database are needed.
+      # Specs mock $app/env/* and #lib/server/db.ts, so no secrets or database are needed, but the
+      # SvelteKit plugin validates the static public values (src/env.ts) when Vitest loads the config.
+      - name: Create .env from template
+        run: cp .env.example .env
+
       - name: Run unit tests
         run: pnpm test:unit --run
 
@@ -120,6 +124,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The SvelteKit plugin validates the static public values (src/env.ts) when Vitest loads the config.
+      - name: Create .env from template
+        run: cp .env.example .env
 
       - name: Run DB tests
         run: pnpm test:db

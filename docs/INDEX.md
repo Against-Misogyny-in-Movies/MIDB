@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 67–70 Motion (~90)
   - 71–74 Browser surfaces (~50)
   - 75–78 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~46.8K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~46.9K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -78,7 +78,7 @@ Read the sections your task touches.
   - 636–691 Configuration & environment (~3.2K)
     - 652–664 Local run sequence (~130)
     - 665–668 npm scripts (~200)
-    - 669–679 CI (`.github/workflows/tests.yml`) (~460)
+    - 669–679 CI (`.github/workflows/tests.yml`) (~490)
     - 680–691 Deploy (`.github/workflows/deploy.yml`) (~630) ← 3
   - 692–707 Testing (~1.2K)
     - 702–707 Verification baseline (~80)
