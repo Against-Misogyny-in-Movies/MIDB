@@ -1,3 +1,4 @@
+import { isHttpError, isRedirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { emailFromClaims, verifyClaims } from '#lib/server/auth/hanko.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
@@ -20,10 +21,9 @@ function withSafeCacheHeaders(response: Response): Response {
 	// A response from `fetch` has immutable headers; copy it before changing them.
 	const safe = new Response(response.body, response);
 	safe.headers.set('cache-control', 'private, no-store');
-	if (setsCookie) {
-		safe.headers.delete('cdn-cache-control');
-		safe.headers.delete('cloudflare-cdn-cache-control');
-	}
+	// A forced-private response must not keep an edge directive, which would outrank it.
+	safe.headers.delete('cdn-cache-control');
+	safe.headers.delete('cloudflare-cdn-cache-control');
 	return safe;
 }
 
@@ -52,7 +52,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (pathname.startsWith('/user/moderation')) {
-		await requireRole(event.locals, ['moderator', 'administrator'], { page: true });
+		// The guard throws; a thrown redirect or error would skip `withSafeCacheHeaders`.
+		try {
+			await requireRole(event.locals, ['moderator', 'administrator'], { page: true });
+		} catch (err) {
+			if (isRedirect(err)) {
+				return withSafeCacheHeaders(
+					new Response(null, { status: err.status, headers: { location: err.location } })
+				);
+			}
+			if (isHttpError(err)) {
+				return withSafeCacheHeaders(new Response(err.body.message, { status: err.status }));
+			}
+			throw err;
+		}
 	}
 
 	return withSafeCacheHeaders(await resolve(event));

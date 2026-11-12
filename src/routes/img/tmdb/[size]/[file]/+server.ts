@@ -3,6 +3,7 @@ import { PRIVATE_NO_STORE, PUBLIC_IMAGE } from '#lib/server/http/cache.ts';
 import { TMDB_IMAGE_FILE, TMDB_IMAGE_SIZES } from '#lib/media/utils/tmdbImage.ts';
 
 const TMDB_IMAGE_ORIGIN = 'https://image.tmdb.org/t/p';
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 /** A failed answer: never kept by a browser or the edge, so an outage does not stick. */
 function failure(status: number): Response {
@@ -29,8 +30,12 @@ export const GET: RequestHandler = async ({ params }) => {
 		return failure(502);
 	}
 
-	const contentType = upstream.headers.get('content-type') ?? '';
-	if (!upstream.ok || !contentType.startsWith('image/')) {
+	// Only the types the file allow-list names: anything else (an HTML error page) is not served.
+	const contentType = (upstream.headers.get('content-type') ?? '')
+		.split(';')[0]
+		.trim()
+		.toLowerCase();
+	if (!upstream.ok || !IMAGE_TYPES.has(contentType)) {
 		return failure(upstream.status === 404 ? 404 : 502);
 	}
 

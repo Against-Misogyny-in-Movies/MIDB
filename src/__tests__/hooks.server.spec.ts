@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { isHttpError, type RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import type { JWTPayload } from 'jose';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 
@@ -95,11 +95,24 @@ describe('handle', () => {
 		expect(resolve).toHaveBeenCalledOnce();
 	});
 
-	it('answers 403 on /user/moderation for role user', async () => {
+	it('answers 403 on /user/moderation for role user, never cached', async () => {
 		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
 		getOrCreateUser.mockResolvedValue({ id: 'sub-1', role: 'user' } as UserRow);
-		const { error, resolve } = await run('/user/moderation');
-		expect(isHttpError(error, 403)).toBe(true);
+		const resolve = vi.fn(async () => new Response('ok'));
+		const res = await handle({ event: event('/user/moderation'), resolve });
+		expect(res.status).toBe(403);
+		expect(res.headers.get('cache-control')).toBe('private, no-store');
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	it('redirects /user/moderation to /auth when the user row is missing, never cached', async () => {
+		verifyClaims.mockResolvedValue({ sub: 'sub-1' });
+		getOrCreateUser.mockResolvedValue(null as unknown as UserRow);
+		const resolve = vi.fn(async () => new Response('ok'));
+		const res = await handle({ event: event('/user/moderation'), resolve });
+		expect(res.status).toBe(303);
+		expect(res.headers.get('location')).toBe('/auth');
+		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		expect(resolve).not.toHaveBeenCalled();
 	});
 
@@ -151,6 +164,20 @@ describe('handle cache headers', () => {
 		expect(res.headers.has('cdn-cache-control')).toBe(false);
 		expect(res.headers.has('cloudflare-cdn-cache-control')).toBe(false);
 		expect(res.headers.get('set-cookie')).toBe('a=b; Path=/');
+	});
+
+	it('drops the edge directives from a response forced private without a cookie', async () => {
+		const res = await respond(
+			new Response('ok', {
+				headers: {
+					'cdn-cache-control': 'max-age=3600',
+					'cloudflare-cdn-cache-control': 'max-age=3600'
+				}
+			})
+		);
+		expect(res.headers.get('cache-control')).toBe('private, no-store');
+		expect(res.headers.has('cdn-cache-control')).toBe(false);
+		expect(res.headers.has('cloudflare-cdn-cache-control')).toBe(false);
 	});
 
 	it('copes with a response whose headers are immutable', async () => {

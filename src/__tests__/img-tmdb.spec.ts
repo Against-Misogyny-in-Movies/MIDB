@@ -75,6 +75,23 @@ describe('GET /img/tmdb/[size]/[file]', () => {
 		}
 	});
 
+	it.each(['image/png', 'image/webp', 'image/jpeg; charset=binary'])('serves %s', async (type) => {
+		fetchSpy.mockResolvedValueOnce(new Response('b', { headers: { 'content-type': type } }));
+		const res = await call('w500', 'a.jpg');
+		expect(res.status).toBe(200);
+		expect(res.headers.get('content-type')).toBe(type.split(';')[0]);
+	});
+
+	it.each(['image/svg+xml', 'image/gif', 'text/html', ''])(
+		'refuses the upstream type %j',
+		async (type) => {
+			fetchSpy.mockResolvedValueOnce(new Response('b', { headers: { 'content-type': type } }));
+			const res = await call('w500', 'a.jpg');
+			expect(res.status).toBe(502);
+			expect(res.headers.get('cache-control')).toBe('private, no-store');
+		}
+	);
+
 	it('refuses an upstream answer that is not an image', async () => {
 		fetchSpy.mockResolvedValueOnce(
 			new Response('<html>', { headers: { 'content-type': 'text/html' } })
