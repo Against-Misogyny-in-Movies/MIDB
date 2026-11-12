@@ -20,7 +20,7 @@ const SELECTORS = {
 	// `<span class="year-count">(184 movies)</span>`: the page's own count of its films.
 	yearCount: /class="year-count">\((\d[\d,]*) movies?\)/,
 	// One film: the IMDb link with the rating image, then the film's own `/view/<id>/` link.
-	film: /<div class="movie"><a href="https:\/\/www\.imdb\.com\/title\/(tt\d+)\/"><img [^>]*?alt="\[([0-3])\]"[^>]*><\/a>\s*<a id="movie-(\d+)" href="[^"]*">([^<]*)<\/a>/g,
+	film: /<div class="movie"><a href="https:\/\/www\.imdb\.com\/title\/(tt\d+|ttNone)\/"><img [^>]*?alt="\[([0-3])\]"[^>]*><\/a>\s*<a id="movie-(\d+)" href="[^"]*">([^<]*)<\/a>/g,
 	// `<div class="movie">` opens every film, so the count of them checks `film` read them all.
 	filmStart: /<div class="movie">/g,
 	// `<a href="/year/2004/page/1/">continued on next page`, in the pager at the end of a full page.
@@ -57,7 +57,8 @@ function decodeEntities(value: string): string {
 
 export interface BechdelFilm {
 	bechdelId: number;
-	imdbId: string;
+	/** null when the site has no IMDb id for the film (its link ends in `ttNone`). */
+	imdbId: string | null;
 	title: string;
 	year: number;
 	/** 0 to 3 */
@@ -81,7 +82,7 @@ export function parseBechdelYearPage(html: string, year: number): BechdelFilm[] 
 	for (const match of html.matchAll(SELECTORS.film)) {
 		films.push({
 			bechdelId: Number(match[3]),
-			imdbId: match[1],
+			imdbId: match[1] === 'ttNone' ? null : match[1],
 			title: decodeEntities(match[4]).trim(),
 			year,
 			rating: Number(match[2])

@@ -42,7 +42,7 @@ Read the sections your task touches.
 - `README.md` — MIDB (~780 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~2.0K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~37.4K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~37.5K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~860)

@@ -69,10 +69,14 @@ export async function syncBechdel(
 		].sort((a, b) => a - b);
 	}
 
-	const byImdb = new Map<string, BechdelFilm>();
+	const byImdb = new Map<string, BechdelFilm & { imdbId: string }>();
+	let withoutImdb = 0;
 	for (const year of years) {
-		for (const film of await readBechdelYear(sources.bechdelYear, year))
-			byImdb.set(film.imdbId, film);
+		for (const film of await readBechdelYear(sources.bechdelYear, year)) {
+			// A film without an IMDb id has nothing to key it by, so it is left out.
+			if (film.imdbId === null) withoutImdb++;
+			else byImdb.set(film.imdbId, { ...film, imdbId: film.imdbId });
+		}
 	}
 	if (byImdb.size === 0) {
 		throw new Error('The Bechdel Test pages gave no films; nothing was changed.');
@@ -161,6 +165,7 @@ export async function syncBechdel(
 			`${result.films} films read; ${result.titlesInserted} added, ${result.titlesUpdated} retitled, ` +
 			`${result.ratingsWritten} ratings written.`
 	);
+	if (withoutImdb > 0) log(`  ${withoutImdb} films have no IMDb id and were skipped.`);
 	if (notYetListed > 0) {
 		log(`  ${notYetListed} films in the recent-additions feed are not on their year page yet.`);
 	}

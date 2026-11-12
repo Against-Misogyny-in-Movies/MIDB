@@ -247,6 +247,15 @@ describe('source sync (fixtures)', () => {
 		expect(rating.rating).toBe(2);
 	});
 
+	it('leaves out a film without an IMDb id', async () => {
+		const noImdb = with2020((html) => html.replace('tt10309552', 'ttNone'));
+		const result = await syncBechdel(db, noImdb, quiet);
+		expect(result).toMatchObject({ films: 16, titlesInserted: 16 });
+		expect(
+			await db.select({ n: count() }).from(titles).where(eq(titles.title, '12 Hour Shift'))
+		).toEqual([{ n: 0 }]);
+	});
+
 	it('reads the recent years and the recent additions daily, after a first sweep', async () => {
 		await syncBechdel(db, sources, quiet);
 		const asked: number[] = [];

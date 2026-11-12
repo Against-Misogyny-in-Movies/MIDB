@@ -41,6 +41,13 @@ describe('parseBechdelYearPage', () => {
 		);
 	});
 
+	it('reads a film the site has no IMDb id for as null', () => {
+		const html = read('bechdel-year-2020.html').replace('tt10309552', 'ttNone');
+		const films = parseBechdelYearPage(html, 2020);
+		expect(films[0]).toMatchObject({ bechdelId: 12373, imdbId: null });
+		expect(films.filter((f) => f.imdbId === null)).toHaveLength(1);
+	});
+
 	it('throws when a film row cannot be read', () => {
 		const changedMarkup = read('bechdel-year-2020.html').replaceAll(
 			'imdb.com/title',
