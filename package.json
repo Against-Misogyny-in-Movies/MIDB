@@ -10,7 +10,7 @@
 		"dev": "vite dev",
 		"dev:debug": "export NODE_OPTIONS='--inspect' && vite dev",
 		"build": "vite build",
-		"preview": "pnpm build && wrangler dev --local --port 4173 --show-interactive-dev-session=false",
+		"preview": "pnpm build && wrangler dev --local --port 4173 --infer-origin-from-routes=false --show-interactive-dev-session=false",
 		"test": "pnpm test:integration && pnpm test:unit",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",

@@ -36,7 +36,7 @@
 
 	.picker {
 		@apply grid gap-sm;
-		grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr));
 	}
 
 	.avatar-tile {

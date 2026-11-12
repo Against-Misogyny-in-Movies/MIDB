@@ -3,7 +3,8 @@ import { describe, expect, test } from 'vitest';
 import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
 import { AVATAR_COMPONENTS } from '#lib/components/user/avatars/avatars.ts';
-import { AVATAR_DEFS, AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
+import { AVATAR_DEFS, AVATAR_KEYS, PORTRAIT_DETAIL_MIN } from '#lib/media/utils/avatars.ts';
+import { FEMINIST_ICONS } from '#lib/media/utils/feminist-icons.ts';
 
 import '@testing-library/jest-dom';
 
@@ -11,6 +12,50 @@ describe('avatar registry', () => {
 	test('every avatar key has exactly one component', () => {
 		expect(Object.keys(AVATAR_COMPONENTS).sort()).toEqual([...AVATAR_KEYS].sort());
 		expect(AVATAR_KEYS.size).toBe(AVATAR_DEFS.length);
+	});
+
+	test('every avatar figure is also in the username pool', () => {
+		const iconName = (name: string) =>
+			name
+				.normalize('NFD')
+				.replace(/[\u0300-\u036f']/g, '')
+				.toLowerCase()
+				.replaceAll(' ', '_');
+		const pool: readonly string[] = FEMINIST_ICONS;
+		for (const { name } of AVATAR_DEFS) expect(pool).toContain(iconName(name));
+	});
+});
+
+describe('Component/Portrait', () => {
+	test.each(AVATAR_DEFS.map((a) => a.key))(
+		'%s draws eyes and mouth only from the detail size up',
+		(avatarKey) => {
+			const small = render(Avatar, { avatarKey, size: PORTRAIT_DETAIL_MIN - 1 }).container;
+			const large = render(Avatar, { avatarKey, size: PORTRAIT_DETAIL_MIN }).container;
+			expect(small.querySelector('[data-portrait-detail]')).toBeNull();
+			expect(large.querySelector('[data-portrait-detail]')).not.toBeNull();
+		}
+	);
+
+	test("a figure's fine marks draw only from the detail size up", () => {
+		const small = render(Avatar, { avatarKey: 'kahlo', size: PORTRAIT_DETAIL_MIN - 1 }).container;
+		const large = render(Avatar, { avatarKey: 'kahlo', size: PORTRAIT_DETAIL_MIN }).container;
+		expect(small.querySelector('[data-portrait-fine]')).toBeNull();
+		expect(large.querySelector('[data-portrait-fine]')).not.toBeNull();
+	});
+
+	test('glasses draw at the smallest size', () => {
+		for (const avatarKey of ['truth', 'johnson', 'ginsburg']) {
+			const small = render(Avatar, { avatarKey, size: 24 }).container;
+			expect(small.querySelector('g[stroke="var(--avatar-line)"]')).not.toBeNull();
+		}
+	});
+
+	test('two portraits on one page clip to their own circle', () => {
+		render(Avatar, { avatarKey: 'kahlo' });
+		render(Avatar, { avatarKey: 'kahlo' });
+		const ids = [...document.querySelectorAll('clipPath')].map((c) => c.id);
+		expect(new Set(ids).size).toBe(ids.length);
 	});
 });
 
