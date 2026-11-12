@@ -124,7 +124,7 @@ export const comments = sqliteTable(
 		editedAt: integer('edited_at', { mode: 'timestamp_ms' }),
 		moderationSource: text('moderation_source', { enum: moderationSource }),
 		moderationReason: text('moderation_reason'),
-		/** The classifier's verdict as JSON text (Phase 5); null until one ran. */
+		/** The classifier's verdict as JSON text; null until one ran. */
 		aiVerdict: text('ai_verdict'),
 		...timestamps()
 	},

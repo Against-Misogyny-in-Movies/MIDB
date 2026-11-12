@@ -142,7 +142,8 @@ test.describe('on a film page', () => {
 		// A signed-out reader sees no comment.
 		const anonymous = await browser.newPage();
 		await anonymous.goto(page);
-		await expect(anonymous.getByText('No comments yet.')).toBeVisible();
+		await expect(anonymous.getByRole('heading', { name: 'Comments' })).toBeVisible();
+		await expect(anonymous.getByText(text)).toHaveCount(0);
 		await anonymous.close();
 
 		await approve(moderator.page, text);

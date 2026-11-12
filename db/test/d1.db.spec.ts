@@ -37,7 +37,7 @@ describe('D1 through Drizzle', () => {
 		).rejects.toThrow();
 	});
 
-	it('rejects text over the length limits the schema keeps from Postgres', async () => {
+	it('rejects text over the length limits the CHECK constraints set', async () => {
 		const long = (n: number) => 'x'.repeat(n);
 		await expect(db.insert(titles).values({ ...movie(1), title: long(256) })).rejects.toThrow();
 		await expect(

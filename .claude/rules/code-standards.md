@@ -93,6 +93,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - Titles are keyed by `(kind, tmdb_id)`, and `imdb_id` is optional. Never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
 - Sync order matters: `db:sync:all` runs Unconsenting Media, the Bechdel Test, the TMDB id backfill, then popularity (`docs/architecture.md`, Source sync).
 - **Production deploys migrate first** (`.claude/rules/deploy-standards.md`, Deploys). A migration merged to `main` reaches the production database on the next deploy, so write it to be safe against live data.
+- **A migration works with the Worker version still serving.** Production migrates and then deploys, so a failed deploy or a `wrangler rollback` runs the old code on the new schema. Ship additive changes first (a new table or a nullable column) and the removal or rename in a later deploy.
 - **Every schema change ships its generated migration** (SQL + snapshot + journal from `pnpm db:generate`) in the same change. CI's `migrations` job fails on drift.
   - Never hand-write or hand-edit a snapshot JSON.
   - `db:generate` prompts need a TTY. Without one, run `script -qec "pnpm exec drizzle-kit generate" /dev/null` and answer the prompts.

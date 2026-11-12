@@ -14,9 +14,15 @@ test('a passkey creates an account, signs out and signs back in', async ({ page 
 	await page.waitForURL('**/auth');
 	expect(await (await page.request.get('/api/me')).json()).toBeNull();
 
-	// The virtual authenticator kept the passkey, so signing in needs no account name.
-	await page.getByRole('button', { name: 'Sign in with a passkey' }).click();
-	await page.waitForURL('**/user/profile');
+	// The virtual authenticator kept the passkey, so signing in needs no account name. It also
+	// answers the page's autofill request at once, which can sign in before the button is
+	// clicked: both are a passkey sign-in, so the click is a try and the profile page is the check.
+	const profileOpened = page.waitForURL('**/user/profile');
+	await page
+		.getByRole('button', { name: 'Sign in with a passkey' })
+		.click({ timeout: 3000 })
+		.catch(() => undefined);
+	await profileOpened;
 	const me = (await (await page.request.get('/api/me')).json()) as { username: string };
 	expect(me.username).toBe(username);
 });

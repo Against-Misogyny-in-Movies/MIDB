@@ -10,16 +10,16 @@ Read whole.
 
 - `AGENTS.md` — MIDB: agent rules (~740 tok)
 - `.claude/rules/authority.md` — Authority (~460 tok)
-- `.claude/rules/code-standards.md` — Code standards (~3.6K tok)
+- `.claude/rules/code-standards.md` — Code standards (~3.7K tok)
   - 5–22 Server / client boundary (~620) ← 2
   - 23–27 Caching (~110)
   - 28–34 Route folders are thin (~130)
   - 35–56 File organisation (~640) ← 4
   - 57–76 Components (~460) ← 3
-  - 77–99 Database (~700) ← 1
-  - 100–106 Testing (~190) ← 1
-  - 107–119 Making a change (~440) ← 3
-  - 120–136 Checking a change (~230) ← 6
+  - 77–100 Database (~780) ← 1
+  - 101–107 Testing (~190) ← 1
+  - 108–120 Making a change (~440) ← 3
+  - 121–137 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
@@ -78,8 +78,8 @@ Read the sections your task touches.
   - 636–691 Configuration & environment (~3.2K)
     - 652–664 Local run sequence (~130)
     - 665–668 npm scripts (~200)
-    - 669–679 CI (`.github/workflows/tests.yml`) (~450)
-    - 680–691 Deploy (`.github/workflows/deploy.yml`) (~630) ← 2
+    - 669–679 CI (`.github/workflows/tests.yml`) (~460)
+    - 680–691 Deploy (`.github/workflows/deploy.yml`) (~630) ← 3
   - 692–707 Testing (~1.2K)
     - 702–707 Verification baseline (~80)
   - 708–716 Known gaps / TODO (~240)

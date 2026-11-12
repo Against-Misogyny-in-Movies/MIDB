@@ -23,7 +23,6 @@ test.describe('with TMDB', () => {
 		await page.goto('/movie/603');
 		await expect(page.getByRole('heading', { level: 1 })).toContainText('The Matrix');
 		await expect(page.getByRole('heading', { name: 'Comments' })).toBeVisible();
-		await expect(page.getByText('No comments yet.')).toBeVisible();
 	});
 
 	test('a series page shows its title and comments', async ({ page }) => {

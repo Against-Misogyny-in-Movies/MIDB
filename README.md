@@ -25,35 +25,28 @@ pnpm dev
 
 ## Deploy
 
-Production deploys from `.github/workflows/deploy.yml` on every push to `main`: build, log the D1 Time Travel bookmark, apply the migrations, then deploy the Worker. A failed step stops the run before the next. A pull request from a branch in the same repository uploads a version of a separate preview Worker with its own database. A pull request from a fork runs tests only and gets no secrets. A daily job deletes the accounts a failed passkey sign-up left behind.
+Production deploys from `.github/workflows/deploy.yml` on every push to `main`, and a pull request from a branch in the same repository deploys the preview Worker. The rules are in [`.claude/rules/deploy-standards.md`](.claude/rules/deploy-standards.md) (branches, deploys, rollbacks) and the steps and settings in [`docs/architecture.md`](docs/architecture.md), Deploy.
 
-To pull a bad deploy, revert the commit on `main`, or roll back or promote a version in the Cloudflare dashboard (`wrangler rollback`). Data comes back from D1 Time Travel, using the bookmark the run logged. A migration is fixed forward with a new one.
-
-### Deploy your own
+### Deploying a copy
 
 A fork or a copy needs a Cloudflare account and a domain in a Cloudflare zone. The Workers Paid plan keeps D1 Time Travel history longer. The steps run from a checkout, after `pnpm install` and `pnpm exec wrangler login`.
 
 1. **D1 databases.** Create two: `pnpm exec wrangler d1 create midb` and `pnpm exec wrangler d1 create midb-preview`. In `wrangler.jsonc`, replace `REPLACE-WITH-D1-DATABASE-ID` and `REPLACE-WITH-PREVIEW-D1-DATABASE-ID` with their ids.
 2. **Rate limits.** Each `namespace_id` in `wrangler.jsonc` must be unique in the account; change the numbers if another Worker already uses them.
-3. **Origins.** Replace `REPLACE-WITH-PRODUCTION-ORIGIN.example` and `REPLACE-WITH-PREVIEW-ORIGIN.example` in `vars` with the two origins, and add a custom-domain route for each to its environment in `wrangler.jsonc`. The `PUBLIC_*` values are inlined into the build, so the repository variables below must match these `vars`.
-4. **Turnstile.** Create a Turnstile widget for the production domain and set its site key as `PUBLIC_TURNSTILE_SITE_KEY` in `vars`. Without a real key, passkey sign-up is not checked.
-5. **First preview deploy.** Run `pnpm build && pnpm exec wrangler deploy --env preview` once; `wrangler versions upload`, which the workflow uses for previews, needs the Worker to exist.
-6. **Worker secrets.** Set each with `pnpm exec wrangler secret put <NAME>` for production and with `--env preview` for the preview Worker. The names are the `Secrets` in `src/lib/server/env.ts`, listed in `.env.example`:
-   - `BETTER_AUTH_SECRET` (required: a long random string);
-   - `TMDB_API_TOKEN` and `DDD_API_KEY` (title pages);
-   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` (each provider's button appears only when both of its values are set);
-   - `TURNSTILE_SECRET_KEY` (the secret of the widget);
-   - `ANTHROPIC_API_KEY` (comment moderation; without it every comment waits for a moderator);
-   - `MODERATION_EXTRA_TERMS` (optional private blocklist terms, comma or newline separated).
-
-   `MODERATION_DEV_AUTO_APPROVE` is for localhost only and is not set in a deployment.
-
+3. **Origins.** Replace `REPLACE-WITH-PRODUCTION-ORIGIN.example` and `REPLACE-WITH-PREVIEW-ORIGIN.example` in `vars` with the two origins, and add a custom-domain route for each to its environment in `wrangler.jsonc`.
+4. **Turnstile.** Create a Turnstile widget for each domain and set its site key as `PUBLIC_TURNSTILE_SITE_KEY` in both `vars` blocks (production and `env.preview`). Without `TURNSTILE_SECRET_KEY`, passkey sign-up is not checked.
+5. **Builds.** The `PUBLIC_*` values are inlined into each build, so the workflows build with the target's own values: the repository variables in step 8 for the origin and the site key, and `wrangler.jsonc` for the TMDB values. A build that differs from `wrangler.jsonc` fails the run. For a manual build, set them in the environment: `PUBLIC_ORIGIN=<origin> PUBLIC_TURNSTILE_SITE_KEY=<key> pnpm build`, then `pnpm exec wrangler deploy` (add `--env preview` for the preview). The first run of the workflow creates the preview Worker, so no separate deploy is needed.
+6. **Worker secrets.** Set each with `pnpm exec wrangler secret put <NAME>` for production and with `--env preview` for the preview Worker. The names are the `Secrets` interface in `src/lib/server/env.ts` (`.env.example` lists them). `BETTER_AUTH_SECRET` is required: a long random string. Without `ANTHROPIC_API_KEY`, a comment that passes the blocklist waits for a moderator. `MODERATION_DEV_AUTO_APPROVE` is for localhost only and is not set in a deployment.
 7. **OAuth apps.** Register `<origin>/api/auth/callback/google` as a redirect URI of the Google OAuth client and `<origin>/api/auth/callback/discord` as one of the Discord application, for each origin that signs in. Discord sign-in links to an existing account only when Discord reports the email verified.
-8. **GitHub secrets.** In the repository's Actions secrets: `CLOUDFLARE_API_TOKEN` (an API token with Workers Scripts edit and D1 edit permissions), `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` (the production database) and `TMDB_API_TOKEN`.
-9. **GitHub variables.** In the repository's Actions variables: `PUBLIC_ORIGIN`, `PREVIEW_ORIGIN` and `PUBLIC_TURNSTILE_SITE_KEY`, equal to the matching `vars` in `wrangler.jsonc`.
-10. **Canonical repository.** `deploy.yml` and `sync-sources.yml` run only when `github.repository` is `Against-Misogyny-in-Movies/MIDB`. Change that string in both files (it appears in each job's `if`) to the new repository's full name.
-11. **First load.** Put `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` in `.env`, then run `pnpm db:migrate:remote` and `pnpm db:sync:all --remote`. The next push to `main` deploys; the daily sync keeps the data current.
-12. **First administrator.** Sign in once on the site, then run `pnpm db:seed:admin --username <username> --remote`.
+8. **GitHub secrets and variables.** In the repository's Actions settings:
+   - secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` (the production database) and `TMDB_API_TOKEN`;
+   - variables: `PUBLIC_ORIGIN`, `PUBLIC_TURNSTILE_SITE_KEY`, `PREVIEW_ORIGIN` and `PREVIEW_TURNSTILE_SITE_KEY`, equal to the matching `vars` in `wrangler.jsonc`.
+
+   The token needs the permissions the workflows use: editing Workers scripts, editing D1 databases, and, once `wrangler.jsonc` has custom-domain routes, editing the zone's Workers routes. The exact permission names are Cloudflare's.
+
+9. **Canonical repository.** `deploy.yml` and `sync-sources.yml` run only when `github.repository` is `Against-Misogyny-in-Movies/MIDB`. Change that string in both files (it appears in each job's `if`) to the new repository's full name.
+10. **First load.** Put `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` in `.env`, then run `pnpm db:migrate:remote` and `pnpm db:sync:all --remote`. The next push to `main` deploys; the daily sync keeps the data current. The workflow migrates the preview database but does not load source data into it; `pnpm db:sync:all --remote` with the preview database's id as `CLOUDFLARE_D1_DATABASE_ID` does.
+11. **First administrator.** Sign in once on the site, then run `pnpm db:seed:admin --username <username> --remote`.
 
 ## Tests
 
@@ -63,7 +56,14 @@ pnpm test:db           # data-layer tests against a local D1
 pnpm test:integration  # Playwright against the built Worker (pnpm preview)
 ```
 
-`pnpm test:db` runs on its own local D1 in `.wrangler/test-state`, which each run wipes and migrates from zero. It needs no secrets, network or Docker. `pnpm test:integration` starts `pnpm preview` itself and needs the local D1 migrated and loaded with the fixtures (`pnpm db:migrate:local && pnpm db:sync:all --local --fixtures`) and a `.dev.vars` with `PUBLIC_ORIGIN=http://localhost:4173`; the specs that need TMDB skip without `TMDB_API_TOKEN` there. `.github/workflows/tests.yml` shows the sequence.
+`pnpm test:db` runs on its own local D1 in `.wrangler/test-state`, which each run wipes and migrates from zero. It needs no secrets, network or Docker.
+
+`pnpm test:integration` starts `pnpm preview` itself. It needs:
+
+- `PUBLIC_ORIGIN=http://localhost:4173` in `.env`, which the build reads, and in `.dev.vars`, which `wrangler dev` reads;
+- the local D1 migrated and loaded with the fixtures (`pnpm db:migrate:local && pnpm db:sync:all --local --fixtures`).
+
+The specs that need TMDB skip without `TMDB_API_TOKEN` in `.dev.vars`, and the Google and Discord specs skip without fake `GOOGLE_*` and `DISCORD_*` client values there. `.github/workflows/tests.yml` shows the sequence.
 
 ## Further reading
 
