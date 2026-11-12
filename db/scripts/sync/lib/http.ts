@@ -8,6 +8,8 @@ export interface FetchOptions {
 	timeoutMs: number;
 	/** A 404 returns null instead of throwing. */
 	notFoundIsNull?: boolean;
+	/** Sent with the User-Agent. */
+	headers?: Record<string, string>;
 	fetchImpl?: typeof fetch;
 	retryDelayMs?: number;
 }
@@ -20,6 +22,7 @@ export async function fetchSource(url: string, options: FetchOptions): Promise<R
 	const {
 		timeoutMs,
 		notFoundIsNull = false,
+		headers = {},
 		fetchImpl = fetch,
 		retryDelayMs = RETRY_DELAY_MS
 	} = options;
@@ -28,7 +31,7 @@ export async function fetchSource(url: string, options: FetchOptions): Promise<R
 		if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
 		try {
 			const res = await fetchImpl(url, {
-				headers: { 'User-Agent': USER_AGENT },
+				headers: { ...headers, 'User-Agent': USER_AGENT },
 				signal: AbortSignal.timeout(timeoutMs)
 			});
 			if (res.status === 404 && notFoundIsNull) {

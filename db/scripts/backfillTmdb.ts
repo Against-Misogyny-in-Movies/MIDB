@@ -4,20 +4,10 @@ import { parseTarget } from './lib/args.ts';
 import type { Db } from '../client.ts';
 import { titles } from '../schema/titles.ts';
 import { isMain } from '../../scripts/lib/is-main.ts';
+import { resolveTmdbId } from './sync/lib/tmdb-find.ts';
 
-const TMDB_BASE = process.env.PUBLIC_TMDB_API_URL || 'https://api.themoviedb.org';
 const BATCH_SIZE = 50;
 const DELAY_MS = 250; // stay under TMDB rate limit (40 req/10s)
-
-async function resolveTmdbId(imdbId: string, token: string): Promise<number | null> {
-	const url = `${TMDB_BASE}/3/find/${imdbId}?external_source=imdb_id`;
-	const res = await fetch(url, {
-		headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
-	});
-	if (!res.ok) return null;
-	const data = (await res.json()) as { movie_results?: { id: number }[] } | null;
-	return data?.movie_results?.[0]?.id ?? null;
-}
 
 /** Looks up the TMDB id of every film that has an IMDb id and no TMDB id yet. */
 export async function backfillTmdb(db: Db, token: string) {
