@@ -15,6 +15,10 @@
 	// Workers Caching: Cloudflare serves cache hits without running the Worker.
 	"cache": { "enabled": true },
 
+	// Workers Logs: the Worker's console output and each request's metadata, kept by Cloudflare.
+	// The preview environment inherits it.
+	"observability": { "enabled": true },
+
 	"d1_databases": [
 		{
 			"binding": "DB",

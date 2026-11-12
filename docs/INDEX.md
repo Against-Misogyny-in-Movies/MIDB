@@ -75,15 +75,15 @@ Read the sections your task touches.
   - 582–597 TMDB integration (~810)
   - 598–616 Auth flow (Better Auth) (~1.9K)
   - 617–635 Caching policy (~1.2K) ← 6
-  - 636–691 Configuration & environment (~3.2K)
+  - 636–692 Configuration & environment (~3.2K)
     - 652–664 Local run sequence (~130)
     - 665–668 npm scripts (~200)
     - 669–679 CI (`.github/workflows/tests.yml`) (~490)
-    - 680–691 Deploy (`.github/workflows/deploy.yml`) (~630) ← 3
-  - 692–707 Testing (~1.2K)
-    - 702–707 Verification baseline (~80)
-  - 708–716 Known gaps / TODO (~240)
-  - 717–725 Related docs (~140)
+    - 680–692 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 693–708 Testing (~1.2K)
+    - 703–708 Verification baseline (~80)
+  - 709–717 Known gaps / TODO (~240)
+  - 718–726 Related docs (~140)
 
 ## Phases
 
@@ -97,7 +97,7 @@ Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
 - `SECURITY.md` — Security (~2.4K tok)
-- `PRIVACY.md` — Privacy (~2.1K tok)
+- `PRIVACY.md` — Privacy (~2.2K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
 

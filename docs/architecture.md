@@ -685,6 +685,7 @@ Every job that holds a Cloudflare token runs only on the canonical repository. T
 - **`preview`** (a pull request whose head is in this repository, not Dependabot's; environment `preview`): build with `PREVIEW_ORIGIN`, migrate the preview database (`--env preview`), then `wrangler deploy --env preview`, so the latest pull request is live at `PREVIEW_ORIGIN` with full sign-in. Each pull request has its own concurrency group (`deploy-preview-<number>`, never cancelled); the preview Worker and its database are shared, so previews from several pull requests overwrite one another and the latest push wins. A fork pull request does not match the condition and has no secrets; `pull_request_target` is never used.
 - **`cleanup`** (daily schedule): `pnpm db:cleanup:orphans --remote`, with the three `CLOUDFLARE_*` values the remote scripts read.
 - A migration must work with the Worker version still serving (`.claude/rules/code-standards.md`, Database).
+- Both Workers run on Workers Paid (D1 Time Travel keeps 30 days there) with Workers Logs on (`observability` in `wrangler.jsonc`, which `env.preview` inherits).
 - The Cloudflare token and account id are the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, passed only to the steps that call wrangler. The Worker's own secrets are set with `wrangler secret put` (add `--env preview` for the preview Worker), never by the workflow.
 
 ---
