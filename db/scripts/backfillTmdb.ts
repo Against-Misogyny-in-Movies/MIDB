@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import { db, closeDb } from './lib/db';
-import { titles } from '../schema/titles';
+import { db, closeDb } from './lib/db.ts';
+import { titles } from '../schema/titles.ts';
 
 const TMDB_BASE = process.env.PUBLIC_TMDB_API_URL || 'https://api.themoviedb.org';
 const TMDB_TOKEN = process.env.TMDB_API_TOKEN;

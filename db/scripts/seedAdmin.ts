@@ -1,10 +1,10 @@
 import { sql } from 'drizzle-orm';
-import { users } from '../schema/auth';
-import { db, closeDb } from './lib/db';
+import { users } from '../schema/auth.ts';
+import { db, closeDb } from './lib/db.ts';
 
 const email = process.argv[2];
 if (!email) {
-	console.error('Usage: bun run db:seed:admin <email>');
+	console.error('Usage: pnpm db:seed:admin <email>');
 	process.exit(1);
 }
 

@@ -2,9 +2,9 @@
 
 Every session, agent and contributor that commits follows these. A reviewer reports a breach as a finding.
 
-`bun run commit:check` (`scripts/git/commit-message.ts`) checks the subject line:
+`pnpm commit:check` (`scripts/git/commit-message.ts`) checks the subject line:
 
-- the `commit-msg` hook in `.githooks/` runs it on every commit (`bun install` sets `core.hooksPath`);
+- the `commit-msg` hook in `.githooks/` runs it on every commit (`pnpm install` sets `core.hooksPath`);
 - CI runs it on every pull request's commits and its title.
 
 Do not skip the hook with `--no-verify`; reword the message.
@@ -33,7 +33,7 @@ Do not skip the hook with `--no-verify`; reword the message.
 
 ## Checkpoints
 
-- **Commit and push often.** An agent that writes code, tests or docs commits a typed checkpoint after each step that leaves `bun run check`, `bun run lint` and its quick tests green, and pushes it to the session's work branch. Example: `feat: Comment votes endpoint, checkpoint`.
+- **Commit and push often.** An agent that writes code, tests or docs commits a typed checkpoint after each step that leaves `pnpm check`, `pnpm lint` and its quick tests green, and pushes it to the session's work branch. Example: `feat: Comment votes endpoint, checkpoint`.
 - **What a checkpoint holds.** It follows these standards like any commit. It never holds a file that must not be committed: secrets, `.env`, a scratch script, a database dump.
 - **Where it goes.** Push with `git push -u origin <branch>` to the branch the session's harness or brief names, never to `main`.
 

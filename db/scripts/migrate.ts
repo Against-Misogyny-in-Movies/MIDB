@@ -1,5 +1,6 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { createDb } from '../client';
+import { createDb } from '../client.ts';
+import { isMain } from '../../scripts/lib/is-main.ts';
 
 const migrationsFolder = new URL('../migrations', import.meta.url).pathname;
 
@@ -13,7 +14,7 @@ export async function migrateDatabase(url: string): Promise<void> {
 	}
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
 	const url = process.env.DB_CONNECTION;
 	if (!url) {
 		console.error('DB_CONNECTION is not set.');

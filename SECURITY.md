@@ -12,7 +12,7 @@ What the site stores and sends is in [PRIVACY.md](PRIVACY.md). This file names t
 
 ## Supply chain
 
-- **Dependencies:** `bun.lock` is committed, and CI installs with `--frozen-lockfile`.
+- **Dependencies:** `pnpm-lock.yaml` is committed, and CI installs with `--frozen-lockfile`.
 - **CI:**
   - CI (`.github/workflows/tests.yml`) runs with a read-only token, so pull requests from forks cannot write to the repository or read secrets.
   - Every action is pinned to a commit SHA.

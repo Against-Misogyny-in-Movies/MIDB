@@ -1,4 +1,4 @@
 #!/bin/sh
 # Refuses a commit whose subject breaks .claude/rules/commit-standards.md (Subject line).
-# `bun install` points git here (core.hooksPath, through the `prepare` script); git commit --no-verify skips it.
-exec bun scripts/git/commit-message.ts --file "$1"
+# `pnpm install` points git here (core.hooksPath, through the `prepare` script); git commit --no-verify skips it.
+exec node scripts/git/commit-message.ts --file "$1"

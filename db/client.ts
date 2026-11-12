@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from './schema';
+import * as schema from './schema/index.ts';
 
 /**
  * Build a Drizzle client over a postgres-js pool. The caller owns the URL (runtime env in the

@@ -7,7 +7,7 @@ You orchestrate. You do not write product code, tests or docs yourself. You brie
 
 A subagent cannot start agents of its own. Run this role as the main session (`claude --agent orchestrator`, or ask the main session to follow this file). If you are a subagent without the Agent tool, stop and say so instead of writing the code yourself.
 
-Read the plan in full first, then `AGENTS.md`, `.claude/rules/authority.md`, `.claude/rules/code-standards.md` and `.claude/rules/docs-standards.md`, and the parts of `docs/architecture.md` the plan names (`docs/INDEX.md` gives their line ranges; `bun run docs:section` prints one). Name sections, not whole files, in each brief. The plan's decisions are settled: do not reopen them, and do not let an agent reopen them.
+Read the plan in full first, then `AGENTS.md`, `.claude/rules/authority.md`, `.claude/rules/code-standards.md` and `.claude/rules/docs-standards.md`, and the parts of `docs/architecture.md` the plan names (`docs/INDEX.md` gives their line ranges; `pnpm docs:section` prints one). Name sections, not whole files, in each brief. The plan's decisions are settled: do not reopen them, and do not let an agent reopen them.
 
 ## Models
 
@@ -34,7 +34,7 @@ Each brief stands on its own, because the agent knows only what you give it. It 
   It must never work around one silently.
 
 - **Measurements** the plan asks for: before and after, with a scratch script in the session scratchpad, never committed.
-- **The exit:** `bun run check`, `bun run lint`, `bun run test:unit --run`, `bun run test:db` where it can run, and `bun run build`, plus the task's own checks. Each result is reported with whether the tree changed after it.
+- **The exit:** `pnpm check`, `pnpm lint`, `pnpm test:unit --run`, `pnpm test:db` where it can run, and `pnpm build`, plus the task's own checks. Each result is reported with whether the tree changed after it.
   - A run that can pass Bash's ten-minute limit goes to the background with its output in a file, and is polled, never waited on in the foreground.
 - **Commits.** Commit and push checkpoints as `.claude/rules/commit-standards.md` (Checkpoints) says. Do not edit `docs/phases/STATUS.md`.
 - **The report:** changes by file, each deviation from the plan and why, and the command results.
@@ -44,7 +44,7 @@ Each brief stands on its own, because the agent knows only what you give it. It 
 An agent's report is a claim. Before committing:
 
 - **Check the tree.** Run `git status` and look for files that must not be there: `.env`, secrets, database dumps, scratch scripts, build output.
-- **Run the cheap checks yourself:** `bun run check`, `bun run lint` and the tests the diff touches (`bunx vitest related <changed files> --run`).
+- **Run the cheap checks yourself:** `pnpm check`, `pnpm lint` and the tests the diff touches (`pnpm exec vitest related <changed files> --run`).
 - **Read each deviation it reports.**
   - A deviation that keeps the plan's intent goes into that task's commit message. It goes into Standing decisions in `docs/phases/STATUS.md` only if it constrains later work.
   - A deviation that changes a kept behaviour, or that the plan settled differently, goes to the user before you commit.

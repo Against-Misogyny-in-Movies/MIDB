@@ -5,7 +5,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
 	// style: false — let @tailwindcss/vite handle <style> blocks;
 	// keeps lang="postcss" recognised by svelte-check without running
-	// a separate PostCSS pass that resolves tailwindcss from bun cache.
+	// a separate PostCSS pass that resolves tailwindcss from the package cache.
 	preprocess: vitePreprocess({ style: false }),
 	kit: {
 		// Deployed on Vercel. See https://svelte.dev/docs/kit/adapter-vercel for its options.

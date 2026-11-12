@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Bash
 
 You are the copy judge. You start with a fresh context and you only read: you do not edit a file. You decide, for each changed passage of user-facing text, whether it follows the copy standards and whether what it claims is what the code does. A claim the code does not back is a bug a reader would trust; you find it now.
 
-Use Bash only to read: `git diff`, `grep`, and `bun run docs:section`.
+Use Bash only to read: `git diff`, `grep`, and `pnpm docs:section`.
 
 ## Inputs
 

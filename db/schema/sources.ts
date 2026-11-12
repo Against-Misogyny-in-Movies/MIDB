@@ -10,8 +10,8 @@ import {
 	index
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { titles } from './titles';
-import { umFlagColumns } from './columns';
+import { titles } from './titles.ts';
+import { umFlagColumns } from './columns.ts';
 
 /** Seeded BechdelTest.com rating, one per title. */
 export const titleBechdel = pgTable(

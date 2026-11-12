@@ -1,11 +1,12 @@
-import { createReadStream, createWriteStream } from 'fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { parse } from 'csv-parse';
 import { eq, sql } from 'drizzle-orm';
-import type { Db } from '../client';
-import { titles } from '../schema/titles';
-import { titleUm, umSource } from '../schema/sources';
-import { normalizeTitle, stripTrailingYear } from '../lib/normalizeTitle';
-import { checkCsvColumns } from './lib/checkCsvColumns';
+import type { Db } from '../client.ts';
+import { titles } from '../schema/titles.ts';
+import { titleUm, umSource } from '../schema/sources.ts';
+import { normalizeTitle, stripTrailingYear } from '../lib/normalizeTitle.ts';
+import { checkCsvColumns } from './lib/checkCsvColumns.ts';
+import { isMain } from '../../scripts/lib/is-main.ts';
 
 const CSV_PATH = './db/seeds/sources/unconsenting.csv';
 const REQUIRED_COLUMNS = [
@@ -247,8 +248,8 @@ export async function seedUnconsenting(db: Db, csvPath: string, reportPath = UNM
 	return { total, matched, ambiguous, unmatched, skipped };
 }
 
-if (import.meta.main) {
-	const { db, closeDb } = await import('./lib/db');
+if (isMain(import.meta.url)) {
+	const { db, closeDb } = await import('./lib/db.ts');
 	try {
 		await seedUnconsenting(db, CSV_PATH);
 	} finally {

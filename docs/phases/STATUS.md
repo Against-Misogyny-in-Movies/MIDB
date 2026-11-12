@@ -16,19 +16,19 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Phases
 
-| Phase | Work                   | Status      | Note |
-| ----- | ---------------------- | ----------- | ---- |
+| Phase | Work                   | Status      | Note                             |
+| ----- | ---------------------- | ----------- | -------------------------------- |
 | T1    | pnpm + Node 22         | active      | 2026-11-12: implementer running. |
-| T2    | TypeScript 6 + TS 7    | not started |      |
-| T3    | Oxlint + ESLint Svelte | not started |      |
-| 0     | SvelteKit 3 upgrade    | not started |      |
-| 1     | Cloudflare platform    | not started |      |
-| 2     | SQLite / D1 data layer | not started |      |
-| 2b    | Daily source sync      | not started |      |
-| 3     | Auth (Better Auth)     | not started |      |
-| 4     | Comments               | not started |      |
-| 5     | AI moderation          | not started |      |
-| 6     | CI, deploy, docs       | not started |      |
+| T2    | TypeScript 6 + TS 7    | not started |                                  |
+| T3    | Oxlint + ESLint Svelte | not started |                                  |
+| 0     | SvelteKit 3 upgrade    | not started |                                  |
+| 1     | Cloudflare platform    | not started |                                  |
+| 2     | SQLite / D1 data layer | not started |                                  |
+| 2b    | Daily source sync      | not started |                                  |
+| 3     | Auth (Better Auth)     | not started |                                  |
+| 4     | Comments               | not started |                                  |
+| 5     | AI moderation          | not started |                                  |
+| 6     | CI, deploy, docs       | not started |                                  |
 
 ## Open items
 

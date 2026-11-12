@@ -1,6 +1,6 @@
 import postgres from 'postgres';
 import { loadEnv } from 'vite';
-import { migrateDatabase } from '../scripts/migrate';
+import { migrateDatabase } from '../scripts/migrate.ts';
 
 /**
  * Vitest globalSetup for the `db` project: wipe TEST_DB_CONNECTION and migrate it from zero,

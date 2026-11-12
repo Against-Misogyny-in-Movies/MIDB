@@ -1,5 +1,5 @@
 import { pgTable, pgEnum, uuid, varchar, integer, uniqueIndex } from 'drizzle-orm/pg-core';
-import { timestamps } from './columns';
+import { timestamps } from './columns.ts';
 
 export const titleKind = pgEnum('title_kind', ['movie', 'tv']);
 

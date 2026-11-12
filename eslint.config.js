@@ -1,7 +1,6 @@
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import sveltePlugin from 'eslint-plugin-svelte';
-import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
 
 const tsRecommended = tsPlugin.configs['flat/recommended'];
@@ -66,7 +65,6 @@ export default [
 	{
 		files: ['**/*.svelte'],
 		languageOptions: {
-			parser: svelteParser,
 			parserOptions: {
 				parser: tsParser
 			}

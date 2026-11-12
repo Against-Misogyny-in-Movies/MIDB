@@ -1,6 +1,6 @@
 import { pgTable, text, varchar, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { timestamps } from './columns';
+import { timestamps } from './columns.ts';
 
 export const userRole = pgEnum('user_role', ['user', 'moderator', 'administrator']);
 

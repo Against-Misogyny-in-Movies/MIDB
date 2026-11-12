@@ -9,19 +9,19 @@ The rules for every session are in `.claude/rules/authority.md`; read it first. 
 - **Commits:** every commit follows `.claude/rules/commit-standards.md` (`<type>: <summary>`, with type `fix`, `feat`, `refactor`, `style` or `repo`). Branches land on `main` squashed.
 - **Branches and deploys:** follow `.claude/rules/deploy-standards.md`.
 
-Find docs through `docs/INDEX.md`. It lists every file an agent reads, its size, and the heading tree of the long ones with line ranges. Read a section, not a whole file: `bun run docs:section architecture "Caching policy"`. After changing a doc's headings, run `bun run docs:index`; a test fails while the index is stale.
+Find docs through `docs/INDEX.md`. It lists every file an agent reads, its size, and the heading tree of the long ones with line ranges. Read a section, not a whole file: `pnpm docs:section architecture "Caching policy"`. After changing a doc's headings, run `pnpm docs:index`; a test fails while the index is stale.
 
 ## Commands
 
-- `bun run dev`: the dev server.
-- `bun run check`: `svelte-check`.
-- `bun run lint`: Prettier and ESLint.
-- `bun run test:unit --run`: the Vitest `unit` project. `bunx vitest run <file>` runs one file.
-- `bun run test:db`: the Vitest `db` project, against Postgres from `docker compose up -d db`.
-- `bun run build`: a production build.
-- `bun run commit:check "<subject>"`: checks a commit subject (the `commit-msg` hook runs it for you).
-- `bun run docs:index` / `bun run docs:section <file> "<heading>"`: writes the docs index / prints one section.
-- `bun run db:*`: migrations, seeds and backfills (`docs/architecture.md`, Seeding).
+- `pnpm dev`: the dev server.
+- `pnpm check`: `svelte-check`.
+- `pnpm lint`: Prettier and ESLint.
+- `pnpm test:unit --run`: the Vitest `unit` project. `pnpm exec vitest run <file>` runs one file.
+- `pnpm test:db`: the Vitest `db` project, against Postgres from `docker compose up -d db`.
+- `pnpm build`: a production build.
+- `pnpm commit:check "<subject>"`: checks a commit subject (the `commit-msg` hook runs it for you).
+- `pnpm docs:index` / `pnpm docs:section <file> "<heading>"`: writes the docs index / prints one section.
+- `pnpm db:*`: migrations, seeds and backfills (`docs/architecture.md`, Seeding).
 
 The verification baseline that every finished task reports is in `.claude/rules/code-standards.md`, Checking a change.
 
@@ -39,4 +39,4 @@ After `implementer` reports a green exit, run `reviewer` on the diff. Also run `
 
 ## Cloud sessions
 
-`.claude/hooks/session-start.sh` installs dependencies in a cloud session. Cloud sessions have no Docker by default, so `bun run test:db` may not run there. Report it as not run, as `.claude/rules/code-standards.md` (Checking a change) says.
+`.claude/hooks/session-start.sh` installs dependencies in a cloud session. Cloud sessions have no Docker by default, so `pnpm test:db` may not run there. Report it as not run, as `.claude/rules/code-standards.md` (Checking a change) says.

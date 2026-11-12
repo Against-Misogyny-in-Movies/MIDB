@@ -1,11 +1,12 @@
-import { createReadStream } from 'fs';
+import { createReadStream } from 'node:fs';
 import { parse } from 'csv-parse';
 import { sql } from 'drizzle-orm';
-import type { Db } from '../client';
-import { titles } from '../schema/titles';
-import { titleBechdel } from '../schema/sources';
-import { normalizeTitle } from '../lib/normalizeTitle';
-import { checkCsvColumns } from './lib/checkCsvColumns';
+import type { Db } from '../client.ts';
+import { titles } from '../schema/titles.ts';
+import { titleBechdel } from '../schema/sources.ts';
+import { normalizeTitle } from '../lib/normalizeTitle.ts';
+import { checkCsvColumns } from './lib/checkCsvColumns.ts';
+import { isMain } from '../../scripts/lib/is-main.ts';
 
 const CSV_PATH = './db/seeds/sources/bechdel.csv';
 const REQUIRED_COLUMNS = ['title', 'year', 'imdbid', 'id', 'bechdelRating', 'numVotes'];
@@ -129,8 +130,8 @@ export async function seedMovies(db: Db, csvPath: string) {
 	return { total, skipped };
 }
 
-if (import.meta.main) {
-	const { db, closeDb } = await import('./lib/db');
+if (isMain(import.meta.url)) {
+	const { db, closeDb } = await import('./lib/db.ts');
 	try {
 		await seedMovies(db, CSV_PATH);
 	} finally {

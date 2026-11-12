@@ -4,7 +4,7 @@ Contributions are released under the [Apache-2.0 License](LICENSE). Follow the [
 
 ## Before starting
 
-- Follow [README.md](README.md), Local setup, until `bun run test:unit --run` passes.
+- Follow [README.md](README.md), Local setup, until `pnpm test:unit --run` passes.
 - For anything beyond a small fix, open an issue first to agree the approach.
 - Report a wrong rating, flag or warning with the "Source data or match problem" form. MIDB never edits a source's values: a wrong value is corrected at the source, and a wrong match is corrected here ([.claude/rules/authority.md](./.claude/rules/authority.md)).
 - Report security problems privately ([SECURITY.md](SECURITY.md)).
@@ -14,8 +14,8 @@ Contributions are released under the [Apache-2.0 License](LICENSE). Follow the [
 1. **Branch.** Fork, then branch from `main`, named `<type>/<short-slug>` (`fix/um-year-match`); see [.claude/rules/deploy-standards.md](./.claude/rules/deploy-standards.md), Branches.
 2. **Check before pushing.** Run the baseline in [.claude/rules/code-standards.md](./.claude/rules/code-standards.md), Checking a change. CI (`.github/workflows/tests.yml`) runs the same.
 3. **Commit subjects.** Use `<type>: <summary>`, with type `fix`, `feat`, `refactor`, `style` or `repo` ([.claude/rules/commit-standards.md](./.claude/rules/commit-standards.md)).
-   - The `commit-msg` hook that `bun install` sets up (`.githooks/`) enforces it.
-   - `bun run commit:check "<subject>"` checks one by hand.
+   - The `commit-msg` hook that `pnpm install` sets up (`.githooks/`) enforces it.
+   - `pnpm commit:check "<subject>"` checks one by hand.
 4. **The pull request title** uses the same format. Pull requests are squash-merged, so the title becomes the commit on `main`. If readers lose a feature, saved data or a URL, add a `Breaking: <what readers lose>` line to the squash body. CI checks the title and every commit subject; the template lists the other checks.
 
 ## Conventions

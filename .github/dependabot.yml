@@ -9,7 +9,7 @@ updates:
       interval: weekly
     commit-message:
       prefix: 'repo:'
-  - package-ecosystem: bun
+  - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly

@@ -10,12 +10,12 @@
 
 ## Checks
 
-- [ ] `bun run check`
-- [ ] `bun run lint`
-- [ ] `bun run test:unit --run`
-- [ ] `bun run test:db` (when the data layer could move)
-- [ ] `bun run build`
-- [ ] A schema change ships its generated migration (`bun run db:generate`)
-- [ ] `bun run docs:index` run if doc headings or doc citations changed
+- [ ] `pnpm check`
+- [ ] `pnpm lint`
+- [ ] `pnpm test:unit --run`
+- [ ] `pnpm test:db` (when the data layer could move)
+- [ ] `pnpm build`
+- [ ] A schema change ships its generated migration (`pnpm db:generate`)
+- [ ] `pnpm docs:index` run if doc headings or doc citations changed
 - [ ] `docs/architecture.md` updated for structural changes; `PRIVACY.md` and `SECURITY.md` for a new request, cookie or stored data
 - [ ] No secrets, `.env`, database dumps or build output committed

@@ -1,19 +1,19 @@
 {
 	"permissions": {
 		"allow": [
-			"Bash(bun install)",
-			"Bash(bun install --frozen-lockfile)",
-			"Bash(bun run check)",
-			"Bash(bun run lint)",
-			"Bash(bun run format)",
-			"Bash(bun run test:unit *)",
-			"Bash(bun run test:db)",
-			"Bash(bun run build)",
-			"Bash(bun run docs:index)",
-			"Bash(bun run docs:section *)",
-			"Bash(bun run commit:check *)",
-			"Bash(bunx vitest run *)",
-			"Bash(bunx vitest related *)"
+			"Bash(pnpm install)",
+			"Bash(pnpm install --frozen-lockfile)",
+			"Bash(pnpm check)",
+			"Bash(pnpm lint)",
+			"Bash(pnpm format)",
+			"Bash(pnpm test:unit *)",
+			"Bash(pnpm test:db)",
+			"Bash(pnpm build)",
+			"Bash(pnpm docs:index)",
+			"Bash(pnpm docs:section *)",
+			"Bash(pnpm commit:check *)",
+			"Bash(pnpm exec vitest run *)",
+			"Bash(pnpm exec vitest related *)"
 		]
 	},
 	"hooks": {

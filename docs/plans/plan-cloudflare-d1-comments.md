@@ -93,7 +93,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
   - `user.email` is required and unique, so passkey-only users get `${id}@users.invalid` with `emailVerified: false`.
   - Linking Google or Discord to such a user means `linkSocial` while signed in, with `allowDifferentEmails: true`.
   - Better Auth's built-in rate limiter is per isolate on Workers, so it is off. Use `advanced.ipAddress.ipAddressHeaders: ['cf-connecting-ip']`.
-  - Schema generator: `bunx auth generate --adapter drizzle --dialect sqlite`.
+  - Schema generator: `pnpm dlx auth generate --adapter drizzle --dialect sqlite`.
 - **Rate-limit binding:**
   - Config: top-level `"ratelimits": [{ name, namespace_id, simple: { limit, period: 10|60 } }]`.
   - API: `await env.X.limit({ key })` returns `{ success }`.
@@ -128,7 +128,7 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
 - **Contributors need no accounts.** This must work with no Cloudflare login, using local D1 in Miniflare:
 
   ```
-  bun install && bun run db:migrate:local && bun run db:sync:all --local && bun run dev
+  pnpm install && pnpm db:migrate:local && pnpm db:sync:all --local && pnpm dev
   ```
 
   - `db:sync:all` needs network but no keys for the UM and Bechdel sources. The TMDB `/find` backfill and the popularity step are skipped, with a notice, when `TMDB_API_TOKEN` is unset. `--fixtures` loads the small test fixtures instead, so `db:sync:all` also works offline.
@@ -270,9 +270,10 @@ The guards, `/api/me`, `toPublicUser`, the session rune's state machine and the 
    - The CSV seeders are replaced by the Phase 2b sync scripts, which use `chunkForD1` + `db.batch`, `new Date()` instead of `now()`, and the `excluded.*` upserts.
    - `seedAdmin.ts` takes `--username` or `--email`.
    - Package scripts: `db:migrate:local` / `db:migrate:remote` (wrangler).
+   - The scripts run on Node's type stripping (`node --env-file-if-exists=.env db/scripts/…`), with explicit `.ts` import extensions and `isMain` (`scripts/lib/is-main.ts`) as the entry-point check.
    - Delete `migrate.ts`, `migrateOnDeploy.ts` and its spec, and `docker-compose.yml`.
    - Remove `csv-parse` (the sync scripts read JSON/HTML/NDJSON, see Phase 2b).
-6. **DB tests** (`bun run test:db`, no docker).
+6. **DB tests** (`pnpm test:db`, no docker).
    - `globalSetup`: wipe `.wrangler/test-state`, then `wrangler d1 migrations apply DB --local --persist-to .wrangler/test-state`. This proves the baseline applies from zero.
    - `setupFiles`: `getPlatformProxy({ persist: { path } })`, then `bindDb(env.DB)`; `dispose()` runs in `afterAll`.
    - Reset: `DELETE FROM` in FK order.
@@ -330,7 +331,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - `sync-popularity.ts`: stream today's TMDB movie and TV export files and update `titles.popularity` for titles that have a `tmdb_id`. Only rows we hold are written: the export is read, not stored.
    - Every request uses the `MIDB-sync` User-Agent, a timeout, and one retry. On a fetch or parse failure the job exits non-zero and changes nothing.
 
-3. **First load in a fresh database** runs the same scripts. `bun run db:sync:all --local|--remote` replaces `db:seed:movies` / `db:seed:um`.
+3. **First load in a fresh database** runs the same scripts. `pnpm db:sync:all --local|--remote` replaces `db:seed:movies` / `db:seed:um`.
    - Delete `db/seeds/sources/*.csv` and `unconsenting_unmatched.txt`.
    - Delete `seedMovies.ts` / `seedUnconsenting.ts`; their upsert and matching code moves into the sync scripts.
    - Delete the CSV readers (`checkCsvColumns.ts`, the `csv-parse` dependency).
@@ -348,7 +349,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 ## Phase 3: Auth (Better Auth)
 
 1. **Schema** (`db/schema/auth.ts`).
-   - Generate `user`, `session`, `account`, `verification` and `passkey` with `bunx auth generate`, then merge.
+   - Generate `user`, `session`, `account`, `verification` and `passkey` with `pnpm dlx auth generate`, then merge.
    - `user` keeps `role`, `username` and `avatar_key` as `additionalFields` (`input: false`), and adds `banned_at`, `ban_reason` and `muted_until`.
    - A `realEmail(user)` helper hides `@users.invalid`. The email is still sent only to `/user/profile`.
 2. **Server** (`src/lib/server/auth/auth.ts`). `getAuth()` is memoised per isolate:
@@ -489,7 +490,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - On push to `main`:
      1. `wrangler d1 time-travel info midb` (log the bookmark);
      2. `wrangler d1 migrations apply midb --remote` (failure stops the deploy);
-     3. `bun run build && wrangler deploy`.
+     3. `pnpm build && wrangler deploy`.
    - Same-repo PRs: migrate the preview DB, then `wrangler versions upload --env preview`.
    - A scheduled job runs the orphan-user cleanup.
    - Secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
@@ -512,11 +513,11 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
 ## Verification
 
 - **Baseline after every phase:**
-  - `bun run check` → 0 errors
-  - `bun run lint` clean
-  - `bun run test:unit`
-  - `bun run test:db` (local D1)
-  - `bun run build`, which produces the worker
+  - `pnpm check` → 0 errors
+  - `pnpm lint` clean
+  - `pnpm test:unit`
+  - `pnpm test:db` (local D1)
+  - `pnpm build`, which produces the worker
 - **New unit specs:**
   - hook safe default: a header-less response becomes `private, no-store`; a response with `Set-Cookie` is forced private
   - each cache header set is correct

@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash
 
 You are the reviewer. You do not edit files, add dependencies, or rewrite the change. You report what must change before the work is acceptable. You are read-only.
 
-Use Bash only to read: `git diff`, `git log`, `bunx vitest run <file>`, `bunx vitest related <files> --run`, `bun run check`, `bun run lint`.
+Use Bash only to read: `git diff`, `git log`, `pnpm exec vitest run <file>`, `pnpm exec vitest related <files> --run`, `pnpm check`, `pnpm lint`.
 
 Before you judge, read:
 

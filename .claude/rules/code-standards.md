@@ -27,6 +27,9 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 ## File organisation
 
 - **Use `$lib` and `$db` aliases** for all cross-folder imports. Relative `./` is for same-folder siblings only.
+- **Scripts under `db/` and `scripts/` run on Node's type stripping.**
+  - Their relative imports carry the `.ts` extension (`from '../client.ts'`), and they use erasable syntax only (no enums, namespaces or parameter properties); `erasableSyntaxOnly` in `tsconfig.json` enforces it.
+  - An entry point is guarded with `isMain(import.meta.url)` (`scripts/lib/is-main.ts`), and a script that reads `.env` is run with `--env-file-if-exists=.env`.
 - **One concern per file.** When a file mixes identity resolution, algorithm logic, and rendering, split it. Name files after what they do, not what they are adjacent to.
 - **A file has one job.**
   - Past roughly 300 lines it needs a single reason to stay together.
@@ -77,14 +80,14 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - Titles are keyed by `(kind, tmdb_id)`, and `imdb_id` is optional. Never invent synthetic ids or `0` sentinels (unknown = `NULL`). Source data is read by reference (`title_um` → `um_source`), not copied.
 - Migration order matters: `db:seed:movies` before `db:seed:um`.
 - **Production deploys migrate first** (`.claude/rules/deploy-standards.md`, Deploys). A migration merged to `main` reaches the production database on the next deploy, so write it to be safe against live data.
-- **Every schema change ships its generated migration** (SQL + snapshot + journal from `bun run db:generate`) in the same change. CI's `migrations` job fails on drift.
+- **Every schema change ships its generated migration** (SQL + snapshot + journal from `pnpm db:generate`) in the same change. CI's `migrations` job fails on drift.
   - Never hand-write or hand-edit a snapshot JSON.
-  - `db:generate` prompts need a TTY. Without one, run `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
+  - `db:generate` prompts need a TTY. Without one, run `script -qec "pnpm exec drizzle-kit generate" /dev/null` and answer the prompts.
 
 ## Testing
 
 - Unit tests: Vitest, co-located in `__tests__/` subfolders (`src/`, `db/`, `scripts/`). Playwright e2e specs live in top-level `e2e-tests/`.
-- **Anything touching Postgres gets a `*.db.spec.ts`**, run by `bun run test:db` (the Vitest `db` project, a real Postgres at `TEST_DB_CONNECTION`, tables truncated before each test). Unit specs must not need a live DB: mock `$lib/server/db`.
+- **Anything touching Postgres gets a `*.db.spec.ts`**, run by `pnpm test:db` (the Vitest `db` project, a real Postgres at `TEST_DB_CONNECTION`, tables truncated before each test). Unit specs must not need a live DB: mock `$lib/server/db`.
 - When moving a function to a new file, update its test's import path. Don't leave a test importing from the old location.
 - A behaviour change ships with its test in the same change. A test that asserts the buggy result is a finding.
 
@@ -104,14 +107,14 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 
 Run the cheap checks often and the full set once.
 
-- **While working:** `bun run check` and `bun run lint` take seconds, so run them after each edit that could break them. Run the tests the edit touches with `bunx vitest run <file>`.
+- **While working:** `pnpm check` and `pnpm lint` take seconds, so run them after each edit that could break them. Run the tests the edit touches with `pnpm exec vitest run <file>`.
 - **Once, at the end, the verification baseline:**
-  - `bun run check` → 0 errors
-  - `bun run lint` → clean
-  - `bun run test:unit --run` → all pass
-  - `bun run test:db` → all pass (with `docker compose up -d db`)
-  - `bun run build` → clean
+  - `pnpm check` → 0 errors
+  - `pnpm lint` → clean
+  - `pnpm test:unit --run` → all pass
+  - `pnpm test:db` → all pass (with `docker compose up -d db`)
+  - `pnpm build` → clean
 
-  Do not run it again on an unchanged tree: a green run stands until a file changes. Fix a failure with the failing file (`bunx vitest run <file> -t "<name>"`), then run the baseline once more.
+  Do not run it again on an unchanged tree: a green run stands until a file changes. Fix a failure with the failing file (`pnpm exec vitest run <file> -t "<name>"`), then run the baseline once more.
 
 - **Reporting:** give each command with its result, and say whether the tree changed after it ran. A command that could not run (no Docker for `test:db`) is reported as not run, with the reason.

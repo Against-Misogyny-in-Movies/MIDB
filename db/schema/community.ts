@@ -12,9 +12,9 @@ import {
 	unique
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { titles } from './titles';
-import { users } from './auth';
-import { timestamps, umFlagColumns } from './columns';
+import { titles } from './titles.ts';
+import { users } from './auth.ts';
+import { timestamps, umFlagColumns } from './columns.ts';
 
 // One table per metric shape, so each can hold what it names.
 

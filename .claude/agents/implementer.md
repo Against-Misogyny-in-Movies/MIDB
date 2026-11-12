@@ -10,7 +10,7 @@ Read, in order:
 1. `docs/phases/STATUS.md`;
 2. the phase's section of the live plan in `docs/plans/`;
 3. `AGENTS.md` and the rules it names;
-4. the sections of `docs/architecture.md` the phase touches (find them in `docs/INDEX.md`; `bun run docs:section` prints one).
+4. the sections of `docs/architecture.md` the phase touches (find them in `docs/INDEX.md`; `pnpm docs:section` prints one).
 
 Which phase you may start, how to mark it, and when it is `completed` are in the header of `docs/phases/STATUS.md`. Follow it. Under the orchestrator, do not edit `docs/phases/STATUS.md`: the orchestrator does.
 

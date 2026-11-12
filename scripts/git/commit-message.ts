@@ -1,14 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { isMain } from '../lib/is-main.ts';
 
 // Checks commit subjects against .claude/rules/commit-standards.md, Subject line: "<type>: <summary>",
 // one of the types below, at most 72 characters, no closing period.
-// Usage: bun run commit:check "<subject>"... checks the subjects given; --range <base>..<head> checks
+// Usage: pnpm commit:check "<subject>"... checks the subjects given; --range <base>..<head> checks
 // every non-merge commit in the range (CI checks a pull request's commits and its title, which becomes
 // the squash commit's subject); --file <path> checks a message file (the commit-msg hook,
-// .githooks/commit-msg); --install points this checkout's git at .githooks (`bun install` runs it
+// .githooks/commit-msg); --install points this checkout's git at .githooks (`pnpm install` runs it
 // through `prepare`; outside a git checkout it does nothing).
 
 export const COMMIT_TYPES = ['fix', 'feat', 'refactor', 'style', 'repo'] as const;
@@ -91,7 +90,7 @@ function subjectsToCheck(args: string[]): string[] {
 	const given = args.filter((arg) => !arg.startsWith('--'));
 	if (given.length === 0)
 		throw new Error(
-			'usage: bun run commit:check "<subject>"... | --range <base>..<head> | --file <path>'
+			'usage: pnpm commit:check "<subject>"... | --range <base>..<head> | --file <path>'
 		);
 	return given;
 }
@@ -109,7 +108,7 @@ function main(): void {
 	process.exit(1);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
 	try {
 		main();
 	} catch (error) {

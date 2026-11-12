@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { buildGraph, headingsOf, INDEX_PATH, renderIndex, resolveSection, ROOT } from '../index';
 
 describe('docs index', () => {
-	it('is current (run `bun run docs:index` after a doc or heading change)', () => {
+	it('is current (run `pnpm docs:index` after a doc or heading change)', () => {
 		const graph = buildGraph();
 		expect(readFileSync(path.join(ROOT, INDEX_PATH), 'utf8')).toBe(renderIndex(graph));
 	});

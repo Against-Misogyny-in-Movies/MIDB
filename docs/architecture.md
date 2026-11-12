@@ -16,20 +16,20 @@ Each metric is designed to show **two scores side by side**: the original author
 
 ## Tech stack
 
-| Layer                     | Technology                                                                                                                                                                                                                          |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework                 | SvelteKit 2.21 + **Svelte 5** (runes: `$props`/`$state`/`$derived`, snippets; SSR + client hydration)                                                                                                                               |
-| Runtime / package manager | **Bun** 1.4.4 everywhere: `packageManager: bun@1.4.4` in `package.json`; CI and Vercel install with `bun install --frozen-lockfile` (lockfile is JSON `bun.lock`); Vercel runs Bun 1.4.4 through `npx`                              |
-| Build / dev               | **Vite 8**; deployed with `@sveltejs/adapter-vercel` 6                                                                                                                                                                              |
-| Styling                   | **Tailwind CSS 4 (CSS-first)** via `@tailwindcss/vite` — no PostCSS config; design tokens live in `src/app.css`. Remixicon for icons.                                                                                               |
-| Database                  | PostgreSQL via **Drizzle ORM** 0.45 (`postgres-js` 3.4 driver) + drizzle-kit 0.31                                                                                                                                                   |
-| Auth                      | **Hanko** (passwordless / passkeys) via `@teamhanko/hanko-elements` 2.6; JWT verified with `jose` 6                                                                                                                                 |
-| External movie data       | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`)                                                                                                                                 |
-| Server cache              | Swappable backend (`$lib/server/cache`): bounded in-memory LRU by default; **Redis** (optional, lazy `redis` pkg) when `REDIS_URL` is set. Caches TMDB (titles, search) + DDD responses and holds the rate-limit counters (`incr`). |
-| Seed parsing              | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs)                                                                                                                                                                       |
-| Testing                   | Vitest 4 (projects `unit` + `db` against real Postgres, co-located in `__tests__/`), Playwright 1.61 (integration, in `e2e-tests/`), Storybook 10 (component dev)                                                                   |
-| Client debounce / ids     | `DebouncedQuery` (`$lib/media/utils/debouncedQuery.svelte.ts`): timer + `AbortController`, no RxJS. Element ids from Svelte's `$props.id()`, no nanoid                                                                              |
-| Lint                      | ESLint 10 (flat config) + `@typescript-eslint/*` 8 + Prettier                                                                                                                                                                       |
+| Layer                     | Technology                                                                                                                                                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework                 | SvelteKit 2.21 + **Svelte 5** (runes: `$props`/`$state`/`$derived`, snippets; SSR + client hydration)                                                                                                                                                            |
+| Runtime / package manager | **pnpm** 10.28 on **Node 22** (`engines` `>=22.18`): `packageManager: pnpm@10.28.0` in `package.json`; CI and Vercel install with `pnpm install --frozen-lockfile` (`pnpm-lock.yaml`). The `.ts` scripts under `db/` and `scripts/` run on Node's type stripping |
+| Build / dev               | **Vite 8**; deployed with `@sveltejs/adapter-vercel` 6                                                                                                                                                                                                           |
+| Styling                   | **Tailwind CSS 4 (CSS-first)** via `@tailwindcss/vite` — no PostCSS config; design tokens live in `src/app.css`. Remixicon for icons.                                                                                                                            |
+| Database                  | PostgreSQL via **Drizzle ORM** 0.45 (`postgres-js` 3.4 driver) + drizzle-kit 0.31                                                                                                                                                                                |
+| Auth                      | **Hanko** (passwordless / passkeys) via `@teamhanko/hanko-elements` 2.6; JWT verified with `jose` 6                                                                                                                                                              |
+| External movie data       | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`)                                                                                                                                                              |
+| Server cache              | Swappable backend (`$lib/server/cache`): bounded in-memory LRU by default; **Redis** (optional, lazy `redis` pkg) when `REDIS_URL` is set. Caches TMDB (titles, search) + DDD responses and holds the rate-limit counters (`incr`).                              |
+| Seed parsing              | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs)                                                                                                                                                                                                    |
+| Testing                   | Vitest 4 (projects `unit` + `db` against real Postgres, co-located in `__tests__/`), Playwright 1.61 (integration, in `e2e-tests/`), Storybook 10 (component dev)                                                                                                |
+| Client debounce / ids     | `DebouncedQuery` (`$lib/media/utils/debouncedQuery.svelte.ts`): timer + `AbortController`, no RxJS. Element ids from Svelte's `$props.id()`, no nanoid                                                                                                           |
+| Lint                      | ESLint 10 (flat config) + `@typescript-eslint/*` 8 + Prettier                                                                                                                                                                                                    |
 
 ---
 
@@ -52,7 +52,7 @@ Each metric is designed to show **two scores side by side**: the original author
 
    Auth:  Browser ⇄ Hanko Cloud (web components + JWT cookie)
           hooks.server.ts verifies the `hanko` cookie via remote JWKS
-   Migrations: `bun run db:migrate` locally; production deploys run them before the build
+   Migrations: `pnpm db:migrate` locally; production deploys run them before the build
                (`migrateOnDeploy.ts`); the server never migrates on boot
 ```
 
@@ -78,7 +78,7 @@ MIDB/
 │   │   ├── auth.ts             # user (Hanko-sub PK, role enum, username/avatarKey, lower(username) idx)
 │   │   └── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
 │   ├── scripts/
-│   │   ├── migrate.ts          # `bun run db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
+│   │   ├── migrate.ts          # `pnpm db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
 │   │   ├── migrateOnDeploy.ts  # first step of vercel.json's buildCommand: migrates DB_CONNECTION when VERCEL_ENV=production, skips otherwise; exports deployMigration(env)
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → titles (kind movie) + title_bechdel; exports seedMovies(db, csvPath)
 │   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + title_um bindings (matched); exports seedUnconsenting(db, csvPath, reportPath?)
@@ -149,19 +149,20 @@ MIDB/
 │       └── actions/            # Svelte `use:` actions (setAttributesToChilds.ts)
 │
 ├── e2e-tests/                  # Playwright integration tests (testDir): landing + navbar search overflow (see Testing)
-├── scripts/                    # repo tooling, run with bun; specs in each folder's __tests__/ (unit project)
-│   ├── git/commit-message.ts   # `bun run commit:check`: commit subjects against .claude/rules/commit-standards.md; --install sets core.hooksPath (run by `prepare`)
-│   ├── docs/index.ts           # `bun run docs:index` writes docs/INDEX.md; `bun run docs:section <file> "<heading>"` prints one section
+├── scripts/                    # repo tooling, run on Node; specs in each folder's __tests__/ (unit project)
+│   ├── git/commit-message.ts   # `pnpm commit:check`: commit subjects against .claude/rules/commit-standards.md; --install sets core.hooksPath (run by `prepare`)
+│   ├── lib/is-main.ts          # isMain(import.meta.url): the entry-point check of every Node-run script (Node 22 has no import.meta.main); spec in lib/__tests__/
+│   ├── docs/index.ts           # `pnpm docs:index` writes docs/INDEX.md; `pnpm docs:section <file> "<heading>"` prints one section
 │   └── checks/__tests__/file-size.spec.ts # the 500-line limit (.claude/rules/code-standards.md, File organisation) with its list of files over it
 ├── docs/
-│   ├── INDEX.md                # generated by `bun run docs:index`: every doc agents read, sizes, heading line ranges, code citations
+│   ├── INDEX.md                # generated by `pnpm docs:index`: every doc agents read, sizes, heading line ranges, code citations
 │   ├── architecture.md         # this file
 │   ├── phases/STATUS.md        # one row per phase of the live plan, open items, standing decisions
 │   └── plans/                  # the live plan(s); done/ holds plans finished before the docs standards (history, not cited)
 ├── .claude/
 │   ├── rules/                  # authority, code, style, copy, docs, commit and deploy standards (AGENTS.md points here)
 │   ├── agents/                 # orchestrator, implementer, reviewer, ux, copy-judge
-│   ├── hooks/session-start.sh  # cloud sessions: bun install --frozen-lockfile, .env from .env.example
+│   ├── hooks/session-start.sh  # cloud sessions: pnpm install --frozen-lockfile, .env from .env.example
 │   ├── settings.json           # allowed commands + the SessionStart hook
 │   └── skills/impeccable/      # vendored design skill (`npx impeccable update`), excluded from prettier/eslint
 ├── .githooks/commit-msg        # runs scripts/git/commit-message.ts on every commit
@@ -174,9 +175,10 @@ MIDB/
 ├── drizzle.config.ts           # drizzle-kit config (out, schema glob, dialect/credentials)
 ├── eslint.config.js            # flat config: typescript-eslint + svelte recommended + prettier
 ├── .prettierrc / .prettierignore # tabs, single quotes, width 100; ignores db/migrations (drizzle-kit output)
-├── playwright.config.ts        # testDir: 'e2e-tests'; webServer `bun run build && bun run preview` on 4173
+├── playwright.config.ts        # testDir: 'e2e-tests'; webServer `pnpm build && pnpm preview` on 4173
 ├── svelte.config.js            # adapter-vercel; alias $db/* → ./db/*; vitePreprocess({ style:false })
-├── vercel.json                 # installCommand `npx --yes bun@1.4.4 install --frozen-lockfile`, buildCommand `migrateOnDeploy.ts` then `run build`, both through `npx --yes bun@1.4.4`
+├── package.json, pnpm-lock.yaml # packageManager pnpm@10.28.0, engines node >=22.18, pnpm.overrides / onlyBuiltDependencies; the lockfile CI and Vercel install with
+├── vercel.json                 # installCommand `pnpm install --frozen-lockfile`, buildCommand `node db/scripts/migrateOnDeploy.ts && pnpm build`
 ├── vite.config.ts              # tailwindcss() + sveltekit() + svelteTesting() + Vitest projects `unit` (jsdom) and `db` (node, real Postgres). No `define`, no build-time env
 ├── README.md                   # short local setup (compose + seeds), points at AGENTS.md, the rules and this doc
 ├── .env.example                # committed template: every var with check/build-safe placeholders
@@ -193,8 +195,8 @@ MIDB/
 - **`$lib/server/**` is the server-only boundary.** SvelteKit fails the build if any client-reachable code imports from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`) and DB access live here only. `data/`= Postgres;`integrations/` = external HTTP clients.
 - **Components for types, never routes.** A component that needs a `Movie`/`Series`/`TriggerTag` type imports it from `$lib/media/types/*` — `media/types/ddd.ts` re-exports DDD types from `integrations/ddd-types.ts` (not `ddd.ts`) as **types only** (erased at build, so no server runtime leaks into the client bundle). Components no longer reach back into `routes/.../`.
 - **`ui/` vs domain.** Title-specific UI lives in domain folders (`movies/*`, `landing/`, `search/*`, …). `ui/` holds generic primitives with at least two real consumers: today only `ui/badge.svelte`.
-- **Imports use `$lib`/`$db` aliases**, with relative `./` reserved for same-folder siblings.
-- **Tests are co-located in a `__tests__/` subfolder** at each location (the `unit` project globs `src/**/*.{spec,test}.{js,ts}` and `db/**/*.spec.ts` at any depth). Specs that touch Postgres are named `*.db.spec.ts` and run only in the `db` project (`bun run test:db`); the `unit` project excludes them and mocks `$lib/server/db`. Playwright e2e specs live in top-level `e2e-tests/`.
+- **Imports use `$lib`/`$db` aliases**, with relative `./` reserved for same-folder siblings. The exception is the Node-run scripts under `db/` and `scripts/` (and what they import: `db/client.ts`, `db/schema/*`, `db/lib/*`): Node cannot resolve aliases or guess extensions, so their relative imports carry `.ts`, and `erasableSyntaxOnly` keeps their syntax strippable.
+- **Tests are co-located in a `__tests__/` subfolder** at each location (the `unit` project globs `src/**/*.{spec,test}.{js,ts}` and `db/**/*.spec.ts` at any depth). Specs that touch Postgres are named `*.db.spec.ts` and run only in the `db` project (`pnpm test:db`); the `unit` project excludes them and mocks `$lib/server/db`. Playwright e2e specs live in top-level `e2e-tests/`.
 
 ---
 
@@ -255,7 +257,7 @@ Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored
 
 **Client shape:** the only user object that reaches the browser is `PublicUser` (`$lib/media/types/user.ts`: `username`, `avatarKey`, `role`, `displayName`), built by `toPublicUser` in `user-queries.ts`. `displayName` falls back username → email local-part → `"Account"` on the server, so the email stays server-side except on `/user/profile`. Loads never return a `UserRow`.
 
-**Role enum (`user_role`):** `user` | `moderator` | `administrator`. Default `user`. Authorization always reads the DB role through `requireRole` (`$lib/server/auth/guards.ts`) — Hanko has no concept of MIDB roles. Promote via `bun run db:seed:admin <email>`.
+**Role enum (`user_role`):** `user` | `moderator` | `administrator`. Default `user`. Authorization always reads the DB role through `requireRole` (`$lib/server/auth/guards.ts`) — Hanko has no concept of MIDB roles. Promote via `pnpm db:seed:admin <email>`.
 
 **Profile fields:** `username` (varchar 32, case-insensitive unique via `lower(username)` index, validated `^[a-z0-9_]{3,32}$` + reserved-name blocklist), `avatar_key` (varchar 48, validated against avatar registry), `email` (nullable — Hanko's claim shape varies by tenant version; `emailFromClaims` handles both string and `{ address }` object forms).
 
@@ -312,9 +314,9 @@ The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `comm
 
 - **`0002_titles_spine`** (generated 2026-10-24, remediation PR 4) — answers: _rename_ `movies`→`titles`, `movie_bechdel`→`title_bechdel`, `movie_id`→`title_id` (in `comments` and `title_bechdel`); _create_ for everything else (`title_kind`/`comment_status` enums, `title_um`, the three community tables, `comments.status`). Drops `community_metric_submissions`, `movie_trigger_tags`, `movie_unconsenting` and the `metric_kind` enum; drops `movies.tmdb_id`'s unique in favour of `titles_kind_tmdb_idx`; every timestamp becomes `timestamptz`. **Hand-edited SQL** (snapshot untouched): `USING … AT TIME ZONE 'UTC'` on each `timestamp → timestamptz`; `kind` added with a temporary `DEFAULT 'movie'` that the data block drops; a data block (unpack `tmdb-tv:<id>`/`tmdb:<id>` into `kind`/`tmdb_id` with `imdb_id` NULL, `year <= 0` → NULL in `titles` and `um_source`, copy `movie_unconsenting` bindings into `title_um`) placed after the renames and column changes and before `DROP TABLE movie_unconsenting` and the new unique/check constraints. Not reversible by revert: roll back by restoring a `pg_dump`. drizzle-kit 0.31.10/0.31.11 crash when one `generate` both renames a table and alters its columns (`preparePgAlterColumns` reads the old snapshot under the new table name); the snapshot was generated with that one lookup made optional-chained in the local `node_modules` (it only decides whether the old column type was an enum, and none were), then the stock package was reinstalled and the drift check confirmed clean.
 
-Future schema changes append `0003`, `0004`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "bunx drizzle-kit generate" /dev/null` and answer the prompts.
+Future schema changes append `0003`, `0004`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "pnpm exec drizzle-kit generate" /dev/null` and answer the prompts.
 
-**Boot does NOT auto-migrate** (commit `742c612`). Run `bun run db:migrate` explicitly after `bun run db:generate`. A fresh DB migrated from zero matches the schema; the CI `db` job proves it on every run.
+**Boot does NOT auto-migrate** (commit `742c612`). Run `pnpm db:migrate` explicitly after `pnpm db:generate`. A fresh DB migrated from zero matches the schema; the CI `db` job proves it on every run.
 
 **Production deploys migrate before they build.** `vercel.json`'s `buildCommand` runs `db/scripts/migrateOnDeploy.ts` first. On `VERCEL_ENV=production` it applies every pending migration to `DB_CONNECTION` through `migrateDatabase`; previews and builds outside Vercel skip, so an unmerged branch never touches the production schema. Drizzle's migrator runs all pending migrations in one transaction, so a failing statement leaves the database as it was and fails the build: the previous deployment keeps serving. A Production build without `DB_CONNECTION` fails too. Consequence: a migration merged to `main` reaches the production database on the next deploy, so it must be safe against live data. A database created without the migrator (no `drizzle.__drizzle_migrations` rows) fails on `relation "user" already exists`; record the migrations it already has by inserting their `hash` (sha256 of the `.sql` file) and `created_at` (the journal's `when`) into `drizzle.__drizzle_migrations`, then deploy again. The deploy step reads `DB_CONNECTION` from the build environment in its own process; the app bundle still never contains it.
 
@@ -322,7 +324,7 @@ Future schema changes append `0003`, `0004`, … and **commit the generated SQL,
 
 ## Seeding
 
-Raw CSVs in `db/seeds/sources/`. Scripts run under Bun and use `csv-parse` for streaming. Each seeder exports its core as a function taking `(db, csvPath)` (the DB smoke test calls it with the test client and the 50-row fixtures in `db/test/fixtures/`); the `bun` entry point (`if (import.meta.main)`) imports `db` + `closeDb` from `db/scripts/lib/db.ts` (built from `process.env.DB_CONNECTION`, which Bun loads from `.env`; throws if unset) and closes the pool when done. All upserts are idempotent (`onConflictDoUpdate`).
+Raw CSVs in `db/seeds/sources/`. Scripts run on Node (type stripping) and use `csv-parse` for streaming. Each seeder exports its core as a function taking `(db, csvPath)` (the DB smoke test calls it with the test client and the 50-row fixtures in `db/test/fixtures/`); the Node entry point (`if (isMain(import.meta.url))`) imports `db` + `closeDb` from `db/scripts/lib/db.ts` (built from `process.env.DB_CONNECTION`, which `node --env-file-if-exists=.env` loads from `.env`; throws if unset) and closes the pool when done. All upserts are idempotent (`onConflictDoUpdate`).
 
 1. **`db:seed:movies`** (`seedMovies.ts`) — stream the **Bechdel CSV** → upsert `titles` (`kind: 'movie'`, keyed by `imdb_id`) + `title_bechdel`. Source of `imdb_id`, `title`, `year` (non-positive → NULL), `clean_title`.
 2. **`db:seed:um`** (`seedUnconsenting.ts`) — stream the **UM CSV**:
@@ -565,25 +567,25 @@ One module, `$lib/server/integrations/tmdb/` (server-only: it holds `TMDB_API_TO
 | `DDD_API_KEY`           | `$lib/server/integrations/ddd.ts` (server only)         | Does The Dog Die API key, `X-API-KEY` header.                                                                                                                                              |
 | `REDIS_URL`             | `$lib/server/cache` (server only)                       | **Optional.** When set, the cache and the rate-limit counters use Redis instead of process memory (so the limit is global). Requires the optional `redis` package. `$env/dynamic/private`. |
 
-Nothing is inlined at build time: `vite.config.ts` has no `define`, so `build` and `check` need no database and the server bundle contains no connection string. `.env.example` is the committed template (allow-listed in `.gitignore`) and lists every variable above. Its placeholders are valid enough for `bun run check` and `bun run build`, so a fresh clone and CI only need `cp .env.example .env`. Title pages need real `TMDB_API_TOKEN`/`DDD_API_KEY` values, and sign-in needs a real Hanko tenant.
+Nothing is inlined at build time: `vite.config.ts` has no `define`, so `build` and `check` need no database and the server bundle contains no connection string. `.env.example` is the committed template (allow-listed in `.gitignore`) and lists every variable above. Its placeholders are valid enough for `pnpm check` and `pnpm build`, so a fresh clone and CI only need `cp .env.example .env`. Title pages need real `TMDB_API_TOKEN`/`DDD_API_KEY` values, and sign-in needs a real Hanko tenant.
 
-**One package manager.** Bun 1.4.4 locally, in CI and on Vercel: `package.json` declares `"packageManager": "bun@1.4.4"`, and `vercel.json` sets `installCommand: npx --yes bun@1.4.4 install --frozen-lockfile` and `buildCommand: npx --yes bun@1.4.4 ./db/scripts/migrateOnDeploy.ts && npx --yes bun@1.4.4 run build`, so production installs exactly the `bun.lock` that CI tested. The version is pinned through `npx` because Vercel ignores `packageManager` for Bun and, when `installCommand` is overridden, runs the oldest Bun in its build image: Bun 1.1 cannot parse the text `bun.lock` ("Unknown lockfile version"), ignores it, and `--frozen-lockfile` then fails the install. Keep the version in `vercel.json`, `packageManager` and the CI `bun-version` in step. The old `npm install --legacy-peer-deps` was hiding a real peer conflict (Storybook 9 peers on Vite ≤7 and vite-plugin-svelte ≤6), fixed by moving to Storybook 10.6. `vite` still lists `yaml@^2` as an optional peer while `eslint-plugin-svelte` pulls `yaml@1` via `postcss-load-config`; Bun does not fail on that and nothing loads a YAML config. No dependency is pinned to `latest`.
+**One package manager.** pnpm 10.28 on Node 22 locally, in CI and on Vercel: `package.json` declares `"packageManager": "pnpm@10.28.0"` and `"engines": { "node": ">=22.18" }` (the first Node 22 with type stripping on; `.npmrc`'s `engine-strict=true` enforces it), and `vercel.json` sets `installCommand: pnpm install --frozen-lockfile` and `buildCommand: node db/scripts/migrateOnDeploy.ts && pnpm build`, so production installs exactly the `pnpm-lock.yaml` that CI tested. Vercel takes the Node version from `engines`. `pnpm.overrides` in `package.json` pins each direct dependency to the version the earlier lockfile resolved; `pnpm.onlyBuiltDependencies` lists `esbuild`, the one dependency whose build script runs (pnpm 10 blocks the rest). The old `npm install --legacy-peer-deps` was hiding a real peer conflict (Storybook 9 peers on Vite ≤7 and vite-plugin-svelte ≤6), fixed by moving to Storybook 10.6. No dependency is pinned to `latest`.
 
 ### Local run sequence
 
 ```bash
-bun install
+pnpm install
 cp .env.example .env     # DB_CONNECTION already points at the compose DB
 docker compose up -d db  # postgres:16, DB midb on localhost:5432
-bun run db:migrate
-bun run db:seed:movies   # must run before db:seed:um
-bun run db:seed:um
-bun run db:backfill:tmdb # optional: resolve tmdb_id ahead of time
-bun run dev
+pnpm db:migrate
+pnpm db:seed:movies   # must run before db:seed:um
+pnpm db:seed:um
+pnpm db:backfill:tmdb # optional: resolve tmdb_id ahead of time
+pnpm dev
 
 # DB tests (once): a separate database on the same server
 docker compose exec db createdb -U postgres midb_test
-bun run test:db          # wipes midb_test, migrates it from zero, runs *.db.spec.ts
+pnpm test:db          # wipes midb_test, migrates it from zero, runs *.db.spec.ts
 ```
 
 ### npm scripts
@@ -592,13 +594,13 @@ bun run test:db          # wipes midb_test, migrates it from zero, runs *.db.spe
 
 ### CI (`.github/workflows/tests.yml`)
 
-Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to the local version.
+Runs on every PR, on pushes to `main`, and on manual dispatch. Every job but `commits` installs pnpm (the `packageManager` version) and Node 22 with the pnpm cache.
 
-- **`static`**: `bun install --frozen-lockfile` → `cp .env.example .env` (so `$env/static/*` resolves) → `bun run check` → `bun run lint` (`prettier --check .` + `eslint .`) → `bun run build`.
-- **`unit`**: `bun install --frozen-lockfile` → `bun run test:unit --run`. Needs no secrets, `.env` or database, because unit specs mock `$env/*` and `$lib/server/db`.
-- **`migrations`**: `bunx drizzle-kit generate --name drift_check`, then fails (printing the status and diff) if `git status --porcelain db/migrations` is non-empty. Needs no DB. A drizzle-kit prompt also fails it (no TTY), which is the correct outcome.
-- **`db`**: `postgres:16` service with DB `midb_test`, `TEST_DB_CONNECTION` set, then `bun run test:db`. Global setup migrates the empty DB from zero, so this job also proves the migration chain applies cleanly.
-- **`e2e`**: skipped unless the repo variable `E2E_ENABLED` is `'true'`. It starts a `postgres:16` service, runs `db:migrate`, then `bun run test:integration`; `playwright.config.ts` builds and previews the app itself (`bun run build && bun run preview`). It needs the secrets `TMDB_API_TOKEN` and `DDD_API_KEY` and the variable `PUBLIC_HANKO_API_URL`. The Playwright report is uploaded on failure.
+- **`static`**: `pnpm install --frozen-lockfile` → `cp .env.example .env` (so `$env/static/*` resolves) → `pnpm check` → `pnpm lint` (`prettier --check .` + `eslint .`) → `pnpm build`.
+- **`unit`**: `pnpm install --frozen-lockfile` → `pnpm test:unit --run`. Needs no secrets, `.env` or database, because unit specs mock `$env/*` and `$lib/server/db`.
+- **`migrations`**: `pnpm exec drizzle-kit generate --name drift_check`, then fails (printing the status and diff) if `git status --porcelain db/migrations` is non-empty. Needs no DB. A drizzle-kit prompt also fails it (no TTY), which is the correct outcome.
+- **`db`**: `postgres:16` service with DB `midb_test`, `TEST_DB_CONNECTION` set, then `pnpm test:db`. Global setup migrates the empty DB from zero, so this job also proves the migration chain applies cleanly.
+- **`e2e`**: skipped unless the repo variable `E2E_ENABLED` is `'true'`. It starts a `postgres:16` service, runs `db:migrate`, then `pnpm test:integration`; `playwright.config.ts` builds and previews the app itself (`pnpm build && pnpm preview`). It needs the secrets `TMDB_API_TOKEN` and `DDD_API_KEY` and the variable `PUBLIC_HANKO_API_URL`. The Playwright report is uploaded on failure.
 
 ---
 
@@ -606,15 +608,15 @@ Runs on every PR, on pushes to `main`, and on manual dispatch. Bun is pinned to 
 
 Three layers, plus Storybook for component development. Specs live in a `__tests__/` folder next to the code they cover; Playwright specs in top-level `e2e-tests/`.
 
-- **`unit`** (Vitest project, `jsdom`; `bun run test:unit`): `src/**/*.{spec,test}.{js,ts}`, `db/**/*.spec.ts` and `scripts/**/*.spec.ts`, minus `*.db.spec.ts`. Needs no database, `.env` or secrets: specs mock `$env/*`, `$lib/server/db`, the TMDB/DDD `fetch` and `$app/*` as needed. Components render through `@testing-library/svelte` (`svelteTesting()` in `vite.config.ts`) with `@testing-library/jest-dom` matchers. Rune classes (`TitleView`, `EpisodeFilter`, `Session`, `MovieSearchState`, `DebouncedQuery`) are tested directly, with fake timers where they debounce. Endpoints are called as plain functions with a hand-built `RequestEvent` (`src/__tests__/api-*.spec.ts`).
-- **`db`** (Vitest project, `node`; `bun run test:db`): every `*.db.spec.ts` against a real Postgres at `TEST_DB_CONNECTION`. `db/test/global-setup.ts` refuses to run if it equals `DB_CONNECTION`, wipes the database and migrates it from zero once per run (so the job also proves the migration chain); `db/test/reset.ts` truncates every schema table before each test and closes the pool after. Files run serially (`fileParallelism: false`). Covers title resolution, sources, UM candidates, user queries, community-table constraints and a seeder smoke test on 50-row fixtures (`db/test/fixtures/`). Locally: `docker compose up -d db`, then `createdb midb_test` once (see _Local run sequence_).
-- **`e2e`** (Playwright, `bun run test:integration`): `playwright.config.ts` builds and previews the app on 4173. `landing.spec.ts` (hero, contribute link, theme toggle) and `navbarSearchOverflow.spec.ts` (mobile dropdown stays in the viewport, `/api/search` mocked with `page.route`). The CI job is gated on `E2E_ENABLED` because it needs real TMDB/DDD secrets.
-- **Storybook** (`bun run storybook`, `build-storybook`): `*.stories.svelte` with `@storybook/addon-svelte-csf`. Only the poster `image` story remains after the redesign deleted the unused primitives. Not run in CI.
+- **`unit`** (Vitest project, `jsdom`; `pnpm test:unit`): `src/**/*.{spec,test}.{js,ts}`, `db/**/*.spec.ts` and `scripts/**/*.spec.ts`, minus `*.db.spec.ts`. Needs no database, `.env` or secrets: specs mock `$env/*`, `$lib/server/db`, the TMDB/DDD `fetch` and `$app/*` as needed. Components render through `@testing-library/svelte` (`svelteTesting()` in `vite.config.ts`) with `@testing-library/jest-dom` matchers. Rune classes (`TitleView`, `EpisodeFilter`, `Session`, `MovieSearchState`, `DebouncedQuery`) are tested directly, with fake timers where they debounce. Endpoints are called as plain functions with a hand-built `RequestEvent` (`src/__tests__/api-*.spec.ts`).
+- **`db`** (Vitest project, `node`; `pnpm test:db`): every `*.db.spec.ts` against a real Postgres at `TEST_DB_CONNECTION`. `db/test/global-setup.ts` refuses to run if it equals `DB_CONNECTION`, wipes the database and migrates it from zero once per run (so the job also proves the migration chain); `db/test/reset.ts` truncates every schema table before each test and closes the pool after. Files run serially (`fileParallelism: false`). Covers title resolution, sources, UM candidates, user queries, community-table constraints and a seeder smoke test on 50-row fixtures (`db/test/fixtures/`). Locally: `docker compose up -d db`, then `createdb midb_test` once (see _Local run sequence_).
+- **`e2e`** (Playwright, `pnpm test:integration`): `playwright.config.ts` builds and previews the app on 4173. `landing.spec.ts` (hero, contribute link, theme toggle) and `navbarSearchOverflow.spec.ts` (mobile dropdown stays in the viewport, `/api/search` mocked with `page.route`). The CI job is gated on `E2E_ENABLED` because it needs real TMDB/DDD secrets.
+- **Storybook** (`pnpm storybook`, `build-storybook`): `*.stories.svelte` with `@storybook/addon-svelte-csf`. Only the poster `image` story remains after the redesign deleted the unused primitives. Not run in CI.
 - **Rule of thumb** (`.claude/rules/code-standards.md`, Testing): anything that touches Postgres gets a `*.db.spec.ts`; everything else stays in `unit` and mocks the DB. Moving a function means moving its spec's import too.
 
 ### Verification baseline
 
-The baseline every finished task reports is `.claude/rules/code-standards.md`, Checking a change. CI runs the same jobs (see _CI_), plus the drift check (`bunx drizzle-kit generate --name drift_check` → no change) and, on pull requests, the commit-subject check.
+The baseline every finished task reports is `.claude/rules/code-standards.md`, Checking a change. CI runs the same jobs (see _CI_), plus the drift check (`pnpm exec drizzle-kit generate --name drift_check` → no change) and, on pull requests, the commit-subject check.
 
 ---
 
@@ -635,5 +637,5 @@ The baseline every finished task reports is `.claude/rules/code-standards.md`, C
 - `docs/INDEX.md` — where every doc and section is, with line ranges.
 - `docs/plans/plan-cloudflare-d1-comments.md` — the live plan; its phases are tracked in `docs/phases/STATUS.md`.
 - `PRODUCT.md`, `DESIGN.md` — product context and the visual system (the Impeccable skill reads both).
-- `README.md` — local setup (Bun + `docker compose`, `.env.example`, migrate + seeds).
+- `README.md` — local setup (Node + pnpm + `docker compose`, `.env.example`, migrate + seeds).
 - `docs/plans/done/` — plans finished before the docs standards; history, not a source of current rules.

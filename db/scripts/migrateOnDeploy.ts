@@ -1,4 +1,5 @@
-import { migrateDatabase } from './migrate';
+import { migrateDatabase } from './migrate.ts';
+import { isMain } from '../../scripts/lib/is-main.ts';
 
 export type DeployMigration = { skip: string } | { url: string };
 
@@ -18,7 +19,7 @@ export function deployMigration(env: Record<string, string | undefined>): Deploy
 	return { url: env.DB_CONNECTION };
 }
 
-if (import.meta.main) {
+if (isMain(import.meta.url)) {
 	try {
 		const step = deployMigration(process.env);
 		if ('skip' in step) {
