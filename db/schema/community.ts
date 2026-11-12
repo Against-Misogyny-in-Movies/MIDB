@@ -33,7 +33,8 @@ import {
 	holdReason,
 	objectificationLevel,
 	reportFraming,
-	reportLevel
+	reportLevel,
+	sexualLevel
 } from '../lib/readerReports.ts';
 
 // One table per metric shape, so each can hold what it names.
@@ -259,7 +260,7 @@ export const communityContentReports = sqliteTable(
 		titleId: text('title_id')
 			.notNull()
 			.references(() => titles.id, { onDelete: 'cascade' }),
-		sexualPresent: text('sexual_present', { enum: reportLevel }),
+		sexualPresent: text('sexual_present', { enum: sexualLevel }),
 		partnerLevel: text('partner_level', { enum: reportLevel }),
 		physicalLevel: text('physical_level', { enum: reportLevel }),
 		stalkingLevel: text('stalking_level', { enum: reportLevel }),
@@ -274,7 +275,7 @@ export const communityContentReports = sqliteTable(
 		primaryKey({ columns: [t.userId, t.titleId] }),
 		index('ccr_title_status_idx').on(t.titleId, t.status),
 		index('ccr_user_created_idx').on(t.userId, t.createdAt),
-		enumCheck('ccr_sexual_present_check', t.sexualPresent, reportLevel),
+		enumCheck('ccr_sexual_present_check', t.sexualPresent, sexualLevel),
 		enumCheck('ccr_partner_level_check', t.partnerLevel, reportLevel),
 		enumCheck('ccr_physical_level_check', t.physicalLevel, reportLevel),
 		enumCheck('ccr_stalking_level_check', t.stalkingLevel, reportLevel),

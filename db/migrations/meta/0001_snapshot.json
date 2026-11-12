@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5f2b03c3-0db2-4f3f-945d-08aa7a3b85b4",
+  "id": "3d66c8b4-30b1-498c-8d29-a394610e8fe5",
   "prevId": "a69d07b6-695c-479d-ac6e-27c3f0d5daa2",
   "tables": {
     "account": {
@@ -1301,7 +1301,7 @@
       "checkConstraints": {
         "ccr_sexual_present_check": {
           "name": "ccr_sexual_present_check",
-          "value": "\"community_content_reports\".\"sexual_present\" IN ('none', 'mentioned', 'on_screen')"
+          "value": "\"community_content_reports\".\"sexual_present\" IN ('none', 'present')"
         },
         "ccr_partner_level_check": {
           "name": "ccr_partner_level_check",

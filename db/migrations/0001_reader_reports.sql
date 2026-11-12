@@ -22,7 +22,7 @@ CREATE TABLE `community_content_reports` (
 	PRIMARY KEY(`user_id`, `title_id`),
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`title_id`) REFERENCES `titles`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "ccr_sexual_present_check" CHECK("community_content_reports"."sexual_present" IN ('none', 'mentioned', 'on_screen')),
+	CONSTRAINT "ccr_sexual_present_check" CHECK("community_content_reports"."sexual_present" IN ('none', 'present')),
 	CONSTRAINT "ccr_partner_level_check" CHECK("community_content_reports"."partner_level" IN ('none', 'mentioned', 'on_screen')),
 	CONSTRAINT "ccr_physical_level_check" CHECK("community_content_reports"."physical_level" IN ('none', 'mentioned', 'on_screen')),
 	CONSTRAINT "ccr_stalking_level_check" CHECK("community_content_reports"."stalking_level" IN ('none', 'mentioned', 'on_screen')),

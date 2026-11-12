@@ -56,7 +56,7 @@ Read the sections your task touches.
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–263 Directory layout (~7.6K)
+  - 68–263 Directory layout (~7.7K)
     - 254–263 File-organisation conventions (~450)
   - 264–277 Styling & theming (~950)
   - 278–290 Copy & voice (~570) ← 1
@@ -95,20 +95,20 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-reader-reports.md` — Plan: reader reports of violence against women (~3.9K tok)
-  - 5–50 Context (~840)
-    - 19–41 Settled with the user (2026-11-12) (~380)
+- `docs/plans/plan-reader-reports.md` — Plan: reader reports of violence against women (~4.0K tok)
+  - 5–50 Context (~890)
+    - 19–41 Settled with the user (2026-11-12) (~430)
     - 42–50 Decisions made in this plan (the user can reopen them) (~240)
-  - 51–65 Vocabulary and thresholds (client-safe, defined once) (~310)
-  - 66–211 Phases (~2.3K)
-    - 68–103 R1: Data (~720)
-    - 104–127 R2: Reader API (~360)
-    - 128–149 R3: Moderation tools (~470)
-    - 150–176 R4: Reader UI (~460)
-    - 177–207 R5: Copy and docs (~270)
-    - 208–211 Cleanup (a separate PR, after R1–R5 have deployed) (~70)
-  - 212–220 Out of scope (not built) (~50)
-  - 221–246 Verification (~320)
+  - 51–64 Vocabulary and thresholds (client-safe, defined once) (~280)
+  - 65–210 Phases (~2.4K)
+    - 67–102 R1: Data (~720)
+    - 103–126 R2: Reader API (~360)
+    - 127–148 R3: Moderation tools (~470)
+    - 149–175 R4: Reader UI (~490)
+    - 176–206 R5: Copy and docs (~270)
+    - 207–210 Cleanup (a separate PR, after R1–R5 have deployed) (~70)
+  - 211–219 Out of scope (not built) (~50)
+  - 220–245 Verification (~320)
 
 ## Policies
 

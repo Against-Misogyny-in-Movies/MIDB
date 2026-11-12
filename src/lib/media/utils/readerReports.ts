@@ -9,6 +9,7 @@ import type {
 	contentReportStatus,
 	reportFraming,
 	reportLevel,
+	sexualLevel,
 	objectificationLevel
 } from '#db/lib/readerReports.ts';
 
@@ -17,10 +18,12 @@ export {
 	holdReason,
 	objectificationLevel,
 	reportFraming,
-	reportLevel
+	reportLevel,
+	sexualLevel
 } from '#db/lib/readerReports.ts';
 
 export type ReportLevel = (typeof reportLevel)[number];
+export type SexualLevel = (typeof sexualLevel)[number];
 export type ObjectificationLevel = (typeof objectificationLevel)[number];
 export type ReportFraming = (typeof reportFraming)[number];
 export type ContentReportStatus = (typeof contentReportStatus)[number];
@@ -40,7 +43,7 @@ export const REPORT_ACCOUNT_MIN_AGE_DAYS = 7;
 
 /** A report is held when this many reports on one title (its own included) fall in this window. */
 export const BURST_WINDOW_HOURS = 24;
-export const BURST_COUNT = 10;
+export const BURST_COUNT = 5;
 
 /** A report is held when its account is younger than `NEW_ACCOUNT_DAYS` and has more than `NEW_ACCOUNT_REPORT_MAX` reports. */
 export const NEW_ACCOUNT_DAYS = 30;
@@ -52,7 +55,7 @@ export const REPORT_CATEGORIES = [
 		field: 'sexualPresent',
 		label: 'Sexual violence',
 		description: 'Rape, sexual assault or sexual harassment of women or girls.',
-		levels: 'violence'
+		levels: 'sexual'
 	},
 	{
 		key: 'partner',
@@ -88,6 +91,11 @@ export type ReportCategory = (typeof REPORT_CATEGORIES)[number]['key'];
 export type ReportCategoryField = (typeof REPORT_CATEGORIES)[number]['field'];
 
 /** The labels of each level set; a missing answer (NULL) reads as not sure. */
+export const SEXUAL_LEVEL_LABELS: Record<SexualLevel, string> = {
+	none: 'Not shown',
+	present: 'Present'
+};
+
 export const REPORT_LEVEL_LABELS: Record<ReportLevel, string> = {
 	none: 'Not shown',
 	mentioned: 'Mentioned or implied',
@@ -106,30 +114,6 @@ export const REPORT_FRAMING_LABELS: Record<ReportFraming, string> = {
 	played_for_laughs: 'Played for laughs',
 	glamorised_or_justified: 'Glamorised or justified'
 };
-
-/** The flags that put a title's sexual violence on screen and those that only mention or imply it. */
-const ON_SCREEN_FLAGS: readonly ConcernFlagKey[] = [
-	'sexHarOnScrn',
-	'sexAdultTeen',
-	'childSexAbuse',
-	'incest',
-	'attemptedRape',
-	'rapeOnScreen'
-];
-const MENTIONED_FLAGS: readonly ConcernFlagKey[] = ['rapeMenDisImp', 'rapeOffScrn'];
-
-/**
- * The level of the sexual category that a reader's flag answers imply: `on_screen` when an
- * on-screen flag is Yes, else `mentioned` when a mentioned flag is Yes, else `none` when every
- * flag is No, else null (not sure). This is the one place the mapping is written.
- */
-export function sexualLevelFromFlags(
-	flags: Partial<Record<ConcernFlagKey, boolean | null>>
-): ReportLevel | null {
-	if (ON_SCREEN_FLAGS.some((k) => flags[k] === true)) return 'on_screen';
-	if (MENTIONED_FLAGS.some((k) => flags[k] === true)) return 'mentioned';
-	return CONCERN_FLAGS.every((f) => flags[f.key] === false) ? 'none' : null;
-}
 
 /** What a report's status reads as to its author. */
 export const STATUS_LABELS: Record<ContentReportStatus, string> = {

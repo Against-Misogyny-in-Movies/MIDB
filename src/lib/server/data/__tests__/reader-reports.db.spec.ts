@@ -10,6 +10,7 @@ import {
 	deleteReport,
 	getReportCounts,
 	getViewerReport,
+	ReportAnswersError,
 	upsertReport,
 	type ReportAnswers
 } from '#lib/server/data/reader-reports.ts';
@@ -26,6 +27,7 @@ const DAY = 86_400_000;
 const REF: TitleRef = { title: 'Alien', imdbId: null, tmdbId: '348', releaseDate: '1979-05-25' };
 
 const answers = (over: Partial<ReportAnswers> = {}): ReportAnswers => ({
+	sexualPresent: null,
 	partnerLevel: 'on_screen',
 	physicalLevel: 'mentioned',
 	stalkingLevel: null,
@@ -70,12 +72,52 @@ describe('upsertReport', () => {
 		expect(result.title.tmdbId).toBe(999);
 	});
 
-	it('derives the sexual level from the flags when it is left out', async () => {
-		await upsertReport('reader', 'movie', REF, answers({ flags: { rapeOnScreen: true } }));
-		const [row] = await db.select().from(communityContentReports);
-		expect(row.sexualPresent).toBe('on_screen');
+	it('keeps the flags only when sexual violence is present', async () => {
+		await upsertReport(
+			'reader',
+			'movie',
+			REF,
+			answers({ sexualPresent: 'present', flags: { rapeOnScreen: true, incest: false } })
+		);
+		let [row] = await db.select().from(communityContentReports);
+		expect(row.sexualPresent).toBe('present');
 		expect(row.rapeOnScreen).toBe(true);
+		expect(row.incest).toBe(false);
+		expect(row.rapeOffScrn).toBeNull();
+
+		await upsertReport(
+			'reader',
+			'movie',
+			REF,
+			answers({ sexualPresent: null, flags: { incest: false } })
+		);
+		[row] = await db.select().from(communityContentReports);
+		expect(row.sexualPresent).toBeNull();
+		expect(row.rapeOnScreen).toBeNull();
 		expect(row.incest).toBeNull();
+
+		await upsertReport(
+			'reader',
+			'movie',
+			REF,
+			answers({ sexualPresent: 'none', flags: { incest: false } })
+		);
+		[row] = await db.select().from(communityContentReports);
+		expect(row.sexualPresent).toBe('none');
+		expect(row.incest).toBeNull();
+	});
+
+	it('refuses a Yes flag while sexual violence is Not shown, and writes nothing', async () => {
+		await expect(
+			upsertReport(
+				'reader',
+				'movie',
+				{ ...REF, tmdbId: '999' },
+				answers({ sexualPresent: 'none', flags: { rapeOnScreen: true } })
+			)
+		).rejects.toBeInstanceOf(ReportAnswersError);
+		expect(await db.select().from(communityContentReports)).toHaveLength(0);
+		expect(await db.select().from(titles)).toHaveLength(1);
 	});
 
 	it('runs the rules again on an edit', async () => {
@@ -100,12 +142,7 @@ describe('upsertReport', () => {
 
 		const held = await upsertReport('reader', 'movie', REF, answers({ sexualPresent: 'none' }));
 		expect(held).toMatchObject({ status: 'held', holdReason: 'contradicts_source' });
-		const fixed = await upsertReport(
-			'reader',
-			'movie',
-			REF,
-			answers({ sexualPresent: 'on_screen' })
-		);
+		const fixed = await upsertReport('reader', 'movie', REF, answers({ sexualPresent: 'present' }));
 		expect(fixed).toMatchObject({ status: 'counted', holdReason: null });
 	});
 
@@ -114,8 +151,8 @@ describe('upsertReport', () => {
 			await addUser(`b${i}`);
 			expect((await upsertReport(`b${i}`, 'movie', REF, answers())).status).toBe('counted');
 		}
-		const tenth = await upsertReport('reader', 'movie', REF, answers());
-		expect(tenth).toMatchObject({ status: 'held', holdReason: 'burst' });
+		const burst = await upsertReport('reader', 'movie', REF, answers());
+		expect(burst).toMatchObject({ status: 'held', holdReason: 'burst' });
 		const again = await upsertReport('b0', 'movie', REF, answers({ framing: null }));
 		expect(again.status).toBe('held');
 	});
@@ -181,12 +218,15 @@ describe('getReportCounts', () => {
 
 	it('counts levels, flags and framing of counted reports', async () => {
 		await addUser('a');
-		await report('reader', { flags: { rapeOnScreen: true, incest: false } });
+		await report('reader', {
+			sexualPresent: 'present',
+			flags: { rapeOnScreen: true, incest: false }
+		});
 		await report('a', { partnerLevel: null, framing: null });
 		const counts = await getReportCounts(titleId);
 		expect(counts.total).toBe(2);
 		expect(counts.categories.partner).toEqual({ none: 0, mentioned: 0, on_screen: 1, unsure: 1 });
-		expect(counts.categories.sexual).toEqual({ none: 0, mentioned: 0, on_screen: 1, unsure: 1 });
+		expect(counts.categories.sexual).toEqual({ none: 0, present: 1, unsure: 1 });
 		expect(counts.categories.objectification.some_scenes).toBe(2);
 		expect(counts.flags.rapeOnScreen).toEqual({ yes: 1, no: 0, unsure: 1 });
 		expect(counts.flags.incest).toEqual({ yes: 0, no: 1, unsure: 1 });
@@ -196,7 +236,7 @@ describe('getReportCounts', () => {
 	it('is empty for a title nobody reported', async () => {
 		const counts = await getReportCounts(titleId);
 		expect(counts.total).toBe(0);
-		expect(counts.categories.sexual.on_screen).toBe(0);
+		expect(counts.categories.sexual.present).toBe(0);
 	});
 
 	it('leaves out held, rejected, under-age, muted and banned reports', async () => {
@@ -206,9 +246,9 @@ describe('getReportCounts', () => {
 		await addUser('held');
 		await addUser('rejected');
 		await addUser('lapsed', 100, { mutedUntil: new Date(Date.now() - DAY) });
-		for (const id of ['reader', 'young', 'muted', 'banned', 'held', 'rejected', 'lapsed']) {
-			await report(id);
-		}
+		// Inserted directly: seven reports in the window would trip the burst rule on write.
+		const ids = ['reader', 'young', 'muted', 'banned', 'held', 'rejected', 'lapsed'];
+		await db.insert(communityContentReports).values(ids.map((userId) => ({ userId, titleId })));
 		await db
 			.update(communityContentReports)
 			.set({ status: 'held', holdReason: 'burst' })

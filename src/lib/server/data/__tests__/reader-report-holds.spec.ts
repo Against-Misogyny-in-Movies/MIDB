@@ -44,7 +44,7 @@ describe('contradictsSource', () => {
 
 	it('holds "No" to a flag UM marks', () => {
 		expect(
-			contradictsSource(facts({ um, sexualPresent: 'on_screen', flags: { rapeOnScreen: false } }))
+			contradictsSource(facts({ um, sexualPresent: 'present', flags: { rapeOnScreen: false } }))
 		).toBe(true);
 	});
 
@@ -55,10 +55,10 @@ describe('contradictsSource', () => {
 
 	it('does not hold a matching answer, a "No" on a flag UM leaves unmarked, or a title with no flags', () => {
 		expect(
-			contradictsSource(facts({ um, sexualPresent: 'on_screen', flags: { rapeOnScreen: true } }))
+			contradictsSource(facts({ um, sexualPresent: 'present', flags: { rapeOnScreen: true } }))
 		).toBe(false);
 		expect(
-			contradictsSource(facts({ um, sexualPresent: 'on_screen', flags: { incest: false } }))
+			contradictsSource(facts({ um, sexualPresent: 'present', flags: { incest: false } }))
 		).toBe(false);
 		expect(contradictsSource(facts({ um: NO_UM_FLAGS, sexualPresent: 'none' }))).toBe(false);
 		expect(contradictsSource(facts({ um: null, sexualPresent: 'none' }))).toBe(false);

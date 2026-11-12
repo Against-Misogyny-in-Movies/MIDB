@@ -4,8 +4,11 @@
  * import from `src/`; the app reaches it through `#lib/media/utils/readerReports.ts`.
  */
 
-/** What a report says about one of the four violence categories. NULL means not sure. */
+/** What a report says about partner or family abuse, physical violence and stalking. NULL means not sure. */
 export const reportLevel = ['none', 'mentioned', 'on_screen'] as const;
+
+/** Whether a report says sexual violence is shown. NULL means not sure. */
+export const sexualLevel = ['none', 'present'] as const;
 
 /** What a report says about sexual objectification. NULL means not sure. */
 export const objectificationLevel = ['none', 'some_scenes', 'throughout'] as const;

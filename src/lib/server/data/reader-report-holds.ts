@@ -4,7 +4,7 @@ import {
 	NEW_ACCOUNT_DAYS,
 	NEW_ACCOUNT_REPORT_MAX,
 	type ConcernFlagKey,
-	type ReportLevel
+	type SexualLevel
 } from '#lib/media/utils/readerReports.ts';
 import type { holdReason } from '#lib/media/utils/readerReports.ts';
 
@@ -12,8 +12,8 @@ export type HoldReason = (typeof holdReason)[number];
 
 /** The facts the three hold rules read, loaded by `reader-reports.ts`. */
 export type HoldFacts = {
-	/** The report's sexual-violence level and flag answers; null is not sure. */
-	sexualPresent: ReportLevel | null;
+	/** The report's sexual-violence and flag answers; null is not sure. */
+	sexualPresent: SexualLevel | null;
 	flags: Partial<Record<ConcernFlagKey, boolean | null>>;
 	/** The title's Unconsenting Media concern flags, or null when it has no UM binding. */
 	um: Record<ConcernFlagKey, boolean> | null;

@@ -11,13 +11,14 @@ import {
 	objectificationLevel,
 	reportFraming,
 	reportLevel,
-	sexualLevelFromFlags,
+	sexualLevel,
 	type ConcernFlagKey,
 	type ContentReportStatus,
 	type ObjectificationLevel,
 	type ReportCategory,
 	type ReportFraming,
-	type ReportLevel
+	type ReportLevel,
+	type SexualLevel
 } from '#lib/media/utils/readerReports.ts';
 import { holdReasonFor, type HoldFacts, type HoldReason } from './reader-report-holds.ts';
 import {
@@ -32,8 +33,8 @@ const HOUR_MS = 3_600_000;
 
 /** A reader's answers: a null level, flag or framing is "not sure" or "not answered". */
 export type ReportAnswers = {
-	/** Left out, it is derived from the flags (`sexualLevelFromFlags`). */
-	sexualPresent?: ReportLevel | null;
+	/** Whether sexual violence is shown; the flags are kept only when it is `present`. */
+	sexualPresent: SexualLevel | null;
 	partnerLevel: ReportLevel | null;
 	physicalLevel: ReportLevel | null;
 	stalkingLevel: ReportLevel | null;
@@ -42,12 +43,20 @@ export type ReportAnswers = {
 	framing: ReportFraming | null;
 };
 
-/** Every flag column, so an edit writes null over a flag the reader no longer answers. */
-function flagValues(flags: ReportAnswers['flags']) {
-	return Object.fromEntries(CONCERN_FLAGS.map((f) => [f.key, flags[f.key] ?? null])) as Record<
-		ConcernFlagKey,
-		boolean | null
-	>;
+/** A report's answers contradict each other; the write route answers 400. */
+export class ReportAnswersError extends Error {}
+
+/**
+ * Every flag column: the reader's answer when sexual violence is `present`, else null, so an
+ * edit writes null over a flag the reader no longer answers. A Yes flag under "Not shown" is
+ * refused.
+ */
+function flagValues({ sexualPresent, flags }: ReportAnswers) {
+	if (sexualPresent === 'none' && CONCERN_FLAGS.some((f) => flags[f.key] === true))
+		throw new ReportAnswersError('A concern flag is Yes while sexual violence is Not shown.');
+	return Object.fromEntries(
+		CONCERN_FLAGS.map((f) => [f.key, sexualPresent === 'present' ? (flags[f.key] ?? null) : null])
+	) as Record<ConcernFlagKey, boolean | null>;
 }
 
 export type ReportWriteResult = {
@@ -71,7 +80,7 @@ async function loadHoldFacts(
 	userId: string,
 	titleId: string,
 	answers: ReportAnswers,
-	sexualPresent: ReportLevel | null,
+	flags: Record<ConcernFlagKey, boolean | null>,
 	now: number
 ): Promise<HoldFacts> {
 	const [[account], [existing], [window], [other], [um]] = await Promise.all([
@@ -108,8 +117,8 @@ async function loadHoldFacts(
 			.where(eq(titleUm.titleId, titleId))
 	]);
 	return {
-		sexualPresent,
-		flags: answers.flags,
+		sexualPresent: answers.sexualPresent,
+		flags,
 		um: um ?? null,
 		othersInWindow: window?.n ?? 0,
 		createdInWindow: !existing || existing.createdAt.getTime() > now - BURST_WINDOW_HOURS * HOUR_MS,
@@ -130,24 +139,19 @@ export async function upsertReport(
 	ref: TitleRef,
 	answers: ReportAnswers
 ): Promise<ReportWriteResult> {
+	const flags = flagValues(answers);
 	const title = await getOrCreateTitleRow(kind, ref);
-	const sexualPresent =
-		answers.sexualPresent === undefined
-			? sexualLevelFromFlags(answers.flags)
-			: answers.sexualPresent;
 
-	const reason = holdReasonFor(
-		await loadHoldFacts(userId, title.id, answers, sexualPresent, Date.now())
-	);
+	const reason = holdReasonFor(await loadHoldFacts(userId, title.id, answers, flags, Date.now()));
 	const status: ContentReportStatus = reason ? 'held' : 'counted';
 
 	const values = {
-		sexualPresent,
+		sexualPresent: answers.sexualPresent,
 		partnerLevel: answers.partnerLevel,
 		physicalLevel: answers.physicalLevel,
 		stalkingLevel: answers.stalkingLevel,
 		objectificationLevel: answers.objectificationLevel,
-		...flagValues(answers.flags),
+		...flags,
 		framing: answers.framing
 	};
 	const [row] = await db
@@ -199,7 +203,9 @@ export async function getViewerReport(
 }
 
 /** A count per level of a category's level set, and `unsure` for a null answer. */
-export type LevelCounts = Partial<Record<ReportLevel | ObjectificationLevel | 'unsure', number>>;
+export type LevelCounts = Partial<
+	Record<ReportLevel | SexualLevel | ObjectificationLevel | 'unsure', number>
+>;
 
 export type ReportCounts = {
 	total: number;
@@ -212,8 +218,8 @@ export type ReportCounts = {
 };
 
 /** The level values of a category's level set. */
-const levelsOf = (set: 'violence' | 'objectification') =>
-	set === 'violence' ? reportLevel : objectificationLevel;
+const levelsOf = (set: 'violence' | 'sexual' | 'objectification') =>
+	set === 'violence' ? reportLevel : set === 'sexual' ? sexualLevel : objectificationLevel;
 
 const count = (cond: SQL) => sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 ELSE 0 END), 0)`;
 

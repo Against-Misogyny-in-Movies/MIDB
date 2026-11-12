@@ -24,8 +24,8 @@ The repo has unused, empty community tables (`db/schema/community.ts`: Bechdel 0
   - Physical violence or murder
   - Stalking or harassment
   - Sexual objectification
-- **Levels for the four violence categories:** Not shown / Mentioned or implied / On screen / Not sure.
-- **Sexual violence detail.** "Shown" opens UM's 8 concern flags (`UM_FLAGS` in `src/lib/media/utils/metrics.ts`), each Yes / No / Not sure, so reader counts line up row by row with UM's entry.
+- **Levels for partner or family abuse, physical violence and stalking:** Not shown / Mentioned or implied / On screen / Not sure.
+- **Sexual violence** (user decision, 2026-11-12) is answered Not shown / Present / Not sure. "Present" opens UM's 8 concern flags (`UM_FLAGS` in `src/lib/media/utils/metrics.ts`), each Yes / No / Not sure, so reader counts line up row by row with UM's entry. No level is derived from the flags: a reader can answer Present with every flag Not sure.
 - **Sexual objectification.**
   - It has its own levels: Not present / In some scenes / Throughout / Not sure.
   - A one-line description says what counts: the camera dwelling on women's bodies, women written only as sexual objects.
@@ -53,7 +53,7 @@ The repo has unused, empty community tables (`db/schema/community.ts`: Bechdel 0
 `src/lib/media/utils/readerReports.ts` holds the shared vocabulary. Its enum tuples live in `db/lib/readerReports.ts`, which the schema imports, the way `db/lib/comments.ts` / `media/utils/comments.ts` do.
 
 - `REPORT_CATEGORIES`: `sexual`, `partner`, `physical`, `stalking`, `objectification`, each with a sentence-case label, a one-line form description, and the level set it uses.
-- `REPORT_LEVELS`: `none`, `mentioned`, `on_screen`. `OBJECTIFICATION_LEVELS`: `none`, `some_scenes`, `throughout`. NULL means not sure.
+- `REPORT_LEVELS`: `none`, `mentioned`, `on_screen`. `SEXUAL_LEVELS`: `none`, `present`. `OBJECTIFICATION_LEVELS`: `none`, `some_scenes`, `throughout`. NULL means not sure.
 - `REPORT_FRAMINGS`: `condemned` (shown as wrong, with consequences), `unclear`, `played_for_laughs`, `glamorised_or_justified`. NULL means not answered.
 - `contentReportStatus`: `counted`, `held`, `rejected`. `holdReason`: `contradicts_source`, `burst`, `busy_new_account`.
 - The thresholds, so Methodology copy can import them instead of restating numbers:
@@ -61,7 +61,6 @@ The repo has unused, empty community tables (`db/schema/community.ts`: Bechdel 0
   - `REPORT_ACCOUNT_MIN_AGE_DAYS`;
   - `BURST_WINDOW_HOURS` and `BURST_COUNT`;
   - `NEW_ACCOUNT_DAYS` and `NEW_ACCOUNT_REPORT_MAX`.
-- The sexual category's level comes from its flags (on screen if `rapeOnScreen`, `sexHarOnScrn`, `childSexAbuse`, …). That mapping is written once, here.
 
 ## Phases
 
@@ -153,7 +152,7 @@ Through `ux` and the Impeccable skill, against `DESIGN.md`.
 
 - **Placement.** A "Reader reports" `CollapsibleSection` (`#lib/components/movies/sections/collapsibleSection.svelte`) right after `UmMetricSection` on both detail pages, with Methodology as its link. It is built once, in `#lib/components/movies/metrics/readerReportsSection.svelte`.
 - **The counts.**
-  - One row per category ("On screen 4 · Mentioned 1 · Not shown 2, of 7").
+  - One row per category ("On screen 4 · Mentioned 1 · Not shown 2, of 7"); the sexual row reads "Present 5 · Not shown 2, of 7".
   - Sexual violence expands to the UM flag rows in the shared marker language (`.flag-*`, `docs/architecture.md`, Shared marker pattern).
   - Numbers are `tabular-nums` in `--ink`, with no coloured digits.
   - Framing comes last.
@@ -165,8 +164,8 @@ Through `ux` and the Impeccable skill, against `DESIGN.md`.
   - not counted (rejected).
 - **The form** (dialog or inline, phone first):
   1. "I watched this" (required).
-  2. The 4 violence categories: Not shown / Mentioned or implied / On screen / Not sure.
-  3. When sexual violence is shown: the 8 UM flags, each Yes / No / Not sure.
+  2. Sexual violence: Not shown / Present / Not sure. Partner or family abuse, physical violence and stalking: Not shown / Mentioned or implied / On screen / Not sure.
+  3. When sexual violence is Present: the 8 UM flags, each Yes / No / Not sure.
   4. Sexual objectification: Not present / In some scenes / Throughout / Not sure.
   5. When any violence category is shown: the optional framing question.
   6. Save is the one `.btn--brand`; Delete is ghost.
