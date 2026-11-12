@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { captcha } from 'better-auth/plugins/captcha';
 import { passkey } from '@better-auth/passkey';
@@ -122,7 +122,11 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 		// Better Auth's limiter counts per isolate, which is not a limit on Workers; `RL_AUTH`
 		// wraps the route instead (`src/routes/api/auth/[...all]/+server.ts`).
 		rateLimit: { enabled: false },
-		hooks: { before: guardLastMethod },
+		hooks: {
+			before: createAuthMiddleware(async (ctx) => {
+				await guardLastMethod(ctx);
+			})
+		},
 		databaseHooks: {
 			session: {
 				create: {

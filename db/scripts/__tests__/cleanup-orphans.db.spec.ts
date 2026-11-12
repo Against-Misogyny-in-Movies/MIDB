@@ -27,18 +27,22 @@ const passkey = (id: string, userId: string) => ({
 const remaining = async () => (await db.select({ id: users.id }).from(users)).map((u) => u.id);
 
 describe('cleanupOrphans', () => {
-	it('removes an old user with no account and no passkey, with its sessions', async () => {
+	it('removes an old user with no account, no passkey and no session', async () => {
 		await db.insert(users).values(userValues('orphan', { createdAt: old }));
+		expect(await cleanupOrphans(db, NOW)).toBe(1);
+		expect(await remaining()).toEqual([]);
+	});
+
+	it('keeps an old user that has a session', async () => {
+		await db.insert(users).values(userValues('signed-in', { createdAt: old }));
 		await db.insert(sessions).values({
 			id: 's1',
 			token: 't1',
-			userId: 'orphan',
+			userId: 'signed-in',
 			expiresAt: new Date(NOW.getTime() + 1000)
 		});
-
-		expect(await cleanupOrphans(db, NOW)).toBe(1);
-		expect(await remaining()).toEqual([]);
-		expect(await db.select().from(sessions)).toHaveLength(0);
+		expect(await cleanupOrphans(db, NOW)).toBe(0);
+		expect(await remaining()).toEqual(['signed-in']);
 	});
 
 	it('keeps a user created within the hour', async () => {

@@ -1,21 +1,22 @@
 import { and, eq, exists, lt, not } from 'drizzle-orm';
 import type { Db } from '../client.ts';
-import { accounts, passkeys, users } from '../schema/auth.ts';
+import { accounts, passkeys, sessions, users } from '../schema/auth.ts';
 import { openScriptDb } from './lib/db.ts';
 import { parseTarget } from './lib/args.ts';
 import { isMain } from '../../scripts/lib/is-main.ts';
 
 /**
- * How long a user may have no sign-in method before it counts as an orphan. A passkey sign-up
- * inserts the user first and the passkey after, and D1 has no transaction around the two, so a
- * failure between them leaves a user nobody can sign in as. An hour is far longer than the
- * two inserts take.
+ * How old a user must be, with no sign-in method and no session, to count as an orphan. A
+ * passkey sign-up inserts the user first and the passkey after, and D1 has no transaction
+ * around the two, so a failure between them leaves a sign-up that never got its passkey. The
+ * window is far longer than the two inserts take.
  */
 export const ORPHAN_AFTER_MS = 60 * 60 * 1000;
 
 /**
- * Deletes the users that have no `account` and no `passkey` and were created more than
- * `ORPHAN_AFTER_MS` ago. Their sessions and any other rows go with them (`ON DELETE CASCADE`).
+ * Deletes the users created more than `ORPHAN_AFTER_MS` ago that have no `account`, no
+ * `passkey` and no `session`: a sign-up that never got its passkey. A user with a session is
+ * kept, whatever else it lacks. Rows that reference the user go with it (`ON DELETE CASCADE`).
  * One batch, so it applies as a unit. Returns how many were removed.
  */
 export async function cleanupOrphans(db: Db, now: Date = new Date()): Promise<number> {
@@ -34,6 +35,11 @@ export async function cleanupOrphans(db: Db, now: Date = new Date()): Promise<nu
 					not(
 						exists(
 							db.select({ one: passkeys.id }).from(passkeys).where(eq(passkeys.userId, users.id))
+						)
+					),
+					not(
+						exists(
+							db.select({ one: sessions.id }).from(sessions).where(eq(sessions.userId, users.id))
 						)
 					)
 				)

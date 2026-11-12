@@ -1,4 +1,4 @@
-import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from 'better-auth/api';
+import { APIError, getAuthoritativeSessionFromCtx } from 'better-auth/api';
 import type { AuthEndpointContext } from './types.ts';
 
 /** Better Auth's endpoints that remove a sign-in method. */
@@ -28,14 +28,17 @@ export async function assertAnotherMethodRemains(
 }
 
 /**
- * `hooks.before`: runs `assertAnotherMethodRemains` ahead of the endpoints that remove a
- * method. The session is read from the database, not the cookie cache. The check and the
- * delete are not one transaction, so two simultaneous removals can both pass; the orphan
- * cleanup does not cover that, but a user can only strand their own account this way.
+ * `hooks.before` step: runs `assertAnotherMethodRemains` ahead of the endpoints that remove a
+ * method. The session is read from the database, not the cookie cache, and a request with no
+ * live session is refused: a revoked or banned browser can still hold a valid `session_data`
+ * cookie for five minutes, and it must not remove methods. The check and the delete are not
+ * one transaction, so two simultaneous removals can both pass; a user can only strand their
+ * own account this way, and the orphan cleanup (`db/scripts/cleanup-orphans.ts`) does not
+ * cover it.
  */
-export const guardLastMethod = createAuthMiddleware(async (ctx) => {
+export async function guardLastMethod(ctx: AuthEndpointContext): Promise<void> {
 	if (!REMOVING_PATHS.has(ctx.path)) return;
 	const session = await getAuthoritativeSessionFromCtx(ctx);
-	if (!session) return;
+	if (!session) throw new APIError('UNAUTHORIZED', { message: 'Unauthorized' });
 	await assertAnotherMethodRemains(ctx, session.user.id);
-});
+}

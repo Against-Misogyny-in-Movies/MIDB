@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { accounts, passkeys, users } from '#db/schema/auth.ts';
+import { eq } from 'drizzle-orm';
+import { accounts, passkeys, sessions, users } from '#db/schema/auth.ts';
 import { userValues } from '#db/test/users.ts';
 import { db } from '#lib/server/db.ts';
 import { createAuth } from '../create-auth.ts';
@@ -9,8 +10,8 @@ const SECRET = 'a-test-secret-of-at-least-thirty-two-characters';
 const ORIGIN = 'http://localhost:5173';
 const auth = createAuth({ db, origin: ORIGIN, secret: SECRET });
 
-/** A request carrying a signed session cookie, as the browser sends it. */
-async function post(path: string, body: object, token: string): Promise<Response> {
+/** The signed `better-auth.session_token` cookie, as the browser sends it. */
+async function sessionCookie(token: string): Promise<string> {
 	const key = await crypto.subtle.importKey(
 		'raw',
 		new TextEncoder().encode(SECRET),
@@ -20,17 +21,22 @@ async function post(path: string, body: object, token: string): Promise<Response
 	);
 	const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(token));
 	const signature = btoa(String.fromCharCode(...new Uint8Array(sig)));
+	return `better-auth.session_token=${encodeURIComponent(`${token}.${signature}`)}`;
+}
+
+/** A POST to an auth endpoint with the given `Cookie` header. */
+function postWithCookie(path: string, body: object, cookie: string): Promise<Response> {
 	return auth.handler(
 		new Request(`${ORIGIN}/api/auth${path}`, {
 			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				origin: ORIGIN,
-				cookie: `better-auth.session_token=${encodeURIComponent(`${token}.${signature}`)}`
-			},
+			headers: { 'content-type': 'application/json', origin: ORIGIN, cookie },
 			body: JSON.stringify(body)
 		})
 	);
+}
+
+async function post(path: string, body: object, token: string): Promise<Response> {
+	return postWithCookie(path, body, await sessionCookie(token));
 }
 
 const account = (id: string) => ({ id, accountId: id, providerId: 'google', userId: 'user-1' });
@@ -97,5 +103,29 @@ describe('the last sign-in method', () => {
 		await db.insert(passkeys).values([passkey('p1'), passkey('p2')]);
 		expect((await post('/passkey/delete-passkey', { id: 'p1' }, token)).status).toBe(200);
 		expect(await remaining()).toEqual({ accounts: 0, passkeys: 1 });
+	});
+
+	it('refuses both removals from a revoked session that still holds a session_data cookie', async () => {
+		await signedIn();
+		await db.insert(accounts).values(account('a1'));
+		await db.insert(passkeys).values([passkey('p1'), passkey('p2')]);
+
+		// Better Auth sets the cache cookie when it answers `get-session`.
+		const cookie = await sessionCookie(token);
+		const res = await auth.handler(
+			new Request(`${ORIGIN}/api/auth/get-session`, { headers: { cookie } })
+		);
+		const dataCookie = res.headers
+			.getSetCookie()
+			.map((c) => c.split(';')[0])
+			.find((c) => c.includes('session_data'));
+		expect(dataCookie).toBeDefined();
+
+		await db.delete(sessions).where(eq(sessions.userId, 'user-1'));
+
+		const both = `${cookie}; ${dataCookie}`;
+		expect((await postWithCookie('/unlink-account', { accountId: 'a1' }, both)).status).toBe(401);
+		expect((await postWithCookie('/passkey/delete-passkey', { id: 'p1' }, both)).status).toBe(401);
+		expect(await remaining()).toEqual({ accounts: 1, passkeys: 2 });
 	});
 });
