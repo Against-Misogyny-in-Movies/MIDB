@@ -19,7 +19,7 @@ Read whole.
   - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
   - 108–120 Making a change (~440) ← 3
-  - 121–137 Checking a change (~230) ← 6
+  - 121–137 Checking a change (~230) ← 7
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
@@ -68,7 +68,7 @@ Read the sections your task touches.
   - 450–474 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
   - 475–494 UM Disambiguation (~630)
   - 495–503 UM flag rendering (~250)
-  - 504–515 Shared marker pattern (metric row markers) (~410) ← 4
+  - 504–515 Shared marker pattern (metric row markers) (~410) ← 5
   - 516–556 Component library (`src/lib/components/`) (~5.6K)
   - 557–567 Live search (`src/lib/components/search/`) (~710)
   - 568–581 Server cache (`src/lib/server/cache/`) (~690)
@@ -89,7 +89,26 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~2.1K tok)
+- `docs/phases/STATUS.md` — Phase status (~2.5K tok)
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-reader-reports.md` — Plan: reader reports of violence against women (~3.9K tok)
+  - 5–50 Context (~840)
+    - 19–41 Settled with the user (2026-11-12) (~380)
+    - 42–50 Decisions made in this plan (the user can reopen them) (~240)
+  - 51–65 Vocabulary and thresholds (client-safe, defined once) (~310)
+  - 66–211 Phases (~2.3K)
+    - 68–103 R1: Data (~720)
+    - 104–127 R2: Reader API (~360)
+    - 128–149 R3: Moderation tools (~470)
+    - 150–176 R4: Reader UI (~460)
+    - 177–207 R5: Copy and docs (~270)
+    - 208–211 Cleanup (a separate PR, after R1–R5 have deployed) (~70)
+  - 212–220 Out of scope (not built) (~50)
+  - 221–246 Verification (~320)
 
 ## Policies
 
