@@ -5,6 +5,7 @@ import { passkey } from '@better-auth/passkey';
 import { sql } from 'drizzle-orm';
 import type { Db } from '#db/client.ts';
 import { accounts, passkeys, sessions, users, verifications } from '#db/schema/auth.ts';
+import { isLocalOrigin } from '#lib/server/http/origin.ts';
 import { adoptProviderEmail } from './link-email.ts';
 import { guardLastMethod } from './last-method.ts';
 import { guardPasskeySignUp } from './turnstile.ts';
@@ -29,9 +30,6 @@ export interface AuthConfig {
 	turnstileSecret?: string;
 }
 
-/** The origins a contributor develops on, where `.env.example` needs no secret. */
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
-
 /**
  * Builds the Better Auth instance (`#lib/server/auth/auth.ts` memoises it). It takes its
  * settings as arguments, so a spec can build one over a test database without the Worker's
@@ -40,7 +38,7 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 export function createAuth({ db, origin, secret, google, discord, turnstileSecret }: AuthConfig) {
 	// Better Auth's own check keys on `NODE_ENV`, which a Worker does not set, so without this a
 	// deployment missing the secret would sign its cookies with the library's public default.
-	if (!secret && !LOCAL_HOSTS.has(new URL(origin).hostname)) {
+	if (!secret && !isLocalOrigin(origin)) {
 		throw new Error('BETTER_AUTH_SECRET is not set. Set it with `wrangler secret put`.');
 	}
 

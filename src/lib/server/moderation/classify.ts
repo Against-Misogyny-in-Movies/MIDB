@@ -1,9 +1,15 @@
-import { APIConnectionTimeoutError, RateLimitError } from '@anthropic-ai/sdk';
+import {
+	AnthropicError,
+	APIConnectionTimeoutError,
+	APIUserAbortError,
+	RateLimitError
+} from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { getAnthropic } from '#lib/server/integrations/anthropic.ts';
 import { env } from '#lib/server/env.ts';
 import type { TitleKind } from '#lib/server/data/title-queries.ts';
-import { Verdict } from './verdict.ts';
+import { MODERATION_REASON_MAX } from '#lib/media/utils/comments.ts';
+import { FALLBACK_REASON, ModelVerdict, Verdict } from './verdict.ts';
 
 export interface ClassifyInput {
 	body: string;
@@ -27,8 +33,18 @@ export type ClassifyResult =
 	| { ok: true; verdict: Verdict; model: string }
 	| { ok: false; code: ClassifyFailure };
 
+/** The model when `MODERATION_MODEL` (`wrangler.jsonc`) is unset. */
 const DEFAULT_MODEL = 'claude-haiku-5-5';
 const MAX_TOKENS = 1024;
+
+/**
+ * The whole moderation call, retries and their waits included, must end in this many
+ * milliseconds: the author is waiting on the request. It caps the per-attempt timeout and the
+ * single retry in `getAnthropic`, so a long `retry-after` cannot hold the request.
+ */
+export const MODERATION_DEADLINE_MS = 12_000;
+
+const outputFormat = zodOutputFormat(ModelVerdict);
 
 /**
  * The moderation policy as the model reads it. It is frozen text: nothing from a comment is
@@ -47,7 +63,7 @@ Answer with a decision:
 - review: unclear, or a person should look at it.
 - reject: the comment clearly breaks the policy.
 
-List every category that applies (empty when none). Set severity from 0 (none) to 3 (severe). Write a reason of at most 140 characters, in plain words, that the author will read.`;
+List every category that applies (empty when none). Set severity from 0 (none) to 3 (severe). Write a reason of at most ${MODERATION_REASON_MAX} characters, in plain words, that the author will read.`;
 
 /** Keeps a comment from closing its own tag: a `<` in data never starts a tag. */
 const asData = (text: string) => text.replaceAll('<', '&lt;');
@@ -62,16 +78,40 @@ export function buildUserMessage({ body, titleName, kind, parentBody }: Classify
 }
 
 function failureCode(error: unknown): ClassifyFailure {
-	if (error instanceof APIConnectionTimeoutError) return 'ai-timeout';
+	if (error instanceof APIConnectionTimeoutError || error instanceof APIUserAbortError) {
+		return 'ai-timeout';
+	}
 	if (error instanceof RateLimitError) return 'ai-rate-limited';
 	return 'ai-error';
+}
+
+/**
+ * Reads the model's JSON text: the SDK's parse for the shape, then the strict `Verdict` for the
+ * ranges. A `reason` over the limit is cut, and an empty one on a `reject` takes the fallback.
+ */
+function readVerdict(text: string): Verdict | null {
+	let loose;
+	try {
+		loose = outputFormat.parse(text);
+	} catch (error) {
+		if (error instanceof AnthropicError) return null;
+		throw error;
+	}
+	const strict = Verdict.safeParse(loose);
+	if (!strict.success) return null;
+	const reason = strict.data.reason.trim().slice(0, MODERATION_REASON_MAX);
+	return {
+		...strict.data,
+		reason: reason === '' && strict.data.decision === 'reject' ? FALLBACK_REASON : reason
+	};
 }
 
 /**
  * Asks the model for a verdict on one comment. Only the comment, the title and the parent
  * comment are sent: never the author's email or id. Every outcome that is not a parsed verdict
  * (no key, a refusal, a cut-off answer, a timeout, an API error) is a failure the policy sends
- * to a person.
+ * to a person. The request is `messages.create`, not `messages.parse`, so the stop reason is
+ * read before the text is: the SDK's parse throws on a refusal or a truncation and hides which.
  */
 export async function classifyComment(input: ClassifyInput): Promise<ClassifyResult> {
 	const client = getAnthropic();
@@ -79,18 +119,23 @@ export async function classifyComment(input: ClassifyInput): Promise<ClassifyRes
 	const model = env.MODERATION_MODEL || DEFAULT_MODEL;
 
 	try {
-		const response = await client.messages.parse({
-			model,
-			max_tokens: MAX_TOKENS,
-			thinking: { type: 'disabled' },
-			output_config: { effort: 'low', format: zodOutputFormat(Verdict) },
-			system: SYSTEM_PROMPT,
-			messages: [{ role: 'user', content: buildUserMessage(input) }]
-		});
+		const response = await client.messages.create(
+			{
+				model,
+				max_tokens: MAX_TOKENS,
+				thinking: { type: 'disabled' },
+				output_config: { effort: 'low', format: outputFormat },
+				system: SYSTEM_PROMPT,
+				messages: [{ role: 'user', content: buildUserMessage(input) }]
+			},
+			{ signal: AbortSignal.timeout(MODERATION_DEADLINE_MS) }
+		);
 		if (response.stop_reason === 'refusal') return { ok: false, code: 'ai-refusal' };
 		if (response.stop_reason === 'max_tokens') return { ok: false, code: 'ai-truncated' };
-		if (!response.parsed_output) return { ok: false, code: 'ai-unparsed' };
-		return { ok: true, verdict: response.parsed_output, model };
+		const block = response.content.find((b) => b.type === 'text');
+		const verdict = block ? readVerdict(block.text) : null;
+		if (!verdict) return { ok: false, code: 'ai-unparsed' };
+		return { ok: true, verdict, model };
 	} catch (error) {
 		return { ok: false, code: failureCode(error) };
 	}

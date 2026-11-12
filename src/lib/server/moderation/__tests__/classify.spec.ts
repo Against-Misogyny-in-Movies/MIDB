@@ -1,21 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { APIConnectionTimeoutError, InternalServerError, RateLimitError } from '@anthropic-ai/sdk';
+import {
+	APIConnectionTimeoutError,
+	APIUserAbortError,
+	InternalServerError,
+	RateLimitError
+} from '@anthropic-ai/sdk';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { env, resetCloudflareStub } from '#test/cloudflare-workers.stub.ts';
 
-const parse = vi.fn();
+const create = vi.fn();
 vi.mock('#lib/server/integrations/anthropic.ts', () => ({
-	getAnthropic: () => (env.ANTHROPIC_API_KEY ? { messages: { parse } } : null)
+	getAnthropic: () => (env.ANTHROPIC_API_KEY ? { messages: { create } } : null)
 }));
 
-const { buildUserMessage, classifyComment, SYSTEM_PROMPT } = await import('../classify.ts');
+const { buildUserMessage, classifyComment, MODERATION_DEADLINE_MS, SYSTEM_PROMPT } =
+	await import('../classify.ts');
+const { FALLBACK_REASON, ModelVerdict } = await import('../verdict.ts');
+const { MODERATION_REASON_MAX } = await import('#lib/media/utils/comments.ts');
 
 const input = { body: 'The film glorifies it.', titleName: 'Alien', kind: 'movie' } as const;
 const verdict = { decision: 'allow', categories: [], severity: 0, reason: 'On topic.' };
-const reply = (over: object) => ({ stop_reason: 'end_turn', parsed_output: verdict, ...over });
+/** A Messages API response whose text block carries the given JSON, as the wire sends it. */
+const reply = (json: unknown = verdict, over: object = {}) => ({
+	stop_reason: 'end_turn',
+	content: [{ type: 'text', text: typeof json === 'string' ? json : JSON.stringify(json) }],
+	...over
+});
 
 beforeEach(() => {
 	resetCloudflareStub();
-	parse.mockReset();
+	create.mockReset();
 	env.ANTHROPIC_API_KEY = 'sk-test';
 	env.MODERATION_MODEL = 'claude-haiku-5-5';
 });
@@ -24,13 +38,13 @@ describe('classifyComment', () => {
 	it('is unavailable without a key and makes no call', async () => {
 		delete env.ANTHROPIC_API_KEY;
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-unavailable' });
-		expect(parse).not.toHaveBeenCalled();
+		expect(create).not.toHaveBeenCalled();
 	});
 
 	it('returns the parsed verdict with the model, for each decision', async () => {
 		for (const decision of ['allow', 'review', 'reject'] as const) {
 			const v = { ...verdict, decision, severity: 2 };
-			parse.mockResolvedValueOnce(reply({ parsed_output: v }));
+			create.mockResolvedValueOnce(reply(v));
 			await expect(classifyComment(input)).resolves.toEqual({
 				ok: true,
 				verdict: v,
@@ -40,9 +54,9 @@ describe('classifyComment', () => {
 	});
 
 	it('requests structured output with thinking off and low effort', async () => {
-		parse.mockResolvedValueOnce(reply({}));
+		create.mockResolvedValueOnce(reply());
 		await classifyComment(input);
-		const request = parse.mock.calls[0][0];
+		const request = create.mock.calls[0][0];
 		expect(request).toMatchObject({
 			model: 'claude-haiku-5-5',
 			max_tokens: 1024,
@@ -55,9 +69,9 @@ describe('classifyComment', () => {
 	});
 
 	it('puts the comment, title and parent inside tags and sends nothing else about the author', async () => {
-		parse.mockResolvedValueOnce(reply({}));
+		create.mockResolvedValueOnce(reply());
 		await classifyComment({ ...input, parentBody: 'Parent text', kind: 'tv' });
-		const request = parse.mock.calls[0][0];
+		const request = create.mock.calls[0][0];
 		const content = request.messages[0].content as string;
 		expect(content).toBe(
 			'<title kind="series">Alien</title>\n<parent_comment>Parent text</parent_comment>\n<comment>The film glorifies it.</comment>'
@@ -72,27 +86,98 @@ describe('classifyComment', () => {
 		expect(text).toContain('&lt;/comment>');
 	});
 
+	it('passes one overall deadline to the call', async () => {
+		create.mockResolvedValueOnce(reply());
+		const timeout = vi.spyOn(AbortSignal, 'timeout');
+		await classifyComment(input);
+		expect(timeout).toHaveBeenCalledWith(MODERATION_DEADLINE_MS);
+		expect(create.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+		timeout.mockRestore();
+	});
+
+	it('ends a call that hangs at the deadline as ai-timeout', async () => {
+		const controller = new AbortController();
+		vi.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(controller.signal);
+		create.mockImplementationOnce(
+			(_params, options: { signal: AbortSignal }) =>
+				new Promise((_resolve, reject) => {
+					options.signal.addEventListener('abort', () => reject(new APIUserAbortError()));
+				})
+		);
+		const pending = classifyComment(input);
+		controller.abort();
+		await expect(pending).resolves.toEqual({ ok: false, code: 'ai-timeout' });
+	});
+
 	it.each([
 		['refusal', 'ai-refusal'],
 		['max_tokens', 'ai-truncated']
-	])('maps stop_reason %s to %s without reading the output', async (stop_reason, code) => {
-		parse.mockResolvedValueOnce(reply({ stop_reason }));
+	])('logs stop_reason %s as %s, whatever the text holds', async (stop_reason, code) => {
+		create.mockResolvedValueOnce(reply('{"decision":', { stop_reason }));
+		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code });
+		create.mockResolvedValueOnce(reply(verdict, { stop_reason }));
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code });
 	});
 
-	it('maps a null parsed_output to ai-unparsed', async () => {
-		parse.mockResolvedValueOnce(reply({ parsed_output: null }));
+	it.each([
+		['text that is not JSON', 'I cannot answer.'],
+		['an unknown decision', { ...verdict, decision: 'maybe' }],
+		['an unknown category', { ...verdict, categories: ['rudeness'] }],
+		['a severity above 3', { ...verdict, severity: 4 }],
+		['a negative severity', { ...verdict, severity: -1 }],
+		['a missing field', { decision: 'allow', categories: [], severity: 0 }]
+	])('maps %s to ai-unparsed', async (_name, json) => {
+		create.mockResolvedValueOnce(reply(json));
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-unparsed' });
 	});
 
-	it('maps a timeout, a rate limit and any other error to review codes', async () => {
-		parse.mockRejectedValueOnce(new APIConnectionTimeoutError());
+	it('maps an answer with no text block to ai-unparsed', async () => {
+		create.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [] });
+		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-unparsed' });
+	});
+
+	it('keeps a valid verdict whose reason is too long, cut to the limit', async () => {
+		const long = 'x'.repeat(MODERATION_REASON_MAX + 60);
+		create.mockResolvedValueOnce(
+			reply({ ...verdict, decision: 'reject', severity: 3, reason: long })
+		);
+		const result = await classifyComment(input);
+		expect(result).toMatchObject({ ok: true, verdict: { decision: 'reject', severity: 3 } });
+		expect(result.ok && result.verdict.reason).toHaveLength(MODERATION_REASON_MAX);
+	});
+
+	it('gives a reject with an empty reason a fixed one', async () => {
+		create.mockResolvedValueOnce(
+			reply({ ...verdict, decision: 'reject', severity: 3, reason: ' ' })
+		);
+		const result = await classifyComment(input);
+		expect(result.ok && result.verdict.reason).toBe(FALLBACK_REASON);
+	});
+
+	it('maps a timeout, an abort, a rate limit and any other error to review codes', async () => {
+		create.mockRejectedValueOnce(new APIConnectionTimeoutError());
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-timeout' });
-		parse.mockRejectedValueOnce(new RateLimitError(429, {}, 'slow down', new Headers()));
+		create.mockRejectedValueOnce(new APIUserAbortError());
+		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-timeout' });
+		create.mockRejectedValueOnce(new RateLimitError(429, {}, 'slow down', new Headers()));
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-rate-limited' });
-		parse.mockRejectedValueOnce(new InternalServerError(500, {}, 'boom', new Headers()));
+		create.mockRejectedValueOnce(new InternalServerError(500, {}, 'boom', new Headers()));
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-error' });
-		parse.mockRejectedValueOnce(new Error('network'));
+		create.mockRejectedValueOnce(new Error('network'));
 		await expect(classifyComment(input)).resolves.toEqual({ ok: false, code: 'ai-error' });
+	});
+});
+
+describe('the SDK parser over the model schema', () => {
+	const format = zodOutputFormat(ModelVerdict);
+
+	it('accepts an overlong reason and a severity of 4, which the app-side check then handles', () => {
+		const text = JSON.stringify({ ...verdict, severity: 4, reason: 'x'.repeat(500) });
+		expect(format.parse(text)).toMatchObject({ severity: 4 });
+	});
+
+	it('throws on an unknown category and on text that is not JSON', () => {
+		expect(() => format.parse(JSON.stringify({ ...verdict, categories: ['rudeness'] }))).toThrow();
+		expect(() => format.parse('nope')).toThrow();
 	});
 });

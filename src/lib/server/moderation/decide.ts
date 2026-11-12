@@ -1,17 +1,11 @@
 import type { CommentStatus, ModerationSource } from '#lib/media/types/comments.ts';
-import type { TitleKind } from '#lib/server/data/title-queries.ts';
 import { env } from '#lib/server/env.ts';
 import { hitsBlocklist } from './blocklist.ts';
-import { classifyComment } from './classify.ts';
+import { isLocalOrigin } from '#lib/server/http/origin.ts';
+import { classifyComment, type ClassifyInput } from './classify.ts';
 import { applyPolicy, type CheckOutcome } from './policy.ts';
 
-export interface DecideInput {
-	body: string;
-	titleName: string;
-	kind: TitleKind;
-	/** The body of the comment being answered, when this is a reply. */
-	parentBody?: string;
-}
+export type DecideInput = ClassifyInput;
 
 /** What a new or edited comment is stored as. */
 export interface Decision {
@@ -22,16 +16,9 @@ export interface Decision {
 	aiVerdict: string | null;
 }
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
-
 /** `MODERATION_DEV_AUTO_APPROVE=1` publishes unchecked comments, and only on a localhost origin. */
 function devAutoApprove(): boolean {
-	if (env.MODERATION_DEV_AUTO_APPROVE !== '1') return false;
-	try {
-		return LOCAL_HOSTS.has(new URL(env.PUBLIC_ORIGIN).hostname);
-	} catch {
-		return false;
-	}
+	return env.MODERATION_DEV_AUTO_APPROVE === '1' && isLocalOrigin(env.PUBLIC_ORIGIN);
 }
 
 /**

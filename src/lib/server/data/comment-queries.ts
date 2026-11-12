@@ -312,10 +312,11 @@ export async function editComment(id: string, userId: string, body: string): Pro
 	let parentBody: string | undefined;
 	if (comment.parentId) {
 		const [parent] = await db
-			.select({ body: comments.body })
+			.select({ body: comments.body, status: comments.status })
 			.from(comments)
 			.where(eq(comments.id, comment.parentId));
-		parentBody = parent?.body;
+		// A hidden or deleted parent's text is withheld from the model, as it is from readers.
+		if (parent?.status === 'published') parentBody = parent.body;
 	}
 	const decision = await decideStatus({
 		body,
