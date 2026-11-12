@@ -67,7 +67,10 @@
 					: 'Create an account with a passkey'
 	);
 
+	// The session store resolves once per page load, so a sign-in made here is read back before
+	// the next page renders its navbar.
 	async function enter() {
+		await session.refresh();
 		await goto(afterSignIn);
 	}
 
@@ -161,7 +164,7 @@
 
 	// A signed-in reader has nothing to do here.
 	$effect(() => {
-		if (session.status === 'user') void goto(afterSignIn, { replaceState: true });
+		if (session.status === 'user') void goto(afterSignIn, { replace: true });
 	});
 
 	// Offers saved passkeys in the field's autofill list, once the field is on the page. A

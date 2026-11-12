@@ -60,6 +60,15 @@ export class Session {
 		return (this.#loading ??= this.status === 'pending' ? this.#fetch(fetcher) : Promise.resolve());
 	}
 
+	/**
+	 * Fetch `/api/me` again, for a sign-in that happened without a page load (the sign-in page
+	 * on the client). Skips the once-per-load memo that `load()` keeps.
+	 */
+	refresh(fetcher: Fetcher = fetch): Promise<void> {
+		if (!browser) return Promise.resolve();
+		return (this.#loading = this.#fetch(fetcher));
+	}
+
 	set(user: PublicUser): void {
 		if (!browser) return;
 		this.#generation++;

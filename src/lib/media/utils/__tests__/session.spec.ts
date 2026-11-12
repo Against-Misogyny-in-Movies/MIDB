@@ -85,6 +85,16 @@ describe('Session', () => {
 		expect(fetcher).toHaveBeenCalledWith('/api/me', { cache: 'no-store' });
 	});
 
+	it('refresh reads /api/me again after a sign-in made without a page load', async () => {
+		const s = new Session();
+		await s.load(respond(null));
+		expect(s.status).toBe('anon');
+		await s.refresh(respond(MARY));
+		expect(s.status).toBe('user');
+		expect(s.user).toEqual(MARY);
+		expect(hint()).toBe('1');
+	});
+
 	it('hints "user" from the midb_hint cookie while the fetch is pending', async () => {
 		document.cookie = 'theme=dark';
 		document.cookie = 'midb_hint=1';

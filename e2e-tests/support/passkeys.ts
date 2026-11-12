@@ -25,9 +25,6 @@ export async function signUpWithPasskey(page: Page, next = '/user/profile'): Pro
 	await page.goto(`/auth?next=${encodeURIComponent(next)}`);
 	await page.getByRole('button', { name: 'Create an account with a passkey' }).click();
 	await page.waitForURL((url) => url.pathname + url.search === next);
-	// A full load: the client-side navigation after sign-in leaves the navbar's session store
-	// (resolved once per page load) signed out, so the next page is loaded afresh.
-	await page.goto(next);
 	const response = await page.request.get('/api/me');
 	const user = (await response.json()) as { username: string };
 	return user.username;

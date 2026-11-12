@@ -20,3 +20,9 @@ test('a passkey creates an account, signs out and signs back in', async ({ page 
 	const me = (await (await page.request.get('/api/me')).json()) as { username: string };
 	expect(me.username).toBe(username);
 });
+
+test('the navbar shows the account on a public page right after signing in', async ({ page }) => {
+	const username = await signUpWithPasskey(page, '/resources');
+	await expect(page.locator('a.user-link')).toContainText(username);
+	await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveCount(0);
+});
