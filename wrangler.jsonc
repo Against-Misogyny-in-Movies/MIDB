@@ -20,7 +20,7 @@
 			"binding": "DB",
 			"database_name": "midb",
 			// Output of `wrangler d1 create midb`.
-			"database_id": "REPLACE-WITH-D1-DATABASE-ID",
+			"database_id": "d92a0d2c-387e-4e36-9178-696e62fe6dc4",
 			"migrations_dir": "db/migrations"
 		}
 	],
@@ -43,7 +43,7 @@
 		"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
 		"MODERATION_MODEL": "claude-haiku-5-5",
 		// Cloudflare's always-passes test key. Replace it with the site key of a Turnstile widget.
-		"PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+		"PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAF-lHA8u8aUccdsQ"
 	},
 
 	// Preview deploys. Wrangler does not inherit bindings or vars into an environment, so
@@ -55,7 +55,7 @@
 				{
 					"binding": "DB",
 					"database_name": "midb-preview",
-					"database_id": "REPLACE-WITH-PREVIEW-D1-DATABASE-ID",
+					"database_id": "873247f6-c523-4dd9-84a6-5608c4c5b8d4",
 					"migrations_dir": "db/migrations"
 				}
 			],
@@ -78,7 +78,7 @@
 				"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
 				"MODERATION_MODEL": "claude-haiku-5-5",
 				// The preview build takes this from the repository variable PREVIEW_TURNSTILE_SITE_KEY.
-				"PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+				"PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAF-l093k7Pl9D0sd"
 			}
 		}
 	}
