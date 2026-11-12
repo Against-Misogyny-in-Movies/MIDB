@@ -11,6 +11,9 @@ People deciding whether to watch something, often right before watching, often o
 - `/` landing: what MIDB is, a search field, what it checks. (Persuade, quiet.)
 - `/movie/[id]`, `/tv/[id]`: the title reference. (Read / Operate.)
 - `/resources`: how each metric works. (Read.)
+- Comments on `/movie/[id]` and `/tv/[id]`: readers discuss a title. A comment is reviewed before others see it; its author sees its status. (Operate.)
+- `/user/comments`: an account's own comments with their status. (Operate.)
+- `/user/moderation`: moderators and administrators review pending and reported comments, mute or ban an account, and read the action log. (Operate.)
 - `/user/*`, `/auth`: account. (Operate.)
 
 ## Commitments
