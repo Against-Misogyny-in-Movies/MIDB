@@ -16,6 +16,20 @@ describe('CollapsibleSection freshness', () => {
 		expect(screen.getByText('Source: BechdelTest.com')).toBeTruthy();
 	});
 
+	it('groups the source link and its date apart from Methodology', () => {
+		render(CollapsibleSection, {
+			...props,
+			updatedAt: '2026-11-12T09:30:00.000Z',
+			learnHref: '/resources#bechdel'
+		});
+		const date = screen.getByText('Updated November 12, 2026');
+		expect(date.tagName).toBe('TIME');
+		expect(date.getAttribute('datetime')).toBe('2026-11-12T09:30:00.000Z');
+		const group = date.parentElement!;
+		expect(group.contains(screen.getByText('Source: BechdelTest.com'))).toBe(true);
+		expect(group.contains(screen.getByText('Methodology'))).toBe(false);
+	});
+
 	it('shows nothing when no sync is recorded', () => {
 		render(CollapsibleSection, { ...props, updatedAt: null });
 		expect(screen.queryByText(/Updated/)).toBeNull();

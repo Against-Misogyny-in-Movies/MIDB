@@ -64,12 +64,17 @@
 		{#if (sourceHref && sourceLabel) || learnHref}
 			<p class="links">
 				{#if sourceHref && sourceLabel}
-					<a class="link" href={sourceHref} target="_blank" rel="noopener noreferrer">
-						Source: {sourceLabel}
-					</a>
-					{#if updatedAt}
-						<span class="updated">Updated {formatDate(updatedAt)}</span>
-					{/if}
+					<span class="source">
+						<a class="link" href={sourceHref} target="_blank" rel="noopener noreferrer">
+							Source: {sourceLabel}
+						</a>
+						{#if updatedAt}
+							<span class="label" aria-hidden="true">·</span>
+							<time class="label tabular-nums" datetime={updatedAt}>
+								Updated {formatDate(updatedAt)}
+							</time>
+						{/if}
+					</span>
 				{/if}
 				{#if learnHref}
 					<a class="link" href={learnHref}>{learnLabel}</a>
@@ -140,8 +145,9 @@
 		@apply flex flex-wrap gap-x-md gap-y-xs text-sm;
 	}
 
-	.updated {
-		@apply text-ink-muted tabular-nums;
+	/* The source link and its date read as one item, so the date never wraps beside Methodology. */
+	.source {
+		@apply flex flex-wrap gap-x-xs;
 	}
 
 	@media (max-width: 479px) {

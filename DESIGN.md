@@ -37,6 +37,7 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 
 - **Header:** sticky, 64px, `--surface-raised` with a hairline. The logo is "MIDB" in an ink pill; "Sign in" is an ink pill button at the right edge.
 - **Card** (`.card`): the one container. Metric sections are `<details>` cards with a source icon disk, an 18px title, a status `Badge` and a chevron.
+- **Section footer:** under a metric section's body, the source link with its "Updated <date>" (`.label`, `tabular-nums`, a `·` between) as one item, then Methodology as its own. The date shows only beside a source link and only when a sync is recorded; the group wraps as a unit, so the date never pairs with Methodology.
 - **Badge** (`ui/badge.svelte`): pill with a tone from `tones.ts`: violet (`pos`, `brand`), copper (`mid`), raspberry (`neg`), grey (`neutral`). The tones mirror `verdict.ts`, so a badge and the verdict above it never disagree.
 - **Buttons** (`.btn`): brand for the one main action per view, ink for a secondary filled action, ghost beside a filled one.
 - **Verdict:** a soft-tone callout with the axis, the tier in its tone (24px Inter Tight), a two-line summary and a disclosure listing the signals. Fixed height so the DDD stream never shifts the page.
