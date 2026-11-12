@@ -1,4 +1,5 @@
 import { APIError, getAuthoritativeSessionFromCtx } from 'better-auth/api';
+import { LAST_METHOD_CODE } from '#lib/auth-errors.ts';
 import type { AuthEndpointContext } from './types.ts';
 
 /** Better Auth's endpoints that remove a sign-in method. */
@@ -23,7 +24,7 @@ export async function assertAnotherMethodRemains(
 		where: [{ field: 'userId', value: userId }]
 	});
 	if (linked.length + passkeys.length <= 1) {
-		throw new APIError('BAD_REQUEST', { message: LAST_METHOD_MESSAGE });
+		throw new APIError('BAD_REQUEST', { message: LAST_METHOD_MESSAGE, code: LAST_METHOD_CODE });
 	}
 }
 

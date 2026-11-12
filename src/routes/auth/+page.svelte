@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { PUBLIC_TURNSTILE_SITE_KEY } from '$app/env/public';
@@ -7,6 +7,9 @@
 	import Turnstile from '#lib/components/auth/turnstile.svelte';
 	import { authClient, createCaptchaClient } from '#lib/auth-client.ts';
 	import { passkeyErrorMessage, providerErrorMessage } from '#lib/auth-errors.ts';
+	import { AUTH_PROVIDERS, type Provider } from '#lib/media/utils/auth-providers.ts';
+	import { currentDeviceName } from '#lib/media/utils/deviceName.ts';
+	import { session } from '#lib/media/utils/session.svelte.js';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -17,12 +20,7 @@
 
 	const AFTER_SIGN_IN = '/user/profile';
 	const passkeysSupported = typeof PublicKeyCredential !== 'undefined';
-	const providers = $derived(
-		[
-			{ id: 'google', label: 'Google', icon: 'ri-google-fill', on: data.providers.google },
-			{ id: 'discord', label: 'Discord', icon: 'ri-discord-fill', on: data.providers.discord }
-		].filter((p) => p.on)
-	);
+	const providers = $derived(AUTH_PROVIDERS.filter((p) => data.providers[p.id]));
 
 	// A provider sign-in that failed redirects back here with `?error=<code>`.
 	const providerError = $derived.by(() => {
@@ -30,17 +28,26 @@
 		return code ? providerErrorMessage(code) : null;
 	});
 
-	let autofill = $state(false);
+	// The form renders once two things are known, so nothing moves after it appears: whether
+	// the browser offers saved passkeys in a field (`autofill`) and whether the reader is
+	// already signed in, who is sent on instead.
+	let autofill = $state<boolean | null>(null);
+	const ready = $derived(autofill !== null && session.status === 'anon');
+
 	let signInBusy = $state(false);
 	let signInError = $state<string | null>(null);
+	let socialError = $state<string | null>(null);
 
 	// Sign-up with Turnstile runs in steps: `checking` while the widget works, `ready` once it
 	// has a token and the next click may start the passkey prompt (browsers want a fresh click
-	// for it), `failed` when the widget or script could not run.
+	// for it), `failed` when the widget or script could not run, and the button then runs the
+	// check again.
 	type SignUp = 'idle' | 'checking' | 'ready' | 'failed' | 'working';
 	let signUp = $state<SignUp>('idle');
 	let signUpError = $state<string | null>(null);
 	let token: string | null = null;
+	/** Whether a token that arrives may start the prompt at once (the click that began the check). */
+	let continueOnToken = false;
 	let widget = $state<{ reset(): void }>();
 	let widgetAttempt = $state(0);
 
@@ -50,16 +57,24 @@
 			? 'Checking the browser'
 			: signUp === 'ready'
 				? 'Create the passkey'
-				: 'Create an account with a passkey'
+				: signUp === 'failed'
+					? 'Run the check again'
+					: 'Create an account with a passkey'
 	);
 
 	async function enter() {
 		await goto(AFTER_SIGN_IN);
 	}
 
-	async function signInWithPasskey() {
-		signInBusy = true;
+	function clearErrors() {
 		signInError = null;
+		signUpError = null;
+		socialError = null;
+	}
+
+	async function signInWithPasskey() {
+		clearErrors();
+		signInBusy = true;
 		const { error } = await authClient.signIn.passkey();
 		signInBusy = false;
 		if (error) {
@@ -69,15 +84,43 @@
 		await enter();
 	}
 
-	async function createAccount() {
-		signUp = 'working';
-		signUpError = null;
-		const client = token ? createCaptchaClient(token) : authClient;
-		const { error } = await client.passkey.addPasskey({ createSession: true });
+	async function signInWithProvider(provider: Provider) {
+		clearErrors();
+		const { error } = await authClient.signIn.social({
+			provider: provider.id,
+			callbackURL: AFTER_SIGN_IN,
+			errorCallbackURL: '/auth'
+		});
+		if (error) socialError = providerErrorMessage(error.code ?? '');
+	}
+
+	/** Starts a Turnstile check; `after` says whether its token may start the prompt by itself. */
+	function runCheck(after: boolean) {
 		token = null;
+		continueOnToken = after;
+		if (signUp === 'failed') widgetAttempt++;
+		signUp = 'checking';
+	}
+
+	async function createAccount() {
+		// A site key means the server wants a token: never ask for the passkey without one.
+		if (captchaOn && !token) {
+			runCheck(false);
+			return;
+		}
+		signUp = 'working';
+		const used = token;
+		token = null;
+		const client = used ? createCaptchaClient(used) : authClient;
+		const { error } = await client.passkey.addPasskey({
+			name: currentDeviceName(),
+			createSession: true
+		});
 		if (error) {
 			signUpError = passkeyErrorMessage(error, 'sign-up');
-			// A token is single-use: the next attempt needs a new check.
+			// A token is single-use: the next attempt needs a new check, and the reader's next
+			// click, not this failure, decides when the prompt opens.
+			continueOnToken = false;
 			signUp = captchaOn ? 'checking' : 'idle';
 			if (captchaOn) widget?.reset();
 			return;
@@ -86,18 +129,14 @@
 	}
 
 	function startSignUp() {
-		signUpError = null;
-		if (signUp === 'idle' && captchaOn) {
-			signUp = 'checking';
-		} else {
-			void createAccount();
-		}
+		clearErrors();
+		if (!captchaOn || (signUp === 'ready' && token)) void createAccount();
+		else runCheck(true);
 	}
 
 	function onToken(value: string) {
 		token = value;
-		// The click that opened the check may still count; if so, carry on without another.
-		if (navigator.userActivation?.isActive) void createAccount();
+		if (continueOnToken && navigator.userActivation?.isActive) void createAccount();
 		else signUp = 'ready';
 	}
 
@@ -106,22 +145,29 @@
 		signUp = 'failed';
 	}
 
-	function retryCheck() {
-		widgetAttempt++;
-		signUp = 'checking';
-	}
-
 	onMount(() => {
-		if (!passkeysSupported) return;
+		void session.load();
 		void (async () => {
-			if (!(await PublicKeyCredential.isConditionalMediationAvailable?.())) return;
-			autofill = true;
-			await tick();
-			// Offers saved passkeys in the field's autofill list. A dismissed or replaced request
-			// is not an error: the button below reports its own failures.
-			const { error } = await authClient.signIn.passkey({ autoFill: true });
-			if (!error) await enter();
+			autofill =
+				passkeysSupported &&
+				(await PublicKeyCredential.isConditionalMediationAvailable?.()) === true;
 		})();
+	});
+
+	// A signed-in reader has nothing to do here.
+	$effect(() => {
+		if (session.status === 'user') void goto(AFTER_SIGN_IN, { replaceState: true });
+	});
+
+	// Offers saved passkeys in the field's autofill list, once the field is on the page. A
+	// dismissed or replaced request is not an error: the button below reports its own failures.
+	let autofillStarted = false;
+	$effect(() => {
+		if (!ready || !autofill || autofillStarted) return;
+		autofillStarted = true;
+		void authClient.signIn.passkey({ autoFill: true }).then(({ error }) => {
+			if (!error) return enter();
+		});
 	});
 </script>
 
@@ -130,105 +176,104 @@
 </svelte:head>
 
 <h1 class="display">Sign in</h1>
-<p class="lead">Sign in with a passkey, Google or Discord. MIDB stores no passwords.</p>
+<p class="lead">MIDB stores no passwords.</p>
 
-{#if providerError}
-	<Notice tone="error">{providerError}</Notice>
-{/if}
-
-{#if providers.length > 0}
-	<div class="group">
-		{#each providers as provider (provider.id)}
-			<button
-				type="button"
-				class="btn btn--ink wide"
-				onclick={async () => {
-					const { error } = await authClient.signIn.social({
-						provider: provider.id as 'google' | 'discord',
-						callbackURL: AFTER_SIGN_IN,
-						errorCallbackURL: '/auth'
-					});
-					if (error) signInError = providerErrorMessage(error.code ?? '');
-				}}
-			>
-				<i class={provider.icon} aria-hidden="true"></i>
-				Continue with {provider.label}
-			</button>
-		{/each}
-	</div>
-	<p class="or" aria-hidden="true"><span>or</span></p>
-{/if}
-
-<div class="group">
-	{#if !passkeysSupported}
-		<Notice tone="error">
-			This browser does not support passkeys.{providers.length > 0
-				? ' Use Google or Discord instead.'
-				: ''}
-		</Notice>
+{#if ready}
+	{#if providerError}
+		<Notice tone="error">{providerError}</Notice>
 	{/if}
 
-	{#if autofill}
-		<div class="field">
-			<label for="passkey-autofill" class="label">Saved passkey</label>
-			<input
-				id="passkey-autofill"
-				name="passkey-autofill"
-				type="text"
-				autocomplete="username webauthn"
-				placeholder="Select a saved passkey"
-			/>
+	{#if providers.length > 0}
+		<div class="group">
+			{#each providers as provider (provider.id)}
+				<button
+					type="button"
+					class="btn btn--ink wide"
+					onclick={() => signInWithProvider(provider)}
+				>
+					<i class={provider.icon} aria-hidden="true"></i>
+					Continue with {provider.label}
+				</button>
+			{/each}
+			{#if socialError}
+				<Notice tone="error">{socialError}</Notice>
+			{/if}
 		</div>
+		<p class="or" aria-hidden="true"><span>or</span></p>
 	{/if}
 
-	<button
-		type="button"
-		class="btn btn--brand wide"
-		disabled={!passkeysSupported || signInBusy || signUp === 'working'}
-		aria-busy={signInBusy}
-		onclick={signInWithPasskey}
-	>
-		<i class="ri-fingerprint-line" aria-hidden="true"></i>
-		Sign in with a passkey
-	</button>
-	{#if signInError}
-		<Notice tone="error">{signInError}</Notice>
-	{/if}
+	<div class="group">
+		{#if !passkeysSupported}
+			<Notice tone="error">
+				This browser does not support passkeys.{providers.length > 0
+					? ' Use Google or Discord instead.'
+					: ''}
+			</Notice>
+		{/if}
 
-	<button
-		type="button"
-		class="btn btn--ghost wide"
-		disabled={!passkeysSupported || signInBusy || signUp === 'working' || signUp === 'checking'}
-		aria-busy={signUp === 'checking' || signUp === 'working'}
-		onclick={startSignUp}
-	>
-		{signUpLabel}
-	</button>
+		{#if autofill}
+			<div class="field">
+				<label for="passkey-autofill" class="label">Saved passkey</label>
+				<input
+					id="passkey-autofill"
+					name="passkey-autofill"
+					type="text"
+					class="input"
+					autocomplete="username webauthn"
+					placeholder="Select a saved passkey"
+				/>
+			</div>
+		{/if}
 
-	{#if captchaOn && signUp !== 'idle' && signUp !== 'failed'}
-		{#key widgetAttempt}
-			<Turnstile
-				bind:this={widget}
-				siteKey={PUBLIC_TURNSTILE_SITE_KEY}
-				ontoken={onToken}
-				onfail={onCheckFailed}
-				onexpire={() => {
-					token = null;
-					if (signUp === 'ready') signUp = 'checking';
-				}}
-			/>
-		{/key}
-	{/if}
-	{#if signUp === 'failed'}
-		<Notice tone="error">
-			The check against automated sign-ups could not run.
-			<button type="button" class="link retry" onclick={retryCheck}>Try again</button>
-		</Notice>
-	{/if}
-	{#if signUpError}
-		<Notice tone="error">{signUpError}</Notice>
-	{/if}
-</div>
+		<button
+			type="button"
+			class="btn btn--brand wide"
+			disabled={!passkeysSupported || signInBusy || signUp === 'working'}
+			aria-busy={signInBusy}
+			onclick={signInWithPasskey}
+		>
+			<i class="ri-fingerprint-line" aria-hidden="true"></i>
+			Sign in with a passkey
+		</button>
+		{#if signInError}
+			<Notice tone="error">{signInError}</Notice>
+		{/if}
+
+		<button
+			type="button"
+			class="btn btn--ghost wide"
+			disabled={!passkeysSupported || signInBusy || signUp === 'working' || signUp === 'checking'}
+			aria-busy={signUp === 'checking' || signUp === 'working'}
+			onclick={startSignUp}
+		>
+			{signUpLabel}
+		</button>
+
+		{#if captchaOn && signUp !== 'idle' && signUp !== 'failed'}
+			{#key widgetAttempt}
+				<Turnstile
+					bind:this={widget}
+					siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+					ontoken={onToken}
+					onfail={onCheckFailed}
+					onexpire={() => {
+						token = null;
+						if (signUp === 'ready') signUp = 'checking';
+					}}
+				/>
+			{/key}
+		{/if}
+		{#if signUp === 'failed'}
+			<Notice tone="error">
+				The check against automated sign-ups could not run. A browser extension or the network may
+				be blocking it.
+			</Notice>
+		{/if}
+		{#if signUpError}
+			<Notice tone="error">{signUpError}</Notice>
+		{/if}
+	</div>
+{/if}
 
 <style lang="postcss">
 	@reference "../../app.css";
@@ -266,29 +311,5 @@
 
 	.field {
 		@apply flex flex-col gap-xs;
-	}
-
-	input {
-		@apply w-full text-ink bg-surface-raised;
-		height: 2.75rem;
-		padding-inline: 16px;
-		border-radius: 12px;
-		border: 1px solid var(--border-strong);
-		transition: border-color 0.15s ease;
-	}
-
-	input:hover {
-		border-color: var(--ink-muted);
-	}
-
-	input:focus-visible {
-		@apply outline-none;
-		border-color: var(--brand);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
-	}
-
-	.retry {
-		@apply bg-transparent border-0 p-0 cursor-pointer;
-		font: inherit;
 	}
 </style>
