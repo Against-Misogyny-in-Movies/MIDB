@@ -52,38 +52,38 @@ Read the sections your task touches.
   - 69–72 Motion (~90)
   - 73–76 Browser surfaces (~50)
   - 77–80 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~46.9K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~47.5K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–258 Directory layout (~7.3K)
-    - 249–258 File-organisation conventions (~450)
-  - 259–272 Styling & theming (~950)
-  - 273–285 Copy & voice (~570) ← 1
-  - 286–315 Routes (~9.4K)
-  - 316–353 User & roles (~2.1K)
-    - 346–353 Migrations (~350)
-  - 354–383 Source sync (~1.8K) ← 3
-  - 384–449 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 450–474 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
-  - 475–494 UM Disambiguation (~630)
-  - 495–503 UM flag rendering (~250)
-  - 504–515 Shared marker pattern (metric row markers) (~410) ← 5
-  - 516–556 Component library (`src/lib/components/`) (~5.6K)
-  - 557–567 Live search (`src/lib/components/search/`) (~710)
-  - 568–581 Server cache (`src/lib/server/cache/`) (~690)
-  - 582–597 TMDB integration (~810)
-  - 598–616 Auth flow (Better Auth) (~1.9K)
-  - 617–635 Caching policy (~1.2K) ← 6
-  - 636–692 Configuration & environment (~3.2K)
-    - 652–664 Local run sequence (~130)
-    - 665–668 npm scripts (~200)
-    - 669–679 CI (`.github/workflows/tests.yml`) (~490)
-    - 680–692 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 693–708 Testing (~1.2K)
-    - 703–708 Verification baseline (~80)
-  - 709–717 Known gaps / TODO (~240)
-  - 718–726 Related docs (~140)
+  - 68–263 Directory layout (~7.6K)
+    - 254–263 File-organisation conventions (~450)
+  - 264–277 Styling & theming (~950)
+  - 278–290 Copy & voice (~570) ← 1
+  - 291–320 Routes (~9.4K)
+  - 321–360 User & roles (~2.4K)
+    - 353–360 Migrations (~350)
+  - 361–390 Source sync (~1.8K) ← 3
+  - 391–456 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 457–481 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.0K) ← 1
+  - 482–501 UM Disambiguation (~630)
+  - 502–510 UM flag rendering (~250)
+  - 511–522 Shared marker pattern (metric row markers) (~410) ← 5
+  - 523–563 Component library (`src/lib/components/`) (~5.6K)
+  - 564–574 Live search (`src/lib/components/search/`) (~710)
+  - 575–588 Server cache (`src/lib/server/cache/`) (~690)
+  - 589–604 TMDB integration (~810)
+  - 605–623 Auth flow (Better Auth) (~1.9K)
+  - 624–642 Caching policy (~1.2K) ← 6
+  - 643–699 Configuration & environment (~3.2K)
+    - 659–671 Local run sequence (~130)
+    - 672–675 npm scripts (~200)
+    - 676–686 CI (`.github/workflows/tests.yml`) (~490)
+    - 687–699 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 700–715 Testing (~1.2K)
+    - 710–715 Verification baseline (~80)
+  - 716–724 Known gaps / TODO (~240)
+  - 725–733 Related docs (~140)
 
 ## Phases
 

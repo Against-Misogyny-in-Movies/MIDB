@@ -33,6 +33,22 @@ export const umFlagColumns = () => ({
 	rapeOnScreen: integer('rape_on_screen', { mode: 'boolean' }).notNull()
 });
 
+/**
+ * The eight concern flags of `umFlagColumns()` (every flag but `noRape`) as nullable columns,
+ * for a reader's answers, where NULL is "not sure". `readerReports.spec.ts` keeps the
+ * key list in step with `UM_FLAGS`.
+ */
+export const umConcernFlagColumns = () => ({
+	rapeMenDisImp: integer('rape_men_dis_imp', { mode: 'boolean' }),
+	sexHarOnScrn: integer('sex_har_on_scrn', { mode: 'boolean' }),
+	sexAdultTeen: integer('sex_adult_teen', { mode: 'boolean' }),
+	childSexAbuse: integer('child_sex_abuse', { mode: 'boolean' }),
+	incest: integer('incest', { mode: 'boolean' }),
+	attemptedRape: integer('attempted_rape', { mode: 'boolean' }),
+	rapeOffScrn: integer('rape_off_scrn', { mode: 'boolean' }),
+	rapeOnScreen: integer('rape_on_screen', { mode: 'boolean' })
+});
+
 /** A CHECK that `column` holds one of `values`, so the constraint is built from the enum tuple. */
 export function enumCheck(
 	name: string,

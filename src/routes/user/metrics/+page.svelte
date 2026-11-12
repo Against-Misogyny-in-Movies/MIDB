@@ -4,11 +4,11 @@
 
 	let { data }: { data: PageData } = $props();
 
-	function ratingLabel(row: PageData['ratings'][number]) {
-		return row.metric === 'bechdel'
-			? `Bechdel Test · ${row.value}/3`
-			: `Unconsenting Media · ${row.value} concern${row.value === 1 ? '' : 's'}`;
-	}
+	const STATUS_LABELS = {
+		counted: 'Counted',
+		held: 'Waiting for review',
+		rejected: 'Not counted'
+	} as const;
 </script>
 
 <div class="account-page">
@@ -16,19 +16,19 @@
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
-		<h1 class="display">Rating history</h1>
+		<h1 class="display">Reader reports</h1>
 	</header>
 
 	{#if data.ratings.length === 0}
-		<p class="empty">No ratings yet.</p>
+		<p class="empty">No reader reports yet.</p>
 	{:else}
 		<ul class="card history">
-			{#each data.ratings as row (`${row.metric}:${row.titleId}`)}
+			{#each data.ratings as row (row.titleId)}
 				<li>
 					<a href={titleHref(row.kind, row.tmdbId)}>
 						<span class="title">{row.title}</span>
 						<span class="meta">
-							{ratingLabel(row)} ·
+							Reader report · {STATUS_LABELS[row.status]} ·
 							<time datetime={row.updatedAt.toISOString()}
 								>{row.updatedAt.toLocaleDateString()}</time
 							>

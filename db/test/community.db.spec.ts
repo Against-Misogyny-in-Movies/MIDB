@@ -5,8 +5,10 @@ import { userValues } from './users.ts';
 import {
 	comments,
 	communityBechdelRatings,
+	communityContentReports,
 	communityDddVotes,
-	communityUmReports
+	communityUmReports,
+	titleCountFlags
 } from '#db/schema/community.ts';
 import { db } from '#lib/server/db.ts';
 
@@ -91,6 +93,45 @@ describe('comments', () => {
 		await expect(db.insert(comments).values({ userId, titleId, body: '' })).rejects.toThrow();
 		await expect(
 			db.insert(comments).values({ userId, titleId, body: 'x'.repeat(5001) })
+		).rejects.toThrow();
+	});
+});
+
+describe('community_content_reports', () => {
+	it('defaults to counted with nothing answered, and keeps one per (user, title)', async () => {
+		const [row] = await db.insert(communityContentReports).values({ userId, titleId }).returning();
+		expect(row.status).toBe('counted');
+		expect(row.partnerLevel).toBeNull();
+		expect(row.incest).toBeNull();
+		await expect(db.insert(communityContentReports).values({ userId, titleId })).rejects.toThrow();
+	});
+
+	it('rejects a value outside its own tuple', async () => {
+		const bad = async (values: Record<string, string>) =>
+			expect(
+				db.insert(communityContentReports).values({ userId, titleId, ...values } as never)
+			).rejects.toThrow();
+		await bad({ partnerLevel: 'some_scenes' });
+		await bad({ sexualPresent: 'throughout' });
+		await bad({ objectificationLevel: 'on_screen' });
+		await bad({ framing: 'fine' });
+		await bad({ status: 'approved' });
+		await bad({ holdReason: 'spam' });
+	});
+});
+
+describe('title_count_flags', () => {
+	it('allows one flag per (title, reporter), rejects a bad status and a long note', async () => {
+		await db.insert(titleCountFlags).values({ titleId, reporterId: userId });
+		await expect(
+			db.insert(titleCountFlags).values({ titleId, reporterId: userId })
+		).rejects.toThrow();
+		await db.delete(titleCountFlags);
+		await expect(
+			db.insert(titleCountFlags).values({ titleId, reporterId: userId, status: 'closed' as never })
+		).rejects.toThrow();
+		await expect(
+			db.insert(titleCountFlags).values({ titleId, reporterId: userId, note: 'x'.repeat(501) })
 		).rejects.toThrow();
 	});
 });

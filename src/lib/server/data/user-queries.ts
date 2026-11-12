@@ -1,11 +1,10 @@
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { sessions, users } from '#db/schema/auth.ts';
-import { communityBechdelRatings, communityUmReports, comments } from '#db/schema/community.ts';
+import { communityContentReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 import { USERNAME_RE } from '#lib/media/utils/username.ts';
-import { umFlagCount } from '#lib/media/utils/metrics.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 
@@ -129,9 +128,7 @@ export async function getUserComments(userId: string) {
 }
 
 export type UserRating = {
-	metric: 'bechdel' | 'unconsenting';
-	/** Bechdel rating 0–3, or the number of UM concerns reported. */
-	value: number;
+	status: (typeof communityContentReports.$inferSelect)['status'];
 	titleId: string;
 	kind: (typeof titles.$inferSelect)['kind'];
 	tmdbId: number | null;
@@ -139,40 +136,17 @@ export type UserRating = {
 	updatedAt: Date;
 };
 
-/** Community rating history (Bechdel ratings and UM reports), newest first. */
+/** A reader's reader reports, newest first, in every status, with the title joined. */
 export async function getUserRatings(userId: string): Promise<UserRating[]> {
-	const [bechdel, um] = await Promise.all([
-		db
-			.select({
-				rating: communityBechdelRatings.rating,
-				titleId: communityBechdelRatings.titleId,
-				updatedAt: communityBechdelRatings.updatedAt,
-				...titleRef
-			})
-			.from(communityBechdelRatings)
-			.innerJoin(titles, eq(communityBechdelRatings.titleId, titles.id))
-			.where(eq(communityBechdelRatings.userId, userId)),
-		db
-			.select({ report: communityUmReports, ...titleRef })
-			.from(communityUmReports)
-			.innerJoin(titles, eq(communityUmReports.titleId, titles.id))
-			.where(eq(communityUmReports.userId, userId))
-	]);
-
-	return [
-		...bechdel.map(({ rating, ...rest }) => ({
-			metric: 'bechdel' as const,
-			value: rating,
-			...rest
-		})),
-		...um.map(({ report, kind, tmdbId, title }) => ({
-			metric: 'unconsenting' as const,
-			value: umFlagCount(report),
-			titleId: report.titleId,
-			updatedAt: report.updatedAt,
-			kind,
-			tmdbId,
-			title
-		}))
-	].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+	return db
+		.select({
+			status: communityContentReports.status,
+			titleId: communityContentReports.titleId,
+			updatedAt: communityContentReports.updatedAt,
+			...titleRef
+		})
+		.from(communityContentReports)
+		.innerJoin(titles, eq(communityContentReports.titleId, titles.id))
+		.where(eq(communityContentReports.userId, userId))
+		.orderBy(desc(communityContentReports.updatedAt), desc(communityContentReports.titleId));
 }
