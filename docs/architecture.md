@@ -22,12 +22,12 @@ Each metric is designed to show **two scores side by side**: the original author
 | Runtime / package manager | **pnpm** 10.28 (`packageManager: pnpm@10.28.0`) on **Node** `>=22.18` (`engines`); CI installs with `pnpm install --frozen-lockfile` (`pnpm-lock.yaml`). The `.ts` scripts under `db/` and `scripts/` run on Node's type stripping                                                                                                                                                                                                                    |
 | Build / dev               | **Vite 8**; hosted on **Cloudflare Workers** with `@sveltejs/adapter-cloudflare` 8, configured by `wrangler.jsonc` (Wrangler 4). Workers Caching is on; D1 is bound as `DB`, and rate limits are Workers rate-limit bindings                                                                                                                                                                                                                          |
 | Styling                   | **Tailwind CSS 4 (CSS-first)** via `@tailwindcss/vite` — no PostCSS config; design tokens live in `src/app.css`. Remixicon for icons.                                                                                                                                                                                                                                                                                                                 |
-| Database                  | PostgreSQL via **Drizzle ORM** 0.45 (`postgres-js` 3.4 driver) + drizzle-kit 0.31                                                                                                                                                                                                                                                                                                                                                                     |
+| Database                  | SQLite on Cloudflare **D1** via **Drizzle ORM** 0.45 (`drizzle-orm/d1`; `sqlite-proxy` for remote scripts) + drizzle-kit 0.31                                                                                                                                                                                                                                                                                                                         |
 | Auth                      | **Hanko** (passwordless / passkeys) via `@teamhanko/hanko-elements` 2.6; JWT verified with `jose` 6                                                                                                                                                                                                                                                                                                                                                   |
 | External movie data       | **TMDB** REST API v3 (Bearer-token auth); **Does The Dog Die** API (live trigger tags, `X-API-KEY`)                                                                                                                                                                                                                                                                                                                                                   |
 | Server cache              | `#lib/server/cache`: the **Cache API** (`caches.default`, per data centre) behind a per-isolate memory level; the memory level alone where `caches` is missing (unit tests). Caches TMDB (titles, search) + DDD responses. `incr` counters are the memory fallback of `rateLimit`.                                                                                                                                                                    |
 | Seed parsing              | **`csv-parse`** 6 (stream-parse the Bechdel + UM source CSVs)                                                                                                                                                                                                                                                                                                                                                                                         |
-| Testing                   | Vitest 4 (projects `unit` + `db` against real Postgres, co-located in `__tests__/`), Playwright 1.61 (integration, in `e2e-tests/`), Storybook 10 (component dev)                                                                                                                                                                                                                                                                                     |
+| Testing                   | Vitest 4 (projects `unit` + `db` against a local D1, co-located in `__tests__/`), Playwright 1.61 (integration, in `e2e-tests/`), Storybook 10 (component dev)                                                                                                                                                                                                                                                                                        |
 | Client debounce / ids     | `DebouncedQuery` (`#lib/media/utils/debouncedQuery.svelte.ts`): timer + `AbortController`, no RxJS. Element ids from Svelte's `$props.id()`, no nanoid                                                                                                                                                                                                                                                                                                |
 | Language / typecheck      | TypeScript 6.0.3 for the tooling (`svelte-check`, editor, typescript-eslint); TypeScript 7.0.2 (`typescript7`, the native compiler) for `pnpm typecheck`, until `svelte-check` supports 7. pnpm links the `typescript7` alias's `tsc` bin over TypeScript 6's, so `pnpm exec tsc` runs 7.0.2; the `typescript` module that `svelte-check`, typescript-eslint and the editor load is 6.0.3, and its compiler is `node node_modules/typescript/bin/tsc` |
 | Lint                      | Oxlint 1.93 (`oxlint-tsgolint`): its type-aware rules cover `.ts` and `.js`, `.svelte.ts` rune modules included; a `.svelte` `<script>` gets Oxlint's syntax rules only, so a fire-and-forget promise in a `.svelte` file is `void`-ed by hand. ESLint 10 (flat config) with `eslint-plugin-svelte` for `.svelte` files and rune modules, parsed by `@typescript-eslint/parser`. Prettier. `pnpm lint` is defined in AGENTS.md                        |
@@ -53,13 +53,13 @@ Each metric is designed to show **two scores side by side**: the original author
 
    Auth:  Browser ⇄ Hanko Cloud (web components + JWT cookie)
           hooks.server.ts verifies the `hanko` cookie via remote JWKS
-   Migrations: `pnpm db:migrate` locally; production deploys run them before the build
-               (`migrateOnDeploy.ts`); the server never migrates on boot
+   Migrations: `wrangler d1 migrations apply` (`pnpm db:migrate:local` / `db:migrate:remote`)
+               from `db/migrations`; the server never migrates on boot
 ```
 
 - **Entry point** is the landing page at `/` (hero + search UX). The hero search is a **live, inline TMDB search**: typing queries a server proxy (`/api/search`, TMDB `search/multi`) and renders a results dropdown in place — there is no `/search` page. Results carry a `mediaType` (`movie`/`tv`) and route to the matching detail page.
 - **Title identity** flows by **TMDB id** through the URL (`/movie/[movieId]`, `/tv/[seriesId]`), but the internal join key across metric sources is **`imdb_id`** (the Bechdel/DDD key). On a detail-page load the live TMDB title is resolved to a local `titles` row via **read-only** `getTitleRow(kind, ref)` (matching on `(kind, tmdb_id)` then `imdb_id`); a GET never mutates the DB. Movies and series share the TMDB numeric id space, so `kind` is part of the key; there are no synthetic ids.
-- **Metric data** comes from three places: **Bechdel + UM** are seeded into Postgres and rendered server-side (SSR); **DDD** is fetched live from its API and **streamed** so a slow external call never blocks first paint. (Bechdel is movie-only; series surface UM + DDD.)
+- **Metric data** comes from three places: **Bechdel + UM** are stored in D1 and rendered server-side (SSR); **DDD** is fetched live from its API and **streamed** so a slow external call never blocks first paint. (Bechdel is movie-only; series surface UM + DDD.)
 - **Caching.** TMDB title fetches (`getMovie`/`getSeries`), TMDB search (`searchTitles`) and DDD lookups go through `#lib/server/cache` so repeat visits to a title skip the external round-trip — the dominant source of detail-page latency. The backend is the Cache API behind a per-isolate memory level (see _Server cache_). Public page loads set `PUBLIC_PAGE` (the landing, whose films are random per request, sets `PUBLIC_NO_STORE`), `/api/search` sets `PUBLIC_SEARCH` and `/img/tmdb/*` sets `PUBLIC_IMAGE`, so Workers Caching serves repeat requests without running the Worker (see _Caching policy_).
 - **Auth** is entirely Hanko's; the app verifies the JWT cookie server-side (claims only, no DB) to gate `/user/*`, and server-rendered public pages never depend on the user (see _Auth flow_).
 
@@ -70,32 +70,34 @@ Each metric is designed to show **two scores side by side**: the original author
 ```
 MIDB/
 ├── db/                         # Data layer — lives OUTSIDE src/, aliased as #db/*
-│   ├── client.ts               # createDb(url, { max? }) → { db, sql } (connect_timeout 10, schema barrel) + type Db. Reads no env
+│   ├── client.ts               # createDb(d1) → drizzle(d1, { schema }) + type Db (BaseSQLiteDatabase<'async'> + batch; the D1 and sqlite-proxy clients both satisfy it). Reads no env
 │   ├── schema/                 # Drizzle table definitions (drizzle-kit reads ./schema/**/*.ts)
 │   │   ├── index.ts            # barrel re-exporting every schema file (passed to drizzle() as `schema`)
-│   │   ├── columns.ts          # shared column sets: timestamps() (timestamptz, $onUpdate) + umFlagColumns() (the 9 UM flags)
-│   │   ├── titles.ts           # title_kind enum + titles (the spine; unique (kind, tmdb_id), unique imdb_id)
-│   │   ├── sources.ts          # titleBechdel + umSource (UM catalogue) + titleUm (binding only)
-│   │   ├── auth.ts             # user (Hanko-sub PK, role enum, username/avatarKey, lower(username) idx)
+│   │   ├── columns.ts          # shared column sets: timestamps() / createdAt() (epoch-ms integers, $defaultFn, $onUpdate) + umFlagColumns() (the 9 UM flags)
+│   │   ├── titles.ts           # titleKind tuple + titles (the spine; unique (kind, tmdb_id), unique imdb_id, popularity + popularity_at, kind CHECK)
+│   │   ├── sources.ts          # titleBechdel + umSource (UM catalogue, source_updated_at) + titleUm (binding only) + sourceSync (last success per source)
+│   │   ├── auth.ts             # userRole tuple + user (Hanko-sub PK, role CHECK, username/avatarKey, lower(username) idx)
 │   │   └── community.ts        # communityBechdelRatings, communityUmReports, communityDddVotes, comments (empty, no write path yet)
 │   ├── scripts/
-│   │   ├── migrate.ts          # `pnpm db:migrate`; exports migrateDatabase(url) (max: 1), also used by db/test/global-setup.ts
-│   │   ├── migrateOnDeploy.ts  # migrates DB_CONNECTION when VERCEL_ENV=production, skips otherwise; exports deployMigration(env). No deploy runs it yet (the live plan, Phase 2 removes it)
 │   │   ├── seedMovies.ts       # `db:seed:movies` — Bechdel CSV → titles (kind movie) + title_bechdel; exports seedMovies(db, csvPath)
 │   │   ├── seedUnconsenting.ts # `db:seed:um` — UM CSV → um_source (all rows) + title_um bindings (matched); exports seedUnconsenting(db, csvPath, reportPath?)
 │   │   ├── seedAdmin.ts        # `db:seed:admin <email>` — case-insensitive promote to administrator
 │   │   ├── backfillTmdb.ts     # `db:backfill:tmdb` — fill null tmdb_id on movie titles via TMDB /find
 │   │   ├── __tests__/          # seeders.db.spec.ts (smoke test on the 50-row fixtures)
-│   │   └── lib/                # script-only: db.ts (script client from process.env.DB_CONNECTION + closeDb), checkCsvColumns.ts
+│   │   └── lib/                # script-only: db.ts (`openScriptDb()`: the local D1 through wrangler's getPlatformProxy, `close()` disposes it), checkCsvColumns.ts
 │   ├── lib/                    # code shared by the seeders and the app (app imports #db/lib/*, seeders ../lib/*)
 │   │   ├── normalizeTitle.ts   # normalizeTitle + stripTrailingYear: the matching key, identical at seed time and at runtime
-│   │   └── __tests__/          # normalizeTitle.spec.ts (unit project: db/**/*.spec.ts minus *.db.spec.ts)
+│   │   ├── chunkForD1.ts       # chunkForD1(rows, columns, reserved?): splits rows so a statement stays at or under D1's 100 bound parameters
+│   │   └── __tests__/          # normalizeTitle.spec.ts, chunkForD1.spec.ts (unit project: db/**/*.spec.ts minus *.db.spec.ts)
 │   ├── seeds/
 │   │   └── sources/            # raw CSVs: bechdel.csv, unconsenting.csv, unconsenting_unmatched.txt (report)
 │   ├── migrations/             # drizzle-kit output: NNNN_*.sql + meta/_journal.json + snapshots (never hand-edited)
 │   └── test/                   # Vitest `db` project harness
-│       ├── global-setup.ts     # wipes TEST_DB_CONNECTION (refuses if it equals DB_CONNECTION) and migrates it from zero
-│       ├── reset.ts            # setupFile: TRUNCATE every schema table RESTART IDENTITY CASCADE beforeEach; closeDb afterAll
+│       ├── global-setup.ts     # wipes .wrangler/test-state and applies db/migrations to it with `wrangler d1 migrations apply --local` (proves the baseline from zero)
+│       ├── state.ts            # TEST_STATE_PATH, shared by global-setup and setup
+│       ├── setup.ts            # setupFile: getPlatformProxy over the test state, bindDb(env.DB), DELETE FROM every table in FK order beforeEach, dispose afterAll
+│       ├── writes.ts           # trackWrites(...tables) / writes(): test-only triggers that log every write, so a spec can prove a read path wrote nothing
+│       ├── d1.db.spec.ts       # what the app relies on from D1 and Drizzle: enum CHECKs, foreign keys, upserts, batch() atomicity, no transactions
 │       ├── community.db.spec.ts # community table constraints (kept out of db/schema/: drizzle-kit loads every .ts there)
 │       └── fixtures/           # 50-row bechdel.csv + unconsenting.csv for the seeder smoke test
 │
@@ -115,14 +117,14 @@ MIDB/
 │   └── lib/
 │       ├── server/             # SvelteKit-ENFORCED server-only boundary (no client import)
 │       │   ├── env.ts          # the one typed accessor for secrets and bindings over `cloudflare:workers` (`env`: `Cloudflare.Env` + `Secrets`); read per request, never at module load (+ __tests__/)
-│       │   ├── db.ts           # the app's `db`: lazy createDb on first use from the dynamic `DB_CONNECTION` (`$app/env/private`)
-│       │   │                   #   (TEST_DB_CONNECTION under Vitest); throws if unset, no localhost fallback; closeDb() (+ __tests__/)
-│       │   ├── data/           # Postgres / Drizzle access, all via #lib/server/db (+ __tests__/, incl. *.db.spec.ts)
+│       │   ├── db.ts           # the app's `db`: lazy createDb over `env.DB` (`#lib/server/env.ts`), rebuilt only when the binding changes;
+│       │   │                   #   throws if there is no binding; bindDb(d1) overrides it for tests and scripts (+ __tests__/)
+│       │   ├── data/           # D1 / Drizzle access, all via #lib/server/db (+ __tests__/, incl. *.db.spec.ts)
 │       │   │   ├── title-queries.ts  # identity resolution: getTitleRow(kind, ref) (read-only) + getOrCreateTitleRow (write path, unused by GETs)
 │       │   │   ├── sources.ts        # seeded metric reads: getBechdel, getUmEntry (title_um → um_source) + toUmEntry mapper
 │       │   │   ├── um-candidates.ts  # UM disambiguation algo: getUnconsentingCandidates (maps rows with toUmEntry)
-│       │   │   ├── catalogue.ts      # landing data: getCatalogueCounts, getMostVotedRatedFilms, getRandomRatedFilms (types in media/types/catalogue.ts)
-│       │   │   ├── pg-errors.ts      # isUniqueViolation (walks DrizzleQueryError's cause chain for 23505)
+│       │   │   ├── catalogue.ts      # landing data: getCatalogueCounts, getPopularRatedFilms, getRandomRatedFilms (types in media/types/catalogue.ts)
+│       │   │   ├── db-errors.ts      # isUniqueViolation (matches `UNIQUE constraint failed` on the DrizzleQueryError's cause message)
 │       │   │   └── user-queries.ts   # read-first JIT provision + toPublicUser + profile update (validated) + username availability + history queries (comments, community ratings)
 │       │   ├── auth/           # (+ __tests__/)
 │       │   │   ├── hanko.ts          # module-level JWKS, verifyClaims(event), emailFromClaims(payload)
@@ -187,7 +189,7 @@ MIDB/
 ├── wrangler.jsonc              # Worker config, no secrets: `main`/`assets` for adapter-cloudflare, Workers Caching, `nodejs_compat`, the D1 `DB` binding, the `RL_*` rate-limit bindings, `vars`, and `env.preview`. Its `REPLACE-WITH-…` values are account-bound placeholders
 ├── worker-configuration.d.ts   # generated by `pnpm cf:types` (`Cloudflare.Env`); rerun it after editing wrangler.jsonc; tsconfig.json includes it
 ├── static/                     # served as-is: favicon.png, fonts/ (Inter Tight 600 and 700 woff2 in three subsets, `OFL.txt`; `@font-face` in src/app.css, the latin files preloaded in src/app.html)
-├── vite.config.ts              # tailwindcss() + sveltekit({ adapter-cloudflare, vitePreprocess({ style:false }) }) + svelteTesting() + Vitest projects `unit` (jsdom) and `db` (node, real Postgres), `test.alias` of `cloudflare:workers` to the stub. No `define`, no build-time secrets
+├── vite.config.ts              # tailwindcss() + sveltekit({ adapter-cloudflare, vitePreprocess({ style:false }) }) + svelteTesting() + Vitest projects `unit` (jsdom) and `db` (node, a local D1, its own config without the Svelte plugins), `test.alias` of `cloudflare:workers` to the stub. No `define`, no build-time secrets
 ├── README.md                   # short local setup (compose + seeds), points at AGENTS.md, the rules and this doc
 ├── .env.example                # committed template: every var with check/build-safe placeholders
 └── .env                        # local copy of .env.example (git-ignored), read by `vite dev` through Wrangler: DB_CONNECTION, TEST_DB_CONNECTION, the PUBLIC_* values, and the secrets (all empty in the template)
@@ -200,11 +202,11 @@ MIDB/
 
 ### File-organisation conventions
 
-- **`#lib/server/**` is the server-only boundary.** SvelteKit fails the build if any client-reachable code imports from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`, …) come from `#lib/server/env.ts`and DB access lives here only.`data/`= Postgres;`integrations/` = external HTTP clients.
+- **`#lib/server/**` is the server-only boundary.** SvelteKit fails the build if any client-reachable code imports from it. Secrets (`TMDB_API_TOKEN`, `DDD_API_KEY`, …) come from `#lib/server/env.ts`and DB access lives here only.`data/`= D1;`integrations/` = external HTTP clients.
 - **Components for types, never routes.** A component that needs a `Movie`/`Series`/`TriggerTag` type imports it from `#lib/media/types/*` — `media/types/ddd.ts` re-exports DDD types from `integrations/ddd-types.ts` (not `ddd.ts`) as **types only** (erased at build, so no server runtime leaks into the client bundle). Components no longer reach back into `routes/.../`.
 - **`ui/` vs domain.** Title-specific UI lives in domain folders (`movies/*`, `landing/`, `search/*`, …). `ui/` holds generic primitives with at least two real consumers: today only `ui/badge.svelte`.
 - **Imports use `#lib` and `#db`**, the subpath imports in package.json (`#lib/*` → `src/lib/*`, `#db/*` → `db/*`), with explicit extensions (`#lib/media/utils/format.ts`, `#lib/components/ui/badge.svelte`); relative `./` is reserved for same-folder siblings. The Node-run scripts under `db/` and `scripts/` (and what they import: `db/client.ts`, `db/schema/*`, `db/lib/*`) use relative `.ts` imports, so they stay free of the app's imports map, and `erasableSyntaxOnly` keeps their syntax strippable.
-- **Tests are co-located in a `__tests__/` subfolder** at each location (the `unit` project globs `src/**/*.{spec,test}.{js,ts}` and `db/**/*.spec.ts` at any depth). Specs that touch Postgres are named `*.db.spec.ts` and run only in the `db` project (`pnpm test:db`); the `unit` project excludes them and mocks `#lib/server/db`. Playwright e2e specs live in top-level `e2e-tests/`.
+- **Tests are co-located in a `__tests__/` subfolder** at each location (the `unit` project globs `src/**/*.{spec,test}.{js,ts}` and `db/**/*.spec.ts` at any depth). Specs that touch the database are named `*.db.spec.ts` and run only in the `db` project (`pnpm test:db`); the `unit` project excludes them and mocks `#lib/server/db`. Playwright e2e specs live in top-level `e2e-tests/`.
 
 ---
 
@@ -277,64 +279,54 @@ Users are identified by the Hanko subject (`sub` claim in the JWT, a UUID stored
 
 ## Database schema
 
-The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `community.ts`, with shared column sets in `columns.ts`. The barrel `db/schema/index.ts` re-exports every file, and `createDb` (`db/client.ts`) and `db/test/reset.ts` rely on it.
+The active schema spans `db/schema/titles.ts`, `sources.ts`, `auth.ts` and `community.ts`, with shared column sets in `columns.ts`. The barrel `db/schema/index.ts` re-exports every file, and `createDb` (`db/client.ts`) and `db/test/setup.ts` rely on it.
 
-> The old user-evaluation model (`metrics`, `metric_options`, `evaluations`, `evaluation_results`) is gone: `db/schema/metric.ts` has been **deleted** and the migrations were **squashed** (2026-06-05), so the current `0000` baseline simply never creates those tables. (Historically they were dropped in the old migration `0006`, which no longer exists on disk.)
-
-**Conventions (remediation PR 4):** every timestamp is `timestamptz`; tables with `created_at`/`updated_at` use `timestamps()` from `columns.ts`, whose `$onUpdate` bumps `updated_at` on every Drizzle update (pin it with ``updatedAt: sql`${col}` `` when a write must not count as an edit). The nine UM flag columns are defined once in `umFlagColumns()`. There are no `0` sentinels: unknown years and missing ids are `NULL`.
+**Conventions:** every timestamp is an integer of epoch milliseconds (`timestamp_ms`); tables with `created_at`/`updated_at` use `timestamps()` from `columns.ts`, which fills both on insert and whose `$onUpdate` bumps `updated_at` on every Drizzle update (pin it with ``updatedAt: sql`${col}` `` when a write must not count as an edit). Write-once tables use `createdAt()`. Ids are `text` filled by `crypto.randomUUID()`. A column with a fixed set of values is `text({ enum })` plus a CHECK, and the tuple is exported (`userRole`, `titleKind`, `commentStatus`, `syncSource`). Booleans are `integer({ mode: 'boolean' })`. The nine UM flag columns are defined once in `umFlagColumns()`. There are no `0` sentinels: unknown years and missing ids are `NULL`. D1 allows 100 bound parameters per statement, so every bulk write goes through `chunkForD1` (`db/lib/chunkForD1.ts`), and D1 has no `BEGIN`: `db.transaction()` fails, and `db.batch()` is the atomic unit.
 
 ### Tables (active)
 
-**`titles`** (`titles.ts`) — the spine for movies **and** TV; seeded from the Bechdel CSV, ids backfilled from TMDB.
+**`titles`** (`titles.ts`) — the spine for movies **and** TV; synced from the Bechdel Test, ids backfilled from TMDB.
 
-- `id` uuid PK, `kind` enum `title_kind` (`movie`|`tv`) NOT NULL, `tmdb_id` integer nullable, `imdb_id` varchar nullable **unique**, `title` varchar(255), `clean_title` varchar(255) (output of `normalizeTitle()`, the UM match key), `year` integer nullable (**NULL = unknown**), `created_at`, `updated_at`.
-- **Unique index `titles_kind_tmdb_idx` on `(kind, tmdb_id)`**: the natural key, because TMDB movie and TV ids share a numeric space (movie 1399 and TV 1399 coexist). Postgres treats NULLs as distinct, so seeded rows without a TMDB id coexist. IMDb ids are globally unique across movies and series, so `imdb_id` has a plain unique.
+- `id` text PK (UUID), `kind` text `movie`|`tv` NOT NULL (CHECK), `tmdb_id` integer nullable, `imdb_id` text nullable **unique**, `title` text, `clean_title` text (output of `normalizeTitle()`, the UM match key), `year` integer nullable (**NULL = unknown**), `popularity` real nullable (TMDB's popularity score, NULL until a sync has seen the title), `popularity_at` timestamp nullable, `created_at`, `updated_at`.
+- **Unique index `titles_kind_tmdb_idx` on `(kind, tmdb_id)`**: the natural key, because TMDB movie and TV ids share a numeric space (movie 1399 and TV 1399 coexist). SQLite treats NULLs as distinct in a unique index, so rows without a TMDB id coexist. IMDb ids are globally unique across movies and series, so `imdb_id` has a plain unique. **Index `titles_popularity_idx` on `popularity`** serves the landing's ranking (`getPopularRatedFilms`; SQLite sorts NULLs last in descending order).
 
 **`title_bechdel`** (`sources.ts`) — seeded, **1:1 with a title**.
 
-- `title_id` uuid **PK** → `titles.id` (cascade), `bechdel_id` integer, `rating` smallint (**CHECK 0..3**), `num_votes` integer (**IMDb's vote count** from the source CSV's `numVotes` column, not BechdelTest.com votes: used only to order the landing page's popular films, never shown as a Bechdel figure), `created_at`.
+- `title_id` text **PK** → `titles.id` (cascade), `bechdel_id` integer, `rating` integer (**CHECK 0..3**), `created_at`.
 
-**`um_source`** (`sources.ts`) — spine-independent **UM catalogue**; every movie and TV row from the UM CSV.
+**`um_source`** (`sources.ts`) — spine-independent **UM catalogue**; every movie and TV row from the UM source.
 
-- `um_id` integer **PK**, `clean_name` varchar, `clean_title_key` varchar (year-stripped normalized key, the lookup index), `year` integer nullable (NULL = unknown), the 9 flag columns (`umFlagColumns()`), `comment` text.
+- `um_id` integer **PK**, `clean_name` text, `clean_title_key` text (year-stripped normalized key, the lookup index), `year` integer nullable (NULL = unknown), the 9 flag columns (`umFlagColumns()`), `comment` text, `source_updated_at` timestamp nullable (the feed's own `updatedAt`).
 - **B-tree index `um_source_clean_title_key_idx` on `clean_title_key`** — `getUnconsentingCandidates` queries this column on every media page with no seeded UM binding (the common case); without the index that's a full table scan.
 - Populated by `db:seed:um` for **all** UM movie/TV rows regardless of whether a title matches. Enables runtime candidate lookup without re-parsing the CSV.
 
 **`title_um`** (`sources.ts`) — seeded, **1:1 with a title**; the resolved UM binding, **by reference only**.
 
-- `title_id` uuid **PK** → `titles.id` (cascade), `um_id` integer → `um_source.um_id`, `created_at`.
+- `title_id` text **PK** → `titles.id` (cascade), `um_id` integer → `um_source.um_id`, `created_at`.
 - The flags are read through the join (`getUmEntry`), so a UM reseed is reflected immediately and there is one row shape (`UmEntry`). Matched by `clean_title` at seed time using a year-aware policy (see Seeding). User choices are never persisted (see UM Disambiguation below).
 
-**`user`** (`auth.ts`) — Hanko-sub PK. `id` text (Hanko `sub`), `email` nullable, `role` enum `user_role` default `user`, `username` varchar(32) nullable, `avatar_key` varchar(48) nullable, `timestamps()`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide). Index on `role`.
+**`source_sync`** (`sources.ts`) — one row per synced source (`bechdel`, `um`, `popularity`): `source` text PK (CHECK), `last_success_at` timestamp, `rows_changed` integer. Written by the sync scripts; nothing reads it yet.
+
+**`user`** (`auth.ts`) — Hanko-sub PK. `id` text (Hanko `sub`), `email` nullable, `role` text `user`|`moderator`|`administrator` default `user` (CHECK), `username` text(32) nullable, `avatar_key` text(48) nullable, `timestamps()`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide). Index on `role`.
 
 **Community tables** (`community.ts`) — empty; one table per metric shape so each can hold what it names. No write path yet (see Known gaps).
 
-- **`community_bechdel_ratings`**: `user_id` → `user.id` (cascade), `title_id` → `titles.id` (cascade), `rating` smallint (**CHECK 0..3**, `cbr_rating_range`), `timestamps()`. PK `(user_id, title_id)` (resubmit = upsert), index `cbr_title_idx (title_id)`.
-- **`community_um_reports`**: `user_id`, `title_id` (both cascade), the 9 flag columns as explicit booleans (`umFlagColumns()`, same shape as `um_source`, aggregatable as `avg(col::int)`), `timestamps()`. PK `(user_id, title_id)`, index `cur_title_idx (title_id)`.
-- **`community_ddd_votes`**: `id` uuid PK, `user_id`, `title_id` (both cascade), `topic_id` integer, `season`/`episode` integer nullable (NULL = whole title), `yes` boolean, `timestamps()`. Constraint `cdv_vote_uniq UNIQUE NULLS NOT DISTINCT (user_id, title_id, topic_id, season, episode)` (PG ≥ 15; compose and CI run 16), index `cdv_title_topic_idx (title_id, topic_id)`.
-- **`comments`**: `id` uuid PK, `title_id` → `titles.id` (cascade), `user_id` → `user.id` (cascade), `body` text (**CHECK `char_length(body) BETWEEN 1 AND 5000`**), `status` enum `comment_status` (`visible`|`hidden`|`deleted`, default `visible`), `timestamps()`. Indexes `(title_id, created_at)` for the title thread, `(user_id, created_at)` for history. No `parent_id` yet: threads are an additive migration when designed.
+- **`community_bechdel_ratings`**: `user_id` → `user.id` (cascade), `title_id` → `titles.id` (cascade), `rating` integer (**CHECK 0..3**, `cbr_rating_range`), `timestamps()`. PK `(user_id, title_id)` (resubmit = upsert), index `cbr_title_idx (title_id)`.
+- **`community_um_reports`**: `user_id`, `title_id` (both cascade), the 9 flag columns as explicit booleans (`umFlagColumns()`, same shape as `um_source`, aggregatable as `avg(col)`), `timestamps()`. PK `(user_id, title_id)`, index `cur_title_idx (title_id)`.
+- **`community_ddd_votes`**: `id` text PK, `user_id`, `title_id` (both cascade), `topic_id` integer, `season`/`episode` integer nullable (NULL = whole title), `yes` boolean, `timestamps()`. Unique index `cdv_vote_uniq` on `(user_id, title_id, topic_id, season-or--1, episode-or--1)`, so a NULL season or episode counts as equal to another NULL (the expression is a `CASE`, because drizzle-kit splits an expression on commas, so `coalesce(x, -1)` is not emitted correctly), index `cdv_title_topic_idx (title_id, topic_id)`.
+- **`comments`**: `id` text PK, `title_id` → `titles.id` (cascade), `user_id` → `user.id` (cascade), `body` text (**CHECK `length(body) BETWEEN 1 AND 5000`**), `status` text `visible`|`hidden`|`deleted` (default `visible`, CHECK), `timestamps()`. Indexes `(title_id, created_at)` for the title thread, `(user_id, created_at)` for history. No `parent_id` yet: threads are an additive migration when designed.
 
 ### Migrations
 
-**Squashed to a single baseline (2026-06-05).** The prior chain (`0000`–`0008`) had corrupted drizzle metadata — `meta/` was missing the `0007`/`0008` snapshots (a legacy of hand-merged duplicate `0002_*` files), which made `db:generate` emit broken diffs (re-creating `um_source`, dropping already-handled tables). Since the dev DB is disposable, the entire `migrations/` folder (SQL + meta) was deleted and regenerated into one clean baseline:
+One SQLite baseline, `db/migrations/0000_init.sql` with its snapshot and journal, generated by drizzle-kit (`pnpm db:generate`, `dialect: 'sqlite'`, `drizzle.config.ts`). While the schema is still changing the baseline is regenerated (delete `db/migrations`, then generate) instead of stacked; once a database holds data, a change is a new migration, fixed forward and never rolled back by hand. Commit the generated SQL, snapshot and journal in the same change as the schema change; never hand-write or hand-edit a snapshot JSON. CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "pnpm exec drizzle-kit generate" /dev/null` and answer the prompts.
 
-- **`0000_jazzy_tag`** — the full current schema: `movies`, `movie_bechdel`, `um_source` (incl. `um_source_clean_title_key_idx`), `movie_unconsenting`, `movie_trigger_tags`, `user`.
-
-- **`0001_swift_wolverine`** (generated 2026-10-24, remediation PR 3) — `user_role` + `metric_kind` enums; `user` rewritten in place (every new column answered _create_, so the Auth.js `name`/`emailVerified`/`image` columns are dropped, `email` becomes nullable, `role`/`username`/`avatar_key`/`created_at`/`updated_at` added, `lower(username)` unique idx + `role` idx); `movie_trigger_tags.created_by` FK re-created with `ON DELETE SET NULL`; `community_metric_submissions` + `comments` with all indexes. Auth.js-era `user` rows are not deleted (drizzle-kit prompts per column, not per table); their ids are not Hanko subs, so nothing ever matches them.
-
-- **`0002_titles_spine`** (generated 2026-10-24, remediation PR 4) — answers: _rename_ `movies`→`titles`, `movie_bechdel`→`title_bechdel`, `movie_id`→`title_id` (in `comments` and `title_bechdel`); _create_ for everything else (`title_kind`/`comment_status` enums, `title_um`, the three community tables, `comments.status`). Drops `community_metric_submissions`, `movie_trigger_tags`, `movie_unconsenting` and the `metric_kind` enum; drops `movies.tmdb_id`'s unique in favour of `titles_kind_tmdb_idx`; every timestamp becomes `timestamptz`. **Hand-edited SQL** (snapshot untouched): `USING … AT TIME ZONE 'UTC'` on each `timestamp → timestamptz`; `kind` added with a temporary `DEFAULT 'movie'` that the data block drops; a data block (unpack `tmdb-tv:<id>`/`tmdb:<id>` into `kind`/`tmdb_id` with `imdb_id` NULL, `year <= 0` → NULL in `titles` and `um_source`, copy `movie_unconsenting` bindings into `title_um`) placed after the renames and column changes and before `DROP TABLE movie_unconsenting` and the new unique/check constraints. Not reversible by revert: roll back by restoring a `pg_dump`. drizzle-kit 0.31.10/0.31.11 crash when one `generate` both renames a table and alters its columns (`preparePgAlterColumns` reads the old snapshot under the new table name); the snapshot was generated with that one lookup made optional-chained in the local `node_modules` (it only decides whether the old column type was an enum, and none were), then the stock package was reinstalled and the drift check confirmed clean.
-
-Future schema changes append `0003`, `0004`, … and **commit the generated SQL, snapshot and journal in the same PR as the schema change.** CI's `migrations` job runs `drizzle-kit generate --name drift_check` and fails if `db/migrations` changes. Never hand-write or hand-edit a snapshot JSON. `db:generate` prompts (rename vs create) need a TTY; without one, run it as `script -qec "pnpm exec drizzle-kit generate" /dev/null` and answer the prompts.
-
-**Boot does NOT auto-migrate** (commit `742c612`). Run `pnpm db:migrate` explicitly after `pnpm db:generate`. A fresh DB migrated from zero matches the schema; the CI `db` job proves it on every run.
-
-**Deploys do not migrate yet.** `db/scripts/migrateOnDeploy.ts` applies every pending migration to `DB_CONNECTION` through `migrateDatabase` when `VERCEL_ENV=production` and skips otherwise; no deploy runs it, and the live plan (Phase 2) removes it. Drizzle's migrator runs all pending migrations in one transaction, so a failing statement leaves the database as it was. A database created without the migrator (no `drizzle.__drizzle_migrations` rows) fails on `relation "user" already exists`; record the migrations it already has by inserting their `hash` (sha256 of the `.sql` file) and `created_at` (the journal's `when`) into `drizzle.__drizzle_migrations`. The script reads `DB_CONNECTION` from its own process; the app bundle never contains it.
+Wrangler applies the files (`wrangler d1 migrations apply`, `migrations_dir` in `wrangler.jsonc`): `pnpm db:migrate:local` for the local database in `.wrangler/state` and `pnpm db:migrate:remote` for the deployed one. Each file is applied atomically and a failure stops the run. D1 keeps foreign keys on and ignores `PRAGMA foreign_keys = OFF`, so a migration that rebuilds a table sets `PRAGMA defer_foreign_keys = on`. **Boot does not migrate.** The `drizzle.config.ts` D1 HTTP credentials (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN`) are read only when all three are set.
 
 ---
 
 ## Seeding
 
-Raw CSVs in `db/seeds/sources/`. Scripts run on Node (type stripping) and use `csv-parse` for streaming. Each seeder exports its core as a function taking `(db, csvPath)` (the DB smoke test calls it with the test client and the 50-row fixtures in `db/test/fixtures/`); the Node entry point (`if (isMain(import.meta.url))`) imports `db` + `closeDb` from `db/scripts/lib/db.ts` (built from `process.env.DB_CONNECTION`, which `node --env-file-if-exists=.env` loads from `.env`; throws if unset) and closes the pool when done. All upserts are idempotent (`onConflictDoUpdate`).
+Raw CSVs in `db/seeds/sources/`. Scripts run on Node (type stripping) and use `csv-parse` for streaming. Each seeder exports its core as a function taking `(db, csvPath)` (the DB smoke test calls it with the test client and the 50-row fixtures in `db/test/fixtures/`); the Node entry point (`if (isMain(import.meta.url))`) opens the local D1 with `openScriptDb()` from `db/scripts/lib/db.ts` (wrangler's `getPlatformProxy`) and closes it when done. All upserts are idempotent (`onConflictDoUpdate`), and every bulk write is split with `chunkForD1` into statements of at most 100 bound parameters, run one after another: a run that stops part way is finished by running it again. The CSVs carry no popularity, so seeding leaves `titles.popularity` NULL.
 
 1. **`db:seed:movies`** (`seedMovies.ts`) — stream the **Bechdel CSV** → upsert `titles` (`kind: 'movie'`, keyed by `imdb_id`) + `title_bechdel`. Source of `imdb_id`, `title`, `year` (non-positive → NULL), `clean_title`.
 2. **`db:seed:um`** (`seedUnconsenting.ts`) — stream the **UM CSV**:
@@ -406,8 +398,8 @@ Both `+page.svelte` files keep only markup and their own sections: the Bechdel c
 **`#lib/server/data/catalogue.ts`** — landing page data (seeded tables only, read-only, tested in `catalogue.db.spec.ts`):
 
 - `getCatalogueCounts()` — row counts of `title_bechdel` and `um_source` for the Bechdel and Unconsenting Media source cards on the landing; cached (`catalogue:counts`, TTL in `catalogue.ts`).
-- `getMostVotedRatedFilms(limit, { requireUmEntry })` — movies with a Bechdel rating ordered by `num_votes` (IMDb votes), with the bound UM entry's concern count and its UM-only safety tier (`scoreSafety(entry, empty DDD)`). `requireUmEntry` inner-joins the UM binding so only films with an entry come back; `requireTmdbId` drops films without a TMDB id.
-- `getRandomRatedFilms(count, pool)` — `count` films sampled at random (partial Fisher–Yates) from the `pool` (default 100) most-voted films with a UM entry and a TMDB id; returns `LinkedRatedFilm` (`tmdbId: number`). The landing hero calls it per request; the ranked pool is cached (`catalogue:hero-pool:<pool>`, TTL in `catalogue.ts`) and the sampling runs on every call, so the films stay random while the query runs once per TTL per isolate or data centre.
+- `getPopularRatedFilms(limit, { requireUmEntry, requireTmdbId })` — movies with a Bechdel rating ordered by `titles.popularity` (TMDB's score, NULLs last), with the bound UM entry's concern count and its UM-only safety tier (`scoreSafety(entry, empty DDD)`). `requireUmEntry` inner-joins the UM binding so only films with an entry come back; `requireTmdbId` drops films without a TMDB id.
+- `getRandomRatedFilms(count, pool)` — `count` films sampled at random (partial Fisher–Yates) from the `pool` (default 100) most popular films with a UM entry and a TMDB id; returns `LinkedRatedFilm` (`tmdbId: number`). The landing hero calls it per request; the ranked pool is cached (`catalogue:hero-pool:v2:<pool>`, TTL in `catalogue.ts`) and the sampling runs on every call, so the films stay random while the query runs once per TTL per isolate or data centre.
 
 **`#lib/server/data/sources.ts`** — seeded metric reads:
 
@@ -520,7 +512,7 @@ A single cache fronts every external call so repeat detail-page visits skip the 
   - **A per-isolate memory level** (`memory.ts`) in front of it: a bounded LRU with TTLs that answers repeats without a Cache API call, and takes only the TTL an entry has left when it is filled from the Cache API.
   - **Memory alone** where `caches` is missing (unit tests, plain Node).
 - **Counters.** `incr(key, ttlMs)` adds 1 to a fixed-window counter and returns the count; the window starts on the first hit and the count starts over when it ends. Counters always live in the memory level (a separate `Map`, oldest window dropped first), so counters and cached values never evict each other; the Cache API has no atomic increment. They are the fallback of `rateLimit` where a bucket has no binding.
-- **Keys** are namespaced: `tmdb:movie:v2:<id>`, `tmdb:series:v2:<id>`; `tmdb:search:v1:<lowercased query>`; `ddd:imdb:<id>`, `ddd:tmdb:<id>`; `catalogue:counts`, `catalogue:hero-pool:<pool>` (the landing's database queries); counters `rl:<bucket>:ip:<address>` / `rl:<bucket>:user:<id>`. The TTLs are in `integrations/tmdb/client.ts`, `integrations/ddd.ts` and `data/catalogue.ts`. Cache API entries outlive a deploy, so a change to a cached value's shape bumps its key's version (`v2` in the TMDB keys).
+- **Keys** are namespaced: `tmdb:movie:v2:<id>`, `tmdb:series:v2:<id>`; `tmdb:search:v1:<lowercased query>`; `ddd:imdb:<id>`, `ddd:tmdb:<id>`; `catalogue:counts`, `catalogue:hero-pool:v2:<pool>` (the landing's database queries); counters `rl:<bucket>:ip:<address>` / `rl:<bucket>:user:<id>`. The TTLs are in `integrations/tmdb/client.ts`, `integrations/ddd.ts` and `data/catalogue.ts`. Cache API entries outlive a deploy, so a change to a cached value's shape bumps its key's version (`v2` in the TMDB keys).
 
 ---
 
@@ -631,10 +623,10 @@ Runs on every PR, on pushes to `main`, and on manual dispatch. Every job but `co
 Three layers, plus Storybook for component development. Specs live in a `__tests__/` folder next to the code they cover; Playwright specs in top-level `e2e-tests/`.
 
 - **`unit`** (Vitest project, `jsdom`; `pnpm test:unit`): `src/**/*.{spec,test}.{js,ts}`, `db/**/*.spec.ts` and `scripts/**/*.spec.ts`, minus `*.db.spec.ts`. Needs no database, `.env` or secrets: specs mock `$app/env/*` and `#lib/server/db`, set secrets and bindings on the `cloudflare:workers` stub (`src/test/cloudflare-workers.stub.ts`), the TMDB/DDD `fetch` and `$app/*` as needed. Components render through `@testing-library/svelte` (`svelteTesting()` in `vite.config.ts`) with `@testing-library/jest-dom` matchers. Rune classes (`TitleView`, `EpisodeFilter`, `Session`, `MovieSearchState`, `DebouncedQuery`) are tested directly, with fake timers where they debounce. Endpoints are called as plain functions with a hand-built `RequestEvent` (`src/__tests__/api-*.spec.ts`).
-- **`db`** (Vitest project, `node`; `pnpm test:db`): every `*.db.spec.ts` against a real Postgres at `TEST_DB_CONNECTION`. `db/test/global-setup.ts` refuses to run if it equals `DB_CONNECTION`, wipes the database and migrates it from zero once per run (so the job also proves the migration chain); `db/test/reset.ts` truncates every schema table before each test and closes the pool after. Files run serially (`fileParallelism: false`). Covers title resolution, sources, UM candidates, user queries, community-table constraints and a seeder smoke test on 50-row fixtures (`db/test/fixtures/`). Locally: `docker compose up -d db`, then `createdb midb_test` once (see _Local run sequence_).
+- **`db`** (Vitest project, `node`; `pnpm test:db`): every `*.db.spec.ts` against a local D1 (Miniflare, through wrangler), with no Postgres and no Docker. The project has its own config in `vite.config.ts` and does not extend the root one: the Svelte plugins add the `browser` export condition, which makes Miniflare load the browser build of `ws`. `db/test/global-setup.ts` wipes `.wrangler/test-state` and applies `db/migrations` to it with `wrangler d1 migrations apply --local` once per run (so the job also proves the baseline applies from zero); `db/test/setup.ts` opens that state with `getPlatformProxy`, binds the app's `db` to it (`bindDb`), deletes every table's rows in foreign-key order before each test and disposes the proxy after. `getPlatformProxy` takes the state root itself while the wrangler CLI adds a `v3` folder, so the setup passes `.wrangler/test-state/v3`. Files run serially (`fileParallelism: false`). "Never writes" checks use `db/test/writes.ts`, whose triggers log every write to a test-only table. Covers title resolution, sources, UM candidates, user queries, community-table constraints, the D1 behaviours the app relies on (`db/test/d1.db.spec.ts`) and a seeder smoke test on 50-row fixtures (`db/test/fixtures/`).
 - **`e2e`** (Playwright, `pnpm test:integration`): `playwright.config.ts` runs `pnpm preview`, which serves the built Worker with `wrangler dev` on 4173 (Node's `vite preview` cannot load the built Worker: it imports `cloudflare:workers`). `landing.spec.ts` (hero, contribute link, theme toggle) and `navbarSearchOverflow.spec.ts` (mobile dropdown stays in the viewport, `/api/search` mocked with `page.route`). The CI job is gated on `E2E_ENABLED` because it needs real TMDB/DDD secrets.
 - **Storybook** (`pnpm storybook`, `build-storybook`): `*.stories.svelte` with `@storybook/addon-svelte-csf`. Only the poster `image` story remains after the redesign deleted the unused primitives. Not run in CI.
-- **Rule of thumb** (`.claude/rules/code-standards.md`, Testing): anything that touches Postgres gets a `*.db.spec.ts`; everything else stays in `unit` and mocks the DB. Moving a function means moving its spec's import too.
+- **Rule of thumb** (`.claude/rules/code-standards.md`, Testing): anything that touches the database gets a `*.db.spec.ts`; everything else stays in `unit` and mocks the DB. Moving a function means moving its spec's import too.
 
 ### Verification baseline
 

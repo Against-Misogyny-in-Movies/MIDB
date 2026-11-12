@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { users } from '../schema/auth.ts';
-import { db, closeDb } from './lib/db.ts';
+import { openScriptDb } from './lib/db.ts';
 
 const email = process.argv[2];
 if (!email) {
@@ -8,6 +8,7 @@ if (!email) {
 	process.exit(1);
 }
 
+const { db, close } = await openScriptDb();
 try {
 	const result = await db
 		.update(users)
@@ -21,5 +22,5 @@ try {
 		console.log(`Promoted ${result[0].email} to administrator.`);
 	}
 } finally {
-	await closeDb();
+	await close();
 }

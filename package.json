@@ -25,7 +25,8 @@
 		"build-storybook": "storybook build",
 		"cf:types": "wrangler types --include-runtime=false --strict-vars=false --env-file /dev/null",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "node --env-file-if-exists=.env db/scripts/migrate.ts",
+		"db:migrate:local": "wrangler d1 migrations apply DB --local",
+		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
 		"db:seed:movies": "node --env-file-if-exists=.env db/scripts/seedMovies.ts",
 		"db:seed:um": "node --env-file-if-exists=.env db/scripts/seedUnconsenting.ts",
 		"db:backfill:tmdb": "node --env-file-if-exists=.env db/scripts/backfillTmdb.ts",
@@ -78,7 +79,6 @@
 		"csv-parse": "^6.2.1",
 		"drizzle-orm": "^0.45.2",
 		"jose": "^6.2.3",
-		"postgres": "^3.4.3",
 		"remixicon": "^4.9.1"
 	},
 	"pnpm": {

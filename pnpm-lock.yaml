@@ -52,9 +52,6 @@ importers:
       jose:
         specifier: 6.2.3
         version: 6.2.3
-      postgres:
-        specifier: ^3.4.3
-        version: 3.4.9
       remixicon:
         specifier: ^4.9.1
         version: 4.9.1
@@ -5481,7 +5478,8 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  postgres@3.4.9: {}
+  postgres@3.4.9:
+    optional: true
 
   preact@10.29.8: {}
 

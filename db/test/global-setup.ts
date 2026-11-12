@@ -1,27 +1,37 @@
-import postgres from 'postgres';
-import { loadEnv } from 'vite';
-import { migrateDatabase } from '../scripts/migrate.ts';
+import { execFileSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
+import { TEST_STATE_PATH } from './state.ts';
 
 /**
- * Vitest globalSetup for the `db` project: wipe TEST_DB_CONNECTION and migrate it from zero,
- * so every run also proves the migration chain applies to an empty database.
+ * Vitest globalSetup for the `db` project: wipe the local D1 test state and apply the
+ * migrations to it with wrangler, so every run also proves the baseline applies from zero.
+ * The persisted state is Miniflare's own; `setup.ts` opens it for each spec file.
  */
-export default async function setup() {
-	const env = loadEnv('test', process.cwd(), '');
-	const url = env.TEST_DB_CONNECTION;
-	if (!url) throw new Error('TEST_DB_CONNECTION is not set: the db tests need their own database.');
-	if (url === env.DB_CONNECTION) {
-		throw new Error('TEST_DB_CONNECTION must not equal DB_CONNECTION: the db tests wipe it.');
-	}
-
-	const sql = postgres(url, { max: 1, connect_timeout: 10, onnotice: () => {} });
+export default function setup() {
+	rmSync(TEST_STATE_PATH, { recursive: true, force: true });
 	try {
-		await sql`DROP SCHEMA IF EXISTS drizzle CASCADE`;
-		await sql`DROP SCHEMA IF EXISTS public CASCADE`;
-		await sql`CREATE SCHEMA public`;
-	} finally {
-		await sql.end();
+		execFileSync(
+			'pnpm',
+			[
+				'exec',
+				'wrangler',
+				'd1',
+				'migrations',
+				'apply',
+				'DB',
+				'--local',
+				'--persist-to',
+				TEST_STATE_PATH
+			],
+			{ stdio: 'pipe', encoding: 'utf8' }
+		);
+	} catch (e) {
+		const { stdout, stderr } = e as { stdout?: string; stderr?: string };
+		throw new Error(
+			`Applying the migrations to the local D1 failed.\n${stdout ?? ''}${stderr ?? ''}`,
+			{
+				cause: e
+			}
+		);
 	}
-
-	await migrateDatabase(url);
 }

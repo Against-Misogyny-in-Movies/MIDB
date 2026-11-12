@@ -184,7 +184,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Migrate database
-        run: pnpm db:migrate
+        run: pnpm db:migrate:local
 
       # `pnpm preview` (started by playwright.config.ts) builds the app and runs the Worker with
       # `wrangler dev`, which reads the Worker's secrets and DB_CONNECTION from .dev.vars, not from

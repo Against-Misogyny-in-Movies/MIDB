@@ -6,6 +6,10 @@ import { defineConfig } from 'vitest/config';
 import { svelteTesting } from '@testing-library/svelte/vite';
 import { fileURLToPath } from 'node:url';
 
+const workersStub = fileURLToPath(
+	new URL('./src/test/cloudflare-workers.stub.ts', import.meta.url)
+);
+
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
@@ -23,11 +27,7 @@ export default defineConfig({
 	test: {
 		globals: true,
 		// `cloudflare:workers` exists only in the Workers runtime; specs get a stub.
-		alias: {
-			'cloudflare:workers': fileURLToPath(
-				new URL('./src/test/cloudflare-workers.stub.ts', import.meta.url)
-			)
-		},
+		alias: { 'cloudflare:workers': workersStub },
 		projects: [
 			{
 				extends: true,
@@ -39,15 +39,18 @@ export default defineConfig({
 				}
 			},
 			{
-				// Real Postgres at TEST_DB_CONNECTION, migrated from zero once per run.
-				extends: true,
+				// A local D1 (Miniflare, through wrangler), migrated from zero once per run. It does
+				// not extend the root config: the Svelte plugins add the `browser` export condition,
+				// which makes Miniflare load the browser build of `ws`.
+				resolve: { alias: { 'cloudflare:workers': workersStub } },
 				test: {
 					name: 'db',
+					globals: true,
 					include: ['src/**/*.db.spec.ts', 'db/**/*.db.spec.ts'],
 					environment: 'node',
 					fileParallelism: false,
 					globalSetup: 'db/test/global-setup.ts',
-					setupFiles: ['db/test/reset.ts']
+					setupFiles: ['db/test/setup.ts']
 				}
 			}
 		]

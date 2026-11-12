@@ -1,10 +1,11 @@
 import { createReadStream, createWriteStream } from 'node:fs';
 import { parse } from 'csv-parse';
-import { eq, sql } from 'drizzle-orm';
+import { eq, getTableColumns, sql } from 'drizzle-orm';
 import type { Db } from '../client.ts';
 import { titles } from '../schema/titles.ts';
 import { titleUm, umSource } from '../schema/sources.ts';
 import { normalizeTitle, stripTrailingYear } from '../lib/normalizeTitle.ts';
+import { chunkForD1 } from '../lib/chunkForD1.ts';
 import { checkCsvColumns } from './lib/checkCsvColumns.ts';
 import { isMain } from '../../scripts/lib/is-main.ts';
 
@@ -29,6 +30,9 @@ const REQUIRED_COLUMNS = [
 ];
 const UNMATCHED_REPORT = './db/seeds/sources/unconsenting_unmatched.txt';
 const BATCH_SIZE = 500;
+// A row binds every column of its table, defaults included.
+const SOURCE_COLUMNS = Object.keys(getTableColumns(umSource)).length;
+const BINDING_COLUMNS = Object.keys(getTableColumns(titleUm)).length;
 
 interface UmRow {
 	id: string;
@@ -99,37 +103,42 @@ export async function seedUnconsenting(db: Db, csvPath: string, reportPath = UNM
 	const flushSource = async () => {
 		if (sourceBatch.length === 0) return;
 		const deduped = [...new Map(sourceBatch.map((r) => [r.umId, r])).values()];
-		await db
-			.insert(umSource)
-			.values(deduped)
-			.onConflictDoUpdate({
-				target: umSource.umId,
-				set: {
-					cleanName: sql`excluded.clean_name`,
-					cleanTitleKey: sql`excluded.clean_title_key`,
-					year: sql`excluded.year`,
-					noRape: sql`excluded.no_rape`,
-					rapeMenDisImp: sql`excluded.rape_men_dis_imp`,
-					sexHarOnScrn: sql`excluded.sex_har_on_scrn`,
-					sexAdultTeen: sql`excluded.sex_adult_teen`,
-					childSexAbuse: sql`excluded.child_sex_abuse`,
-					incest: sql`excluded.incest`,
-					attemptedRape: sql`excluded.attempted_rape`,
-					rapeOffScrn: sql`excluded.rape_off_scrn`,
-					rapeOnScreen: sql`excluded.rape_on_screen`,
-					comment: sql`excluded.comment`
-				}
-			});
+		// One statement per chunk: D1 caps a statement at 100 bound parameters.
+		for (const chunk of chunkForD1(deduped, SOURCE_COLUMNS)) {
+			await db
+				.insert(umSource)
+				.values(chunk)
+				.onConflictDoUpdate({
+					target: umSource.umId,
+					set: {
+						cleanName: sql`excluded.clean_name`,
+						cleanTitleKey: sql`excluded.clean_title_key`,
+						year: sql`excluded.year`,
+						noRape: sql`excluded.no_rape`,
+						rapeMenDisImp: sql`excluded.rape_men_dis_imp`,
+						sexHarOnScrn: sql`excluded.sex_har_on_scrn`,
+						sexAdultTeen: sql`excluded.sex_adult_teen`,
+						childSexAbuse: sql`excluded.child_sex_abuse`,
+						incest: sql`excluded.incest`,
+						attemptedRape: sql`excluded.attempted_rape`,
+						rapeOffScrn: sql`excluded.rape_off_scrn`,
+						rapeOnScreen: sql`excluded.rape_on_screen`,
+						comment: sql`excluded.comment`
+					}
+				});
+		}
 		sourceBatch.length = 0;
 	};
 
 	const flushBindings = async () => {
 		if (bindingBatch.length === 0) return;
 		const deduped = [...new Map(bindingBatch.map((r) => [r.titleId, r])).values()];
-		await db
-			.insert(titleUm)
-			.values(deduped)
-			.onConflictDoUpdate({ target: titleUm.titleId, set: { umId: sql`excluded.um_id` } });
+		for (const chunk of chunkForD1(deduped, BINDING_COLUMNS)) {
+			await db
+				.insert(titleUm)
+				.values(chunk)
+				.onConflictDoUpdate({ target: titleUm.titleId, set: { umId: sql`excluded.um_id` } });
+		}
 		bindingBatch.length = 0;
 	};
 
@@ -249,10 +258,11 @@ export async function seedUnconsenting(db: Db, csvPath: string, reportPath = UNM
 }
 
 if (isMain(import.meta.url)) {
-	const { db, closeDb } = await import('./lib/db.ts');
+	const { openScriptDb } = await import('./lib/db.ts');
+	const { db, close } = await openScriptDb();
 	try {
 		await seedUnconsenting(db, CSV_PATH);
 	} finally {
-		await closeDb();
+		await close();
 	}
 }

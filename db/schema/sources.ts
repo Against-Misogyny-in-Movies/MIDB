@@ -1,44 +1,35 @@
-import {
-	pgTable,
-	uuid,
-	varchar,
-	integer,
-	smallint,
-	text,
-	timestamp,
-	check,
-	index
-} from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer, check, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { titles } from './titles.ts';
-import { umFlagColumns } from './columns.ts';
+import { createdAt, umFlagColumns } from './columns.ts';
 
-/** Seeded BechdelTest.com rating, one per title. */
-export const titleBechdel = pgTable(
+/** Synced BechdelTest.com rating, one per title. */
+export const titleBechdel = sqliteTable(
 	'title_bechdel',
 	{
-		titleId: uuid('title_id')
+		titleId: text('title_id')
 			.primaryKey()
 			.references(() => titles.id, { onDelete: 'cascade' }),
 		bechdelId: integer('bechdel_id').notNull(),
-		rating: smallint('rating').notNull(),
-		numVotes: integer('num_votes').notNull(),
-		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+		rating: integer('rating').notNull(),
+		createdAt: createdAt()
 	},
 	() => [check('rating_range', sql`rating >= 0 AND rating <= 3`)]
 );
 
 /** The Unconsenting Media catalogue, independent of the spine. */
-export const umSource = pgTable(
+export const umSource = sqliteTable(
 	'um_source',
 	{
 		umId: integer('um_id').primaryKey(),
-		cleanName: varchar('clean_name').notNull(),
-		cleanTitleKey: varchar('clean_title_key').notNull(),
+		cleanName: text('clean_name').notNull(),
+		cleanTitleKey: text('clean_title_key').notNull(),
 		// null = unknown
 		year: integer('year'),
 		...umFlagColumns(),
-		comment: text('comment')
+		comment: text('comment'),
+		// The feed's own `updatedAt` for the item; null for a row the feed gave no date for.
+		sourceUpdatedAt: integer('source_updated_at', { mode: 'timestamp_ms' })
 	},
 	(t) => [
 		// getUnconsentingCandidates() looks up by cleanTitleKey
@@ -46,13 +37,26 @@ export const umSource = pgTable(
 	]
 );
 
-/** Binding only: a title's UM entry is read through the join, so a reseed shows immediately. */
-export const titleUm = pgTable('title_um', {
-	titleId: uuid('title_id')
+/** Binding only: a title's UM entry is read through the join, so a resync shows immediately. */
+export const titleUm = sqliteTable('title_um', {
+	titleId: text('title_id')
 		.primaryKey()
 		.references(() => titles.id, { onDelete: 'cascade' }),
 	umId: integer('um_id')
 		.notNull()
 		.references(() => umSource.umId),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	createdAt: createdAt()
 });
+
+export const syncSource = ['bechdel', 'um', 'popularity'] as const;
+
+/** When each source last synced successfully, and how many rows that run changed. */
+export const sourceSync = sqliteTable(
+	'source_sync',
+	{
+		source: text('source', { enum: syncSource }).primaryKey(),
+		lastSuccessAt: integer('last_success_at', { mode: 'timestamp_ms' }).notNull(),
+		rowsChanged: integer('rows_changed').notNull()
+	},
+	(t) => [check('source_sync_source_check', sql`${t.source} IN ('bechdel', 'um', 'popularity')`)]
+);

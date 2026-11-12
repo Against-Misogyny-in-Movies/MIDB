@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { sql } from 'drizzle-orm';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { count as countRows } from 'drizzle-orm';
 import { titles } from '#db/schema/titles.ts';
 import { db } from '#lib/server/db.ts';
+import { trackWrites, writes } from '#db/test/writes.ts';
 import { getOrCreateTitleRow, getTitleRow, type TitleRef } from '#lib/server/data/title-queries.ts';
 
 const GOT: TitleRef = {
@@ -19,17 +20,11 @@ async function insertTitle(values: Partial<typeof titles.$inferInsert> = {}) {
 	return row;
 }
 
-async function count(): Promise<number> {
-	const rows = await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM ${titles}`);
-	return rows[0].n;
-}
+beforeAll(() => trackWrites('titles'));
 
-/** Concatenated xmin of every row: changes if any row is written. */
-async function xmins(): Promise<string> {
-	const rows = await db.execute<{ x: string | null }>(
-		sql`SELECT string_agg(xmin::text, ',' ORDER BY id) AS x FROM ${titles}`
-	);
-	return rows[0].x ?? '';
+async function count(): Promise<number> {
+	const [row] = await db.select({ n: countRows() }).from(titles);
+	return row.n;
 }
 
 describe('titles spine (review 2.4)', () => {
@@ -81,9 +76,9 @@ describe('getTitleRow', () => {
 		expect(await getTitleRow('tv', { ...GOT, imdbId: null })).toBeNull();
 	});
 
-	it('never writes (row count and xmin unchanged)', async () => {
+	it('never writes (row count unchanged, no write logged)', async () => {
 		await insertTitle({ imdbId: 'tt0078748', tmdbId: null });
-		const [n, x] = [await count(), await xmins()];
+		const [n, before] = [await count(), await writes()];
 		await getTitleRow('movie', {
 			title: 'Alien',
 			imdbId: 'tt0078748',
@@ -92,7 +87,7 @@ describe('getTitleRow', () => {
 		});
 		await getTitleRow('tv', GOT);
 		expect(await count()).toBe(n);
-		expect(await xmins()).toBe(x);
+		expect(await writes()).toBe(before);
 	});
 });
 

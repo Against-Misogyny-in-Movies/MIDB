@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import { db, closeDb } from './lib/db.ts';
+import { openScriptDb } from './lib/db.ts';
+import type { Db } from '../client.ts';
 import { titles } from '../schema/titles.ts';
 
 const TMDB_BASE = process.env.PUBLIC_TMDB_API_URL || 'https://api.themoviedb.org';
@@ -22,7 +23,7 @@ async function resolveTmdbId(imdbId: string): Promise<number | null> {
 	return data?.movie_results?.[0]?.id ?? null;
 }
 
-async function main() {
+async function main(db: Db) {
 	const toBackfill = await db
 		.select({ id: titles.id, imdbId: titles.imdbId })
 		.from(titles)
@@ -51,8 +52,9 @@ async function main() {
 	console.log(`Done. Updated: ${updated}, not found: ${notFound}`);
 }
 
+const { db, close } = await openScriptDb();
 try {
-	await main();
+	await main(db);
 } finally {
-	await closeDb();
+	await close();
 }

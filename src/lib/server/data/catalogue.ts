@@ -25,11 +25,12 @@ export function getCatalogueCounts(): Promise<CatalogueCounts> {
 }
 
 /**
- * The films with a Bechdel Test rating and the most IMDb votes (the seeded `num_votes` column
- * is IMDb's count), with their Unconsenting Media entry when one is bound. With
- * `requireUmEntry`, only films that have one; with `requireTmdbId`, only films that have a page.
+ * The films with a Bechdel Test rating and the highest TMDB popularity (`titles.popularity`,
+ * which SQLite sorts last when null), with their Unconsenting Media entry when one is bound.
+ * With `requireUmEntry`, only films that have one; with `requireTmdbId`, only films that have
+ * a page.
  */
-export async function getMostVotedRatedFilms(
+export async function getPopularRatedFilms(
 	limit = 6,
 	{
 		requireUmEntry = false,
@@ -55,7 +56,7 @@ export async function getMostVotedRatedFilms(
 				.leftJoin(umSource, eq(umSource.umId, titleUm.umId));
 	const rows = await joined
 		.where(and(eq(titles.kind, 'movie'), requireTmdbId ? isNotNull(titles.tmdbId) : undefined))
-		.orderBy(desc(titleBechdel.numVotes))
+		.orderBy(desc(titles.popularity))
 		.limit(limit);
 
 	return rows.map((r) => {
@@ -75,13 +76,13 @@ export async function getMostVotedRatedFilms(
 }
 
 /**
- * `count` films picked at random from the `pool` most IMDb-voted films that have a Bechdel
+ * `count` films picked at random from the `pool` most popular films that have a Bechdel
  * rating, an Unconsenting Media entry and a TMDB id (so each links to its page). The landing
  * hero calls it on every request. The pool is cached for an hour; the shuffle runs per call.
  */
 export async function getRandomRatedFilms(count = 6, pool = 100): Promise<LinkedRatedFilm[]> {
-	const ranked = await getCached(`catalogue:hero-pool:${pool}`, LANDING_TTL_MS, () =>
-		getMostVotedRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
+	const ranked = await getCached(`catalogue:hero-pool:v2:${pool}`, LANDING_TTL_MS, () =>
+		getPopularRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
 	);
 	// `filter` copies, so the shuffle below never reorders the cached array.
 	const films = ranked.filter((film): film is LinkedRatedFilm => film.tmdbId !== null);

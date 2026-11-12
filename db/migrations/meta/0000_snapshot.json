@@ -1,96 +1,750 @@
 {
-  "id": "9a400aba-a2c8-4df7-b263-8aa3e5f8e3b3",
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "da921c25-806c-414a-a2ce-dc0dce67e876",
   "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "7",
-  "dialect": "postgresql",
   "tables": {
-    "public.user": {
+    "user": {
       "name": "user",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "autoincrement": false
         },
         "email": {
           "name": "email",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "autoincrement": false
         },
-        "emailVerified": {
-          "name": "emailVerified",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "image": {
-          "name": "image",
+        "role": {
+          "name": "role",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'user'"
+        },
+        "username": {
+          "name": "username",
+          "type": "text(32)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "avatar_key": {
+          "name": "avatar_key",
+          "type": "text(48)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "user_username_lower_idx": {
+          "name": "user_username_lower_idx",
+          "columns": [
+            "lower(\"username\")"
+          ],
+          "isUnique": true
+        },
+        "user_role_idx": {
+          "name": "user_role_idx",
+          "columns": [
+            "role"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "user_role_check": {
+          "name": "user_role_check",
+          "value": "\"user\".\"role\" IN ('user', 'moderator', 'administrator')"
+        }
+      }
+    },
+    "comments": {
+      "name": "comments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'visible'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "comments_title_idx": {
+          "name": "comments_title_idx",
+          "columns": [
+            "title_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "comments_user_idx": {
+          "name": "comments_user_idx",
+          "columns": [
+            "user_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "comments_title_id_titles_id_fk": {
+          "name": "comments_title_id_titles_id_fk",
+          "tableFrom": "comments",
+          "tableTo": "titles",
+          "columnsFrom": [
+            "title_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "comments_user_id_user_id_fk": {
+          "name": "comments_user_id_user_id_fk",
+          "tableFrom": "comments",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "comments_body_length": {
+          "name": "comments_body_length",
+          "value": "length(\"comments\".\"body\") BETWEEN 1 AND 5000"
+        },
+        "comments_status_check": {
+          "name": "comments_status_check",
+          "value": "\"comments\".\"status\" IN ('visible', 'hidden', 'deleted')"
+        }
+      }
+    },
+    "community_bechdel_ratings": {
+      "name": "community_bechdel_ratings",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rating": {
+          "name": "rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cbr_title_idx": {
+          "name": "cbr_title_idx",
+          "columns": [
+            "title_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "community_bechdel_ratings_user_id_user_id_fk": {
+          "name": "community_bechdel_ratings_user_id_user_id_fk",
+          "tableFrom": "community_bechdel_ratings",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "community_bechdel_ratings_title_id_titles_id_fk": {
+          "name": "community_bechdel_ratings_title_id_titles_id_fk",
+          "tableFrom": "community_bechdel_ratings",
+          "tableTo": "titles",
+          "columnsFrom": [
+            "title_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "community_bechdel_ratings_user_id_title_id_pk": {
+          "columns": [
+            "user_id",
+            "title_id"
+          ],
+          "name": "community_bechdel_ratings_user_id_title_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "cbr_rating_range": {
+          "name": "cbr_rating_range",
+          "value": "\"community_bechdel_ratings\".\"rating\" >= 0 AND \"community_bechdel_ratings\".\"rating\" <= 3"
+        }
+      }
+    },
+    "community_ddd_votes": {
+      "name": "community_ddd_votes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "topic_id": {
+          "name": "topic_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "episode": {
+          "name": "episode",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "yes": {
+          "name": "yes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cdv_vote_uniq": {
+          "name": "cdv_vote_uniq",
+          "columns": [
+            "user_id",
+            "title_id",
+            "topic_id",
+            "CASE WHEN \"season\" IS NULL THEN -1 ELSE \"season\" END",
+            "CASE WHEN \"episode\" IS NULL THEN -1 ELSE \"episode\" END"
+          ],
+          "isUnique": true
+        },
+        "cdv_title_topic_idx": {
+          "name": "cdv_title_topic_idx",
+          "columns": [
+            "title_id",
+            "topic_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "community_ddd_votes_user_id_user_id_fk": {
+          "name": "community_ddd_votes_user_id_user_id_fk",
+          "tableFrom": "community_ddd_votes",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "community_ddd_votes_title_id_titles_id_fk": {
+          "name": "community_ddd_votes_title_id_titles_id_fk",
+          "tableFrom": "community_ddd_votes",
+          "tableTo": "titles",
+          "columnsFrom": [
+            "title_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "community_um_reports": {
+      "name": "community_um_reports",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "no_rape": {
+          "name": "no_rape",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rape_men_dis_imp": {
+          "name": "rape_men_dis_imp",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sex_har_on_scrn": {
+          "name": "sex_har_on_scrn",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sex_adult_teen": {
+          "name": "sex_adult_teen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "child_sex_abuse": {
+          "name": "child_sex_abuse",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "incest": {
+          "name": "incest",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "attempted_rape": {
+          "name": "attempted_rape",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rape_off_scrn": {
+          "name": "rape_off_scrn",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rape_on_screen": {
+          "name": "rape_on_screen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cur_title_idx": {
+          "name": "cur_title_idx",
+          "columns": [
+            "title_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "community_um_reports_user_id_user_id_fk": {
+          "name": "community_um_reports_user_id_user_id_fk",
+          "tableFrom": "community_um_reports",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "community_um_reports_title_id_titles_id_fk": {
+          "name": "community_um_reports_title_id_titles_id_fk",
+          "tableFrom": "community_um_reports",
+          "tableTo": "titles",
+          "columnsFrom": [
+            "title_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "community_um_reports_user_id_title_id_pk": {
+          "columns": [
+            "user_id",
+            "title_id"
+          ],
+          "name": "community_um_reports_user_id_title_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "titles": {
+      "name": "titles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tmdb_id": {
+          "name": "tmdb_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "imdb_id": {
+          "name": "imdb_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "clean_title": {
+          "name": "clean_title",
+          "type": "text(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "popularity": {
+          "name": "popularity",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "popularity_at": {
+          "name": "popularity_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "titles_imdb_id_unique": {
+          "name": "titles_imdb_id_unique",
+          "columns": [
+            "imdb_id"
+          ],
+          "isUnique": true
+        },
+        "titles_kind_tmdb_idx": {
+          "name": "titles_kind_tmdb_idx",
+          "columns": [
+            "kind",
+            "tmdb_id"
+          ],
+          "isUnique": true
+        },
+        "titles_popularity_idx": {
+          "name": "titles_popularity_idx",
+          "columns": [
+            "popularity"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "titles_kind_check": {
+          "name": "titles_kind_check",
+          "value": "\"titles\".\"kind\" IN ('movie', 'tv')"
+        }
+      }
+    },
+    "source_sync": {
+      "name": "source_sync",
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_success_at": {
+          "name": "last_success_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rows_changed": {
+          "name": "rows_changed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {
+        "source_sync_source_check": {
+          "name": "source_sync_source_check",
+          "value": "\"source_sync\".\"source\" IN ('bechdel', 'um', 'popularity')"
+        }
+      }
     },
-    "public.movie_bechdel": {
-      "name": "movie_bechdel",
-      "schema": "",
+    "title_bechdel": {
+      "name": "title_bechdel",
       "columns": {
-        "movie_id": {
-          "name": "movie_id",
-          "type": "uuid",
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "bechdel_id": {
           "name": "bechdel_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "rating": {
           "name": "rating",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "num_votes": {
-          "name": "num_votes",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "movie_bechdel_movie_id_movies_id_fk": {
-          "name": "movie_bechdel_movie_id_movies_id_fk",
-          "tableFrom": "movie_bechdel",
-          "tableTo": "movies",
+        "title_bechdel_title_id_titles_id_fk": {
+          "name": "title_bechdel_title_id_titles_id_fk",
+          "tableFrom": "title_bechdel",
+          "tableTo": "titles",
           "columnsFrom": [
-            "movie_id"
+            "title_id"
           ],
           "columnsTo": [
             "id"
@@ -101,105 +755,46 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {
         "rating_range": {
           "name": "rating_range",
           "value": "rating >= 0 AND rating <= 3"
         }
-      },
-      "isRLSEnabled": false
+      }
     },
-    "public.movie_trigger_tags": {
-      "name": "movie_trigger_tags",
-      "schema": "",
+    "title_um": {
+      "name": "title_um",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
-        "movie_id": {
-          "name": "movie_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "topic_id": {
-          "name": "topic_id",
+        "um_id": {
+          "name": "um_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
-        },
-        "does_name": {
-          "name": "does_name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "yes_sum": {
-          "name": "yes_sum",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "no_sum": {
-          "name": "no_sum",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "comment": {
-          "name": "comment",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false
         }
       },
-      "indexes": {
-        "movie_trigger_tags_movie_topic_idx": {
-          "name": "movie_trigger_tags_movie_topic_idx",
-          "columns": [
-            {
-              "expression": "movie_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "topic_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
-        "movie_trigger_tags_movie_id_movies_id_fk": {
-          "name": "movie_trigger_tags_movie_id_movies_id_fk",
-          "tableFrom": "movie_trigger_tags",
-          "tableTo": "movies",
+        "title_um_title_id_titles_id_fk": {
+          "name": "title_um_title_id_titles_id_fk",
+          "tableFrom": "title_um",
+          "tableTo": "titles",
           "columnsFrom": [
-            "movie_id"
+            "title_id"
           ],
           "columnsTo": [
             "id"
@@ -207,15 +802,15 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "movie_trigger_tags_created_by_user_id_fk": {
-          "name": "movie_trigger_tags_created_by_user_id_fk",
-          "tableFrom": "movie_trigger_tags",
-          "tableTo": "user",
+        "title_um_um_id_um_source_um_id_fk": {
+          "name": "title_um_um_id_um_source_um_id_fk",
+          "tableFrom": "title_um",
+          "tableTo": "um_source",
           "columnsFrom": [
-            "created_by"
+            "um_id"
           ],
           "columnsTo": [
-            "id"
+            "um_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -223,330 +818,158 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
     },
-    "public.movie_unconsenting": {
-      "name": "movie_unconsenting",
-      "schema": "",
+    "um_source": {
+      "name": "um_source",
       "columns": {
-        "movie_id": {
-          "name": "movie_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
         "um_id": {
           "name": "um_id",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": true
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
         },
         "clean_name": {
           "name": "clean_name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "item_type": {
-          "name": "item_type",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "comment": {
-          "name": "comment",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "no_rape": {
-          "name": "no_rape",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rape_men_dis_imp": {
-          "name": "rape_men_dis_imp",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sex_har_on_scrn": {
-          "name": "sex_har_on_scrn",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sex_adult_teen": {
-          "name": "sex_adult_teen",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "child_sex_abuse": {
-          "name": "child_sex_abuse",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "incest": {
-          "name": "incest",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "attempted_rape": {
-          "name": "attempted_rape",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rape_off_scrn": {
-          "name": "rape_off_scrn",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rape_on_screen": {
-          "name": "rape_on_screen",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
           "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "movie_unconsenting_movie_id_movies_id_fk": {
-          "name": "movie_unconsenting_movie_id_movies_id_fk",
-          "tableFrom": "movie_unconsenting",
-          "tableTo": "movies",
-          "columnsFrom": [
-            "movie_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.movies": {
-      "name": "movies",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "imdb_id": {
-          "name": "imdb_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tmdb_id": {
-          "name": "tmdb_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "title": {
-          "name": "title",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "year": {
-          "name": "year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "clean_title": {
-          "name": "clean_title",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "movies_imdb_id_unique": {
-          "name": "movies_imdb_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "imdb_id"
-          ]
-        },
-        "movies_tmdb_id_unique": {
-          "name": "movies_tmdb_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tmdb_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.um_source": {
-      "name": "um_source",
-      "schema": "",
-      "columns": {
-        "um_id": {
-          "name": "um_id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "clean_name": {
-          "name": "clean_name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
+          "autoincrement": false
         },
         "clean_title_key": {
           "name": "clean_title_key",
-          "type": "varchar",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "year": {
           "name": "year",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "no_rape": {
           "name": "no_rape",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "rape_men_dis_imp": {
           "name": "rape_men_dis_imp",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "sex_har_on_scrn": {
           "name": "sex_har_on_scrn",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "sex_adult_teen": {
           "name": "sex_adult_teen",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "child_sex_abuse": {
           "name": "child_sex_abuse",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "incest": {
           "name": "incest",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "attempted_rape": {
           "name": "attempted_rape",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "rape_off_scrn": {
           "name": "rape_off_scrn",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "rape_on_screen": {
           "name": "rape_on_screen",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "comment": {
           "name": "comment",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
         "um_source_clean_title_key_idx": {
           "name": "um_source_clean_title_key_idx",
           "columns": [
-            {
-              "expression": "clean_title_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
+            "clean_title_key"
           ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
+          "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
     }
   },
-  "enums": {},
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
   "views": {},
+  "enums": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {
+      "user_username_lower_idx": {
+        "columns": {
+          "lower(\"username\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "cdv_vote_uniq": {
+        "columns": {
+          "CASE WHEN \"season\" IS NULL THEN -1 ELSE \"season\" END": {
+            "isExpression": true
+          },
+          "CASE WHEN \"episode\" IS NULL THEN -1 ELSE \"episode\" END": {
+            "isExpression": true
+          }
+        }
+      }
+    }
   }
 }

@@ -11,19 +11,19 @@ const BECHDEL_CSV = 'db/test/fixtures/bechdel.csv';
 const UM_CSV = 'db/test/fixtures/unconsenting.csv';
 
 async function counts() {
-	const [row] = await db.execute<{
+	const [row] = await db.all<{
 		titles: number;
 		bechdel: number;
 		um: number;
 		bindings: number;
 		badYears: number;
 	}>(sql`SELECT
-		(SELECT count(*)::int FROM titles) AS titles,
-		(SELECT count(*)::int FROM title_bechdel) AS bechdel,
-		(SELECT count(*)::int FROM um_source) AS um,
-		(SELECT count(*)::int FROM title_um) AS bindings,
-		(SELECT count(*)::int FROM titles WHERE year <= 0 OR kind <> 'movie') +
-		(SELECT count(*)::int FROM um_source WHERE year <= 0) AS "badYears"`);
+		(SELECT count(*) FROM titles) AS titles,
+		(SELECT count(*) FROM title_bechdel) AS bechdel,
+		(SELECT count(*) FROM um_source) AS um,
+		(SELECT count(*) FROM title_um) AS bindings,
+		(SELECT count(*) FROM titles WHERE year <= 0 OR kind <> 'movie') +
+		(SELECT count(*) FROM um_source WHERE year <= 0) AS "badYears"`);
 	return row;
 }
 
@@ -46,7 +46,7 @@ describe('seeders (50-row fixtures)', () => {
 		expect(readFileSync(report, 'utf8').split('\n')[0]).toMatch(/^id\tname/);
 
 		// Bindings carry only (title_id, um_id); every flag is read from um_source.
-		const [binding] = await db.execute(sql`SELECT * FROM title_um LIMIT 1`);
+		const [binding] = await db.all<Record<string, unknown>>(sql`SELECT * FROM title_um LIMIT 1`);
 		expect(Object.keys(binding).sort()).toEqual(['created_at', 'title_id', 'um_id']);
 
 		await seedUnconsenting(db, UM_CSV, report);
