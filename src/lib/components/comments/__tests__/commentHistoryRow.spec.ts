@@ -52,7 +52,7 @@ describe('CommentHistoryRow', () => {
 
 	it('shows the reason of a rejected comment and who hid a hidden one', () => {
 		mount(row({ status: 'rejected', moderationReason: 'Contains a slur' }));
-		expect(screen.getByText(/Reason: Contains a slur/)).toBeTruthy();
+		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
 		cleanup();
 		mount(row({ status: 'hidden' }));
 		expect(screen.getByText(/A moderator hid this comment/)).toBeTruthy();

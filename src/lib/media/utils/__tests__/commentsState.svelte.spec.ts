@@ -102,9 +102,33 @@ describe('CommentsState', () => {
 		const state = new CommentsState('movie', '1', async () => json({ comment: OWN }, 201));
 		expect(await state.post('hello')).toBe(true);
 		expect(state.viewer?.comments.map((c) => c.id)).toEqual(['new']);
-		expect(state.notices.compose).toMatch(
-			/Only its author and moderators see it until a moderator reviews it/
+		expect(state.notices.compose).toBe(
+			'Comment sent. Only the author and moderators see the comment until a moderator decides.'
 		);
+		expect(state.noticeTones.compose).toBe('warn');
+	});
+
+	it('leads a rejected notice with the reason', async () => {
+		const rejected: OwnComment = {
+			...OWN,
+			status: 'rejected',
+			moderationReason: 'Attacks a person'
+		};
+		const state = new CommentsState('movie', '1', async () => json({ comment: rejected }, 201));
+		await state.post('hello');
+		expect(state.notices.compose).toBe(
+			'Rejected: Attacks a person. Only the author and moderators see the comment.'
+		);
+		expect(state.noticeTones.compose).toBe('warn');
+	});
+
+	it('keeps a just-published comment in the viewer state until the list carries it', async () => {
+		const published: OwnComment = { ...OWN, status: 'published' };
+		const state = new CommentsState('movie', '1', async () => json({ comment: published }, 201));
+		await state.post('hello');
+		expect(state.viewer?.comments.map((c) => c.id)).toEqual(['new']);
+		expect(state.notices.compose).toBe('Comment posted.');
+		expect(state.noticeTones.compose).toBe('success');
 	});
 
 	it('shows the server message for a muted account and returns false', async () => {

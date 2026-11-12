@@ -6,6 +6,7 @@ import type {
 	ReportReason,
 	ViewerCommentState
 } from '#lib/media/types/comments.ts';
+import { unpublishedNote } from '#lib/media/utils/comments.ts';
 import {
 	type CommentAction,
 	describeFailure,
@@ -23,6 +24,8 @@ import {
  * `edit:<id>`, `delete:<id>`, `vote:<id>`, `report:<id>`, `load`, `more`, `viewer`), so the
  * component shows it beside that control.
  */
+const SHOWN_STATUSES = new Set<OwnComment['status']>(['pending', 'rejected', 'published']);
+
 export class CommentsState {
 	readonly kind: 'movie' | 'tv';
 	readonly tmdbId: string;
@@ -39,6 +42,8 @@ export class CommentsState {
 	/** The HTTP status behind each error (0 when the server could not be reached). */
 	failures = $state<Record<string, number>>({});
 	notices = $state<Record<string, string>>({});
+	/** How each notice reads: a posted comment is `success`; one held or rejected is `warn`. */
+	noticeTones = $state<Record<string, 'success' | 'warn'>>({});
 	busy = $state<Record<string, boolean>>({});
 
 	#fetch: Fetcher;
@@ -63,6 +68,7 @@ export class CommentsState {
 		this.errors[key] = describeFailure(action, reply.status, reply.message);
 		this.failures[key] = reply.status;
 		delete this.notices[key];
+		delete this.noticeTones[key];
 	}
 
 	#start(key: string): void {
@@ -70,6 +76,7 @@ export class CommentsState {
 		delete this.errors[key];
 		delete this.failures[key];
 		delete this.notices[key];
+		delete this.noticeTones[key];
 	}
 
 	/** The first page of the current sort. */
@@ -149,11 +156,17 @@ export class CommentsState {
 		return null;
 	}
 
+	/**
+	 * Keeps the reader's own comment in the viewer state while it is not public (pending,
+	 * rejected) or is published but not in the cached list yet, so `buildThreads` shows it at
+	 * once under any sort. Once the list carries it, the public view wins.
+	 */
 	#setOwn(comment: OwnComment): void {
 		const viewer = this.#ensureViewer();
 		const rest = viewer.comments.filter((c) => c.id !== comment.id);
+		const shownPublicly = comment.status === 'published' && this.#find(comment.id) !== null;
 		viewer.comments =
-			comment.status === 'pending' || comment.status === 'rejected' ? [comment, ...rest] : rest;
+			shownPublicly || !SHOWN_STATUSES.has(comment.status) ? rest : [comment, ...rest];
 	}
 
 	/** Takes a comment out of the public list: a placeholder while it has replies, else gone. */
@@ -194,15 +207,19 @@ export class CommentsState {
 			return false;
 		}
 		const { comment } = reply.data;
+		this.#setOwn(comment);
 		if (comment.status === 'published') {
-			// Not in the cached list yet: the purge that follows this write refreshes it.
+			// Not in the cached list yet (the purge that follows this write refreshes it), so the
+			// viewer state carries it until the list does.
 			this.notices[key] = 'Comment posted.';
+			this.noticeTones[key] = 'success';
 		} else {
-			this.#setOwn(comment);
-			this.notices[key] =
-				comment.status === 'rejected'
-					? 'The comment was rejected. Only its author and moderators see it.'
-					: 'Comment sent. Only its author and moderators see it until a moderator reviews it.';
+			const note = unpublishedNote(
+				comment.status === 'rejected' ? 'rejected' : 'pending',
+				comment.moderationReason
+			);
+			this.notices[key] = comment.status === 'rejected' ? note : `Comment sent. ${note}`;
+			this.noticeTones[key] = 'warn';
 		}
 		return true;
 	}

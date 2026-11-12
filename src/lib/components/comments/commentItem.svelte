@@ -5,6 +5,7 @@
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
+	import { unpublishedNote } from '#lib/media/utils/comments.ts';
 	import CommentReportForm from './commentReportForm.svelte';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
 	import type { ShownComment } from '#lib/media/utils/commentThread.ts';
@@ -133,15 +134,9 @@
 		{/if}
 
 		{#if comment.review?.status === 'pending'}
-			<p class="label">
-				Only its author and moderators see this comment until a moderator reviews it.
-			</p>
+			<p class="label">{unpublishedNote('pending', null)}</p>
 		{:else if comment.review?.status === 'rejected'}
-			<p class="label">
-				Only its author and moderators see this comment.{comment.review.reason
-					? ` Reason: ${comment.review.reason}`
-					: ''}
-			</p>
+			<p class="label">{unpublishedNote('rejected', comment.review.reason)}</p>
 		{/if}
 	{/if}
 
@@ -220,7 +215,9 @@
 				oncancel={() => (mode = null)}
 			/>
 		{:else if comments.notices[replyKey]}
-			<Notice tone="success">{comments.notices[replyKey]}</Notice>
+			<Notice tone={comments.noticeTones[replyKey] ?? 'success'}
+				>{comments.notices[replyKey]}</Notice
+			>
 		{/if}
 		{#if mode === 'report'}
 			<CommentReportForm commentId={comment.id} state={comments} onclose={() => (mode = null)} />

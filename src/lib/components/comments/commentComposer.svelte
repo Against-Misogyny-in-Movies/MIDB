@@ -13,6 +13,8 @@
 		/** True when the error is about the text itself (a length limit), which marks the field invalid. */
 		invalid?: boolean;
 		notice?: string;
+		/** `success` for a posted comment; `warn` for one held or rejected. */
+		noticeTone?: 'success' | 'warn';
 		/** A reply or an edit: its button is secondary, because the section's own composer is the main action. */
 		nested?: boolean;
 		/** Sets the keyboard focus on the field when it mounts (a reply or an edit just opened). */
@@ -32,6 +34,7 @@
 		error,
 		invalid = false,
 		notice,
+		noticeTone = 'success',
 		nested = false,
 		autofocus = false,
 		hint,
@@ -61,7 +64,7 @@
 	}
 </script>
 
-<form class="composer" onsubmit={submit}>
+<form class="composer" aria-busy={busy} onsubmit={submit}>
 	<label class="sr-only" for="{id}-field">{label}</label>
 	<textarea
 		id="{id}-field"
@@ -70,15 +73,17 @@
 		maxlength={COMMENT_BODY_MAX}
 		bind:value={body}
 		bind:this={field}
+		readonly={busy}
 		aria-invalid={invalid && error ? true : undefined}
 		aria-describedby={error ? `${id}-error` : undefined}></textarea>
 	<div class="row">
 		<button
 			class="btn {nested ? 'btn--ink' : 'btn--brand'}"
+			class:busy
 			type="submit"
 			disabled={empty || busy || (initial !== '' && unchanged)}
 		>
-			{busy ? 'Saving…' : submitLabel}
+			{busy ? 'Checking…' : submitLabel}
 		</button>
 		{#if oncancel}
 			<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
@@ -87,13 +92,17 @@
 			{body.length.toLocaleString('en-US')} / {COMMENT_BODY_MAX.toLocaleString('en-US')}
 		</span>
 	</div>
-	{#if hint}
+	<div class="status" class:status--held={busy || error || notice} aria-live="polite">
+		{#if busy}
+			<p class="label">Checking the comment…</p>
+		{:else if error}
+			<Notice tone="error" id="{id}-error">{error}</Notice>
+		{:else if notice}
+			<Notice tone={noticeTone}>{notice}</Notice>
+		{/if}
+	</div>
+	{#if hint && !busy && !error && !notice}
 		<p class="label">{hint}</p>
-	{/if}
-	{#if error}
-		<Notice tone="error" id="{id}-error">{error}</Notice>
-	{:else if notice}
-		<Notice tone="success">{notice}</Notice>
 	{/if}
 </form>
 
@@ -117,6 +126,34 @@
 	.row {
 		@apply flex flex-wrap items-center;
 		gap: var(--spacing-sm);
+	}
+
+	/*
+	 * The live region for the check and its outcome. While a check runs, and while its outcome
+	 * shows, it holds two lines of a notice so the outcome replaces the line in place and the
+	 * list below does not move.
+	 */
+	.status {
+		min-height: 0;
+	}
+
+	.status--held {
+		min-height: 2.75rem;
+	}
+
+	@media (max-width: 40rem) {
+		.status--held {
+			min-height: 4rem;
+		}
+	}
+
+	/* A running check keeps its label readable: the disabled look would drop it below 4.5:1. */
+	.btn.busy:disabled {
+		opacity: 1;
+		cursor: progress;
+		background-color: var(--surface-sunken);
+		border-color: var(--border);
+		color: var(--ink-muted);
 	}
 
 	.count {

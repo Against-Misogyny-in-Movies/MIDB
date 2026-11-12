@@ -40,3 +40,16 @@ export const COMMENT_STATUS_LABELS: Record<(typeof commentStatus)[number], strin
 
 /** The mute lengths a moderator picks from, in hours. */
 export const MUTE_HOURS = [24, 168, 720] as const;
+
+/**
+ * What the author reads under a comment that is not public: for a rejected one the reason
+ * first, then who can see it.
+ */
+export function unpublishedNote(status: 'pending' | 'rejected', reason: string | null): string {
+	if (status === 'pending') {
+		return 'Only the author and moderators see the comment until a moderator decides.';
+	}
+	const text = reason?.trim();
+	const lead = text ? `${/[.!?]$/.test(text) ? text : `${text}.`} ` : '';
+	return `Rejected: ${lead}Only the author and moderators see the comment.`;
+}

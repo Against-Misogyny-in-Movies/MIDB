@@ -30,10 +30,13 @@ function ownAsShown(own: OwnComment, me: PublicUser, names: Map<string, string>)
 		replyCount: 0,
 		createdAt: own.createdAt,
 		editedAt: own.editedAt,
-		review: {
-			status: own.status === 'rejected' ? 'rejected' : 'pending',
-			reason: own.moderationReason
-		}
+		review:
+			own.status === 'published'
+				? null
+				: {
+						status: own.status === 'rejected' ? 'rejected' : 'pending',
+						reason: own.moderationReason
+					}
 	};
 }
 
@@ -42,7 +45,8 @@ const byAge = (a: ShownComment, b: ShownComment) =>
 
 /**
  * The list the section draws: the public page's threads, with the reader's own pending and
- * rejected comments merged in (the public list never carries them). An own comment that is
+ * rejected comments merged in (the public list never carries them), and the one the reader just
+ * published until the cached list carries it. An own comment that is
  * also in the public list, as the placeholder of an edited comment that has replies, replaces
  * that placeholder in place. Any other own root goes first, newest first; an own reply joins its
  * root's thread by age; an own reply whose root is not on the loaded pages stands as a thread
@@ -69,7 +73,8 @@ export function buildThreads(
 	const take = (view: CommentView): ShownComment => {
 		const mine = ownById.get(view.id);
 		if (mine) placed.add(view.id);
-		return mine ?? asShown(view);
+		// A published own comment already in the list is just the public view.
+		return mine?.review ? mine : asShown(view);
 	};
 
 	const threads: Thread[] = list.map((root) => ({

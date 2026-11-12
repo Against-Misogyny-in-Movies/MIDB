@@ -199,7 +199,7 @@ describe('CommentsSection signed in', () => {
 		expect(await screen.findByText('Own p')).toBeTruthy();
 		expect(screen.getByText('Awaiting review')).toBeTruthy();
 		expect(screen.getByText('Rejected')).toBeTruthy();
-		expect(screen.getByText(/Reason: Contains a slur/)).toBeTruthy();
+		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
 	});
 
 	it('has no vote or report controls on the reader’s own comment, and edit and delete on it only', async () => {
@@ -238,8 +238,77 @@ describe('CommentsSection signed in', () => {
 			expect.objectContaining({ body: JSON.stringify({ body: 'Hello there' }) })
 		);
 		expect(screen.getByText('Awaiting review')).toBeTruthy();
-		expect(screen.getByRole('status').textContent).toMatch(
-			/Only its author and moderators see it until a moderator reviews it/
+		expect(screen.getByRole('status').textContent).toBe(
+			'Comment sent. Only the author and moderators see the comment until a moderator decides.'
+		);
+	});
+
+	it('keeps the field read-only and names the check while it runs, then keeps the text on failure', async () => {
+		let release!: () => void;
+		const gate = new Promise<void>((r) => (release = r));
+		mount(
+			api({
+				[`GET ${LIST}`]: list([]),
+				[`GET ${LIST}/viewer`]: viewer(),
+				[`POST ${LIST}`]: async () => {
+					await gate;
+					return json({ message: 'Server error' }, 500);
+				}
+			})
+		);
+		const field = await screen.findByRole('textbox', { name: 'Write a comment' });
+		await fireEvent.input(field, { target: { value: 'My draft' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+
+		const busyButton = await screen.findByRole('button', { name: 'Checking…' });
+		expect((busyButton as HTMLButtonElement).disabled).toBe(true);
+		expect((field as HTMLTextAreaElement).readOnly).toBe(true);
+		expect(field.closest('form')?.getAttribute('aria-busy')).toBe('true');
+		expect(screen.getByText('Checking the comment…').closest('[aria-live="polite"]')).toBeTruthy();
+
+		release();
+		await screen.findByRole('alert');
+		expect((field as HTMLTextAreaElement).readOnly).toBe(false);
+		expect((field as HTMLTextAreaElement).value).toBe('My draft');
+		expect(field.closest('form')?.getAttribute('aria-busy')).toBe('false');
+	});
+
+	it('shows a just-published comment at once, once, and warns on a rejection with the reason first', async () => {
+		const published = own('new', { body: 'Fresh', status: 'published' });
+		const posts = [
+			json({ comment: published }, 201),
+			json(
+				{
+					comment: own('no', {
+						body: 'Bad',
+						status: 'rejected',
+						moderationReason: 'Attacks a person.'
+					})
+				},
+				201
+			)
+		];
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('a')]),
+				[`GET ${LIST}/viewer`]: viewer(),
+				[`POST ${LIST}`]: () => posts.shift() as Response
+			})
+		);
+		const field = await screen.findByRole('textbox', { name: 'Write a comment' });
+		await fireEvent.input(field, { target: { value: 'Fresh' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+		expect(await screen.findByText('Fresh')).toBeTruthy();
+		expect(screen.getAllByText('Fresh')).toHaveLength(1);
+		expect(screen.getByRole('status').textContent).toBe('Comment posted.');
+		expect(screen.queryByText('Awaiting review')).toBeNull();
+
+		await fireEvent.input(field, { target: { value: 'Bad' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+		await waitFor(() =>
+			expect(screen.getAllByRole('status').map((n) => n.textContent)).toContain(
+				'Rejected: Attacks a person. Only the author and moderators see the comment.'
+			)
 		);
 	});
 

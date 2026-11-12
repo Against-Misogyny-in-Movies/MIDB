@@ -97,6 +97,7 @@
 					error={comments.errors.compose}
 					invalid={comments.failures.compose === 400}
 					notice={comments.notices.compose}
+					noticeTone={comments.noticeTones.compose}
 					onsubmit={(body) => comments.post(body)}
 				/>
 			{/if}

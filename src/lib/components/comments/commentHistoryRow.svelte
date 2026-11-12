@@ -3,6 +3,7 @@
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
+	import { unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
@@ -110,11 +111,11 @@
 		<p class="body">{comment.body}</p>
 	{/if}
 
-	{#if comment.status === 'rejected' || comment.status === 'hidden'}
+	{#if comment.status === 'rejected'}
+		<p class="label">{unpublishedNote('rejected', comment.moderationReason)}</p>
+	{:else if comment.status === 'hidden'}
 		<p class="label">
-			{comment.status === 'hidden'
-				? 'A moderator hid this comment.'
-				: 'Only its author and moderators see it.'}{comment.moderationReason
+			A moderator hid this comment.{comment.moderationReason
 				? ` Reason: ${comment.moderationReason}`
 				: ''}
 		</p>
