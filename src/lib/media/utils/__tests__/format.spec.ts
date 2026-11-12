@@ -84,6 +84,8 @@ describe('formatDate', () => {
 describe('displayTitle', () => {
 	test('moves a trailing article to the front', () => {
 		expect(displayTitle('Matrix, The')).toBe('The Matrix');
+		expect(displayTitle('Call, The')).toBe('The Call');
+		expect(displayTitle('The Call')).toBe('The Call');
 		expect(displayTitle('Lord of the Rings: The Return of the King, The')).toBe(
 			'The Lord of the Rings: The Return of the King'
 		);

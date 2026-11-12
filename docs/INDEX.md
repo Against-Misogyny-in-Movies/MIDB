@@ -39,10 +39,10 @@ Each agent reads its own file.
 
 Read the sections your task touches.
 
-- `README.md` — MIDB (~930 tok)
+- `README.md` — MIDB (~960 tok)
 - `PRODUCT.md` — Product (~290 tok)
 - `DESIGN.md` — Design (~2.0K tok)
-- `docs/architecture.md` — MIDB — Architecture Reference (~38.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~38.2K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~860)
@@ -55,7 +55,7 @@ Read the sections your task touches.
   - 289–335 Database schema (~1.9K)
     - 295–327 Tables (active) (~1.2K)
     - 328–335 Migrations (~350)
-  - 336–365 Source sync (~1.7K) ← 2
+  - 336–365 Source sync (~1.8K) ← 2
   - 366–431 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
   - 432–451 UM Disambiguation (~630)
   - 452–460 UM flag rendering (~250)
@@ -93,9 +93,9 @@ Read when a task names the plan.
   - 160–177 Phase 0: SvelteKit 3 upgrade (on the current stack, before anything else) (~430)
   - 178–238 Phase 1: Cloudflare platform (~1.3K)
   - 239–285 Phase 2: SQLite / D1 data layer (~940)
-  - 286–349 Phase 2b: Daily source sync (Bechdel Test, Unconsenting Media, popularity) (~1.6K)
-  - 350–402 Phase 3: Auth (Better Auth) (~1.0K)
-  - 403–455 Phase 4: Comments (~970)
+  - 286–348 Phase 2b: Daily source sync (Bechdel Test, Unconsenting Media, popularity) (~1.6K)
+  - 349–401 Phase 3: Auth (Better Auth) (~1.0K)
+  - 402–455 Phase 4: Comments (~1000)
   - 456–483 Phase 5: AI moderation (~480)
   - 484–513 Phase 6: CI, deploy, docs (~460)
   - 514–555 Verification (~650)
@@ -105,10 +105,10 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~930 tok)
-- `PRIVACY.md` — Privacy (~780 tok)
+- `SECURITY.md` — Security (~1.0K tok)
+- `PRIVACY.md` — Privacy (~810 tok)
 - `ACCESSIBILITY.md` — Accessibility (~400 tok)
-- `THIRD_PARTY_NOTICES.md` — Third-party notices (~680 tok)
+- `THIRD_PARTY_NOTICES.md` — Third-party notices (~740 tok)
 
 ## Code to docs
 

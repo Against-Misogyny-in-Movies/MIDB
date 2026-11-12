@@ -91,8 +91,9 @@ export function formatDate(iso: string): string {
 }
 
 /**
- * Moves a trailing English article to the front: the Bechdel Test data stores titles in
- * library order (`"Matrix, The"`, `"Lord of the Rings: The Return of the King, The"`).
+ * Moves a trailing English article to the front. The Bechdel Test year pages (the synced
+ * titles) and TMDB give titles in reading order (`"The Matrix"`), which pass through
+ * unchanged; a title in library order (`"Matrix, The"`) is reordered.
  *
  * @param title - A title as stored.
  * @returns The title in reading order (`"The Matrix"`); other titles unchanged.

@@ -8,7 +8,7 @@ export interface CatalogueCounts {
 
 /** One film for the landing page's data card: seeded values only, nothing fetched live. */
 export interface RatedFilm {
-	/** As stored: library order, e.g. "Matrix, The" (render with `displayTitle`). */
+	/** As stored, normally reading order ("The Matrix"); render with `displayTitle`, which also reorders "Matrix, The". */
 	title: string;
 	year: number | null;
 	/** Null when the title was never backfilled with a TMDB id. */

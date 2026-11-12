@@ -338,14 +338,13 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - Delete the CSV readers (`checkCsvColumns.ts`, the `csv-parse` dependency).
    - Fixture-based db specs cover the sync (`db/scripts/__tests__/sync.db.spec.ts`).
 4. **Schedule:** `.github/workflows/sync-sources.yml`, `cron: '23 9 * * *'` (after TMDB's 08:00 UTC export).
-   - Steps, all `--remote`: `db:sync:um`, `db:sync:bechdel` (`--full` on Sundays), `db:sync:um` again so new films bind the same day, `db:backfill:tmdb`, `db:sync:popularity`.
-   - Secrets: `CLOUDFLARE_*` for the D1 REST API, plus `TMDB_API_TOKEN`.
+   - One step, `db:sync:all --remote` (`--full` on Sundays): UM, Bechdel, UM again over the same feed so new films bind the same day, `db:backfill:tmdb`, `db:sync:popularity`. A failing step fails the job and skips the rest.
+   - Secrets: `CLOUDFLARE_*` for the D1 REST API, plus `TMDB_API_TOKEN`, given to that step only.
    - Runs only on the canonical repo (`if: github.repository == …`), never on forks.
    - GitHub disables schedules after 60 days with no repo activity. Document this in the README, and alert through workflow failure emails.
 5. **Freshness in the app.** Title pages are cached at the edge for 1h and the landing query for 1h, so synced data shows within an hour.
    - Add `source_synced_at` per source in a small `source_sync` table (source, last_success_at, rows_changed).
-   - Show it as "Updated <date>" next to each "Source:" link, which also makes the copy code-backed.
-   - Moderators see a stale-sync warning on `/user/moderation` after 48h without a successful sync.
+   - Show it as "Updated <date>" next to each "Source:" link, which also makes the copy code-backed. The Bechdel Test section uses the last full sweep (`bechdel_sweep`), because daily runs reread only the recent years.
 
 ## Phase 3: Auth (Better Auth)
 
@@ -452,6 +451,7 @@ DDD and TMDB are already fetched live. Bechdel and UM are static CSV snapshots t
    - Tabs: Pending, Reported, Recent actions.
    - Each row shows the comment, its title, the AI categories, the reports, and the author's history count.
    - Form actions `?/approve|hide|reject|restore|dismiss|mute|ban`, each calling `requireRole`.
+   - A stale-sync warning when a source in `source_sync` has had no successful sync for 48h (`getSourceSyncDates`).
 
 ## Phase 5: AI moderation
 
