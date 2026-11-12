@@ -82,7 +82,9 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 		account: {
 			accountLinking: {
 				enabled: true,
-				trustedProviders: ['google', 'discord'],
+				// Only Google: a Discord sign-in links to an existing user only when Discord reports
+				// the email as verified.
+				trustedProviders: ['google'],
 				// A passkey-only account has a placeholder email, so a provider's email differs.
 				allowDifferentEmails: true,
 				updateUserInfoOnLink: true,

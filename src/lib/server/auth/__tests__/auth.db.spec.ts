@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { eq } from 'drizzle-orm';
 import type { Account } from 'better-auth';
-import { sessions, users } from '#db/schema/auth.ts';
+import { handleOAuthUserInfo } from 'better-auth/oauth2';
+import { accounts, sessions, users } from '#db/schema/auth.ts';
 import { userValues } from '#db/test/users.ts';
 import { db } from '#lib/server/db.ts';
 import { banUser } from '#lib/server/data/user-queries.ts';
@@ -119,5 +120,44 @@ describe('adoptProviderEmail against the database', () => {
 		await adoptProviderEmail(account, ctxWith('mary@example.com'));
 		const [row] = await db.select().from(users).where(eq(users.id, 'user-1'));
 		expect(row.email).toBe('user-1@users.invalid');
+	});
+});
+
+describe('account linking', () => {
+	const ctx = async () => ({ context: await auth.$context });
+	const signIn = async (providerId: string, emailVerified: boolean) =>
+		handleOAuthUserInfo((await ctx()) as unknown as Parameters<typeof handleOAuthUserInfo>[0], {
+			userInfo: {
+				id: 'provider-id',
+				email: 'mary@example.com',
+				emailVerified,
+				name: 'Mary'
+			},
+			account: { providerId, accountId: 'provider-id', accessToken: 'at' }
+		});
+
+	it('does not bind an unverified Discord email to the user who has that email', async () => {
+		await db
+			.insert(users)
+			.values(userValues('user-1', { email: 'mary@example.com', emailVerified: true }));
+
+		const result = await signIn('discord', false);
+
+		expect(result.error).toBe('account not linked');
+		expect(await db.select().from(accounts)).toHaveLength(0);
+		expect(await db.select().from(users)).toHaveLength(1);
+	});
+
+	it('links Discord once it reports the email verified', async () => {
+		await db
+			.insert(users)
+			.values(userValues('user-1', { email: 'mary@example.com', emailVerified: true }));
+
+		const result = await signIn('discord', true);
+
+		expect(result.error).toBeNull();
+		const rows = await db.select().from(accounts);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({ userId: 'user-1', providerId: 'discord' });
 	});
 });
