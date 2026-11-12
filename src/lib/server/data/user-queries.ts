@@ -7,6 +7,7 @@ import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
+import { activeMute } from './mute.ts';
 import { countsFromDate } from './reader-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
@@ -143,7 +144,6 @@ export type UserRating = {
 
 /** A reader's reader reports, newest first, in every status, with the title joined. */
 export async function getUserRatings(userId: string): Promise<UserRating[]> {
-	const now = Date.now();
 	const rows = await db
 		.select({
 			status: communityContentReports.status,
@@ -162,6 +162,6 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 	return rows.map(({ accountCreatedAt, bannedAt, mutedUntil, ...row }) => ({
 		...row,
 		countsFrom: countsFromDate(accountCreatedAt),
-		restricted: bannedAt !== null || (mutedUntil !== null && mutedUntil.getTime() > now)
+		restricted: bannedAt !== null || activeMute(mutedUntil) !== null
 	}));
 }

@@ -228,9 +228,22 @@ describe('getReportCounts', () => {
 		expect(counts.categories.partner).toEqual({ none: 0, mentioned: 0, on_screen: 1, unsure: 1 });
 		expect(counts.categories.sexual).toEqual({ none: 0, present: 1, unsure: 1 });
 		expect(counts.categories.objectification.some_scenes).toBe(2);
-		expect(counts.flags.rapeOnScreen).toEqual({ yes: 1, no: 0, unsure: 1 });
-		expect(counts.flags.incest).toEqual({ yes: 0, no: 1, unsure: 1 });
+		expect(counts.flags.rapeOnScreen).toEqual({ yes: 1, no: 0, unsure: 0 });
+		expect(counts.flags.incest).toEqual({ yes: 0, no: 1, unsure: 0 });
 		expect(counts.framing.condemned).toBe(1);
+	});
+
+	it('tallies flags only over reports that said sexual violence is present', async () => {
+		await addUser('a');
+		await addUser('b');
+		await addUser('c');
+		await report('reader', { sexualPresent: 'present', flags: { incest: true } });
+		await report('a', { sexualPresent: 'none' });
+		await report('b', { sexualPresent: null });
+		await report('c', { sexualPresent: 'present', flags: {} });
+		const { flags } = await getReportCounts(titleId);
+		expect(flags.incest).toEqual({ yes: 1, no: 0, unsure: 1 });
+		expect(flags.rapeOnScreen).toEqual({ yes: 0, no: 0, unsure: 2 });
 	});
 
 	it('is empty for a title nobody reported', async () => {

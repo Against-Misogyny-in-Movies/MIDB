@@ -39,7 +39,8 @@ export function contradictsSource(f: HoldFacts): boolean {
 
 /**
  * The report is the `BURST_COUNT`th (or later) on its title inside the window. It counts
- * itself only when it was created inside the window, so an edit of an old report is not held.
+ * itself only when it was created inside the window, so an old report counts only the others
+ * and is held when the others alone reach `BURST_COUNT`.
  */
 export function isBurst(f: HoldFacts): boolean {
 	return f.othersInWindow + (f.createdInWindow ? 1 : 0) >= BURST_COUNT;

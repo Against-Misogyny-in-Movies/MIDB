@@ -101,7 +101,7 @@ Read when a task names the plan.
     - 42–50 Decisions made in this plan (the user can reopen them) (~240)
   - 51–64 Vocabulary and thresholds (client-safe, defined once) (~280)
   - 65–210 Phases (~2.4K)
-    - 67–102 R1: Data (~720)
+    - 67–102 R1: Data (~740)
     - 103–126 R2: Reader API (~360)
     - 127–148 R3: Moderation tools (~470)
     - 149–175 R4: Reader UI (~490)

@@ -211,7 +211,7 @@ export type ReportCounts = {
 	total: number;
 	/** Per category, a count for each level and for `unsure` (a null answer). */
 	categories: Record<ReportCategory, LevelCounts>;
-	/** Per concern flag, `yes`, `no` and `unsure`. */
+	/** Per concern flag, `yes`, `no` and `unsure`, over the reports that said sexual violence is present. */
 	flags: Record<ConcernFlagKey, { yes: number; no: number; unsure: number }>;
 	/** Per framing; reports that did not answer it appear in none. */
 	framing: Record<ReportFraming, number>;
@@ -227,7 +227,8 @@ const count = (cond: SQL) => sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 E
  * The counts for a title: only reports that are `counted`, whose account is at least
  * `REPORT_ACCOUNT_MIN_AGE_DAYS` old and is neither banned nor muted. The age is applied here,
  * so a report starts counting on its own, and a cached count can lag by its TTL. Two grouped
- * reads over the same rows: the categories with the framing and the total, then the flags.
+ * reads: the categories with the framing and the total, then the flags, which only the reports
+ * that said sexual violence is present were asked.
  */
 export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 	const now = Date.now();
@@ -263,7 +264,7 @@ export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 			.select(flagSelection)
 			.from(reports)
 			.innerJoin(users, eq(reports.userId, users.id))
-			.where(where)
+			.where(and(where, eq(reports.sexualPresent, 'present')))
 	]);
 
 	const categories = {} as Record<ReportCategory, LevelCounts>;

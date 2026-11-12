@@ -86,7 +86,7 @@ The repo has unused, empty community tables (`db/schema/community.ts`: Bechdel 0
   - `getReportCounts(titleId)` counts only reports that are `counted`, whose account is at least `REPORT_ACCOUNT_MIN_AGE_DAYS` old, and that is not muted or banned. It returns the total and the level counts per category and per flag, in one grouped query per kind, through the query builder.
 - **`src/lib/server/data/reader-report-holds.ts`.** The three rules as pure checks over the loaded facts, so they can be unit-tested:
   - **contradicts the source.** The title has a UM binding with any concern flag, and the report says sexual violence "Not shown", or "No" to a flag UM marks. "Not sure" never triggers it.
-  - **burst.** At least `BURST_COUNT` reports on the title within `BURST_WINDOW_HOURS`. New reports in the window are held.
+  - **burst.** At least `BURST_COUNT` reports on the title within `BURST_WINDOW_HOURS`. A report counts itself only when it was written inside the window, so an old report is held when the others alone reach `BURST_COUNT`.
   - **busy new account.** The account is younger than `NEW_ACCOUNT_DAYS` and has more than `NEW_ACCOUNT_REPORT_MAX` reports.
 - **`src/lib/server/data/count-flags.ts`:** `flagCounts`, `resolveCountFlag` and `dismissCountFlag`.
 - **`getUserRatings`** in `user-queries.ts` reads the new table instead of the Bechdel and UM tables.
