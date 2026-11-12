@@ -9,6 +9,9 @@
 	"compatibility_date": "2026-11-01",
 	"compatibility_flags": ["nodejs_compat"],
 
+	// The custom domain serves the Worker; Cloudflare creates its DNS record and certificate.
+	"routes": [{ "pattern": "againstmisogyny.org", "custom_domain": true }],
+
 	// Workers Caching: Cloudflare serves cache hits without running the Worker.
 	"cache": { "enabled": true },
 
@@ -35,7 +38,7 @@
 
 	"vars": {
 		// Production origin: the custom domain. Local dev takes its value from `.env`.
-		"PUBLIC_ORIGIN": "https://REPLACE-WITH-PRODUCTION-ORIGIN.example",
+		"PUBLIC_ORIGIN": "https://againstmisogyny.org",
 		"PUBLIC_TMDB_API_URL": "https://api.themoviedb.org",
 		"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
 		"MODERATION_MODEL": "claude-haiku-5-5",
@@ -47,6 +50,7 @@
 	// each one is repeated, with its own D1 database and rate-limit namespaces.
 	"env": {
 		"preview": {
+			"routes": [{ "pattern": "preview.againstmisogyny.org", "custom_domain": true }],
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -69,7 +73,7 @@
 				{ "name": "RL_MODERATE", "namespace_id": "2007", "simple": { "limit": 60, "period": 60 } }
 			],
 			"vars": {
-				"PUBLIC_ORIGIN": "https://REPLACE-WITH-PREVIEW-ORIGIN.example",
+				"PUBLIC_ORIGIN": "https://preview.againstmisogyny.org",
 				"PUBLIC_TMDB_API_URL": "https://api.themoviedb.org",
 				"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
 				"MODERATION_MODEL": "claude-haiku-5-5",
