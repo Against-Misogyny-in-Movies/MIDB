@@ -17,7 +17,7 @@ The site should be usable without sight, with low vision, with limited hand move
 ## Known gaps
 
 - **No automated check yet.** No automated accessibility audit runs in CI. The Playwright e2e specs cover layout only.
-- **Sign-in:** the sign-in screen is Hanko's web component, and its accessibility is Hanko's.
+- **Sign-in:** `/auth` and `/user/security` are MIDB's own pages. Buttons and fields have text labels, errors and confirmations are announced (`role="alert"` / `role="status"`), and every action works from the keyboard. The Cloudflare Turnstile widget on sign-up is Cloudflare's, and its accessibility is theirs.
 
 ## Reporting a barrier
 

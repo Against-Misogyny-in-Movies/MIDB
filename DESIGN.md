@@ -39,7 +39,8 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 - **Card** (`.card`): the one container. Metric sections are `<details>` cards with a source icon disk, an 18px title, a status `Badge` and a chevron.
 - **Section footer:** under a metric section's body, the source link with its "Updated <date>" (`.label`, `tabular-nums`, a `·` between) as one item, then Methodology as its own. The date shows only beside a source link and only when a sync is recorded; the group wraps as a unit, so the date never pairs with Methodology.
 - **Badge** (`ui/badge.svelte`): pill with a tone from `tones.ts`: violet (`pos`, `brand`), copper (`mid`), raspberry (`neg`), grey (`neutral`). The tones mirror `verdict.ts`, so a badge and the verdict above it never disagree.
-- **Buttons** (`.btn`): brand for the one main action per view, ink for a secondary filled action, ghost beside a filled one.
+- **Buttons** (`.btn`): brand for the one main action per view, ink for a secondary filled action, ghost beside a filled one. A disabled button is the same shape at 55% opacity with a not-allowed cursor.
+- **Notice** (`ui/notice.svelte`): an inline message in a 12px-radius plate, `--danger-soft` with `--danger` text for an error and `--success-soft` with `--success` for a confirmation. It sits beside the action it reports on.
 - **Verdict:** a soft-tone callout with the axis, the tier in its tone (24px Inter Tight), a two-line summary and a disclosure listing the signals. Fixed height so the DDD stream never shifts the page.
 - **Stat line:** source icon + label + value, used for the title page's source index.
 - **Highlight** (`.highlight` + `.tone-*`): a term in its colour over a soft highlighter stroke. Status tones (`pos`, `mid`, `neg`, `neutral`) for values, source tones (`bechdel`, `um`, `ddd`, `tmdb`) for source names. Used in sentences on the landing; badges stay the form for values in data views.
@@ -52,7 +53,7 @@ Restrained: tinted neutrals, one violet for actions, four violet shades for sour
 - **Landing:** the hero is a sentence about a real film ("Inception passes the Bechdel Test and has no Unconsenting Media concerns."), its clauses in their badge tones with a highlighter stroke, cycling through popular films with the titles as chips that double as the timer; then the search bar. The sections keep their cards and the hero's voice: Inter Tight sentences with highlighted terms and chip links. Four source cards (icon disk, the source name highlighted in its shade, real counts in the sentence); a lilac Verdicts plate with each tier highlighted in its tone; one centred About sentence. Everything shown is real (`#lib/server/data/catalogue.ts`).
 - **Title page:** poster beside the title, overview, the two verdicts, the source stat line, then section cards: Bechdel Test, Unconsenting Media, Does the Dog Die, Cast and crew, Details.
 - **Methodology:** title and lede, a sticky "On this page" list, then one card per topic with its icon disk.
-- **Account, sign-in, errors:** centred columns of cards; the sign-in card floats.
+- **Account, sign-in, errors:** centred columns of cards; the sign-in card floats. It stacks full-width actions: provider buttons in ink, a hairline "or", the passkey sign-in in brand and passkey sign-up in ghost; the Turnstile widget appears under them with its 65px slot reserved. The sign-in methods page is one card of hairline-separated rows (icon, name, "Added" date, ghost actions), with confirmations in a `--surface-sunken` plate under the row.
 
 ## Motion
 
@@ -60,7 +61,7 @@ One authored moment: the landing hero's sentence change (a 0.5s fade with a slig
 
 ## Browser surfaces
 
-Focus rings (2px brand outline), selection (brand at 24%), caret (brand), scrollbars (`--border-strong`), `select` (8px radius) and the Hanko sign-in and profile elements are themed from the tokens in the base layer.
+Focus rings (2px brand outline), selection (brand at 24%), caret (brand), scrollbars (`--border-strong`), and `select` (8px radius) are themed from the tokens in the base layer.
 
 ## Avoid
 
