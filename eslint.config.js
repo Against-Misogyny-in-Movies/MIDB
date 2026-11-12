@@ -2,9 +2,10 @@ import tsParser from '@typescript-eslint/parser';
 import sveltePlugin from 'eslint-plugin-svelte';
 import prettier from 'eslint-config-prettier';
 
-// Oxlint lints TS and JS (`.oxlintrc.json`); ESLint lints only what Oxlint cannot read: Svelte templates.
+// Oxlint lints TS and JS (`.oxlintrc.json`); ESLint adds `eslint-plugin-svelte` for Svelte templates and
+// `.svelte` rune modules (`.svelte.ts`, `.svelte.js`). Its recommended config also covers plain `.js` files.
 export default [
-	// Svelte recommended (flat); its rules apply to `.svelte` files only
+	// Svelte recommended (flat): the plugin's rules for `.svelte` and `.svelte.{js,ts}`, plus its `.js` base config
 	...sveltePlugin.configs['flat/recommended'],
 
 	// Prettier disables formatting rules: must come last among rule configs
@@ -19,14 +20,13 @@ export default [
 			'node_modules/**',
 			'package/**',
 			'.claude/skills/impeccable/**',
-			'**/*.stories.svelte',
-			'**/*.svelte.{js,ts}'
+			'**/*.stories.svelte'
 		]
 	},
 
-	// Svelte files: scripts are parsed as TypeScript
+	// Svelte files and rune modules: scripts are parsed as TypeScript
 	{
-		files: ['**/*.svelte'],
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
 				parser: tsParser

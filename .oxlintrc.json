@@ -20,19 +20,19 @@
 		"typescript/no-misused-promises": "error",
 		"typescript/await-thenable": "error",
 		"typescript/no-unnecessary-type-assertion": "error",
-		"typescript/no-unsafe-type-assertion": "off",
-		"typescript/no-unnecessary-type-parameters": "off",
-		"typescript/unbound-method": "off",
-		"typescript/require-array-sort-compare": "off",
-		"unicorn/no-array-sort": "off",
-		"unicorn/consistent-function-scoping": "off",
-		"unicorn/no-empty-file": "off",
-		"unicorn/require-module-specifiers": "off",
-		"import/no-unassigned-import": "off",
-		"no-underscore-dangle": "off",
-		"no-shadow": "off",
-		"typescript/consistent-return": "off",
-		"promise/always-return": "off"
+		"typescript/no-unsafe-type-assertion": "off", // deliberate casts at typed boundaries and in mocks
+		"typescript/no-unnecessary-type-parameters": "off", // the cache Backend.get<T> generic is deliberate
+		"typescript/unbound-method": "off", // getter tests on the db proxy
+		"typescript/require-array-sort-compare": "off", // every sort is on a fresh array
+		"unicorn/no-array-sort": "off", // every sort is on a fresh array
+		"unicorn/consistent-function-scoping": "off", // helpers are kept beside their callers
+		"unicorn/no-empty-file": "off", // Kit's src/lib/index.ts is empty
+		"unicorn/require-module-specifiers": "off", // `export {}` in app.d.ts
+		"import/no-unassigned-import": "off", // CSS and setup side-effect imports
+		"no-underscore-dangle": "off", // the ^_ unused convention
+		"no-shadow": "off", // harmless shadows
+		"typescript/consistent-return": "off", // never-returning guards and exhaustive switches
+		"promise/always-return": "off" // state-assigning .then
 	},
 	"ignorePatterns": [
 		".svelte-kit",

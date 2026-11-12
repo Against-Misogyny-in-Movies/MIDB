@@ -101,7 +101,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - Match the surrounding code: comments that say what the code does now, in sentence case, with the same naming.
   - A comment cites a doc by file and section heading (`docs/architecture.md, Caching policy`), never by line number.
   - It does not narrate what the code used to do.
-- No `oxlint-disable` or `eslint-disable` without a reason on the same line that says why the rule is wrong there. A promise is awaited or explicitly `void`-ed (`void goto(...)`); Oxlint's `no-floating-promises` fails the rest.
+- No `oxlint-disable` or `eslint-disable` without a reason on the same line that says why the rule is wrong there. A promise is awaited or explicitly `void`-ed (`void goto(...)`). Oxlint's type-aware rules (`no-floating-promises`) cover `.ts` and `.js`, `.svelte.ts` rune modules included; a `.svelte` `<script>` gets only Oxlint's syntax rules, so a fire-and-forget there is `void`-ed by hand.
 - No `any`, no empty `catch`, no commented-out code, and no unused export left "for later". No new dependency that the live plan or the user did not ask for.
 - A script an agent runs prints only what the agent needs to act on. A failure prints its full output.
 
@@ -113,7 +113,7 @@ Run the cheap checks often and the full set once.
 - **Once, at the end, the verification baseline:**
   - `pnpm check` → 0 errors
   - `pnpm typecheck` → 0 errors
-  - `pnpm lint` → clean (Prettier, Oxlint type-aware, and ESLint for Svelte templates)
+  - `pnpm lint` → clean (AGENTS.md, Commands, says what it runs)
   - `pnpm test:unit --run` → all pass
   - `pnpm test:db` → all pass (with `docker compose up -d db`)
   - `pnpm build` → clean

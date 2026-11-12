@@ -13,7 +13,12 @@ export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {
 		const user = await requireUser(locals);
 		const data = await request.formData();
-		const username = (data.get('username') as string | null)?.trim() || undefined;
+		const rawUsername = data.get('username');
+		// A file part is not a username: fail like any other invalid one.
+		if (rawUsername !== null && typeof rawUsername !== 'string') {
+			return fail(422, { error: 'username-format' });
+		}
+		const username = rawUsername?.trim() || undefined;
 		const avatarKey = (data.get('avatarKey') as string | null) || undefined;
 
 		if (!username && !avatarKey) {

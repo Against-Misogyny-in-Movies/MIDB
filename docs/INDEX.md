@@ -61,7 +61,7 @@ Read the sections your task touches.
   - 560–609 Configuration & environment (~1.7K)
     - 577–593 Local run sequence (~140)
     - 594–597 npm scripts (~130)
-    - 598–609 CI (`.github/workflows/tests.yml`) (~370)
+    - 598–609 CI (`.github/workflows/tests.yml`) (~350)
   - 610–625 Testing (~660)
     - 620–625 Verification baseline (~80)
   - 626–636 Known gaps / TODO (~340)

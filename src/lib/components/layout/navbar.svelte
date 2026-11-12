@@ -9,7 +9,7 @@
 
 	// The navbar lives in the root layout, so this runs once per full page load.
 	onMount(() => {
-		session.load();
+		void session.load();
 	});
 
 	const showSearch = $derived($page.url.pathname !== '/');
