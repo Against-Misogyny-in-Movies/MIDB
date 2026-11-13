@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 69–72 Motion (~90)
   - 73–76 Browser surfaces (~50)
   - 77–80 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~48.7K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~48.8K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)

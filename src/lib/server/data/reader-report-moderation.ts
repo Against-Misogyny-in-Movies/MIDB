@@ -19,7 +19,11 @@ import type { UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
 type ReportRow = typeof reports.$inferSelect;
-type TitleRef = { kind: (typeof titles.$inferSelect)['kind']; tmdbId: number | null; name: string };
+export type TitleRef = {
+	kind: (typeof titles.$inferSelect)['kind'];
+	tmdbId: number | null;
+	name: string;
+};
 
 export type ReportModerationResult =
 	| { ok: true; titles: TitleRef[] }
@@ -388,4 +392,17 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 		title: f.title,
 		flags: flags.get(f.titleId) ?? []
 	}));
+}
+
+/** A title a moderator opened from the flagged list, with every report on it. */
+export type OpenTitle = TitleRef & { id: string; reports: TitleReport[] };
+
+/** The title with its reports, or null when no title has that id. */
+export async function getOpenTitle(titleId: string): Promise<OpenTitle | null> {
+	const [row] = await db
+		.select({ id: titles.id, ...titleSelect })
+		.from(titles)
+		.where(eq(titles.id, titleId));
+	if (!row) return null;
+	return { ...row, reports: await listTitleReports(titleId) };
 }

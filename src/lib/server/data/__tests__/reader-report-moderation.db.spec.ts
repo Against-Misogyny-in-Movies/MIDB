@@ -12,6 +12,7 @@ import {
 import { userValues } from '#db/test/users.ts';
 import {
 	approveReport,
+	getOpenTitle,
 	listFlaggedTitles,
 	listHeldReports,
 	listTitleReports,
@@ -235,5 +236,19 @@ describe('queues', () => {
 		expect(flagged[0].flags.map((f) => f.note)).toEqual(expect.arrayContaining([null, 'Too low']));
 		await resolveCountFlag(flagged[1].flags[0].id, 'mod');
 		expect((await listFlaggedTitles()).map((f) => f.titleId)).toEqual([a]);
+	});
+});
+
+describe('getOpenTitle', () => {
+	it('returns the title with every report on it', async () => {
+		await report('r1', a, 'held', 'busy_new_account');
+		await report('r2', a);
+		const open = await getOpenTitle(a);
+		expect(open).toMatchObject({ id: a, kind: 'movie', tmdbId: 348, name: 'Alien' });
+		expect(open?.reports.map((r) => r.status).sort()).toEqual(['counted', 'held']);
+	});
+
+	it('returns null for an id no title has', async () => {
+		expect(await getOpenTitle('missing')).toBeNull();
 	});
 });

@@ -16,6 +16,15 @@ const queries = {
 	listReportedQueue: vi.fn(),
 	listRecentActions: vi.fn()
 };
+const reports = {
+	approveReport: vi.fn(),
+	rejectReport: vi.fn(),
+	rejectAccountReports: vi.fn(),
+	listHeldReports: vi.fn(),
+	listFlaggedTitles: vi.fn(),
+	getOpenTitle: vi.fn()
+};
+const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn() };
 const getSourceSyncDates = vi.fn();
 
 vi.mock('#lib/server/auth/guards.ts', () => ({
@@ -29,19 +38,43 @@ vi.mock('#lib/server/http/purge-title.ts', () => ({
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
+vi.mock('#lib/server/data/reader-report-moderation.ts', () => reports);
+vi.mock('#lib/server/data/count-flags.ts', () => flags);
 vi.mock('#lib/server/data/source-sync.ts', () => ({
 	getSourceSyncDates: () => getSourceSyncDates()
 }));
 
 const { load, actions } = await import('../+page.server');
 
+const loadEvent = (search = '') =>
+	({ locals: {}, url: new URL(`http://localhost/user/moderation${search}`) }) as Parameters<
+		typeof load
+	>[0];
+
 const MOD = { id: 'mod-1', role: 'moderator' };
 const TITLE = { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' };
 
 const NAMES = ['approve', 'hide', 'reject', 'restore', 'dismiss', 'mute', 'ban'] as const;
-type Name = (typeof NAMES)[number];
+const REPORT_NAMES = [
+	'countReport',
+	'rejectReport',
+	'rejectAccountReports',
+	'resolveFlag',
+	'dismissFlag'
+] as const;
+type Name = (typeof NAMES)[number] | (typeof REPORT_NAMES)[number];
 
-function run(name: Name, fields: Record<string, string> = { id: 'c1', userId: 'u1', hours: '24' }) {
+const REPORT_FIELDS = { id: 'f1', userId: 'u1', titleId: 't1' };
+const allFns = () => [
+	...Object.values(queries),
+	...Object.values(reports),
+	...Object.values(flags)
+];
+
+function run(
+	name: Name,
+	fields: Record<string, string> = { id: 'c1', userId: 'u1', titleId: 't1', hours: '24' }
+) {
 	const form = new FormData();
 	for (const [key, value] of Object.entries(fields)) form.set(key, value);
 	const event = {
@@ -58,6 +91,12 @@ beforeEach(() => {
 	purgeTitleComments.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
+	for (const fn of Object.values(reports))
+		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
+	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue(true);
+	reports.listHeldReports.mockResolvedValue([]);
+	reports.listFlaggedTitles.mockResolvedValue([]);
+	reports.getOpenTitle.mockResolvedValue(null);
 	getSourceSyncDates.mockReset().mockResolvedValue({});
 });
 
@@ -66,13 +105,13 @@ describe('load', () => {
 		queries.listPendingQueue.mockResolvedValue([]);
 		queries.listReportedQueue.mockResolvedValue([]);
 		queries.listRecentActions.mockResolvedValue([]);
-		await load({ locals: {} } as Parameters<typeof load>[0]);
+		await load(loadEvent());
 		expect(requireRole).toHaveBeenCalledWith({}, ['moderator', 'administrator'], { page: true });
 	});
 
 	it('refuses a reader who is not a moderator before reading any queue', async () => {
 		requireRole.mockImplementation(async () => error(403, 'Forbidden'));
-		await expect(load({ locals: {} } as Parameters<typeof load>[0])).rejects.toMatchObject({
+		await expect(load(loadEvent())).rejects.toMatchObject({
 			status: 403
 		});
 		expect(queries.listPendingQueue).not.toHaveBeenCalled();
@@ -86,7 +125,7 @@ describe('load', () => {
 			um: new Date(Date.now() - 49 * 3_600_000).toISOString(),
 			bechdel: new Date().toISOString()
 		});
-		const data = (await load({ locals: {} } as Parameters<typeof load>[0])) as {
+		const data = (await load(loadEvent())) as {
 			pending: unknown[];
 			staleSources: { source: string }[];
 		};
@@ -95,11 +134,11 @@ describe('load', () => {
 	});
 });
 
-describe.each(NAMES)('?/%s', (name) => {
+describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 	it('answers 403 to a reader who is not a moderator and changes nothing', async () => {
 		requireRole.mockImplementation(async () => error(403, 'Forbidden'));
 		await expect(run(name)).rejects.toMatchObject({ status: 403 });
-		for (const fn of Object.values(queries)) expect(fn).not.toHaveBeenCalled();
+		for (const fn of allFns()) expect(fn).not.toHaveBeenCalled();
 		expect(purgeTitleComments).not.toHaveBeenCalled();
 	});
 
@@ -118,7 +157,73 @@ describe.each(NAMES)('?/%s', (name) => {
 	it('answers 429 from the rate limit before any change', async () => {
 		rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
 		await expect(run(name)).rejects.toMatchObject({ status: 429 });
-		for (const fn of Object.values(queries)) expect(fn).not.toHaveBeenCalled();
+		for (const fn of allFns()) expect(fn).not.toHaveBeenCalled();
+	});
+});
+
+describe('the reader-reports view', () => {
+	it('returns the held reports, the flagged titles and no open title without ?title=', async () => {
+		reports.listHeldReports.mockResolvedValue([{ titleId: 't1' }]);
+		reports.listFlaggedTitles.mockResolvedValue([{ titleId: 't2' }]);
+		const data = (await load(loadEvent())) as Record<string, unknown>;
+		expect(data.held).toEqual([{ titleId: 't1' }]);
+		expect(data.flagged).toEqual([{ titleId: 't2' }]);
+		expect(data.openTitle).toBeNull();
+		expect(reports.getOpenTitle).not.toHaveBeenCalled();
+	});
+
+	it('opens the title named by ?title=', async () => {
+		reports.getOpenTitle.mockResolvedValue({ id: 't9', reports: [] });
+		const data = (await load(loadEvent('?title=t9'))) as Record<string, unknown>;
+		expect(reports.getOpenTitle).toHaveBeenCalledWith('t9');
+		expect(data.openTitle).toEqual({ id: 't9', reports: [] });
+	});
+
+	it('reads no report data for a reader who is not staff', async () => {
+		requireRole.mockImplementation(async () => error(403, 'Forbidden'));
+		await expect(load(loadEvent('?title=t9'))).rejects.toMatchObject({ status: 403 });
+		expect(reports.listHeldReports).not.toHaveBeenCalled();
+		expect(reports.getOpenTitle).not.toHaveBeenCalled();
+	});
+});
+
+describe('reader-report actions', () => {
+	it('count and reject call the data function with the actor, account and title', async () => {
+		expect(await run('countReport', REPORT_FIELDS)).toEqual({ id: 'u1:t1', done: 'countReport' });
+		expect(reports.approveReport).toHaveBeenCalledWith(MOD, 'u1', 't1');
+		await run('rejectReport', REPORT_FIELDS);
+		expect(reports.rejectReport).toHaveBeenCalledWith(MOD, 'u1', 't1');
+		expect(purgeTitleComments).not.toHaveBeenCalled();
+	});
+
+	it('reject all calls the data function with the account', async () => {
+		expect(await run('rejectAccountReports', REPORT_FIELDS)).toEqual({
+			id: 'u1',
+			done: 'rejectAccountReports'
+		});
+		expect(reports.rejectAccountReports).toHaveBeenCalledWith(MOD, 'u1');
+	});
+
+	it('resolve and dismiss close the flag as the acting moderator', async () => {
+		expect(await run('resolveFlag', REPORT_FIELDS)).toEqual({ id: 'f1', done: 'resolveFlag' });
+		expect(flags.resolveCountFlag).toHaveBeenCalledWith('f1', 'mod-1');
+		await run('dismissFlag', REPORT_FIELDS);
+		expect(flags.dismissCountFlag).toHaveBeenCalledWith('f1', 'mod-1');
+	});
+
+	it('answers 400 when the report is not named', async () => {
+		expect(await run('countReport', { userId: 'u1' })).toMatchObject({ status: 400 });
+		expect(reports.approveReport).not.toHaveBeenCalled();
+	});
+
+	it('maps a refusal to its status', async () => {
+		reports.approveReport.mockResolvedValue({ ok: false, reason: 'not-found' });
+		expect(await run('countReport', REPORT_FIELDS)).toMatchObject({
+			status: 404,
+			data: { id: 'u1:t1' }
+		});
+		flags.resolveCountFlag.mockResolvedValue(false);
+		expect(await run('resolveFlag', REPORT_FIELDS)).toMatchObject({ status: 409 });
 	});
 });
 

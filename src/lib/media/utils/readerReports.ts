@@ -7,6 +7,7 @@
 import { UM_FLAGS, type UmFlagKey } from '#lib/media/utils/metrics.ts';
 import type {
 	contentReportStatus,
+	holdReason,
 	reportFraming,
 	reportLevel,
 	sexualLevel,
@@ -121,3 +122,36 @@ export const STATUS_LABELS: Record<ContentReportStatus, string> = {
 	held: 'Waiting for review',
 	rejected: 'Not counted'
 };
+
+/** Why a report waits for a moderator. */
+export const HOLD_REASON_LABELS: Record<(typeof holdReason)[number], string> = {
+	contradicts_source: 'Contradicts Unconsenting Media',
+	burst: 'Burst on this title',
+	busy_new_account: 'Busy new account'
+};
+
+/** One answered category of a report, as a moderator reads it; a missing answer reads as not sure. */
+export type AnswerLine = { key: ReportCategory; label: string; value: string };
+
+type AnswerFields = {
+	sexualPresent: SexualLevel | null;
+	partnerLevel: ReportLevel | null;
+	physicalLevel: ReportLevel | null;
+	stalkingLevel: ReportLevel | null;
+	objectificationLevel: ObjectificationLevel | null;
+};
+
+export const NOT_SURE = 'Not sure';
+
+export function answerLines(answers: AnswerFields): AnswerLine[] {
+	return REPORT_CATEGORIES.map((c) => {
+		const answer = answers[c.field];
+		const labels: Record<string, string> =
+			c.levels === 'sexual'
+				? SEXUAL_LEVEL_LABELS
+				: c.levels === 'objectification'
+					? OBJECTIFICATION_LEVEL_LABELS
+					: REPORT_LEVEL_LABELS;
+		return { key: c.key, label: c.label, value: answer ? (labels[answer] ?? NOT_SURE) : NOT_SURE };
+	});
+}

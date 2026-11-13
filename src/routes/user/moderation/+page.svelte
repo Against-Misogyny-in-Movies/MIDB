@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
+	import ReaderReportsPanel from '#lib/components/moderation/readerReportsPanel.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import type { ActionOutcome } from '#lib/media/types/moderation.ts';
@@ -9,12 +10,21 @@
 
 	let { data, form } = $props();
 
-	type Tab = 'pending' | 'reported' | 'recent';
-	let tab = $state<Tab>('pending');
+	type Tab = 'pending' | 'reported' | 'reports' | 'recent';
+	/** A link to one title's reader reports (`?title=`) opens that tab. */
+	let tab = $state<Tab>(initialTab());
+	function initialTab(): Tab {
+		return data.openTitle ? 'reports' : 'pending';
+	}
 
 	const TABS = $derived([
 		{ id: 'pending' as const, label: 'Pending', count: data.pending.length },
 		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
+		{
+			id: 'reports' as const,
+			label: 'Reader reports',
+			count: data.held.length + data.flagged.length
+		},
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
 	]);
 
@@ -108,6 +118,13 @@
 					{/each}
 				</ul>
 			{/if}
+		{:else if tab === 'reports'}
+			<ReaderReportsPanel
+				held={data.held}
+				flagged={data.flagged}
+				openTitle={data.openTitle}
+				{outcome}
+			/>
 		{:else if items.length === 0}
 			<p class="empty" id="moderation-empty" tabindex="-1">
 				{tab === 'pending'
