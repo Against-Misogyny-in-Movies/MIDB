@@ -106,6 +106,7 @@ export class CommentsState {
 			return;
 		}
 		this.list = reply.data.comments;
+		this.#applyScores(this.list);
 		this.nextCursor = reply.data.nextCursor;
 		this.phase = 'ready';
 	}
@@ -126,7 +127,9 @@ export class CommentsState {
 		if (generation !== this.#generation) return;
 		if (!reply.ok) return this.#fail('more', 'more', reply);
 		const known = this.list.map((c) => c.id);
-		this.list = [...this.list, ...reply.data.comments.filter((c) => !known.includes(c.id))];
+		const added = reply.data.comments.filter((c) => !known.includes(c.id));
+		this.#applyScores(added);
+		this.list = [...this.list, ...added];
 		this.nextCursor = reply.data.nextCursor;
 	}
 
@@ -138,6 +141,7 @@ export class CommentsState {
 		const reply = await this.#request<ViewerCommentState>('GET', `${this.#base}/viewer`);
 		if (reply.ok) {
 			this.viewer = reply.data;
+			this.#applyScores(this.list);
 			this.viewerPhase = 'ready';
 		} else if (reply.status === 401) {
 			// Signed out after all (the first paint only guessed): there is nothing to merge.
@@ -157,8 +161,23 @@ export class CommentsState {
 	}
 
 	#ensureViewer(): ViewerCommentState {
-		this.viewer ??= { votes: {}, comments: [], mutedUntil: null };
+		this.viewer ??= { votes: {}, scores: {}, comments: [], mutedUntil: null };
 		return this.viewer;
+	}
+
+	/**
+	 * Shows the current score of each comment the reader voted on over the cached list's, which
+	 * trails votes by the edge TTL. A comment with a vote request out keeps its optimistic score.
+	 */
+	#applyScores(comments: CommentView[]): void {
+		const scores = this.viewer?.scores;
+		if (!scores) return;
+		for (const root of comments) {
+			for (const comment of [root, ...root.replies]) {
+				const score = scores[comment.id];
+				if (score !== undefined && !this.#votes[comment.id]) comment.score = score;
+			}
+		}
 	}
 
 	/** A comment, or a reply, in the public list. */
@@ -284,7 +303,7 @@ export class CommentsState {
 		const viewer = this.#ensureViewer();
 		const current = viewer.votes[id] ?? null;
 		const sync = this.#votes[id] ?? {
-			confirmed: { vote: current, score: this.#find(id)?.score ?? 0 },
+			confirmed: { vote: current, score: viewer.scores[id] ?? this.#find(id)?.score ?? 0 },
 			intended: current
 		};
 		this.#votes[id] = sync;
@@ -317,6 +336,7 @@ export class CommentsState {
 		const viewer = this.#ensureViewer();
 		if (vote === null) delete viewer.votes[id];
 		else viewer.votes[id] = vote;
+		viewer.scores[id] = confirmed.score;
 		const shown = this.#find(id);
 		if (shown) shown.score = confirmed.score + (vote ?? 0) - (confirmed.vote ?? 0);
 	}

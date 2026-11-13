@@ -47,7 +47,6 @@ const { clearCache } = await import('#lib/server/cache/index.ts');
 
 const TITLE = { id: 't1', kind: 'movie', tmdbId: 348, title: 'Alien' };
 const TAG = 'comments:movie:348';
-const VOTE_TITLE = { kind: 'movie', tmdbId: 348 };
 const OWN = { id: 'c1', status: 'pending', body: 'Hello' };
 
 const user = (overrides: Partial<UserRow> = {}) =>
@@ -116,8 +115,8 @@ beforeEach(async () => {
 	});
 	editComment.mockResolvedValue({ ok: true, comment: OWN, title: { kind: 'movie', tmdbId: 348 } });
 	softDeleteComment.mockResolvedValue({ ok: true, title: { kind: 'movie', tmdbId: 348 } });
-	setVote.mockResolvedValue({ ok: true, score: 1, vote: 1, title: VOTE_TITLE });
-	removeVote.mockResolvedValue({ ok: true, score: 0, vote: null, title: VOTE_TITLE });
+	setVote.mockResolvedValue({ ok: true, score: 1, vote: 1 });
+	removeVote.mockResolvedValue({ ok: true, score: 0, vote: null });
 	reportComment.mockResolvedValue({
 		ok: true,
 		alreadyReported: false,
@@ -125,7 +124,12 @@ beforeEach(async () => {
 		title: { kind: 'movie', tmdbId: 348 }
 	});
 	listTitleComments.mockResolvedValue({ comments: [], nextCursor: null });
-	getViewerCommentState.mockResolvedValue({ votes: {}, comments: [], mutedUntil: null });
+	getViewerCommentState.mockResolvedValue({
+		votes: {},
+		scores: {},
+		comments: [],
+		mutedUntil: null
+	});
 });
 
 describe('GET the public list', () => {
@@ -338,15 +342,15 @@ describe('votes', () => {
 		expect(await status(put())).toBe(429);
 	});
 
-	it('sets and removes a vote, and purges the title comment list after each', async () => {
+	it('sets and removes a vote, and schedules no purge', async () => {
 		const res = await put();
 		await expect(res.json()).resolves.toEqual({ score: 1, vote: 1 });
 		expect(setVote).toHaveBeenCalledWith('c1', 'u1', 1);
 		const removed = await call(vote.DELETE, { params, method: 'DELETE', body: {} });
 		await expect(removed.json()).resolves.toEqual({ score: 0, vote: null });
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: [TAG] }]);
-		expect(waitUntilPromises).toHaveLength(2);
+		expect(purgeCalls).toEqual([]);
+		expect(waitUntilPromises).toEqual([]);
 	});
 
 	it('refuses a vote on your own comment (403), a missing one (404) and a bad value (400)', async () => {

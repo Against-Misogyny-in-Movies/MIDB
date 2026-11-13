@@ -290,11 +290,24 @@ describe('votes', () => {
 		expect((await row(id)).score).toBe(0);
 	});
 
-	it('returns the title kind and TMDB id of the comment voted on', async () => {
-		const id = await published('author', 'Great');
-		const title = { kind: 'movie', tmdbId: 348 };
-		expect(await setVote(id, 'u1', 1)).toMatchObject({ ok: true, title });
-		expect(await removeVote(id, 'u1')).toMatchObject({ ok: true, title });
+	it('gives the viewer state the current scores of the comments the reader voted on, on this title only', async () => {
+		const voted = await published('author', 'Voted');
+		const unvoted = await published('author', 'Not voted');
+		await setVote(voted, 'u1', 1);
+		await setVote(voted, 'u2', 1);
+		await setVote(unvoted, 'u2', 1);
+		const [other] = await db
+			.insert(titles)
+			.values({ kind: 'movie', title: 'Aliens', cleanTitle: 'aliens', tmdbId: 679 })
+			.returning();
+		const [elsewhere] = await db
+			.insert(comments)
+			.values({ titleId: other.id, userId: 'author', body: 'Elsewhere', status: 'published' })
+			.returning();
+		await setVote(elsewhere.id, 'u1', 1);
+		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		expect(state.votes).toEqual({ [voted]: 1 });
+		expect(state.scores).toEqual({ [voted]: 2 });
 	});
 
 	it('refuses a vote on your own comment, on a pending one, and on a missing one', async () => {

@@ -13,6 +13,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	return privateJson(
 		title
 			? await getViewerCommentState(title.id, user)
-			: { votes: {}, comments: [], mutedUntil: activeMute(user.mutedUntil) }
+			: { votes: {}, scores: {}, comments: [], mutedUntil: activeMute(user.mutedUntil) }
 	);
 };

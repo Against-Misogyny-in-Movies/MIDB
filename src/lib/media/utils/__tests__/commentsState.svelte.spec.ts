@@ -150,6 +150,54 @@ describe('CommentsState', () => {
 		expect(toasts.items).toEqual([]);
 	});
 
+	describe('viewer scores', () => {
+		const viewerReply = (scores: Record<string, number>) =>
+			json({ votes: { a: 1, c: -1 }, scores, comments: [], mutedUntil: null });
+
+		/** Page one holds `a` and `b`; page two holds `c`. The cached scores are all 1. */
+		function setup(scores: Record<string, number>) {
+			const fetcher = vi.fn(async (url: unknown, init?: RequestInit) => {
+				const u = String(url);
+				if (u.endsWith('/viewer')) return viewerReply(scores);
+				if (init?.method === 'DELETE') return json({ score: 3, vote: null });
+				if (u.includes('cursor='))
+					return json({ comments: [view('c', { score: 1 })], nextCursor: null });
+				return json({ comments: [view('a'), view('b')], nextCursor: 'next' });
+			});
+			return { state: new CommentsState('movie', '1', fetcher), fetcher };
+		}
+
+		it('overrides the cached score of a voted comment when the viewer state arrives', async () => {
+			const { state } = setup({ a: 4 });
+			await state.load();
+			await state.loadViewer();
+			expect(state.list.map((c) => c.score)).toEqual([4, 1]);
+		});
+
+		it('overrides it when the list loads after the viewer state, and on a later page', async () => {
+			const { state } = setup({ a: 4, c: -2 });
+			await state.loadViewer();
+			await state.load();
+			expect(state.list.map((c) => c.score)).toEqual([4, 1]);
+			await state.loadMore();
+			expect(state.list.map((c) => c.score)).toEqual([4, 1, -2]);
+		});
+
+		it('builds the reader’s next vote on the fresh score', async () => {
+			const { state, fetcher } = setup({ a: 4 });
+			await state.load();
+			await state.loadViewer();
+			const pending = state.vote('a', 1);
+			expect(state.voteOf('a')).toBeNull();
+			expect(state.list[0].score).toBe(3);
+			await pending;
+			expect(fetcher).toHaveBeenCalledWith(
+				'/api/comments/a/vote',
+				expect.objectContaining({ method: 'DELETE' })
+			);
+		});
+	});
+
 	describe('votes', () => {
 		/** A state with comment `a` (score 1) loaded, and a fetcher that answers each vote request through its own gate. */
 		async function setup() {
@@ -186,7 +234,12 @@ describe('CommentsState', () => {
 			['down to up', -1, 1, 1, 3]
 		] as const)('moves the score by the delta for %s', async (_name, from, press, to, score) => {
 			const { state, gates } = await setup();
-			state.viewer = { votes: from === null ? {} : { a: from }, comments: [], mutedUntil: null };
+			state.viewer = {
+				votes: from === null ? {} : { a: from },
+				scores: {},
+				comments: [],
+				mutedUntil: null
+			};
 			state.list[0].score = 1;
 			const pending = state.vote('a', press);
 			expect(state.voteOf('a')).toBe(to);
@@ -197,7 +250,7 @@ describe('CommentsState', () => {
 
 		it('sends DELETE for a repeated press', async () => {
 			const { state, gates, requests } = await setup();
-			state.viewer = { votes: { a: 1 }, comments: [], mutedUntil: null };
+			state.viewer = { votes: { a: 1 }, scores: {}, comments: [], mutedUntil: null };
 			const pending = state.vote('a', 1);
 			expect(requests()).toEqual(['DELETE']);
 			gates[0](json({ score: 0, vote: null }));

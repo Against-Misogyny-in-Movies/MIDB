@@ -173,7 +173,8 @@ export function toOwnComment(row: CommentRow): OwnComment {
 }
 
 /**
- * What only the signed-in reader sees on a title: their votes on its comments and their own
+ * What only the signed-in reader sees on a title: their votes on its comments with those
+ * comments' current scores (the cached list trails them), and their own
  * pending and rejected comments (the public list leaves those out). Never cached.
  */
 export async function getViewerCommentState(
@@ -183,7 +184,11 @@ export async function getViewerCommentState(
 	const userId = user.id;
 	const [votes, own] = await Promise.all([
 		db
-			.select({ commentId: commentVotes.commentId, value: commentVotes.value })
+			.select({
+				commentId: commentVotes.commentId,
+				value: commentVotes.value,
+				score: comments.score
+			})
 			.from(commentVotes)
 			.innerJoin(comments, eq(commentVotes.commentId, comments.id))
 			.where(and(eq(commentVotes.userId, userId), eq(comments.titleId, titleId))),
@@ -201,6 +206,7 @@ export async function getViewerCommentState(
 	]);
 	return {
 		votes: Object.fromEntries(votes.map((v) => [v.commentId, v.value === 1 ? 1 : -1])),
+		scores: Object.fromEntries(votes.map((v) => [v.commentId, v.score])),
 		comments: own.map(toOwnComment),
 		mutedUntil: activeMute(user.mutedUntil)
 	};

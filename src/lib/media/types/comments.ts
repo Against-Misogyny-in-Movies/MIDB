@@ -57,6 +57,8 @@ export type OwnComment = {
 export type ViewerCommentState = {
 	/** Comment id to the reader's vote. */
 	votes: Record<string, 1 | -1>;
+	/** Comment id to its current score, for the comments the reader voted on: the cached list trails it. */
+	scores: Record<string, number>;
 	/** The reader's pending and rejected comments on this title, newest first. */
 	comments: OwnComment[];
 	/** When the reader's mute ends, while it is in the future; otherwise null. */

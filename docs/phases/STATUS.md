@@ -45,7 +45,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | M4    | Moderation table: docs          | completed   | 2026-11-13.                                                                                                       |
 | S1    | Staff powers and rate limits    | completed   | 2026-11-13. Moderation rows reviewed from code only, not rendered.                                                |
 | S2    | DDD section starts closed       | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
-| S3    | Snappy comment votes            | not started |                                                                                                                   |
+| S3    | Snappy comment votes            | completed   | 2026-11-13. Not rendered in a browser; voter-fresh scores came after the review round.                            |
 | S4    | Links to a comment              | not started |                                                                                                                   |
 | S5    | Public user profiles            | not started |                                                                                                                   |
 | S6    | Letterboxd score                | not started |                                                                                                                   |
@@ -114,6 +114,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Administrators act on any account and comment, their own and other administrators' included, except muting or banning themselves (user decision, 2026-11-13).
   - Staff are not rate-limited, except on the AI moderation calls (user decision, 2026-11-13).
   - Public profiles show avatar, name, join date, staff role, comment score total, published comments and counted community reports (user decision, 2026-11-13).
+  - Votes do not purge the cached comment list; the reader's private viewer state carries current scores for comments they voted on (user decision, 2026-11-13).
   - Film pages show the Letterboxd average rating from the official API with a secret key, as the only outside rating (user decision, 2026-11-13).
 - **Toolchain:**
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).

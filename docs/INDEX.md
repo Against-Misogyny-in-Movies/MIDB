@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 72–75 Motion (~110)
   - 76–79 Browser surfaces (~50)
   - 80–83 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~54.9K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~55.0K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -76,7 +76,7 @@ Read the sections your task touches.
   - 617–630 Server cache (`src/lib/server/cache/`) (~690)
   - 631–646 TMDB integration (~810)
   - 647–665 Auth flow (Better Auth) (~1.9K)
-  - 666–685 Caching policy (~1.4K) ← 7
+  - 666–685 Caching policy (~1.5K) ← 7
   - 686–742 Configuration & environment (~3.8K)
     - 702–714 Local run sequence (~130)
     - 715–718 npm scripts (~200)
@@ -91,17 +91,17 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~3.6K tok)
+- `docs/phases/STATUS.md` — Phase status (~3.7K tok)
   - 5–16 Rules (~270)
   - 17–52 Phases (~1.4K)
   - 53–87 Open items (~850)
-  - 88–131 Standing decisions (~1.0K) ← 1
+  - 88–132 Standing decisions (~1.1K) ← 1
 
 ## Live plans
 
 Read when a task names the plan.
 
-- `docs/plans/plan-community-polish.md` — Plan: community polish (~2.6K tok)
+- `docs/plans/plan-community-polish.md` — Plan: community polish (~2.8K tok)
 
 ## Policies
 

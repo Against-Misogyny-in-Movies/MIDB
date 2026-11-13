@@ -10,7 +10,7 @@ These are user decisions from 2026-11-13. The settled ones are also in `docs/pha
 - **Reporter names.** Comment reports show the reporter's username to staff.
 - **Administrators.** An administrator may act on any account and any comment, their own and other administrators' included. The one exception is muting or banning themselves. Moderators keep their current limits.
 - **Staff rate limits.** Moderators and administrators are not rate-limited, except on the AI moderation calls (`RL_MODERATE_AI`), which cost money.
-- **Votes.** A vote shows at once and a reload shows the current score.
+- **Votes.** A vote shows at once. The voter sees current scores for the comments they voted on after a reload. Votes do not purge the list (user decision, 2026-11-13).
 - **DDD.** The Does the Dog Die section renders closed.
 - **Profiles.** Each account with a username has a public profile showing:
   - its avatar, name, join date and staff role;
@@ -78,15 +78,15 @@ These are user decisions from 2026-11-13. The settled ones are also in `docs/pha
 
 **Server**
 
-- `votable()` (`src/lib/server/data/comment-votes.ts`) returns the comment's title kind and TMDB id from the same query.
-- The vote endpoint purges the title's comment list with `purgeTitleComments` under `waitUntil`.
+- The vote endpoint purges nothing (user decision, 2026-11-13): a purge per vote on a busy title spends the purge budget, and a refused purge for a moderation removal or new comment would go unseen.
+- The viewer endpoint (`private, no-store`) also returns `scores`, the current score of each comment the reader voted on in this title, read with their votes. The client shows them over the cached list, on load and on later pages, and builds its optimistic deltas on them.
 - Update `docs/architecture.md`, Caching policy, and the `PUBLIC_COMMENTS` comment in `cache.ts`.
 - Measure the vote endpoint before and after with a scratch script on a local D1, and report both numbers in the commit body.
 
 **Tests**
 
 - Unit specs for the state: optimistic apply, coalescing and rollback.
-- A DB spec that `votable` returns the title.
+- A DB spec that the viewer state returns scores only for the reader's voted comments on the title, and unit specs that the scores override the cached list's and seed the confirmed score.
 
 ### S4: Links to a comment
 

@@ -49,7 +49,7 @@ function mount(viewer: () => Response | Promise<Response>, put?: () => Response)
 	return render(CommentsSection, { kind: 'movie', tmdbId: '603', fetcher });
 }
 
-const empty = () => json({ votes: {}, comments: [], mutedUntil: null });
+const empty = () => json({ votes: {}, scores: {}, comments: [], mutedUntil: null });
 
 beforeEach(() => {
 	document.cookie = 'midb_hint=; max-age=0; path=/';

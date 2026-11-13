@@ -27,7 +27,8 @@ const json = (body: unknown, status = 200) =>
 
 /** A state with comment `a` loaded; vote requests wait on a gate, viewer requests answer from `viewerReply`. */
 async function setup(
-	viewerReply: () => Response = () => json({ votes: {}, comments: [], mutedUntil: null })
+	viewerReply: () => Response = () =>
+		json({ votes: {}, scores: {}, comments: [], mutedUntil: null })
 ) {
 	const gates: Array<(reply: Response) => void> = [];
 	const fetcher = vi.fn(async (url: unknown, init?: RequestInit) => {
@@ -79,7 +80,7 @@ describe('CommentsState votes and the reader state', () => {
 		const until = new Date(Date.now() + 3_600_000).toISOString();
 		let muted = false;
 		const { state, gates } = await setup(() =>
-			json({ votes: {}, comments: [], mutedUntil: muted ? until : null })
+			json({ votes: {}, scores: {}, comments: [], mutedUntil: muted ? until : null })
 		);
 		await state.loadViewer();
 		expect(state.mutedUntil).toBeNull();
