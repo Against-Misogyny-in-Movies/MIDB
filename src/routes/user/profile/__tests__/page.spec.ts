@@ -62,7 +62,11 @@ describe('saving the profile', () => {
 		await waitFor(() => expect(save.getAttribute('aria-busy')).toBe('true'));
 		expect((save as HTMLButtonElement).disabled).toBe(false);
 		release();
-		await waitFor(() => expect(shown()).toEqual(['success: Profile saved.']));
+		await waitFor(() =>
+			expect(shown()).toEqual([
+				'warn: Nothing changed: the username and avatar are the ones already saved.'
+			])
+		);
 		expect(save.getAttribute('aria-busy')).toBe('false');
 	});
 
@@ -84,6 +88,15 @@ describe('saving the profile', () => {
 		await fireEvent.input(field, { target: { value: 'mary' } });
 		expect(document.getElementById('username-hint')?.textContent).not.toMatch(/reserved/);
 		expect(field.getAttribute('aria-invalid')).toBeNull();
+	});
+
+	it('says what a save changed, as the server stored it', async () => {
+		form.result = { type: 'success', data: { success: true, me: { ...ME, username: 'maria' } } };
+		mount();
+		const field = screen.getByRole('textbox', { name: 'Username' });
+		await fireEvent.input(field, { target: { value: 'Maria' } });
+		await fireEvent.submit(field.closest('form')!);
+		await waitFor(() => expect(shown()).toEqual(['success: Username changed to maria.']));
 	});
 
 	it('toasts a refused avatar', async () => {

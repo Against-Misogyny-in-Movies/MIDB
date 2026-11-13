@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { AUTH_PROVIDERS, providerIcon, providerLabel } from '#lib/media/utils/auth-providers.ts';
@@ -30,7 +31,15 @@
 	}
 
 	onMount(() => {
-		void methods.load(page.url.searchParams.get('error'));
+		const params = page.url.searchParams;
+		void methods.load(params.get('error'), params.get('linked'));
+		// The result is shown once: a reload of the page does not show it again.
+		if (params.has('error') || params.has('linked')) {
+			const url = new URL(page.url.href);
+			url.searchParams.delete('error');
+			url.searchParams.delete('linked');
+			replaceState(url, page.state);
+		}
 	});
 </script>
 

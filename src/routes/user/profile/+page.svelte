@@ -62,22 +62,43 @@
 			: undefined
 	);
 
+	type Profile = { username: string; avatarKey: string | null };
+
+	/** Toasts what a save changed. */
+	function announceSave(before: Profile, after: Profile) {
+		const username = after.username !== before.username;
+		const avatar = after.avatarKey !== before.avatarKey;
+		if (username && avatar)
+			toasts.success(`Username changed to ${after.username}, and avatar changed.`);
+		else if (username) toasts.success(`Username changed to ${after.username}.`);
+		else if (avatar) toasts.success('Avatar changed.');
+		else toasts.warn('Nothing changed: the username and avatar are the ones already saved.');
+	}
+
 	/** Saves the profile: the result is a toast, except a refused username, which its field shows. */
 	const saveProfile: SubmitFunction = ({ formData }) => {
 		saving = true;
 		submittedUsername = String(formData.get('username') ?? '');
+		const before: Profile = { username: user?.username ?? '', avatarKey: user?.avatarKey ?? null };
 		return async ({ result, update }) => {
 			await update();
 			saving = false;
 			if (result.type === 'success') {
-				toasts.success('Profile saved.');
+				// The account as the server stored it (a username is lowercased), not as typed.
+				const me = result.data?.me as Partial<Profile> | undefined;
+				announceSave(before, {
+					username: me?.username ?? before.username,
+					avatarKey: me?.avatarKey ?? before.avatarKey
+				});
 			} else if (result.type === 'failure') {
 				const error = result.data?.error;
 				if (typeof error === 'string' && USERNAME_ERRORS[error]) return;
 				toasts.error(
 					error === 'avatar-invalid'
 						? 'That avatar is not available. Choose another.'
-						: 'The profile could not be saved. Try again.'
+						: error === 'no-changes'
+							? 'Nothing to save: enter a username or choose an avatar.'
+							: 'The profile could not be saved. Try again.'
 				);
 			}
 		};

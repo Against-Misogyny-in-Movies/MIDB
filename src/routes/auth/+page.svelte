@@ -63,8 +63,9 @@
 
 	// The session store resolves once per page load, so a sign-in made here is read back before
 	// the next page renders its navbar.
-	async function enter() {
+	async function enter(message = 'Signed in.') {
 		await session.refresh();
+		toasts.success(message);
 		await goto(afterSignIn);
 	}
 
@@ -123,7 +124,7 @@
 			if (captchaOn) widget?.reset();
 			return;
 		}
-		await enter();
+		await enter('Account created. Signed in.');
 	}
 
 	function startSignUp() {

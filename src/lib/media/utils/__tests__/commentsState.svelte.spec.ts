@@ -211,6 +211,23 @@ describe('CommentsState', () => {
 		expect(state.errors.viewer).toBeUndefined();
 	});
 
+	it('toasts an edit by the status it answered, and a delete', async () => {
+		const replies = [
+			json({ comment: { ...OWN, id: 'a', status: 'published' } }),
+			json({ comment: { ...OWN, id: 'a', status: 'pending' } }),
+			json({ ok: true })
+		];
+		const state = new CommentsState('movie', '1', async () => replies.shift()!);
+		expect(await state.edit('a', 'new text')).toBe(true);
+		expect(await state.edit('a', 'newer text')).toBe(true);
+		expect(await state.remove('a')).toBe(true);
+		expect(shown()).toEqual([
+			'success: Comment saved.',
+			'warn: Comment saved. Only the author and moderators see the comment until a moderator decides.',
+			'success: Comment deleted.'
+		]);
+	});
+
 	it('says when the account had reported the comment before', async () => {
 		const state = new CommentsState('movie', '1', async () => json({ alreadyReported: true }));
 		expect(await state.report('a', { reason: 'spam', note: '  ' })).toBe(true);

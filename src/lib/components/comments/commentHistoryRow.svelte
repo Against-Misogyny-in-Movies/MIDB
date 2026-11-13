@@ -3,7 +3,7 @@
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
-	import { unpublishedNote } from '#lib/media/utils/comments.ts';
+	import { commentResult, unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
@@ -55,6 +55,8 @@
 			return false;
 		}
 		const saved = reply.data.comment;
+		const result = commentResult('edit', saved);
+		toasts.show(result.tone, result.text);
 		comment = {
 			...comment,
 			body: saved.body,
@@ -76,6 +78,7 @@
 			return;
 		}
 		comment = { ...comment, status: 'deleted' };
+		toasts.success('Comment deleted.');
 		mode = null;
 		await focusAfterUpdate(() => root);
 	}
