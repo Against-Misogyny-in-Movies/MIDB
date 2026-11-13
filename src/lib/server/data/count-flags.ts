@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
-import { titleCountFlags } from '#db/schema/community.ts';
+import { moderationActions, titleCountFlags } from '#db/schema/community.ts';
+import { runBatch } from './comment-status.ts';
 
 /** The "counts look wrong" flags on a title, by status. */
 export async function flagCounts(
@@ -16,18 +17,43 @@ export async function flagCounts(
 	return out;
 }
 
-/** Moves an open flag to `status`; false when it is not open (or does not exist). */
+/**
+ * Moves an open flag to `status` and logs it in the same batch, the log row only while the flag
+ * is still open; false when it is not open (or does not exist). Counts do not change, so
+ * nothing is purged.
+ */
 async function closeFlag(
 	flagId: string,
 	actorId: string,
 	status: 'resolved' | 'dismissed'
 ): Promise<boolean> {
-	const rows = await db
-		.update(titleCountFlags)
-		.set({ status, resolvedBy: actorId })
-		.where(and(eq(titleCountFlags.id, flagId), eq(titleCountFlags.status, 'open')))
-		.returning({ id: titleCountFlags.id });
-	return rows.length > 0;
+	const action = status === 'resolved' ? 'resolve_count_flag' : 'dismiss_count_flag';
+	const open = and(eq(titleCountFlags.id, flagId), eq(titleCountFlags.status, 'open'));
+	const results = await runBatch([
+		db.insert(moderationActions).select(
+			db
+				.select({
+					id: sql<string>`${crypto.randomUUID()}`.as('id'),
+					actorId: sql<string>`${actorId}`.as('actorId'),
+					targetCommentId: sql<string | null>`NULL`.as('targetCommentId'),
+					targetUserId: sql<string | null>`NULL`.as('targetUserId'),
+					targetTitleId: titleCountFlags.titleId,
+					action: sql<typeof action>`${action}`.as('action'),
+					reason: sql<string | null>`NULL`.as('reason'),
+					muteHours: sql<number | null>`NULL`.as('muteHours'),
+					createdAt: sql<number>`${Date.now()}`.as('createdAt')
+				})
+				.from(titleCountFlags)
+				.where(open)
+		),
+		db
+			.update(titleCountFlags)
+			.set({ status, resolvedBy: actorId })
+			.where(open)
+			.returning({ id: titleCountFlags.id })
+	]);
+	const closed = results[1];
+	return Array.isArray(closed) && closed.length > 0;
 }
 
 /** A moderator acted on the counts the flag pointed at. */

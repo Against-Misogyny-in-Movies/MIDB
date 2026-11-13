@@ -23,7 +23,12 @@
 		restore: 'restored a comment',
 		dismiss: 'dismissed the reports on a comment',
 		mute: 'muted',
-		ban: 'banned'
+		ban: 'banned',
+		approve_report: 'counted a reader report',
+		reject_report: 'rejected a reader report',
+		reject_account_reports: 'rejected every reader report of',
+		resolve_count_flag: 'resolved a counts flag',
+		dismiss_count_flag: 'dismissed a counts flag'
 	};
 
 	/** A hide or a reject can be undone while the comment is still in that state. */

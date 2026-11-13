@@ -227,6 +227,8 @@ export const moderationActions = sqliteTable(
 			onDelete: 'set null'
 		}),
 		targetUserId: text('target_user_id').references(() => users.id, { onDelete: 'set null' }),
+		/** The title a reader-report or count-flag action concerns; null on comment and user actions. */
+		targetTitleId: text('target_title_id').references(() => titles.id, { onDelete: 'set null' }),
 		action: text('action', { enum: moderationAction }).notNull(),
 		reason: text('reason'),
 		/** The length of a mute, in hours; null on every other action. */
