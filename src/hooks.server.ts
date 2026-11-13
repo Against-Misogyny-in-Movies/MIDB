@@ -24,6 +24,30 @@ function withSafeCacheHeaders(response: Response): Response {
 	return asPrivate(response);
 }
 
+const SECURITY_HEADERS = {
+	'strict-transport-security': 'max-age=63072000; includeSubDomains',
+	'x-content-type-options': 'nosniff',
+	'referrer-policy': 'strict-origin-when-cross-origin',
+	'x-frame-options': 'DENY',
+	'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+	'cross-origin-opener-policy': 'same-origin'
+};
+
+/**
+ * Every response the hook returns carries the security headers (`docs/architecture.md`, Caching policy). The response is copied, because one from `fetch`, a library or `Response.redirect` has
+ * immutable headers. Assets served by Workers Assets never reach the hook and do not carry them.
+ */
+function withSecurityHeaders(response: Response): Response {
+	const out = new Response(response.body, response);
+	for (const [name, value] of Object.entries(SECURITY_HEADERS)) out.headers.set(name, value);
+	return out;
+}
+
+/** The one exit of `handle`: the cache policy, then the security headers. */
+function finish(response: Response): Response {
+	return withSecurityHeaders(withSafeCacheHeaders(response));
+}
+
 /**
  * The signed-in user, or null. The session comes from Better Auth (its cookie cache answers
  * without a query for a few minutes); the row is then read fresh, so a ban, a role change or a
@@ -44,31 +68,29 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const { pathname } = event.url;
 
-	// Returned, not thrown: a thrown redirect skips `withSafeCacheHeaders`, and whether this one
+	// Returned, not thrown: a thrown redirect skips `finish`, and whether this one
 	// applies depends on the cookie, which the edge cache key ignores. The gate checks only that
 	// a session cookie exists; the guards verify the session itself.
 	if (isAccountPath(pathname) && !getSessionCookie(event.request)) {
-		return withSafeCacheHeaders(
-			new Response(null, { status: 303, headers: { location: '/auth' } })
-		);
+		return finish(new Response(null, { status: 303, headers: { location: '/auth' } }));
 	}
 
 	if (pathname.startsWith('/user/moderation')) {
-		// The guard throws; a thrown redirect or error would skip `withSafeCacheHeaders`.
+		// The guard throws; a thrown redirect or error would skip `finish`.
 		try {
 			await requireRole(event.locals, STAFF_ROLES, { page: true });
 		} catch (err) {
 			if (isRedirect(err)) {
-				return withSafeCacheHeaders(
+				return finish(
 					new Response(null, { status: err.status, headers: { location: err.location } })
 				);
 			}
 			if (isHttpError(err)) {
-				return withSafeCacheHeaders(new Response(err.body.message, { status: err.status }));
+				return finish(new Response(err.body.message, { status: err.status }));
 			}
 			throw err;
 		}
 	}
 
-	return withSafeCacheHeaders(await resolve(event));
+	return finish(await resolve(event));
 };

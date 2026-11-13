@@ -243,3 +243,11 @@ describe('getProfileComments paging', () => {
 		expect(two.nextCursor).toBeNull();
 	});
 });
+
+describe('getProfileComments times', () => {
+	it('rounds a comment time down to the minute', async () => {
+		await comment({ createdAt: new Date('2026-11-01T10:07:42.123Z') });
+		const page = await getProfileComments('anna-id', null);
+		expect(page.comments[0].createdAt).toBe('2026-11-01T10:07:00.000Z');
+	});
+});

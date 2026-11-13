@@ -67,6 +67,27 @@ beforeEach(() => {
 	mocks.letterboxdConfigured.mockReturnValue(true);
 });
 
+describe('loadTitle ids', () => {
+	test.each(['abc', '..%2F..%2F3%2Fconfiguration', '../3/configuration', '', '1234567890', '1 2'])(
+		'answers 404 for %j before any request goes out',
+		async (id) => {
+			await expect(loadTitle('movie', id)).rejects.toMatchObject({ status: 404 });
+			await expect(loadTitle('tv', id)).rejects.toMatchObject({ status: 404 });
+			expect(mocks.getMovie).not.toHaveBeenCalled();
+			expect(mocks.getSeries).not.toHaveBeenCalled();
+			expect(mocks.getTriggerTagsLive).not.toHaveBeenCalled();
+			expect(mocks.getTriggerTagsForSeries).not.toHaveBeenCalled();
+			expect(mocks.getLetterboxdRating).not.toHaveBeenCalled();
+		}
+	);
+
+	test('passes the id normalised, as parseTitleParams gives it', async () => {
+		mocks.getTitleRow.mockResolvedValue(row);
+		await loadTitle('movie', '0603');
+		expect(mocks.getMovie).toHaveBeenCalledWith('603');
+	});
+});
+
 describe('loadTitle', () => {
 	test('movie with a seeded row: Bechdel + UM binding, no candidates, DDD streamed by imdb id', async () => {
 		mocks.getTitleRow.mockResolvedValue(row);

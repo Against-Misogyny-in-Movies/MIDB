@@ -5,27 +5,7 @@
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#fbfafc" />
-		<script>
-			try {
-				// `midb_hint` (session.svelte.ts) marks a probably signed-in reader, so the comment
-				// section reserves the composer's height in the first paint.
-				if (/(?:^|;\s*)midb_hint=1(?:;|$)/.test(document.cookie)) {
-					document.documentElement.dataset.hint = 'user';
-				}
-			} catch (_) {}
-			try {
-				var t = localStorage.getItem('theme');
-				if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-				// Tint the mobile browser chrome with the active theme's --surface
-				// (#fbfafc light, #141217 dark). Resolve a manual override first,
-				// else follow the system preference
-				var dark =
-					t === 'dark' ||
-					(t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-				var meta = document.querySelector('meta[name="theme-color"]');
-				if (meta) meta.setAttribute('content', dark ? '#141217' : '#fbfafc');
-			} catch (_) {}
-		</script>
+		<script src="%sveltekit.assets%/theme-init.js"></script>
 		<link
 			rel="preload"
 			href="%sveltekit.assets%/fonts/inter-tight-latin-700-normal.woff2"

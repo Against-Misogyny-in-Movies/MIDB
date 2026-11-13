@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
+import { comments } from '#db/schema/community.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { titles } from '#db/schema/titles.ts';
@@ -7,6 +8,7 @@ import { userValues } from '#db/test/users.ts';
 import {
 	createComment,
 	getCommentThread,
+	listTitleComments,
 	softDeleteComment
 } from '#lib/server/data/comment-queries.ts';
 import { approveComment, hideComment, rejectComment } from '#lib/server/data/moderation-actions.ts';
@@ -153,5 +155,54 @@ describe('getCommentThread', () => {
 		expect((await getCommentThread(pending, viewers.administrator))?.review?.status).toBe(
 			'pending'
 		);
+	});
+});
+
+describe('comment times', () => {
+	const EXACT = new Date('2026-11-01T10:07:42.123Z');
+	const EDITED = new Date('2026-11-01T10:09:59.999Z');
+
+	async function stamped() {
+		const root = await store('author', 'Root');
+		const reply = await store('replier', 'Reply', root);
+		await db.update(comments).set({ createdAt: EXACT, editedAt: EDITED });
+		return { root, reply };
+	}
+
+	it('rounds the public list down to the minute and keeps the cursor exact', async () => {
+		const { root, reply } = await stamped();
+		const { comments: list } = await listTitleComments(title.id, {
+			sort: 'new',
+			limit: 1
+		});
+		expect(list[0]).toMatchObject({
+			id: root,
+			createdAt: '2026-11-01T10:07:00.000Z',
+			editedAt: '2026-11-01T10:09:00.000Z'
+		});
+		expect(list[0].replies[0]).toMatchObject({ id: reply, createdAt: '2026-11-01T10:07:00.000Z' });
+	});
+
+	it.each(['anonymous', 'other'] as const)('rounds a thread for %s', async (who) => {
+		const { reply } = await stamped();
+		const thread = await getCommentThread(reply, viewers[who]);
+		expect(thread?.root.createdAt).toBe('2026-11-01T10:07:00.000Z');
+		expect(thread?.root.replies[0].createdAt).toBe('2026-11-01T10:07:00.000Z');
+		expect(thread?.root.replies[0].editedAt).toBe('2026-11-01T10:09:00.000Z');
+	});
+
+	it("keeps an author's own comments exact and rounds everyone else's", async () => {
+		const { reply } = await stamped();
+		const thread = await getCommentThread(reply, viewers.author);
+		expect(thread?.root.createdAt).toBe(EXACT.toISOString());
+		expect(thread?.root.replies[0].createdAt).toBe('2026-11-01T10:07:00.000Z');
+	});
+
+	it.each(['moderator', 'administrator'] as const)('keeps every time exact for %s', async (who) => {
+		const { reply } = await stamped();
+		const thread = await getCommentThread(reply, viewers[who]);
+		expect(thread?.root.createdAt).toBe(EXACT.toISOString());
+		expect(thread?.root.editedAt).toBe(EDITED.toISOString());
+		expect(thread?.root.replies[0].createdAt).toBe(EXACT.toISOString());
 	});
 });

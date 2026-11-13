@@ -13,6 +13,7 @@ import type {
 import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import { COMMENT_PAGE_SIZE, afterCursor, decodeCursor, encodeCursor } from './comment-queries.ts';
 import { displayNameOf } from './user-queries.ts';
+import { publicTime } from './public-time.ts';
 import { countedReportsWhere } from './community-reports.ts';
 
 /** What an account's public profile reads of its user row: enough to show and to cache it, nothing private. */
@@ -87,7 +88,7 @@ export async function getProfileComments(
 				id: comment.id,
 				body: comment.body,
 				score: comment.score,
-				createdAt: comment.createdAt.toISOString(),
+				createdAt: publicTime(comment.createdAt),
 				edited: comment.editedAt !== null,
 				title: { kind, tmdbId, name: titleName },
 				inReplyTo:

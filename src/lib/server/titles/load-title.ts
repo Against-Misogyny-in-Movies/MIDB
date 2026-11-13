@@ -6,6 +6,7 @@ import type { UmEntry } from '#lib/media/types/um.ts';
 import { getMovie, getSeries } from '#lib/server/integrations/tmdb/index.ts';
 import { getTriggerTagsForSeries, getTriggerTagsLive } from '#lib/server/integrations/ddd.ts';
 import { getLetterboxdRating, letterboxdConfigured } from '#lib/server/integrations/letterboxd.ts';
+import { parseTitleParams } from '#lib/server/data/comment-title.ts';
 import { getTitleRow, type TitleKind } from '#lib/server/data/title-queries.ts';
 import { getBechdel, getUmEntry, type BechdelData } from '#lib/server/data/sources.ts';
 import { getUnconsentingCandidates } from '#lib/server/data/um-candidates.ts';
@@ -35,7 +36,9 @@ export interface TitlePageData<M extends Movie | Series> {
  * visit never writes), then the seeded sources, then UM candidates when nothing is bound, plus
  * the streamed DDD lookup and, for a film, the streamed Letterboxd rating. User-agnostic, so `PUBLIC_PAGE` caching is safe.
  *
- * @throws SvelteKit `error()` when TMDB rejects the id.
+ * @throws SvelteKit `error()` 404 for an id that is not 1–9 digits, before any request goes out
+ * (the id is part of the TMDB path, so `..%2F` would otherwise reach another endpoint), and
+ * when TMDB rejects the id.
  */
 export function loadTitle(kind: 'movie', tmdbId: string): Promise<TitlePageData<Movie>>;
 export function loadTitle(kind: 'tv', tmdbId: string): Promise<TitlePageData<Series>>;
@@ -43,9 +46,10 @@ export async function loadTitle(
 	kind: TitleKind,
 	tmdbId: string
 ): Promise<TitlePageData<Movie | Series>> {
+	const { tmdbId: id } = parseTitleParams(kind, tmdbId);
 	return kind === 'movie'
-		? withSources('movie', await getMovie(tmdbId), (movie) => getTriggerTagsLive(movie.imdbId))
-		: withSources('tv', await getSeries(tmdbId), getTriggerTagsForSeries);
+		? withSources('movie', await getMovie(id), (movie) => getTriggerTagsLive(movie.imdbId))
+		: withSources('tv', await getSeries(id), getTriggerTagsForSeries);
 }
 
 async function withSources<M extends Movie | Series>(

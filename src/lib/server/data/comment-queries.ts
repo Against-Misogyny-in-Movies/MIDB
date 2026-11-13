@@ -16,6 +16,7 @@ import { isStaff } from '#lib/media/utils/staff.ts';
 import { decideStatus } from '#lib/server/moderation/decide.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { activeMute } from './mute.ts';
+import { publicTime } from './public-time.ts';
 import { toPublicUser } from './user-queries.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
 import {
@@ -68,13 +69,19 @@ export function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undef
 
 type ListedRow = { comment: CommentRow; author: typeof users.$inferSelect };
 
-/** `open` shows a comment that is not published as it is, for the reader allowed to see it. */
+/**
+ * `open` shows a comment that is not published as it is, for the reader allowed to see it.
+ * `exact` keeps the exact times, for the comment's author and for staff; every other view
+ * carries them rounded down to the minute (`publicTime`).
+ */
 function toView(
 	{ comment, author }: ListedRow,
 	authors: Map<string, ListedRow>,
 	replies: CommentView[] = [],
-	open = false
+	open = false,
+	exact = false
 ): CommentView {
+	const time = (date: Date) => (exact ? date.toISOString() : publicTime(date));
 	const removed = !open && comment.status !== 'published';
 	const parent =
 		comment.parentId && comment.parentId !== comment.rootId ? authors.get(comment.parentId) : null;
@@ -95,8 +102,8 @@ function toView(
 		author: removed ? null : toPublicUser(author),
 		score: removed ? 0 : comment.score,
 		replyCount: comment.replyCount,
-		createdAt: comment.createdAt.toISOString(),
-		editedAt: removed ? null : (comment.editedAt?.toISOString() ?? null),
+		createdAt: time(comment.createdAt),
+		editedAt: removed || !comment.editedAt ? null : time(comment.editedAt),
 		replies
 	};
 }
@@ -201,15 +208,17 @@ export async function getCommentThread(
 	if (!title || title.tmdbId === null) return null;
 
 	const byId = new Map(rows.map((r) => [r.comment.id, r]));
+	const exactFor = (r: ListedRow) =>
+		viewer !== null && (isStaff(viewer.role) || viewer.id === r.comment.userId);
 	const replies = rows
 		.filter(
 			(r) => r.comment.id !== rootId && (r.comment.status === 'published' || r.comment.id === id)
 		)
-		.map((r) => toView(r, byId, [], r.comment.id === id));
+		.map((r) => toView(r, byId, [], r.comment.id === id, exactFor(r)));
 	return {
 		kind: title.kind,
 		tmdbId: title.tmdbId,
-		root: toView(rootRow, byId, replies, rootRow.comment.id === id),
+		root: toView(rootRow, byId, replies, rootRow.comment.id === id, exactFor(rootRow)),
 		review:
 			target.status === 'published'
 				? null
