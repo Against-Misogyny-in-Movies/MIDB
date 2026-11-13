@@ -194,11 +194,16 @@ describe('ModerationItem', () => {
 	it('marks the pressed button busy and holds the others until the action ends', async () => {
 		let release!: () => void;
 		form.update = () => new Promise<void>((r) => (release = r));
-		mount();
+		mount({ reports: [{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z' }] });
 		const approve = screen.getByRole('button', { name: 'Approve' });
 		await fireEvent.submit(approve.closest('form') as HTMLFormElement);
 		await waitFor(() => expect(approve.getAttribute('aria-busy')).toBe('true'));
-		expect((approve as HTMLButtonElement).disabled).toBe(true);
+		// The pressed button keeps the focus, so it stays enabled; the others wait.
+		expect((approve as HTMLButtonElement).disabled).toBe(false);
+		expect(screen.getByRole('button', { name: 'Dismiss reports' })).toHaveProperty(
+			'disabled',
+			true
+		);
 		release();
 		await waitFor(() => expect(approve.getAttribute('aria-busy')).toBe('false'));
 	});

@@ -47,12 +47,12 @@ Read the sections your task touches.
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–63 Components (~2.3K) ← 1
+  - 37–63 Components (~2.4K) ← 1
   - 64–70 Pages (~450)
   - 71–74 Motion (~110)
   - 75–78 Browser surfaces (~50)
   - 79–82 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~51.5K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~52.3K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -71,7 +71,7 @@ Read the sections your task touches.
   - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
   - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
   - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
-  - 550–590 Component library (`src/lib/components/`) (~6.2K)
+  - 550–590 Component library (`src/lib/components/`) (~7.1K)
   - 591–601 Live search (`src/lib/components/search/`) (~710)
   - 602–615 Server cache (`src/lib/server/cache/`) (~690)
   - 616–631 TMDB integration (~810)
@@ -100,7 +100,7 @@ Read before a change that touches what they describe.
 - `CONTRIBUTING.md` — Contributing (~640 tok)
 - `SECURITY.md` — Security (~2.9K tok)
 - `PRIVACY.md` — Privacy (~2.5K tok)
-- `ACCESSIBILITY.md` — Accessibility (~640 tok)
+- `ACCESSIBILITY.md` — Accessibility (~660 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
 
 ## Code to docs

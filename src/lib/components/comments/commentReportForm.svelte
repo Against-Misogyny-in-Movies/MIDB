@@ -6,7 +6,6 @@
 		reportReason
 	} from '#lib/media/utils/comments.ts';
 	import type { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
-	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 	interface Props {
 		commentId: string;
@@ -25,14 +24,7 @@
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
 		if (!reason || comments.busy[key]) return;
-		const result = await comments.report(commentId, { reason, note });
-		if (!result.ok) return;
-		toasts.success(
-			result.alreadyReported
-				? 'This account already reported the comment.'
-				: 'Report sent. Moderators review it.'
-		);
-		onsent();
+		if (await comments.report(commentId, { reason, note })) onsent();
 	}
 </script>
 
@@ -55,7 +47,7 @@
 			class="btn btn--ink"
 			type="submit"
 			aria-busy={comments.busy[key] ?? false}
-			disabled={!reason || comments.busy[key]}
+			disabled={!reason}
 		>
 			Send report
 		</button>

@@ -38,6 +38,8 @@
 	<title>Sign-in methods | MIDB</title>
 </svelte:head>
 
+<svelte:window onpageshow={(event) => event.persisted && methods.restored()} />
+
 <div class="account-page">
 	<header>
 		<a href="/user/profile" class="back"
@@ -99,7 +101,7 @@
 										type="button"
 										class="btn btn--ink"
 										aria-busy={methods.running === `unlink:${account.id}`}
-										disabled={methods.busy}
+										disabled={methods.busy && methods.running !== `unlink:${account.id}`}
 										onclick={() => methods.unlink(account)}
 										>Remove {providerLabel(account.providerId)}</button
 									>
@@ -174,7 +176,9 @@
 										type="submit"
 										class="btn btn--ink"
 										aria-busy={methods.running === `rename:${passkey.id}`}
-										disabled={methods.busy || !methods.nameDraft.trim()}>Save name</button
+										disabled={!methods.nameDraft.trim() ||
+											(methods.busy && methods.running !== `rename:${passkey.id}`)}
+										>Save name</button
 									>
 									<button
 										type="button"
@@ -195,7 +199,7 @@
 										type="button"
 										class="btn btn--ink"
 										aria-busy={methods.running === `delete:${passkey.id}`}
-										disabled={methods.busy}
+										disabled={methods.busy && methods.running !== `delete:${passkey.id}`}
 										onclick={() => methods.removePasskey(passkey)}>Delete passkey</button
 									>
 									<button
@@ -217,7 +221,7 @@
 						type="button"
 						class="btn btn--brand"
 						aria-busy={methods.running === 'add-passkey'}
-						disabled={methods.busy}
+						disabled={methods.busy && methods.running !== 'add-passkey'}
 						onclick={() => methods.addPasskey()}
 					>
 						<i class="ri-fingerprint-line" aria-hidden="true"></i>
@@ -228,7 +232,7 @@
 							type="button"
 							class="btn btn--ghost"
 							aria-busy={methods.running === `link:${provider.id}`}
-							disabled={methods.busy}
+							disabled={methods.busy && methods.running !== `link:${provider.id}`}
 							onclick={() => methods.link(provider)}
 						>
 							<i class={provider.icon} aria-hidden="true"></i>

@@ -53,14 +53,19 @@
 		'username-format': 'A username is 3–32 characters: lowercase letters, numbers and underscores.',
 		'username-reserved': 'That username is reserved.'
 	};
-	const usernameError = $derived(
-		typeof form?.error === 'string' ? USERNAME_ERRORS[form.error] : undefined
-	);
 	let saving = $state(false);
+	/** The username the last save sent: its refusal shows only while the field still holds it. */
+	let submittedUsername = $state<string | null>(null);
+	const usernameError = $derived(
+		typeof form?.error === 'string' && usernameInput === submittedUsername
+			? USERNAME_ERRORS[form.error]
+			: undefined
+	);
 
 	/** Saves the profile: the result is a toast, except a refused username, which its field shows. */
-	const saveProfile: SubmitFunction = () => {
+	const saveProfile: SubmitFunction = ({ formData }) => {
 		saving = true;
+		submittedUsername = String(formData.get('username') ?? '');
 		return async ({ result, update }) => {
 			await update();
 			saving = false;
@@ -150,9 +155,7 @@
 			/>
 		</fieldset>
 
-		<button type="submit" class="btn btn--brand save" aria-busy={saving} disabled={saving}>
-			Save profile
-		</button>
+		<button type="submit" class="btn btn--brand save" aria-busy={saving}> Save profile </button>
 	</form>
 
 	<nav class="card account-nav" aria-label="Account">

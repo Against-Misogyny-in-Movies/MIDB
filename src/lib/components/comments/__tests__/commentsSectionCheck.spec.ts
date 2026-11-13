@@ -116,7 +116,7 @@ describe('CommentsSection check', () => {
 
 		const busyButton = screen.getByRole('button', { name: 'Comment' });
 		await waitFor(() => expect(busyButton.getAttribute('aria-busy')).toBe('true'));
-		expect((busyButton as HTMLButtonElement).disabled).toBe(true);
+		expect((busyButton as HTMLButtonElement).disabled).toBe(false);
 		expect((field as HTMLTextAreaElement).readOnly).toBe(true);
 		expect(field.closest('form')?.getAttribute('aria-busy')).toBe('true');
 		expect(screen.getByText('Checking the comment…').closest('[aria-live="polite"]')).toBeTruthy();

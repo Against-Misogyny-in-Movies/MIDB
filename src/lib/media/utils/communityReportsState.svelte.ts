@@ -35,8 +35,8 @@ function describe(action: Action, status: number): string {
  * signed-in reader's own report (`private, no-store`) and the writes. Counts are not refetched
  * after a write, because they are edge-cached and a purge lands a moment later. A failed load
  * is stored under its key (`load`, `viewer`), so the section shows it in place; a failed write
- * is a toast (`toasts.svelte.ts`), and so is the result of one that went through, which the
- * component words.
+ * is a toast (`toasts.svelte.ts`), and so is the result of a delete or a flag, worded here. A
+ * save's result depends on the standing read back after it, so `communityReportOwn` words it.
  */
 export class CommunityReportsState {
 	readonly #base: string;

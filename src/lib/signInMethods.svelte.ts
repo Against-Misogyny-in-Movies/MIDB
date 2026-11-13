@@ -175,6 +175,14 @@ export class SignInMethods {
 		this.running = null;
 	}
 
+	/**
+	 * Back from the provider's page through the back/forward cache: the page left with the link
+	 * running, so its button is no longer busy.
+	 */
+	restored() {
+		if (this.running?.startsWith('link:')) this.running = null;
+	}
+
 	/** Sends the browser to the provider; the button stays busy until the page leaves. */
 	async link(provider: Provider) {
 		this.running = `link:${provider.id}`;

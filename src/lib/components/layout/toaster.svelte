@@ -9,10 +9,20 @@
 
 	const polite = $derived(toasts.items.filter((t) => t.tone !== 'error'));
 	const urgent = $derived(toasts.items.filter((t) => t.tone === 'error'));
+
+	/** Escape closes the newest toast, unless something else on the page took the key. */
+	function closeNewest(event: KeyboardEvent) {
+		if (event.key !== 'Escape' || event.defaultPrevented) return;
+		const newest = toasts.items.at(-1);
+		if (newest) toasts.dismiss(newest.id);
+	}
 </script>
 
+<svelte:window onkeydown={closeNewest} />
+
 {#snippet item(toast: Toast)}
-	<li
+	<!-- svelte-ignore a11y_no_static_element_interactions (pointing pauses the timer, a convenience; focus pauses it too) -->
+	<div
 		class="toast toast--{toast.tone}"
 		onmouseenter={() => toasts.pause(toast.id)}
 		onmouseleave={() => toasts.resume(toast.id)}
@@ -20,22 +30,28 @@
 		onfocusout={() => toasts.resume(toast.id)}
 	>
 		<i class="icon {ICONS[toast.tone]}" aria-hidden="true"></i>
-		<p class="text">{toast.text}</p>
-		<button class="close" type="button" aria-label="Close" onclick={() => toasts.dismiss(toast.id)}>
+		<p class="text" id="toast-{toast.id}">{toast.text}</p>
+		<button
+			class="close"
+			type="button"
+			aria-label="Close"
+			aria-describedby="toast-{toast.id}"
+			onclick={() => toasts.dismiss(toast.id)}
+		>
 			<i class="ri-close-line" aria-hidden="true"></i>
 		</button>
-	</li>
+	</div>
 {/snippet}
 
 <!-- Both regions are in the page from the first paint, so a screen reader announces what is added
      to them: errors at once, the rest politely. -->
 <section class="toaster" aria-label="Notifications">
-	<ol class="stack" role="alert" aria-live="assertive">
+	<div class="stack" role="alert" aria-live="assertive">
 		{#each urgent as toast (toast.id)}{@render item(toast)}{/each}
-	</ol>
-	<ol class="stack" role="status" aria-live="polite">
+	</div>
+	<div class="stack" role="status" aria-live="polite">
 		{#each polite as toast (toast.id)}{@render item(toast)}{/each}
-	</ol>
+	</div>
 </section>
 
 <style lang="postcss">
@@ -50,10 +66,10 @@
 		pointer-events: none;
 	}
 
-	/* An empty region stays rendered (an empty list has no height), so a screen reader is
+	/* An empty region stays rendered (with no toast it has no height), so a screen reader is
 	   already watching it when the first toast arrives. */
 	.stack {
-		@apply flex flex-col list-none m-0 p-0;
+		@apply flex flex-col;
 		gap: var(--spacing-sm);
 	}
 

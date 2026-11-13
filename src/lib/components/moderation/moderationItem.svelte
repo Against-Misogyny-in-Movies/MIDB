@@ -102,7 +102,11 @@
 		{#if comment.status === 'pending'}
 			<form method="POST" action="?/approve" use:enhance={submit('approve')}>
 				<input type="hidden" name="id" value={comment.id} />
-				<button class="btn btn--ink" aria-busy={busy === 'approve'} disabled={busy !== null}>
+				<button
+					class="btn btn--ink"
+					aria-busy={busy === 'approve'}
+					disabled={busy !== null && busy !== 'approve'}
+				>
 					Approve
 				</button>
 			</form>
@@ -110,7 +114,11 @@
 		{#if item.reports.length > 0}
 			<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
 				<input type="hidden" name="id" value={comment.id} />
-				<button class="btn btn--ink" aria-busy={busy === 'dismiss'} disabled={busy !== null}>
+				<button
+					class="btn btn--ink"
+					aria-busy={busy === 'dismiss'}
+					disabled={busy !== null && busy !== 'dismiss'}
+				>
 					Dismiss reports
 				</button>
 			</form>

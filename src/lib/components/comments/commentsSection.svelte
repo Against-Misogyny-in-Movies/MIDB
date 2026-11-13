@@ -158,7 +158,6 @@
 						class="btn btn--ink more"
 						type="button"
 						aria-busy={comments.busy.more ?? false}
-						disabled={comments.busy.more}
 						bind:this={moreButton}
 						onclick={showMore}
 					>

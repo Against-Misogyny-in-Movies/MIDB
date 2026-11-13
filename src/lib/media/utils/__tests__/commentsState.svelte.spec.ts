@@ -211,11 +211,9 @@ describe('CommentsState', () => {
 		expect(state.errors.viewer).toBeUndefined();
 	});
 
-	it('reports whether the report was a repeat', async () => {
+	it('says when the account had reported the comment before', async () => {
 		const state = new CommentsState('movie', '1', async () => json({ alreadyReported: true }));
-		expect(await state.report('a', { reason: 'spam', note: '  ' })).toEqual({
-			ok: true,
-			alreadyReported: true
-		});
+		expect(await state.report('a', { reason: 'spam', note: '  ' })).toBe(true);
+		expect(shown()).toEqual(['success: This account already reported the comment.']);
 	});
 });

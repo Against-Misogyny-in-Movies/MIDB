@@ -21,9 +21,12 @@
 		void focusAfterUpdate(() => field);
 	}
 
+	/** Hands the focus back to the link, or to the open report form while the link is hidden. */
 	function close() {
 		open = false;
-		void focusAfterUpdate(() => trigger);
+		void focusAfterUpdate(
+			() => trigger ?? document.querySelector<HTMLElement>('[data-report-form] input') ?? undefined
+		);
 	}
 
 	async function submit(event: SubmitEvent) {
@@ -53,12 +56,7 @@
 					bind:this={field}></textarea>
 			</label>
 			<div class="row">
-				<button
-					class="btn btn--ink"
-					type="submit"
-					aria-busy={reports.busy.flag ?? false}
-					disabled={reports.busy.flag}
-				>
+				<button class="btn btn--ink" type="submit" aria-busy={reports.busy.flag ?? false}>
 					Send to moderators
 				</button>
 				<button class="btn btn--ghost" type="button" onclick={close}>Cancel</button>

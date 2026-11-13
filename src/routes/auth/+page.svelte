@@ -175,6 +175,9 @@
 	<title>Sign in | MIDB</title>
 </svelte:head>
 
+<!-- Back from a provider's page through the back/forward cache: the sign-in it started is over. -->
+<svelte:window onpageshow={(event) => event.persisted && (socialBusy = null)} />
+
 <h1 class="display">Sign in</h1>
 <p class="lead">MIDB stores no passwords.</p>
 
@@ -186,7 +189,7 @@
 					type="button"
 					class="btn btn--ink wide"
 					aria-busy={socialBusy === provider.id}
-					disabled={socialBusy !== null}
+					disabled={socialBusy !== null && socialBusy !== provider.id}
 					onclick={() => signInWithProvider(provider)}
 				>
 					<i class={provider.icon} aria-hidden="true"></i>
@@ -223,7 +226,7 @@
 		<button
 			type="button"
 			class="btn btn--brand wide"
-			disabled={!passkeysSupported || signInBusy || signUp === 'working'}
+			disabled={!passkeysSupported || signUp === 'working'}
 			aria-busy={signInBusy}
 			onclick={signInWithPasskey}
 		>
@@ -234,7 +237,7 @@
 		<button
 			type="button"
 			class="btn btn--ghost wide"
-			disabled={!passkeysSupported || signInBusy || signUp === 'working' || signUp === 'checking'}
+			disabled={!passkeysSupported || signInBusy || signUp === 'checking'}
 			aria-busy={signUp === 'working'}
 			onclick={startSignUp}
 		>

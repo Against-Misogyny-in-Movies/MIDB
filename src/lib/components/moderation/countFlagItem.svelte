@@ -34,7 +34,7 @@
 				<button
 					class="btn {action.style}"
 					aria-busy={busy === action.name}
-					disabled={busy !== null}
+					disabled={busy !== null && busy !== action.name}
 				>
 					{action.label}
 				</button>

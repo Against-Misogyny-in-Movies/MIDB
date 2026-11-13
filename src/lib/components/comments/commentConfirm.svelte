@@ -16,7 +16,7 @@
 <div class="plate confirm">
 	<p class="text-sm">{message}</p>
 	<div class="row">
-		<button class="btn btn--ink" type="button" aria-busy={busy} disabled={busy} onclick={onconfirm}>
+		<button class="btn btn--ink" type="button" aria-busy={busy} onclick={onconfirm}>
 			{confirmLabel}
 		</button>
 		<button class="btn btn--ghost" type="button" onclick={oncancel}>{cancelLabel}</button>

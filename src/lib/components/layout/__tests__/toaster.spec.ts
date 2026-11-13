@@ -34,4 +34,16 @@ describe('Toaster', () => {
 		expect(screen.queryByText('The flag was not sent.')).toBeNull();
 		expect(toasts.items).toEqual([]);
 	});
+
+	it('closes the newest toast on Escape, and names the message each Close button closes', async () => {
+		render(Toaster);
+		toasts.error('The flag was not sent.');
+		toasts.success('Comment posted.');
+		const close = await screen.findAllByRole('button', { name: 'Close' });
+		expect(
+			close.map((b) => document.getElementById(b.getAttribute('aria-describedby')!)?.textContent)
+		).toEqual(['The flag was not sent.', 'Comment posted.']);
+		await fireEvent.keyDown(window, { key: 'Escape' });
+		expect(toasts.items.map((t) => t.text)).toEqual(['The flag was not sent.']);
+	});
 });

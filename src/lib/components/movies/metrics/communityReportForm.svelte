@@ -199,7 +199,7 @@
 					type="button"
 					bind:this={confirmButton}
 					aria-busy={reports.busy.delete ?? false}
-					disabled={busy}
+					disabled={reports.busy.save}
 					onclick={remove}
 				>
 					Delete report
@@ -216,7 +216,7 @@
 					class="btn btn--brand"
 					type="submit"
 					aria-busy={reports.busy.save ?? false}
-					disabled={busy}
+					disabled={reports.busy.delete}
 				>
 					Save report
 				</button>

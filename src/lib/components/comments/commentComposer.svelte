@@ -40,6 +40,8 @@
 	// svelte-ignore state_referenced_locally
 	let body = $state(initial);
 	let field: HTMLTextAreaElement | undefined = $state();
+	/** Set when a check ends; the slot keeps its height until the next keystroke, so the list below does not move up. */
+	let settled = $state(false);
 
 	const length = $derived(body.trim().length);
 	const empty = $derived(length === 0);
@@ -53,7 +55,9 @@
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
 		if (empty || busy) return;
-		if (await onsubmit(body.trim())) body = initial;
+		const stored = await onsubmit(body.trim());
+		settled = true;
+		if (stored) body = initial;
 	}
 </script>
 
@@ -66,6 +70,7 @@
 		maxlength={COMMENT_BODY_MAX}
 		bind:value={body}
 		bind:this={field}
+		oninput={() => (settled = false)}
 		readonly={busy}
 		aria-invalid={error ? true : undefined}
 		aria-describedby={error ? `${id}-error` : undefined}></textarea>
@@ -74,7 +79,7 @@
 			class="btn {nested ? 'btn--ink' : 'btn--brand'}"
 			type="submit"
 			aria-busy={busy}
-			disabled={empty || busy || (initial !== '' && unchanged)}
+			disabled={!busy && (empty || (initial !== '' && unchanged))}
 		>
 			{submitLabel}
 		</button>
@@ -85,14 +90,14 @@
 			{body.length.toLocaleString('en-US')} / {COMMENT_BODY_MAX.toLocaleString('en-US')}
 		</span>
 	</div>
-	<div class="status" class:status--held={busy || error} aria-live="polite">
+	<div class="status" class:status--held={busy || error || settled} aria-live="polite">
 		{#if busy}
 			<p class="label">Checking the comment…</p>
 		{:else if error}
 			<Notice tone="error" id="{id}-error">{error}</Notice>
 		{/if}
 	</div>
-	{#if hint && !busy && !error}
+	{#if hint && !busy && !error && !settled}
 		<p class="label">{hint}</p>
 	{/if}
 </form>
@@ -120,9 +125,9 @@
 	}
 
 	/*
-	 * The live region for the check, and for a refusal of the text. While a check runs, and while
-	 * a refusal shows, it holds a notice's height (one line, three on a phone) so the refusal
-	 * replaces the line in place and the list below does not move. Every other outcome is a toast.
+	 * The live region for the check, and for a refusal of the text. While a check runs, while a
+	 * refusal shows and after the check until the next keystroke, it holds a notice's height (one
+	 * line, three on a phone), so the list below does not move. Every other outcome is a toast.
 	 */
 	.status {
 		min-height: 0;

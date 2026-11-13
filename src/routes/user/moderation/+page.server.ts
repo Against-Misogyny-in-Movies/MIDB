@@ -93,7 +93,7 @@ type Outcome = ModerationResult | ReportModerationResult | InvalidRequest;
 
 /**
  * One moderator action: the guard (403 for anyone else), the rate limit, then `run` over the
- * form. `key` names the row the answer belongs to; `after` runs on success (a comment action
+ * form. `key` reads the action's target, and a form without one is refused; `after` runs on success (a comment action
  * purges its title's list there, so the change is public at once). The community-report data
  * functions purge their own counts.
  */

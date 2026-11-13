@@ -105,7 +105,7 @@
 			}}
 		>
 			<input type="hidden" name="id" value={entry.commentId} />
-			<button class="btn btn--ink" aria-busy={busy} disabled={busy}>Restore comment</button>
+			<button class="btn btn--ink" aria-busy={busy}>Restore comment</button>
 		</form>
 	{/if}
 </li>

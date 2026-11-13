@@ -12,7 +12,20 @@
 	}
 
 	let { children }: Props = $props();
+
+	/**
+	 * A button whose action is running (`.btn[aria-busy='true']`) stays enabled so it keeps the
+	 * keyboard focus, and this ignores a second press of it, a form's submit included.
+	 */
+	function holdBusyButtons(event: MouseEvent) {
+		if (!(event.target instanceof Element)) return;
+		if (!event.target.closest(".btn[aria-busy='true']")) return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+	}
 </script>
+
+<svelte:document onclickcapture={holdBusyButtons} />
 
 <NavProgress />
 

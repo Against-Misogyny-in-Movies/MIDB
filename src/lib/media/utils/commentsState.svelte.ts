@@ -21,7 +21,7 @@ import { toasts } from '#lib/media/utils/toasts.svelte.js';
  * signed-in reader's votes and unpublished comments (`private, no-store`), and the writes. A
  * write patches this state from its own response rather than refetching the list, because the
  * list is edge-cached and a purge lands a moment after the write. A write's outcome is a toast
- * (`toasts.svelte.ts`). A failure the page shows in place is stored under its key instead: a
+ * (`toasts.svelte.ts`), worded here. A failure the page shows in place is stored under its key instead: a
  * list that did not load (`load`, `viewer`), and text the server refused (a 400 on `compose`,
  * `reply:<id>` or `edit:<id>`), which the composer shows under its field.
  */
@@ -40,8 +40,6 @@ export class CommentsState {
 	/** `idle` until a signed-in reader's state is requested; `ready` also after a 401 (nothing to show). */
 	viewerPhase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	errors = $state<Record<string, string>>({});
-	/** The HTTP status behind each stored error (0 when the server could not be reached). */
-	failures = $state<Record<string, number>>({});
 	busy = $state<Record<string, boolean>>({});
 
 	#fetch: Fetcher;
@@ -73,13 +71,11 @@ export class CommentsState {
 			return;
 		}
 		this.errors[key] = message;
-		this.failures[key] = reply.status;
 	}
 
 	#start(key: string): void {
 		this.busy[key] = true;
 		delete this.errors[key];
-		delete this.failures[key];
 	}
 
 	/** The first page of the current sort. */
@@ -290,11 +286,8 @@ export class CommentsState {
 		if (shown) shown.score = reply.data.score;
 	}
 
-	/** Reports a comment. `alreadyReported` is true when this account reported it before. */
-	async report(
-		id: string,
-		input: { reason: ReportReason; note: string }
-	): Promise<{ ok: boolean; alreadyReported: boolean }> {
+	/** Reports a comment. True when the server took the report, or this account had reported it before. */
+	async report(id: string, input: { reason: ReportReason; note: string }): Promise<boolean> {
 		const key = `report:${id}`;
 		this.#start(key);
 		const note = input.note.trim();
@@ -306,9 +299,14 @@ export class CommentsState {
 		this.busy[key] = false;
 		if (!reply.ok) {
 			this.#fail(key, 'report', reply);
-			return { ok: false, alreadyReported: false };
+			return false;
 		}
-		return { ok: true, alreadyReported: reply.data.alreadyReported };
+		toasts.success(
+			reply.data.alreadyReported
+				? 'This account already reported the comment.'
+				: 'Report sent. Moderators review it.'
+		);
+		return true;
 	}
 
 	/** When the reader's mute ends, while it has not; otherwise null. */
