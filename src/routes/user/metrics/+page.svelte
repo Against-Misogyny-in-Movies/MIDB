@@ -1,18 +1,11 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
-	import { STATUS_LABELS } from '#lib/media/utils/readerReports.ts';
+	import { formatDate } from '#lib/media/utils/format.ts';
+	import { reportStanding } from '#lib/media/utils/reportStanding.ts';
+	import Badge from '#lib/components/ui/badge.svelte';
 
 	let { data }: { data: PageData } = $props();
-
-	/** What a report's standing reads as: a counted one may not count yet, or at all. */
-	function standing(row: PageData['ratings'][number]): string {
-		if (row.status !== 'counted') return STATUS_LABELS[row.status];
-		if (row.restricted) return STATUS_LABELS.rejected;
-		if (row.countsFrom.getTime() > Date.now())
-			return `Counts from ${row.countsFrom.toLocaleDateString()}`;
-		return STATUS_LABELS.counted;
-	}
 </script>
 
 <div class="account-page">
@@ -28,13 +21,14 @@
 	{:else}
 		<ul class="card history">
 			{#each data.ratings as row (row.titleId)}
+				{@const standing = reportStanding(row, { restricted: row.restricted })}
 				<li>
 					<a href={titleHref(row.kind, row.tmdbId)}>
 						<span class="title">{row.title}</span>
 						<span class="meta">
-							{standing(row)} ·
+							<Badge tone={standing.tone}>{standing.label}</Badge>
 							<time datetime={row.updatedAt.toISOString()}
-								>{row.updatedAt.toLocaleDateString()}</time
+								>Updated {formatDate(row.updatedAt.toISOString())}</time
 							>
 						</span>
 					</a>
@@ -93,6 +87,6 @@
 	}
 
 	.meta {
-		@apply text-sm text-ink-muted;
+		@apply flex flex-wrap items-center gap-sm text-sm text-ink-muted;
 	}
 </style>
