@@ -1,11 +1,10 @@
 <script lang="ts">
 	import Badge from '#lib/components/ui/badge.svelte';
-	import Notice from '#lib/components/ui/notice.svelte';
 	import CountRejectForms from '#lib/components/moderation/countRejectForms.svelte';
 	import ReportAccountActions from '#lib/components/moderation/reportAccountActions.svelte';
 	import ReportAnswers from '#lib/components/moderation/reportAnswers.svelte';
 	import ReportRowShell from '#lib/components/moderation/reportRowShell.svelte';
-	import type { ActionOutcome, TitleReport } from '#lib/media/types/moderation.ts';
+	import type { TitleReport } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { accountLine } from '#lib/media/utils/reportAccount.ts';
 	import { effectiveStanding, moderatorStandingLabel } from '#lib/media/utils/reportStanding.ts';
@@ -15,12 +14,11 @@
 	interface Props {
 		report: TitleReport;
 		titleId: string;
-		outcome: ActionOutcome;
 		/** Whether the acting moderator may mute, ban or reject the reports of this account. */
 		canAct: boolean;
 	}
 
-	let { report, titleId, outcome, canAct }: Props = $props();
+	let { report, titleId, canAct }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -29,8 +27,6 @@
 		(name) => (busy = name)
 	);
 
-	const key = $derived(`${report.account.userId}:${titleId}`);
-	const mine = $derived(outcome?.id === key ? outcome : null);
 	const standing = $derived(
 		moderatorStandingLabel(
 			effectiveStanding({
@@ -63,7 +59,6 @@
 		/>
 	{/snippet}
 	{#snippet footer()}
-		{#if mine?.error}<Notice tone="error">{mine.error}</Notice>{/if}
-		<ReportAccountActions account={report.account} {outcome} {canAct} />
+		<ReportAccountActions account={report.account} {canAct} />
 	{/snippet}
 </ReportRowShell>

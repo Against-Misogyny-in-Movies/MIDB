@@ -12,6 +12,11 @@ export type { CatalogueCounts, LinkedRatedFilm, RatedFilm } from '#lib/media/typ
 
 /** Seeded data changes on the daily sync, so the landing's queries are kept for an hour. */
 const LANDING_TTL_MS = 60 * 60 * 1000;
+/**
+ * An empty hero pool (no film has a TMDB id yet, as before the first TMDB id backfill) is kept
+ * for a minute only, so the hero appears soon after the sync fills it.
+ */
+const EMPTY_POOL_TTL_MS = 60 * 1000;
 
 /** Row counts of `title_bechdel` and `um_source`, cached for an hour. */
 export function getCatalogueCounts(): Promise<CatalogueCounts> {
@@ -78,13 +83,16 @@ export async function getPopularRatedFilms(
 /**
  * `count` films picked at random from the `pool` most popular films that have a Bechdel
  * rating, an Unconsenting Media entry and a TMDB id (so each links to its page). The landing
- * hero calls it on every request. The pool is cached for an hour; the shuffle runs per call.
+ * hero calls it on every request. The pool is cached for an hour, an empty one for a minute; the
+ * shuffle runs per call.
  */
 export async function getRandomRatedFilms(count = 6, pool = 100): Promise<LinkedRatedFilm[]> {
 	// The key's version is bumped when the pool's contents or order change (v2: ordered by
 	// popularity), so a cached pool of the old shape is not served.
-	const ranked = await getCached(`catalogue:hero-pool:v2:${pool}`, LANDING_TTL_MS, () =>
-		getPopularRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
+	const ranked = await getCached(
+		`catalogue:hero-pool:v2:${pool}`,
+		(films: RatedFilm[]) => (films.length === 0 ? EMPTY_POOL_TTL_MS : LANDING_TTL_MS),
+		() => getPopularRatedFilms(pool, { requireUmEntry: true, requireTmdbId: true })
 	);
 	// `filter` copies, so the shuffle below never reorders the cached array.
 	const films = ranked.filter((film): film is LinkedRatedFilm => film.tmdbId !== null);

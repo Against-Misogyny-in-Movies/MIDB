@@ -13,6 +13,7 @@ The site should be usable without sight, with low vision, with limited hand move
 - **Status:** status is always written out. Each verdict and source state is a labelled badge, never a colour alone.
 - **Focus and loading:** keyboard focus has a visible ring (`src/app.css`). Streamed data fills reserved space and marks itself `aria-busy` instead of moving the page.
 - **Content warnings:** content warnings are plain text on the page, not hidden behind hover.
+- **Results of actions:** the result of an action (a comment posted, a report saved, a failed write) is a toast in a live region that is rendered, empty, from the first paint: a failure is announced at once (`role="alert"`), the rest politely (`role="status"`). A field the server refuses (a username, a comment that is too long) shows the error under the field instead. A failure stays until it is closed; any other toast closes after a reading time that stops while the pointer or the focus is on it. A `.btn` whose action is running is marked `aria-busy` and keeps its accessible name.
 
 ## Known gaps
 

@@ -17,6 +17,10 @@ vi.mock('$app/env', () => ({ browser: true }));
 const { default: CommunityReportsSection } = await import('../communityReportsSection.svelte');
 const { CommunityReportsState } = await import('#lib/media/utils/communityReportsState.svelte.js');
 const { session } = await import('#lib/media/utils/session.svelte.js');
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+
+/** The toasts showing, as `tone: text`. */
+const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
 
 function mount(fetcher: ReturnType<typeof api>) {
 	return render(CommunityReportsSection, {
@@ -26,7 +30,10 @@ function mount(fetcher: ReturnType<typeof api>) {
 	});
 }
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	toasts.clear();
+});
 
 describe('CommunityReportsSection reporting flow', () => {
 	beforeEach(() => session.set(ME));
@@ -60,26 +67,14 @@ describe('CommunityReportsSection reporting flow', () => {
 		);
 	});
 
-	it('says a deleted report leaves the counts on reload, until the form opens again', async () => {
+	it('toasts a deleted report and puts the focus on "Add a report"', async () => {
 		mount(api(routes({ [`DELETE ${BASE}`]: () => new Response(null, { status: 204 }) }, stored())));
 		await fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
-		expect(
-			await screen.findByText('Report deleted. A reload shows the counts without it.')
-		).toBeTruthy();
-		await fireEvent.click(screen.getByRole('button', { name: 'Add a report' }));
-		expect(screen.queryByText(/Report deleted/)).toBeNull();
-	});
-
-	it('moves focus to the delete notice so the result is announced', async () => {
-		mount(api(routes({ [`DELETE ${BASE}`]: () => new Response(null, { status: 204 }) }, stored())));
-		await fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
-		const notice = (await screen.findByText(/Report deleted/)).closest('.deleted')!;
-		expect(notice.getAttribute('tabindex')).toBe('-1');
-		await waitFor(() => expect(document.activeElement).toBe(notice));
+		const add = await screen.findByRole('button', { name: 'Add a report' });
+		await waitFor(() => expect(document.activeElement).toBe(add));
+		expect(shown()).toEqual(['success: Report deleted. A reload shows the counts without it.']);
 	});
 
 	it('keeps a note typed in the flag plate when the report form opens and closes', async () => {
@@ -91,33 +86,6 @@ describe('CommunityReportsSection reporting flow', () => {
 			'value',
 			'One report is off'
 		);
-	});
-
-	it('hides the delete notice once a report is saved', async () => {
-		let saved: ViewerReportView | null = stored();
-		mount(
-			api({
-				[`GET ${BASE}`]: counts(),
-				[`GET ${BASE}/viewer`]: () => json({ report: saved, mutedUntil: null }),
-				[`DELETE ${BASE}`]: () => {
-					saved = null;
-					return new Response(null, { status: 204 });
-				},
-				[`PUT ${BASE}`]: () => {
-					saved = stored();
-					return json({ status: 'counted', holdReason: null });
-				}
-			})
-		);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
-		await screen.findByText(/Report deleted/);
-		await fireEvent.click(screen.getByRole('button', { name: 'Add a report' }));
-		await fireEvent.click(screen.getByLabelText('I watched this'));
-		await fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
-		await screen.findByText(/Report saved/);
-		expect(screen.queryByText(/Report deleted/)).toBeNull();
 	});
 
 	it('puts "I watched this" and its error just above the actions, after the questions', async () => {

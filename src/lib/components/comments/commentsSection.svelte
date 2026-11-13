@@ -95,9 +95,6 @@
 					submitLabel="Comment"
 					busy={comments.busy.compose}
 					error={comments.errors.compose}
-					invalid={comments.failures.compose === 400}
-					notice={comments.notices.compose}
-					noticeTone={comments.noticeTones.compose}
 					onsubmit={(body) => comments.post(body)}
 				/>
 			{/if}
@@ -160,15 +157,12 @@
 					<button
 						class="btn btn--ink more"
 						type="button"
-						disabled={comments.busy.more}
+						aria-busy={comments.busy.more ?? false}
 						bind:this={moreButton}
 						onclick={showMore}
 					>
-						{comments.busy.more ? 'Loading…' : 'Show more comments'}
+						Show more comments
 					</button>
-					{#if comments.errors.more}
-						<Notice tone="error">{comments.errors.more}</Notice>
-					{/if}
 				{/if}
 			{/if}
 		</div>

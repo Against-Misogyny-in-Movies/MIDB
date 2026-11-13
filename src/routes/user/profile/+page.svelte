@@ -3,9 +3,10 @@
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
-	import Notice from '#lib/components/ui/notice.svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
+	import { toasts } from '#lib/media/utils/toasts.svelte.js';
+	import type { SubmitFunction } from '$app/forms';
 
 	let { data, form } = $props();
 
@@ -46,6 +47,42 @@
 		availabilityCheck.push(value);
 	}
 
+	/** A refusal of the username, shown under its field. */
+	const USERNAME_ERRORS: Record<string, string> = {
+		'username-taken': 'That username is already taken.',
+		'username-format': 'A username is 3–32 characters: lowercase letters, numbers and underscores.',
+		'username-reserved': 'That username is reserved.'
+	};
+	let saving = $state(false);
+	/** The username the last save sent: its refusal shows only while the field still holds it. */
+	let submittedUsername = $state<string | null>(null);
+	const usernameError = $derived(
+		typeof form?.error === 'string' && usernameInput === submittedUsername
+			? USERNAME_ERRORS[form.error]
+			: undefined
+	);
+
+	/** Saves the profile: the result is a toast, except a refused username, which its field shows. */
+	const saveProfile: SubmitFunction = ({ formData }) => {
+		saving = true;
+		submittedUsername = String(formData.get('username') ?? '');
+		return async ({ result, update }) => {
+			await update();
+			saving = false;
+			if (result.type === 'success') {
+				toasts.success('Profile saved.');
+			} else if (result.type === 'failure') {
+				const error = result.data?.error;
+				if (typeof error === 'string' && USERNAME_ERRORS[error]) return;
+				toasts.error(
+					error === 'avatar-invalid'
+						? 'That avatar is not available. Choose another.'
+						: 'The profile could not be saved. Try again.'
+				);
+			}
+		};
+	};
+
 	function roleLabel(role: string) {
 		return { user: 'Member', moderator: 'Moderator', administrator: 'Administrator' }[role] ?? role;
 	}
@@ -67,23 +104,13 @@
 		</div>
 	</header>
 
-	{#if form?.error}
-		<Notice tone="error">
-			{#if form.error === 'username-taken'}That username is already taken.
-			{:else if form.error === 'username-format'}A username is 3–32 characters: lowercase letters,
-				numbers and underscores.
-			{:else if form.error === 'username-reserved'}That username is reserved.
-			{:else if form.error === 'avatar-invalid'}That avatar is not available. Choose another.
-			{:else}The profile could not be saved. Try again.
-			{/if}
-		</Notice>
-	{/if}
-
-	{#if form?.success}
-		<Notice tone="success">Profile saved.</Notice>
-	{/if}
-
-	<form method="POST" action="?/updateProfile" use:enhance class="card profile-form">
+	<form
+		method="POST"
+		action="?/updateProfile"
+		use:enhance={saveProfile}
+		class="card profile-form"
+		aria-busy={saving}
+	>
 		<input type="hidden" name="avatarKey" value={selectedAvatar ?? ''} />
 
 		<div class="field">
@@ -102,9 +129,15 @@
 				autocomplete="off"
 				spellcheck="false"
 				aria-describedby="username-hint"
+				aria-invalid={usernameError && availability === 'idle' ? true : undefined}
 			/>
-			<p id="username-hint" class="hint hint--{availability}" aria-live="polite">
-				{#if availability === 'checking'}Checking…
+			<p
+				id="username-hint"
+				class="hint hint--{usernameError && availability === 'idle' ? 'taken' : availability}"
+				aria-live="polite"
+			>
+				{#if usernameError && availability === 'idle'}{usernameError}
+				{:else if availability === 'checking'}Checking…
 				{:else if availability === 'available'}Available
 				{:else if availability === 'taken'}Already taken
 				{:else}Shown on comments. Change it here: lowercase letters, numbers and underscores.
@@ -122,7 +155,7 @@
 			/>
 		</fieldset>
 
-		<button type="submit" class="btn btn--brand save">Save profile</button>
+		<button type="submit" class="btn btn--brand save" aria-busy={saving}> Save profile </button>
 	</form>
 
 	<nav class="card account-nav" aria-label="Account">

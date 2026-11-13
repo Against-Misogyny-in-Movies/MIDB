@@ -4,6 +4,7 @@
 	import ReportChoice from './reportChoice.svelte';
 	import type { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import {
+		type ContentReportStatus,
 		CONCERN_FLAGS,
 		NOT_SURE,
 		REPORT_CATEGORIES,
@@ -28,8 +29,10 @@
 		labelledby: string;
 		/** Whether the reader already has a report, which Delete would withdraw. */
 		saved: boolean;
-		/** Runs after a save or a delete went through. */
-		ondone: () => void;
+		/** Runs after a save went through, with the status it answered. */
+		onsaved: (status: ContentReportStatus) => void;
+		/** Runs after a delete went through. */
+		ondeleted: () => void;
 		oncancel: () => void;
 	}
 
@@ -38,7 +41,8 @@
 		draft = $bindable(),
 		labelledby,
 		saved,
-		ondone,
+		onsaved,
+		ondeleted,
 		oncancel
 	}: Props = $props();
 
@@ -83,7 +87,8 @@
 			void focusAfterUpdate(() => watched);
 			return;
 		}
-		if (await reports.save(draft)) ondone();
+		const status = await reports.save(draft);
+		if (status) onsaved(status);
 	}
 
 	function askToDelete() {
@@ -98,7 +103,7 @@
 
 	async function remove() {
 		if (busy) return;
-		if (await reports.remove()) ondone();
+		if (await reports.remove()) ondeleted();
 	}
 </script>
 
@@ -193,10 +198,11 @@
 					class="btn btn--ink"
 					type="button"
 					bind:this={confirmButton}
-					disabled={busy}
+					aria-busy={reports.busy.delete ?? false}
+					disabled={reports.busy.save}
 					onclick={remove}
 				>
-					{reports.busy.delete ? 'Deleting…' : 'Delete report'}
+					Delete report
 				</button>
 				<button class="btn btn--ghost" type="button" disabled={busy} onclick={keepReport}>
 					Cancel
@@ -206,8 +212,13 @@
 	{:else}
 		<div class="actions">
 			<div class="main">
-				<button class="btn btn--brand" type="submit" disabled={busy}>
-					{reports.busy.save ? 'Saving…' : 'Save report'}
+				<button
+					class="btn btn--brand"
+					type="submit"
+					aria-busy={reports.busy.save ?? false}
+					disabled={reports.busy.delete}
+				>
+					Save report
 				</button>
 				<button class="btn btn--ghost" type="button" disabled={busy} onclick={oncancel}>
 					Cancel
@@ -225,12 +236,6 @@
 				</button>
 			{/if}
 		</div>
-	{/if}
-	{#if reports.errors.save}
-		<Notice tone="error">{reports.errors.save}</Notice>
-	{/if}
-	{#if reports.errors.delete}
-		<Notice tone="error">{reports.errors.delete}</Notice>
 	{/if}
 </form>
 

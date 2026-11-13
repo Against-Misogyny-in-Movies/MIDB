@@ -9,6 +9,3 @@ export type {
 	ReportAnswerColumns,
 	TitleReport
 } from '#lib/server/data/community-report-queue.ts';
-
-/** What the last moderation form action answered: the comment it concerned, and a failure or what was done. */
-export type ActionOutcome = { id: string | null; error?: string; done?: string } | null;

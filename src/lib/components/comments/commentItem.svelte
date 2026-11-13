@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
-	import Notice from '#lib/components/ui/notice.svelte';
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
@@ -56,21 +55,21 @@
 		return [all[at + 1]?.id, all[at - 1]?.id].filter((id): id is string => Boolean(id));
 	}
 
+	/** Closes the panel after it did its work, and puts the focus on the comment it acted on. */
+	async function closeAndFocus(): Promise<void> {
+		mode = null;
+		await focusAfterUpdate(() => root);
+	}
+
 	async function saveEdit(body: string): Promise<boolean> {
 		const ok = await comments.edit(comment.id, body);
-		if (ok) {
-			mode = null;
-			await focusAfterUpdate(() => root);
-		}
+		if (ok) await closeAndFocus();
 		return ok;
 	}
 
 	async function sendReply(body: string): Promise<boolean> {
 		const ok = await comments.post(body, comment.id);
-		if (ok) {
-			mode = null;
-			await focusAfterUpdate(() => root);
-		}
+		if (ok) await closeAndFocus();
 		return ok;
 	}
 
@@ -122,7 +121,6 @@
 				initial={comment.body ?? ''}
 				busy={comments.busy[editKey]}
 				error={comments.errors[editKey]}
-				invalid={comments.failures[editKey] === 400}
 				hint="Saving runs moderation again."
 				nested
 				autofocus
@@ -199,28 +197,25 @@
 	{/if}
 
 	{#if !comment.removed}
-		{#if comments.errors[voteKey]}
-			<Notice tone="error">{comments.errors[voteKey]}</Notice>
-		{/if}
 		{#if mode === 'reply'}
 			<CommentComposer
 				label="Reply to {comment.author?.displayName ?? 'this comment'}"
 				submitLabel="Reply"
 				busy={comments.busy[replyKey]}
 				error={comments.errors[replyKey]}
-				invalid={comments.failures[replyKey] === 400}
 				nested
 				autofocus
 				onsubmit={sendReply}
 				oncancel={() => (mode = null)}
 			/>
-		{:else if comments.notices[replyKey]}
-			<Notice tone={comments.noticeTones[replyKey] ?? 'success'}
-				>{comments.notices[replyKey]}</Notice
-			>
 		{/if}
 		{#if mode === 'report'}
-			<CommentReportForm commentId={comment.id} state={comments} onclose={() => (mode = null)} />
+			<CommentReportForm
+				commentId={comment.id}
+				state={comments}
+				onclose={() => (mode = null)}
+				onsent={closeAndFocus}
+			/>
 		{/if}
 		{#if mode === 'delete'}
 			<CommentConfirm
@@ -229,10 +224,8 @@
 					? ' Replies stay under a placeholder.'
 					: ''}"
 				confirmLabel="Delete comment"
-				busyLabel="Deleting…"
 				cancelLabel="Keep comment"
 				busy={comments.busy[deleteKey]}
-				error={comments.errors[deleteKey]}
 				onconfirm={remove}
 				oncancel={() => (mode = null)}
 			/>

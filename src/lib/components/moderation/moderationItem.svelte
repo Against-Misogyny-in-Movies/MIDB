@@ -3,8 +3,7 @@
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
-	import Notice from '#lib/components/ui/notice.svelte';
-	import type { ActionOutcome, ModerationItem } from '#lib/media/types/moderation.ts';
+	import type { ModerationItem } from '#lib/media/types/moderation.ts';
 	import { COMMENT_STATUS_LABELS, REPORT_REASON_LABELS } from '#lib/media/utils/comments.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
@@ -13,12 +12,11 @@
 
 	interface Props {
 		item: ModerationItem;
-		outcome: ActionOutcome;
 		/** False for an account this reader's role cannot mute or ban (an administrator, oneself, a moderator for a moderator). */
 		canActOnAuthor: boolean;
 	}
 
-	let { item, outcome, canActOnAuthor }: Props = $props();
+	let { item, canActOnAuthor }: Props = $props();
 
 	type Panel = 'hide' | 'reject' | 'mute' | 'ban';
 	let panel = $state<Panel | null>(null);
@@ -28,7 +26,6 @@
 
 	const { comment, author } = $derived(item);
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
-	const mine = $derived(outcome?.id === comment.id ? outcome : null);
 	const SOURCES: Record<string, string> = {
 		ai: 'Held by the automatic check',
 		blocklist: 'Matched the blocklist',
@@ -47,11 +44,6 @@
 	);
 
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
-
-	const DONE: Record<string, string> = {
-		mute: 'Account muted.',
-		ban: 'Account banned.'
-	};
 </script>
 
 <li class="item" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
@@ -110,16 +102,24 @@
 		{#if comment.status === 'pending'}
 			<form method="POST" action="?/approve" use:enhance={submit('approve')}>
 				<input type="hidden" name="id" value={comment.id} />
-				<button class="btn btn--ink" disabled={busy !== null}>
-					{busy === 'approve' ? 'Approving…' : 'Approve'}
+				<button
+					class="btn btn--ink"
+					aria-busy={busy === 'approve'}
+					disabled={busy !== null && busy !== 'approve'}
+				>
+					Approve
 				</button>
 			</form>
 		{/if}
 		{#if item.reports.length > 0}
 			<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
 				<input type="hidden" name="id" value={comment.id} />
-				<button class="btn btn--ink" disabled={busy !== null}>
-					{busy === 'dismiss' ? 'Dismissing…' : 'Dismiss reports'}
+				<button
+					class="btn btn--ink"
+					aria-busy={busy === 'dismiss'}
+					disabled={busy !== null && busy !== 'dismiss'}
+				>
+					Dismiss reports
 				</button>
 			</form>
 		{/if}
@@ -162,12 +162,6 @@
 			{submit}
 			oncancel={() => (panel = null)}
 		/>
-	{/if}
-
-	{#if mine?.error}
-		<Notice tone="error">{mine.error}</Notice>
-	{:else if mine?.done && DONE[mine.done]}
-		<Notice tone="success">{DONE[mine.done]}</Notice>
 	{/if}
 </li>
 

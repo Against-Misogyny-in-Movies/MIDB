@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CommentView, OwnComment } from '#lib/media/types/comments.ts';
 import { describeFailure } from '#lib/media/utils/commentApi.ts';
 import { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
+import { toasts } from '#lib/media/utils/toasts.svelte.js';
+
+afterEach(() => toasts.clear());
+
+/** The toasts showing, as `tone: text`. */
+const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
 
 function view(id: string, over: Partial<CommentView> = {}): CommentView {
 	return {
@@ -102,10 +108,9 @@ describe('CommentsState', () => {
 		const state = new CommentsState('movie', '1', async () => json({ comment: OWN }, 201));
 		expect(await state.post('hello')).toBe(true);
 		expect(state.viewer?.comments.map((c) => c.id)).toEqual(['new']);
-		expect(state.notices.compose).toBe(
-			'Comment sent. Only the author and moderators see the comment until a moderator decides.'
-		);
-		expect(state.noticeTones.compose).toBe('warn');
+		expect(shown()).toEqual([
+			'warn: Comment sent. Only the author and moderators see the comment until a moderator decides.'
+		]);
 	});
 
 	it('leads a rejected notice with the reason', async () => {
@@ -116,10 +121,9 @@ describe('CommentsState', () => {
 		};
 		const state = new CommentsState('movie', '1', async () => json({ comment: rejected }, 201));
 		await state.post('hello');
-		expect(state.notices.compose).toBe(
-			'Rejected: Attacks a person. Only the author and moderators see the comment.'
-		);
-		expect(state.noticeTones.compose).toBe('warn');
+		expect(shown()).toEqual([
+			'warn: Rejected: Attacks a person. Only the author and moderators see the comment.'
+		]);
 	});
 
 	it('keeps a just-published comment in the viewer state until the list carries it', async () => {
@@ -127,16 +131,23 @@ describe('CommentsState', () => {
 		const state = new CommentsState('movie', '1', async () => json({ comment: published }, 201));
 		await state.post('hello');
 		expect(state.viewer?.comments.map((c) => c.id)).toEqual(['new']);
-		expect(state.notices.compose).toBe('Comment posted.');
-		expect(state.noticeTones.compose).toBe('success');
+		expect(shown()).toEqual(['success: Comment posted.']);
 	});
 
-	it('shows the server message for a muted account and returns false', async () => {
+	it('toasts the server message for a muted account and returns false', async () => {
 		const state = new CommentsState('movie', '1', async () =>
 			json({ message: 'Account muted' }, 403)
 		);
 		expect(await state.post('hello')).toBe(false);
-		expect(state.errors.compose).toMatch(/muted/);
+		expect(shown()).toEqual([expect.stringMatching(/^error: .*muted/)]);
+		expect(state.errors.compose).toBeUndefined();
+	});
+
+	it('keeps a refusal of the text under the field instead of a toast', async () => {
+		const state = new CommentsState('movie', '1', async () => json({ message: 'Too long' }, 400));
+		expect(await state.post('hello')).toBe(false);
+		expect(state.errors.compose).toBe(describeFailure('create', 400, 'Too long'));
+		expect(toasts.items).toEqual([]);
 	});
 
 	it('sets a vote from the response, and a second press of the same vote removes it', async () => {
@@ -200,11 +211,9 @@ describe('CommentsState', () => {
 		expect(state.errors.viewer).toBeUndefined();
 	});
 
-	it('reports whether the report was a repeat', async () => {
+	it('says when the account had reported the comment before', async () => {
 		const state = new CommentsState('movie', '1', async () => json({ alreadyReported: true }));
-		expect(await state.report('a', { reason: 'spam', note: '  ' })).toEqual({
-			ok: true,
-			alreadyReported: true
-		});
+		expect(await state.report('a', { reason: 'spam', note: '  ' })).toBe(true);
+		expect(shown()).toEqual(['success: This account already reported the comment.']);
 	});
 });

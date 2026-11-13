@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { UserCommentRow } from '#lib/media/types/comments.ts';
+import { toasts } from '#lib/media/utils/toasts.svelte.js';
 import CommentHistoryRow from '../commentHistoryRow.svelte';
 
 const row = (over: Partial<UserCommentRow> = {}): UserCommentRow => ({
@@ -24,6 +25,7 @@ const json = (body: unknown, status = 200) =>
 afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
+	toasts.clear();
 });
 
 function mount(comment: UserCommentRow) {
@@ -111,7 +113,7 @@ describe('CommentHistoryRow', () => {
 		expect(await screen.findByText('Deleted')).toBeTruthy();
 	});
 
-	it('shows a failed write beside its action', async () => {
+	it('toasts a failed delete and keeps the comment as it was', async () => {
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async () => json({ message: 'Account muted' }, 403))
@@ -119,7 +121,11 @@ describe('CommentHistoryRow', () => {
 		mount(row());
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
-		expect((await screen.findByRole('alert')).textContent).toMatch(/muted/);
+		await waitFor(() =>
+			expect(toasts.items.map((t) => t.tone + ': ' + t.text)).toEqual([
+				expect.stringMatching(/^error: .*muted/)
+			])
+		);
 		expect(screen.getByText('Published')).toBeTruthy();
 	});
 });

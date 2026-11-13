@@ -334,7 +334,36 @@
 		opacity: 0.55;
 	}
 
+	/* A running action: the label keeps its width, hidden under a spinner in the label's colour,
+	   and the button keeps its full colour while it is disabled against a second press. */
+	.btn[aria-busy='true'] {
+		position: relative;
+		color: transparent;
+		cursor: progress;
+		opacity: 1;
+	}
+
+	.btn[aria-busy='true']::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		width: 1rem;
+		height: 1rem;
+		margin: auto;
+		border: 2px solid var(--btn-ink, var(--ink));
+		border-right-color: transparent;
+		border-radius: 9999px;
+		animation: btn-spin 0.7s linear infinite;
+	}
+
+	@keyframes btn-spin {
+		to {
+			transform: rotate(1turn);
+		}
+	}
+
 	.btn--brand {
+		--btn-ink: var(--on-brand);
 		background-color: var(--brand);
 		color: var(--on-brand);
 	}
@@ -345,6 +374,7 @@
 	}
 
 	.btn--ink {
+		--btn-ink: var(--on-ink);
 		background-color: var(--ink);
 		color: var(--on-ink);
 	}
@@ -354,6 +384,7 @@
 	}
 
 	.btn--ghost {
+		--btn-ink: var(--ink);
 		background-color: var(--surface-raised);
 		border-color: var(--border);
 		color: var(--ink);
@@ -495,6 +526,11 @@
 		.chip,
 		.input {
 			transition: none;
+		}
+
+		/* A still ring with a gap still reads as working. */
+		.btn[aria-busy='true']::after {
+			animation: none;
 		}
 	}
 }

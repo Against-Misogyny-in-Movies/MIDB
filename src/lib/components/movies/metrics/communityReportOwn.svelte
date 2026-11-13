@@ -8,6 +8,8 @@
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
+	import { toasts } from '#lib/media/utils/toasts.svelte.js';
+	import type { ContentReportStatus } from '#lib/media/utils/communityReports.ts';
 
 	interface Props {
 		state: CommunityReportsState;
@@ -21,7 +23,6 @@
 
 	let draft = $state<ReportDraft>(emptyDraft());
 	let trigger: HTMLButtonElement | undefined = $state();
-	let deletedNote: HTMLDivElement | undefined = $state();
 
 	const report = $derived(reports.viewer?.report ?? null);
 	const mutedUntil = $derived(reports.viewer?.mutedUntil ?? null);
@@ -49,7 +50,6 @@
 	const showLine = $derived(report !== null || (editing && !mutedUntil));
 
 	function show() {
-		reports.deleted = false;
 		draft = report ? draftFromReport(report) : emptyDraft();
 		editing = true;
 		void focusAfterUpdate(() =>
@@ -57,29 +57,30 @@
 		);
 	}
 
+	/** Edit, or "Add a report" after a delete, takes the focus back; the toast announces the result. */
 	function close() {
 		editing = false;
-		// A delete leaves its result in the notice, so that is where focus goes to announce it.
-		void focusAfterUpdate(() => (reports.deleted ? deletedNote : trigger));
+		void focusAfterUpdate(() => trigger);
+	}
+
+	/** Says what the save did, from the status it answered and the report read back after it. */
+	function announceSave(status: ContentReportStatus) {
+		close();
+		if (status === 'held') {
+			toasts.warn('Report saved. It waits for a moderator before it counts.');
+		} else if (standing?.kind === 'young') {
+			toasts.success(
+				`Report saved. It counts from ${formatDate(standing.countsFrom)}, once the account is old enough.`
+			);
+		} else if (standing?.kind === 'rejected') {
+			toasts.warn('Report saved. A moderator rejected it, so it does not count.');
+		} else if (standing?.kind === 'restricted') {
+			toasts.warn(`Report saved. It does not count while the account is ${standing.by}.`);
+		} else {
+			toasts.success('Report saved. The counts include it once the page reloads.');
+		}
 	}
 </script>
-
-{#snippet savedNotice()}
-	{#if reports.saved?.status === 'held'}
-		<Notice tone="warn">Report saved. It waits for a moderator before it counts.</Notice>
-	{:else if reports.saved && standing?.kind === 'young'}
-		<Notice tone="success">
-			Report saved. It counts from {formatDate(standing.countsFrom)}, once the account is old
-			enough.
-		</Notice>
-	{:else if reports.saved && standing?.kind === 'rejected'}
-		<Notice tone="warn">Report saved. A moderator rejected it, so it does not count.</Notice>
-	{:else if reports.saved && standing?.kind === 'restricted'}
-		<Notice tone="warn">Report saved. It does not count while the account is {standing.by}.</Notice>
-	{:else if reports.saved}
-		<Notice tone="success">Report saved. The counts above include it once the page reloads.</Notice>
-	{/if}
-{/snippet}
 
 <div class="own" aria-busy={session.status === 'pending' || (session.status === 'user' && pending)}>
 	{#if session.status === 'anon'}
@@ -88,7 +89,6 @@
 		</p>
 	{:else if session.status === 'user' && !pending}
 		{#if reports.errors.viewer}
-			{@render savedNotice()}
 			<Notice tone="error">{reports.errors.viewer}</Notice>
 			<button class="btn btn--ink retry" type="button" onclick={() => reports.loadViewer()}>
 				Try again
@@ -120,22 +120,16 @@
 					bind:draft
 					labelledby="report-own-title"
 					saved={report !== null}
-					ondone={close}
+					onsaved={announceSave}
+					ondeleted={close}
 					oncancel={close}
 				/>
-			{:else if report}
-				{@render savedNotice()}
-			{:else}
+			{:else if !report}
 				<div class="line">
 					<button class="btn btn--ink" type="button" bind:this={trigger} onclick={show}>
 						Add a report
 					</button>
 				</div>
-				{#if reports.deleted}
-					<div class="deleted" tabindex="-1" bind:this={deletedNote}>
-						<Notice tone="success">Report deleted. A reload shows the counts without it.</Notice>
-					</div>
-				{/if}
 			{/if}
 		{/if}
 	{/if}
@@ -172,11 +166,6 @@
 
 	.retry {
 		@apply self-start;
-	}
-
-	/* Focused by the code once a delete went through; there is nothing to operate on it. */
-	.deleted:focus {
-		outline: none;
 	}
 
 	@media (pointer: coarse) {

@@ -9,8 +9,12 @@ const { default: CommunityReportsSection } = await import('../communityReportsSe
 const { CommunityReportsState } = await import('#lib/media/utils/communityReportsState.svelte.js');
 const { default: CommunityReportsBadge } = await import('../communityReportsBadge.svelte');
 const { session } = await import('#lib/media/utils/session.svelte.js');
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+const { default: Toaster } = await import('#lib/components/layout/toaster.svelte');
 
+/** The section with the layout's toasts, which carry the outcome of each write. */
 function mount(fetcher: ReturnType<typeof api>) {
+	render(Toaster);
 	return render(CommunityReportsSection, {
 		kind: 'movie',
 		tmdbId: '603',
@@ -18,7 +22,10 @@ function mount(fetcher: ReturnType<typeof api>) {
 	});
 }
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	toasts.clear();
+});
 
 describe('CommunityReportsSection counts', () => {
 	beforeEach(() => session.clear());
@@ -263,7 +270,7 @@ describe('CommunityReportsSection reader states', () => {
 		expect(
 			await screen.findByText('Report saved. A moderator rejected it, so it does not count.')
 		).toBeTruthy();
-		expect(screen.queryByText(/The counts above include it/)).toBeNull();
+		expect(screen.queryByText(/The counts include it/)).toBeNull();
 	});
 
 	it('offers Try again when the reader’s report cannot be loaded', async () => {
@@ -282,7 +289,7 @@ describe('CommunityReportsSection reader states', () => {
 		expect(screen.getByRole('button', { name: 'Counts look wrong' })).toBeTruthy();
 	});
 
-	it('keeps "Report saved." when the read-back fails', async () => {
+	it('says "Report saved." when the read-back fails', async () => {
 		let reads = 0;
 		mount(
 			api({
@@ -296,7 +303,7 @@ describe('CommunityReportsSection reader states', () => {
 		await fireEvent.click(screen.getByLabelText('I watched this'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
 		expect(
-			await screen.findByText('Report saved. The counts above include it once the page reloads.')
+			await screen.findByText('Report saved. The counts include it once the page reloads.')
 		).toBeTruthy();
 		expect(screen.getByText(/This account’s report could not be loaded/)).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();

@@ -7,16 +7,22 @@ import type {
 	TitleReport
 } from '#lib/media/types/moderation.ts';
 
-const form = vi.hoisted(() => ({ update: async () => {} }));
+const form = vi.hoisted(() => ({
+	update: async () => {},
+	result: { type: 'success', data: {} } as { type: string; data?: Record<string, unknown> }
+}));
 
 vi.mock('$app/forms', () => ({
 	enhance: (
 		node: HTMLFormElement,
-		submit?: () => (opts: { update: () => Promise<void> }) => Promise<void>
+		submit?: () => (opts: {
+			result: typeof form.result;
+			update: () => Promise<void>;
+		}) => Promise<void>
 	) => {
 		const onSubmit = (event: Event) => {
 			event.preventDefault();
-			void submit?.()({ update: () => form.update() });
+			void submit?.()({ result: form.result, update: () => form.update() });
 		};
 		node.addEventListener('submit', onSubmit);
 		return { destroy: () => node.removeEventListener('submit', onSubmit) };
@@ -28,10 +34,17 @@ const { default: CommunityReportsPanel } = await import('../communityReportsPane
 const { default: ReportAnswers } = await import('../reportAnswers.svelte');
 const { default: RecentActionRow } = await import('../recentActionRow.svelte');
 
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+
 afterEach(() => {
 	cleanup();
 	form.update = async () => {};
+	form.result = { type: 'success', data: {} };
+	toasts.clear();
 });
+
+/** The toasts showing, as `tone: text`. */
+const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
 
 const DAY = 86_400_000;
 const account = (over: Partial<ReportAccount> = {}): ReportAccount => ({
@@ -84,10 +97,10 @@ const titleReport = (over: Partial<TitleReport> = {}): TitleReport => ({
 	...over
 });
 
-function mountRow(report: TitleReport, canAct = true, outcome = null as never) {
+function mountRow(report: TitleReport, canAct = true) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(TitleReportRow, {
-		props: { report, titleId: 't1', outcome, canAct },
+		props: { report, titleId: 't1', canAct },
 		target: list
 	});
 }
@@ -212,14 +225,13 @@ describe('the open title view', () => {
 	const open = { id: 't1', kind: 'movie' as const, tmdbId: 348, name: 'Alien', reports: [] };
 	const me = { id: 'mod', role: 'moderator' };
 
-	function mountPanel(outcome = null as never, flags: FlaggedTitle[] = [flagged]) {
+	function mountPanel(flags: FlaggedTitle[] = [flagged]) {
 		return render(CommunityReportsPanel, {
 			held: [],
 			flagged: flags,
 			openTitle: open,
 			titleId: 't1',
-			me,
-			outcome
+			me
 		});
 	}
 
@@ -252,12 +264,20 @@ describe('the open title view', () => {
 		await waitFor(() => expect(document.activeElement?.id).toBe('open-title'));
 	});
 
-	it('confirms a resolved or dismissed flag with a notice', () => {
-		mountPanel({ id: 'f1', done: 'resolveFlag' } as never);
-		expect(screen.getByRole('status').textContent).toBe('Marked resolved.');
-		cleanup();
-		mountPanel({ id: 'f1', done: 'dismissFlag' } as never);
-		expect(screen.getByRole('status').textContent).toBe('Dismissed.');
+	it('confirms a resolved or dismissed flag with a toast', async () => {
+		mountPanel();
+		form.result = { type: 'success', data: { id: 'f1', done: 'resolveFlag' } };
+		await fireEvent.submit(
+			screen.getAllByRole('button', { name: 'Resolve' })[0].closest('form') as HTMLFormElement
+		);
+		await waitFor(() => expect(shown()).toEqual(['success: Marked resolved.']));
+		form.result = { type: 'success', data: { id: 'f2', done: 'dismissFlag' } };
+		await fireEvent.submit(
+			screen.getAllByRole('button', { name: 'Dismiss' })[1].closest('form') as HTMLFormElement
+		);
+		await waitFor(() =>
+			expect(shown()).toEqual(['success: Marked resolved.', 'success: Dismissed.'])
+		);
 	});
 
 	it('shows no actions for a report of an administrator', () => {
@@ -267,8 +287,7 @@ describe('the open title view', () => {
 			flagged: [],
 			openTitle: { ...open, reports: [admin] },
 			titleId: 't1',
-			me,
-			outcome: null
+			me
 		});
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
 	});
@@ -306,7 +325,7 @@ describe('the action log sentences', () => {
 	});
 	const mountEntry = (e: RecentAction) => {
 		const list = document.body.appendChild(document.createElement('ul'));
-		return render(RecentActionRow, { props: { entry: e, outcome: null }, target: list });
+		return render(RecentActionRow, { props: { entry: e }, target: list });
 	};
 
 	it.each([

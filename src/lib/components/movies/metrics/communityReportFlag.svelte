@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Notice from '#lib/components/ui/notice.svelte';
 	import type { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import { REPORT_NOTE_MAX } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
@@ -16,16 +15,18 @@
 	let note = $state('');
 	let trigger: HTMLButtonElement | undefined = $state();
 	let field: HTMLTextAreaElement | undefined = $state();
-	let sent: HTMLDivElement | undefined = $state();
 
 	function show() {
 		open = true;
 		void focusAfterUpdate(() => field);
 	}
 
+	/** Hands the focus back to the link, or to the open report form while the link is hidden. */
 	function close() {
 		open = false;
-		void focusAfterUpdate(() => trigger);
+		void focusAfterUpdate(
+			() => trigger ?? document.querySelector<HTMLElement>('[data-report-form] input') ?? undefined
+		);
 	}
 
 	async function submit(event: SubmitEvent) {
@@ -33,8 +34,7 @@
 		if (reports.busy.flag) return;
 		if (await reports.flag(note)) {
 			note = '';
-			open = false;
-			void focusAfterUpdate(() => sent);
+			close();
 		}
 	}
 </script>
@@ -56,20 +56,13 @@
 					bind:this={field}></textarea>
 			</label>
 			<div class="row">
-				<button class="btn btn--ink" type="submit" disabled={reports.busy.flag}>
-					{reports.busy.flag ? 'Sending…' : 'Send to moderators'}
+				<button class="btn btn--ink" type="submit" aria-busy={reports.busy.flag ?? false}>
+					Send to moderators
 				</button>
 				<button class="btn btn--ghost" type="button" onclick={close}>Cancel</button>
 				<span id="report-flag-count" class="label count">{note.length} / {REPORT_NOTE_MAX}</span>
 			</div>
-			{#if reports.errors.flag}
-				<Notice tone="error">{reports.errors.flag}</Notice>
-			{/if}
 		</form>
-	{:else if reports.flagged}
-		<div class="sent" tabindex="-1" bind:this={sent}>
-			<Notice tone="success">Sent to the moderators.</Notice>
-		</div>
 	{:else if !hideTrigger}
 		<button class="link wrong" type="button" bind:this={trigger} onclick={show}>
 			Counts look wrong
@@ -112,22 +105,12 @@
 		@apply ml-auto tabular-nums;
 	}
 
-	/* Focused by the code once the flag went out; there is nothing to operate on it. */
-	.sent:focus {
-		outline: none;
-	}
-
 	.wrong {
 		@apply inline-flex items-center cursor-pointer text-sm;
 		min-height: 1.5rem;
 	}
 
 	@media (pointer: coarse) {
-		/* Focused by the code once the flag went out; there is nothing to operate on it. */
-		.sent:focus {
-			outline: none;
-		}
-
 		.wrong {
 			min-height: 2.75rem;
 		}

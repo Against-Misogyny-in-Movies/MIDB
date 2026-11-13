@@ -14,15 +14,16 @@ import {
 	type Fetcher,
 	type Reply
 } from '#lib/media/utils/commentApi.ts';
+import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 /**
  * One title's comment section: the public list (edge-cached, the same for every reader), the
  * signed-in reader's votes and unpublished comments (`private, no-store`), and the writes. A
  * write patches this state from its own response rather than refetching the list, because the
- * list is edge-cached and a purge lands a moment after the write. Each failure and
- * confirmation is stored under the key of the control that caused it (`compose`, `reply:<id>`,
- * `edit:<id>`, `delete:<id>`, `vote:<id>`, `report:<id>`, `load`, `more`, `viewer`), so the
- * component shows it beside that control.
+ * list is edge-cached and a purge lands a moment after the write. A write's outcome is a toast
+ * (`toasts.svelte.ts`), worded here. A failure the page shows in place is stored under its key instead: a
+ * list that did not load (`load`, `viewer`), and text the server refused (a 400 on `compose`,
+ * `reply:<id>` or `edit:<id>`), which the composer shows under its field.
  */
 const SHOWN_STATUSES = new Set<OwnComment['status']>(['pending', 'rejected', 'published']);
 
@@ -39,11 +40,6 @@ export class CommentsState {
 	/** `idle` until a signed-in reader's state is requested; `ready` also after a 401 (nothing to show). */
 	viewerPhase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	errors = $state<Record<string, string>>({});
-	/** The HTTP status behind each error (0 when the server could not be reached). */
-	failures = $state<Record<string, number>>({});
-	notices = $state<Record<string, string>>({});
-	/** How each notice reads: a posted comment is `success`; one held or rejected is `warn`. */
-	noticeTones = $state<Record<string, 'success' | 'warn'>>({});
 	busy = $state<Record<string, boolean>>({});
 
 	#fetch: Fetcher;
@@ -65,18 +61,21 @@ export class CommentsState {
 	}
 
 	#fail(key: string, action: CommentAction, reply: { status: number; message: string }): void {
-		this.errors[key] = describeFailure(action, reply.status, reply.message);
-		this.failures[key] = reply.status;
-		delete this.notices[key];
-		delete this.noticeTones[key];
+		const message = describeFailure(action, reply.status, reply.message);
+		const inPlace =
+			action === 'load' ||
+			action === 'viewer' ||
+			((action === 'create' || action === 'edit') && reply.status === 400);
+		if (!inPlace) {
+			toasts.error(message);
+			return;
+		}
+		this.errors[key] = message;
 	}
 
 	#start(key: string): void {
 		this.busy[key] = true;
 		delete this.errors[key];
-		delete this.failures[key];
-		delete this.notices[key];
-		delete this.noticeTones[key];
 	}
 
 	/** The first page of the current sort. */
@@ -211,15 +210,13 @@ export class CommentsState {
 		if (comment.status === 'published') {
 			// Not in the cached list yet (the purge that follows this write refreshes it), so the
 			// viewer state carries it until the list does.
-			this.notices[key] = 'Comment posted.';
-			this.noticeTones[key] = 'success';
+			toasts.success('Comment posted.');
 		} else {
 			const note = unpublishedNote(
 				comment.status === 'rejected' ? 'rejected' : 'pending',
 				comment.moderationReason
 			);
-			this.notices[key] = comment.status === 'rejected' ? note : `Comment sent. ${note}`;
-			this.noticeTones[key] = 'warn';
+			toasts.warn(comment.status === 'rejected' ? note : `Comment sent. ${note}`);
 		}
 		return true;
 	}
@@ -289,11 +286,8 @@ export class CommentsState {
 		if (shown) shown.score = reply.data.score;
 	}
 
-	/** Reports a comment. `alreadyReported` is true when this account reported it before. */
-	async report(
-		id: string,
-		input: { reason: ReportReason; note: string }
-	): Promise<{ ok: boolean; alreadyReported: boolean }> {
+	/** Reports a comment. True when the server took the report, or this account had reported it before. */
+	async report(id: string, input: { reason: ReportReason; note: string }): Promise<boolean> {
 		const key = `report:${id}`;
 		this.#start(key);
 		const note = input.note.trim();
@@ -305,9 +299,14 @@ export class CommentsState {
 		this.busy[key] = false;
 		if (!reply.ok) {
 			this.#fail(key, 'report', reply);
-			return { ok: false, alreadyReported: false };
+			return false;
 		}
-		return { ok: true, alreadyReported: reply.data.alreadyReported };
+		toasts.success(
+			reply.data.alreadyReported
+				? 'This account already reported the comment.'
+				: 'Report sent. Moderators review it.'
+		);
+		return true;
 	}
 
 	/** When the reader's mute ends, while it has not; otherwise null. */

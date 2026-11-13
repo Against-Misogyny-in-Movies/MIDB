@@ -95,7 +95,9 @@
 		</ul>
 	</div>
 
-	<p class="caption">Picked at random from the 100 most IMDb-voted films rated by both sources.</p>
+	<p class="caption">
+		Picked at random from the 100 films most popular on TMDB that both sources rate.
+	</p>
 </div>
 
 <style lang="postcss">

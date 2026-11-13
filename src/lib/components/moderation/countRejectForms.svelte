@@ -19,8 +19,12 @@
 	<form method="POST" action="?/countReport" use:enhance={submit('countReport')}>
 		<input type="hidden" name="userId" value={userId} />
 		<input type="hidden" name="titleId" value={titleId} />
-		<button class="btn btn--ink" disabled={busy !== null}>
-			{busy === 'countReport' ? 'Counting…' : 'Count it'}
+		<button
+			class="btn btn--ink"
+			aria-busy={busy === 'countReport'}
+			disabled={busy !== null && busy !== 'countReport'}
+		>
+			Count it
 		</button>
 	</form>
 {/if}
@@ -28,8 +32,12 @@
 	<form method="POST" action="?/rejectReport" use:enhance={submit('rejectReport')}>
 		<input type="hidden" name="userId" value={userId} />
 		<input type="hidden" name="titleId" value={titleId} />
-		<button class="btn btn--ghost" disabled={busy !== null}>
-			{busy === 'rejectReport' ? 'Rejecting…' : 'Reject'}
+		<button
+			class="btn btn--ghost"
+			aria-busy={busy === 'rejectReport'}
+			disabled={busy !== null && busy !== 'rejectReport'}
+		>
+			Reject
 		</button>
 	</form>
 {/if}

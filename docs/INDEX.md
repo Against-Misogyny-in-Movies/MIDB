@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~4.0K tok)
+- `DESIGN.md` — Design (~4.3K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–62 Components (~2.0K)
-  - 63–69 Pages (~470)
-  - 70–73 Motion (~90)
-  - 74–77 Browser surfaces (~50)
-  - 78–81 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~51.1K tok)
+  - 37–63 Components (~2.4K) ← 1
+  - 64–70 Pages (~450)
+  - 71–74 Motion (~110)
+  - 75–78 Browser surfaces (~50)
+  - 79–82 Avoid (~90)
+- `docs/architecture.md` — MIDB — Architecture Reference (~52.3K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -60,7 +60,7 @@ Read the sections your task touches.
     - 259–268 File-organisation conventions (~450)
   - 269–282 Styling & theming (~950)
   - 283–295 Copy & voice (~540) ← 1
-  - 296–326 Routes (~9.8K)
+  - 296–326 Routes (~9.9K)
   - 327–366 User & roles (~2.5K)
     - 359–366 Migrations (~350)
   - 367–396 Source sync (~1.8K) ← 3
@@ -71,7 +71,7 @@ Read the sections your task touches.
   - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
   - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
   - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
-  - 550–590 Component library (`src/lib/components/`) (~5.9K)
+  - 550–590 Component library (`src/lib/components/`) (~7.1K)
   - 591–601 Live search (`src/lib/components/search/`) (~710)
   - 602–615 Server cache (`src/lib/server/cache/`) (~690)
   - 616–631 TMDB integration (~810)
@@ -100,7 +100,7 @@ Read before a change that touches what they describe.
 - `CONTRIBUTING.md` — Contributing (~640 tok)
 - `SECURITY.md` — Security (~2.9K tok)
 - `PRIVACY.md` — Privacy (~2.5K tok)
-- `ACCESSIBILITY.md` — Accessibility (~520 tok)
+- `ACCESSIBILITY.md` — Accessibility (~660 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
 
 ## Code to docs
@@ -112,5 +112,5 @@ The sections each area's comments cite, most cited first. Read these before chan
 - `scripts/ci`: docs/architecture.md, Deploy (`.github/workflows/deploy.yml`) (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
-- `src/lib`: docs/architecture.md, Shared marker pattern (metric row markers) (3); docs/architecture.md, Caching policy (2); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (2); docs/architecture.md, Source sync (1)
+- `src/lib`: docs/architecture.md, Shared marker pattern (metric row markers) (3); docs/architecture.md, Caching policy (2); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (2); DESIGN.md, Components (1); docs/architecture.md, Source sync (1)
 - `src/routes`: docs/architecture.md, Shared marker pattern (metric row markers) (1)
