@@ -61,7 +61,7 @@ Reader reports become MIDB community reports, moderators and administrators repo
 
 The `ux` review of the flow, accepted in full. File names are the C1 names; the copy below is a draft that `copy-judge` checks.
 
-- **The form stays under its row.** While the form is open, the own-report line keeps "This account’s report" and its badge and drops only Edit. For a new report, the "Add a report" row gives way to a line reading "This account’s report". The form is `aria-labelledby` that line (DESIGN.md, Plate: a plate sits under the row it acts on).
+- **The form stays under its row.** While the form is open, the own-report line keeps "This account’s report" and its badge and drops only Edit. For a new report, the "Add a report" row gives way to a line reading "This account’s report". The form is `aria-labelledby` that line (the plate rule in `DESIGN.md`: a plate sits under the row it acts on).
 - **Delete reports its result.** `CommunityReportsState` holds a client-side `deleted` flag, set on a successful delete and cleared on a save, on `clearViewer()` and when the form opens. Under "Add a report" a success `Notice` reads "Report deleted. The counts above drop it once the page reloads."
 - **Saved copy matches the counts.** The counts are not refetched after a write, so the counted notice reads "Report saved. The counts above include it once the page reloads." The held and young notices keep their text.
 - **"I watched this" sits above Save.** The checkbox and its error move to just above the actions row, after framing, keeping `aria-describedby`, the alert and the focus on the checkbox.

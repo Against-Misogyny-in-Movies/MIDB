@@ -35,14 +35,14 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | R3    | Reader reports: moderation      | completed   | 2026-11-13. The tab has been reviewed from code only, not in a browser.                                           |
 | R4    | Reader reports: UI              | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here); the reserved counts height is computed, not measured. |
 | R5    | Reader reports: copy and docs   | completed   | 2026-11-13.                                                                                                       |
-| C1    | Community reports: rename       | active      | 2026-11-13.                                                                                                       |
-| C2    | Community reports: staff        | not started |                                                                                                                   |
+| C1    | Community reports: rename | completed | 2026-11-13. The migration keeps its name `0001_reader_reports`. |
+| C2    | Community reports: staff | active | 2026-11-13. |
 | C3    | Community reports: header badge | not started |                                                                                                                   |
 | C4    | Community reports: flow         | not started |                                                                                                                   |
 
 ## Open items
 
-- **Reader reports:**
+- **Community reports:**
   - Render the title-page section, the form and the moderation tab in a browser (no TMDB token here), and measure the counts slot's reserved height at phone and desktop widths.
   - Once the reader reports have deployed, add the migration that drops `community_bechdel_ratings`, `community_um_reports` and `community_ddd_votes` (`docs/architecture.md`, Known gaps).
 - **UX:**
@@ -89,7 +89,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Comments:**
   - Every new account gets a generated username (`{feminist icon}_{4 digits}`), which the reader can change (user decision, 2026-11-12).
   - A deleted comment keeps its text, hidden from other readers and still visible to its author and moderators (user decision, 2026-11-12).
-- **Reader reports:**
+- **Community reports:**
   - Readers report what a title shows (five categories, sexual violence through UM's flags), not a safety score; reports never change the verdict (user decision, 2026-11-12).
   - Sexual violence is answered Not shown / Present / Not sure; UM's flags are asked only on Present, and no level is derived from them (user decision, 2026-11-12).
   - Reports count after an account-age wait; contradicting UM, a burst on a title or a busy new account holds a report for a moderator; readers can flag a title's counts (user decision, 2026-11-12).
