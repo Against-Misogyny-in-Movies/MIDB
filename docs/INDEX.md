@@ -91,7 +91,13 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~2.6K tok)
+- `docs/phases/STATUS.md` — Phase status (~2.8K tok)
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-community-reports.md` — Plan: MIDB community reports (~1.9K tok)
 
 ## Policies
 
