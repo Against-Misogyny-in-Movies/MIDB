@@ -4,7 +4,7 @@
  * categories are app data, so they live here.
  */
 
-import type { reportReason, commentStatus } from '#db/lib/comments.ts';
+import type { reportReason, commentStatus, moderationSource } from '#db/lib/comments.ts';
 import type { CommentStatus } from '#lib/media/types/comments.ts';
 
 export {
@@ -53,6 +53,36 @@ export const CATEGORY_MEANINGS: Record<(typeof VERDICT_CATEGORIES)[number], stri
 	violence: 'glorifying or calling for violence',
 	disparagement: 'demeaning a person or a group without a slur',
 	trolling: 'bad-faith bait meant to provoke'
+};
+
+/** What each category is called in the moderation table and its filters. */
+export const CATEGORY_LABELS: Record<(typeof VERDICT_CATEGORIES)[number], string> = {
+	hate: 'Hate',
+	misogyny: 'Misogyny',
+	harassment: 'Harassment',
+	slur: 'Slur',
+	threat: 'Threat',
+	'sexual-minors': 'Sexual content, minors',
+	'sexual-explicit': 'Explicit sexual content',
+	doxxing: 'Doxxing',
+	spam: 'Spam',
+	'survivor-mockery': 'Survivor mockery',
+	'off-topic': 'Off topic',
+	violence: 'Violence',
+	disparagement: 'Disparagement',
+	trolling: 'Trolling'
+};
+
+/** A category's label; a category this build does not know (an older verdict) reads as stored. */
+export const categoryLabel = (category: string): string =>
+	CATEGORY_LABELS[category as (typeof VERDICT_CATEGORIES)[number]] ?? category;
+
+/** What put a comment in review, as the moderation table's source filter names it. */
+export const MODERATION_SOURCE_LABELS: Record<(typeof moderationSource)[number], string> = {
+	ai: 'Automatic check',
+	blocklist: 'Blocklist',
+	moderator: 'Moderator',
+	reports: 'Reports'
 };
 
 /** A plain-language table query is at most this many characters. */

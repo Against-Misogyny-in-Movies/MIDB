@@ -41,6 +41,11 @@ export function commentStatusTone(status: CommentStatus): BadgeTone {
 	return 'neutral';
 }
 
+/** The classifier's severity (1 to 3) of a comment: grey for the lowest, copper, then raspberry. */
+export function severityTone(severity: number): BadgeTone {
+	return severity >= 3 ? 'neg' : severity === 2 ? 'mid' : 'neutral';
+}
+
 /** A community report's status: counted green, held copper, rejected neutral. */
 export function reportStatusTone(status: ContentReportStatus): BadgeTone {
 	if (status === 'counted') return 'pos';

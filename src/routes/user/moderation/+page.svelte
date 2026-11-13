@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
+	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -10,16 +12,20 @@
 
 	let { data } = $props();
 
-	type Tab = 'pending' | 'reported' | 'reports' | 'recent';
+	type Tab = 'pending' | 'reported' | 'reports' | 'recent' | 'table';
 	/**
-	 * `?tab=reports` and `?title=` open the community-reports tab, every other URL opens Pending. A
-	 * click on a tab overrides it until the URL changes (a title's reports, back to the list).
+	 * `?tab=reports` and `?title=` open the community-reports tab, `?tab=table` the table of every
+	 * comment, every other URL opens Pending. A click on a tab overrides it until the URL changes
+	 * (a title's reports, back to the list).
 	 */
-	let tab = $derived<Tab>(data.titleId || data.tab === 'reports' ? 'reports' : 'pending');
+	let tab = $derived<Tab>(
+		data.titleId || data.tab === 'reports' ? 'reports' : data.tab === 'table' ? 'table' : 'pending'
+	);
 
 	const TABS = $derived([
 		{ id: 'pending' as const, label: 'Pending', count: data.pending.length },
 		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
+		{ id: 'table' as const, label: 'All comments', count: null },
 		{
 			id: 'reports' as const,
 			label: 'MIDB community reports',
@@ -27,6 +33,12 @@
 		},
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
 	]);
+
+	/** The table loads from the server with its filters, so choosing it goes to its URL. */
+	function select(next: Tab) {
+		tab = next;
+		if (next === 'table' && data.tab !== 'table') void goto('?tab=table', { reset: false });
+	}
 
 	/**
 	 * The tab keyboard pattern: one tab is in the tab order, the arrow keys move between tabs
@@ -50,7 +62,7 @@
 							: null;
 		if (target === null) return;
 		event.preventDefault();
-		tab = TABS[target].id;
+		select(TABS[target].id);
 		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
 	}
 
@@ -61,7 +73,7 @@
 	<title>Moderation · MIDB</title>
 </svelte:head>
 
-<div class="page">
+<div class="page" class:wide={tab === 'table'}>
 	<header>
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
@@ -91,7 +103,7 @@
 				aria-selected={tab === t.id}
 				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
 				tabindex={tab === t.id ? 0 : -1}
-				onclick={() => (tab = t.id)}
+				onclick={() => select(t.id)}
 				onkeydown={(event) => onTabKeydown(event, i)}
 			>
 				{t.label}{#if t.count !== null}
@@ -101,7 +113,18 @@
 	</div>
 
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
-		{#if tab === 'recent'}
+		{#if tab === 'table'}
+			{#if data.table && data.filters}
+				<TablePanel
+					table={data.table}
+					filters={data.filters}
+					aiAvailable={data.aiAvailable}
+					me={data.me}
+				/>
+			{:else}
+				<p class="empty" aria-busy="true">Loading comments…</p>
+			{/if}
+		{:else if tab === 'recent'}
 			{#if data.recent.length === 0}
 				<p class="empty" id="moderation-empty" tabindex="-1">No moderation actions yet.</p>
 			{:else}
@@ -152,6 +175,11 @@
 
 	.back:hover {
 		@apply text-ink;
+	}
+
+	/* The table needs the whole column the layout allows. */
+	.page.wide {
+		max-width: none;
 	}
 
 	h1 {
