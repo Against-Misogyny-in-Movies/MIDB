@@ -42,64 +42,71 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~4.4K tok)
+- `DESIGN.md` — Design (~4.6K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–63 Components (~2.5K) ← 1
-  - 64–70 Pages (~450)
-  - 71–74 Motion (~110)
-  - 75–78 Browser surfaces (~50)
-  - 79–82 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~52.4K tok)
+  - 37–64 Components (~2.7K) ← 1
+  - 65–71 Pages (~450)
+  - 72–75 Motion (~110)
+  - 76–79 Browser surfaces (~50)
+  - 80–83 Avoid (~90)
+- `docs/architecture.md` — MIDB — Architecture Reference (~54.5K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–268 Directory layout (~8.4K)
-    - 259–268 File-organisation conventions (~450)
-  - 269–282 Styling & theming (~950)
-  - 283–295 Copy & voice (~540) ← 1
-  - 296–326 Routes (~9.9K)
-  - 327–366 User & roles (~2.5K)
-    - 359–366 Migrations (~350)
-  - 367–396 Source sync (~1.8K) ← 3
-  - 397–462 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
-  - 463–488 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.2K) ← 2
-  - 489–508 UM Disambiguation (~630)
-  - 509–517 UM flag rendering (~250)
-  - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
-  - 550–590 Component library (`src/lib/components/`) (~7.1K)
-  - 591–601 Live search (`src/lib/components/search/`) (~710)
-  - 602–615 Server cache (`src/lib/server/cache/`) (~690)
-  - 616–631 TMDB integration (~810)
-  - 632–650 Auth flow (Better Auth) (~1.9K)
-  - 651–670 Caching policy (~1.4K) ← 6
-  - 671–727 Configuration & environment (~3.2K)
-    - 687–699 Local run sequence (~130)
-    - 700–703 npm scripts (~200)
-    - 704–714 CI (`.github/workflows/tests.yml`) (~490)
-    - 715–727 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 728–743 Testing (~1.2K)
-    - 738–743 Verification baseline (~80)
-  - 744–752 Known gaps / TODO (~180) ← 1
-  - 753–761 Related docs (~140)
+  - 68–274 Directory layout (~8.9K)
+    - 265–274 File-organisation conventions (~450)
+  - 275–288 Styling & theming (~950)
+  - 289–301 Copy & voice (~540) ← 1
+  - 302–332 Routes (~9.9K)
+  - 333–373 User & roles (~2.6K)
+    - 366–373 Migrations (~330)
+  - 374–403 Source sync (~1.8K) ← 3
+  - 404–469 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
+  - 470–502 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.7K) ← 2
+  - 503–522 UM Disambiguation (~630)
+  - 523–531 UM flag rendering (~250)
+  - 532–540 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 541–551 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 552–563 Shared marker pattern (metric row markers) (~410) ← 5
+  - 564–605 Component library (`src/lib/components/`) (~7.5K)
+  - 606–616 Live search (`src/lib/components/search/`) (~710)
+  - 617–630 Server cache (`src/lib/server/cache/`) (~690)
+  - 631–646 TMDB integration (~810)
+  - 647–665 Auth flow (Better Auth) (~1.9K)
+  - 666–685 Caching policy (~1.4K) ← 6
+  - 686–742 Configuration & environment (~3.8K)
+    - 702–714 Local run sequence (~130)
+    - 715–718 npm scripts (~200)
+    - 719–729 CI (`.github/workflows/tests.yml`) (~490)
+    - 730–742 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 743–759 Testing (~1.2K)
+    - 754–759 Verification baseline (~80)
+  - 760–768 Known gaps / TODO (~180) ← 1
+  - 769–777 Related docs (~140)
 
 ## Phases
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~2.8K tok)
+- `docs/phases/STATUS.md` — Phase status (~3.2K tok)
+  - 5–16 Rules (~260)
+  - 17–46 Phases (~1.2K)
+  - 47–81 Open items (~850)
+  - 82–120 Standing decisions (~880)
 
 ## Policies
 
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~2.9K tok)
-- `PRIVACY.md` — Privacy (~2.5K tok)
+- `SECURITY.md` — Security (~3.3K tok)
+  - 5–18 Network (~2.7K)
+  - 19–29 Supply chain (~490)
+  - 30–35 Reporting a vulnerability (~90)
+- `PRIVACY.md` — Privacy (~2.9K tok)
 - `ACCESSIBILITY.md` — Accessibility (~660 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
 

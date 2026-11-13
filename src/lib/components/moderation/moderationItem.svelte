@@ -4,7 +4,11 @@
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationItem } from '#lib/media/types/moderation.ts';
-	import { COMMENT_STATUS_LABELS, REPORT_REASON_LABELS } from '#lib/media/utils/comments.ts';
+	import {
+		COMMENT_STATUS_LABELS,
+		REPORT_REASON_LABELS,
+		categoryLabel
+	} from '#lib/media/utils/comments.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
@@ -14,9 +18,11 @@
 		item: ModerationItem;
 		/** False for an account this reader's role cannot mute or ban (an administrator, oneself, a moderator for a moderator). */
 		canActOnAuthor: boolean;
+		/** The element that takes the focus when an action takes this row off the page and no neighbour can (default: the empty-state line). */
+		fallbackId?: string;
 	}
 
-	let { item, canActOnAuthor }: Props = $props();
+	let { item, canActOnAuthor, fallbackId = 'moderation-empty' }: Props = $props();
 
 	type Panel = 'hide' | 'reject' | 'mute' | 'ban';
 	let panel = $state<Panel | null>(null);
@@ -40,7 +46,8 @@
 	const submit = rowSubmit(
 		() => root,
 		(name) => (busy = name),
-		() => (panel = null)
+		() => (panel = null),
+		() => fallbackId
 	);
 
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
@@ -75,7 +82,7 @@
 	{#if item.aiCategories.length > 0}
 		<ul class="tags" aria-label="Categories from the automatic check">
 			{#each item.aiCategories as category (category)}
-				<li><Badge tone="neutral">{category}</Badge></li>
+				<li><Badge tone="neutral">{categoryLabel(category)}</Badge></li>
 			{/each}
 		</ul>
 	{/if}

@@ -46,3 +46,6 @@ export const moderationAction = [
 
 /** A moderator's reason on a hide or a reject is at most this long (the classifier's reason limit). */
 export const MODERATION_REASON_MAX = 140;
+
+/** The concern a moderator types for an AI scan is at most this many characters. */
+export const SCAN_CONCERN_MAX = 200;

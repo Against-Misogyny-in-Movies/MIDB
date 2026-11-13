@@ -1,21 +1,98 @@
 /**
  * Plain data for the comment endpoints and UI. The enum tuples and length limits that the
- * schema's CHECKs also use live in `db/lib/comments.ts` and are re-exported here.
+ * schema's CHECKs also use live in `db/lib/comments.ts` and are re-exported here. The moderation
+ * categories are app data, so they live here.
  */
 
-import type { reportReason, commentStatus } from '#db/lib/comments.ts';
+import type { reportReason, commentStatus, moderationSource } from '#db/lib/comments.ts';
 import type { CommentStatus } from '#lib/media/types/comments.ts';
 
 export {
 	COMMENT_BODY_MAX,
 	MODERATION_REASON_MAX,
 	REPORT_NOTE_MAX,
+	SCAN_CONCERN_MAX,
 	commentStatus,
 	moderationAction,
 	moderationSource,
 	reportReason,
 	reportStatus
 } from '#db/lib/comments.ts';
+
+/** What the classifier may flag a comment for. */
+export const VERDICT_CATEGORIES = [
+	'hate',
+	'misogyny',
+	'harassment',
+	'slur',
+	'threat',
+	'sexual-minors',
+	'sexual-explicit',
+	'doxxing',
+	'spam',
+	'survivor-mockery',
+	'off-topic',
+	'violence',
+	'disparagement',
+	'trolling'
+] as const;
+
+/** What each category means, for the prompts that name them. */
+export const CATEGORY_MEANINGS: Record<(typeof VERDICT_CATEGORIES)[number], string> = {
+	hate: 'hate speech against a group',
+	misogyny: 'endorsing or celebrating misogyny or sexual violence',
+	harassment: 'attacking, insulting or harassing a person',
+	slur: 'a slur',
+	threat: 'a threat of harm',
+	'sexual-minors': 'sexual content involving minors',
+	'sexual-explicit': 'explicit sexual content',
+	doxxing: 'sharing personal information',
+	spam: 'spam, advertising or unrelated links',
+	'survivor-mockery': 'mocking or doubting survivors',
+	'off-topic': 'unrelated to the title',
+	violence: 'glorifying or calling for violence',
+	disparagement: 'demeaning a person or a group without a slur',
+	trolling: 'bad-faith bait meant to provoke'
+};
+
+/** What each category is called in the moderation table and its filters. */
+export const CATEGORY_LABELS: Record<(typeof VERDICT_CATEGORIES)[number], string> = {
+	hate: 'Hate',
+	misogyny: 'Misogyny',
+	harassment: 'Harassment',
+	slur: 'Slur',
+	threat: 'Threat',
+	'sexual-minors': 'Sexual content, minors',
+	'sexual-explicit': 'Explicit sexual content',
+	doxxing: 'Doxxing',
+	spam: 'Spam',
+	'survivor-mockery': 'Survivor mockery',
+	'off-topic': 'Off topic',
+	violence: 'Violence',
+	disparagement: 'Disparagement',
+	trolling: 'Trolling'
+};
+
+/** A category's label; a category this build does not know (an older verdict) reads as stored. */
+export const categoryLabel = (category: string): string =>
+	CATEGORY_LABELS[category as (typeof VERDICT_CATEGORIES)[number]] ?? category;
+
+/** What put a comment in review, as the moderation table's source filter names it. */
+export const MODERATION_SOURCE_LABELS: Record<(typeof moderationSource)[number], string> = {
+	ai: 'Automatic check',
+	blocklist: 'Blocklist',
+	moderator: 'Moderator',
+	reports: 'Reports'
+};
+
+/** A plain-language table query is at most this many characters. */
+export const AI_QUERY_MAX = 300;
+
+/** An AI scan sends this many comments per model call. */
+export const SCAN_BATCH = 25;
+
+/** An AI scan makes at most this many calls, so it covers one page of the table. */
+export const SCAN_MAX_BATCHES = 2;
 
 /** Distinct open reports that move a published comment back to review. */
 export const REPORT_THRESHOLD = 3;

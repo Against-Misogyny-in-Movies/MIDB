@@ -15,6 +15,7 @@ const DELETE_ORDER = [
 	'title_count_flags',
 	'community_content_reports',
 	'comment_reports',
+	'comment_ai_labels',
 	'comment_votes',
 	'comments',
 	'community_ddd_votes',

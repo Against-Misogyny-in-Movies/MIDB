@@ -39,6 +39,10 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | C2    | Community reports: staff        | completed | 2026-11-13.                                                                                                       |
 | C3    | Community reports: header badge | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
 | C4    | Community reports: flow         | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
+| M1    | Moderation table: data          | completed | 2026-11-13.                                                                                                       |
+| M2    | Moderation table: AI            | completed | 2026-11-13. The scan and query calls have run only against a mocked SDK (Open items).                             |
+| M3    | Moderation table: UI            | completed | 2026-11-13. Rendered against seeded local data only; the AI controls seen only in their disabled state.           |
+| M4    | Moderation table: docs          | completed | 2026-11-13.                                                                                                       |
 
 ## Open items
 
@@ -63,6 +67,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Mute and ban have no undo: there is no unmute or unban action.
 - **Moderation:**
   - The Claude Haiku 5.5 check has run only against a mocked SDK; run a few real comments through it once `ANTHROPIC_API_KEY` is set, and review the blocklist and system prompt against real traffic.
+  - The moderation table's AI search and scan have run only against a mocked SDK; once `ANTHROPIC_API_KEY` is set, run a few searches and a page scan, and check the filters and labels they produce.
+  - The All comments table has been rendered only against seeded local data, without its AI controls enabled; check it against real traffic, in the dark theme and on a touch device.
+  - Time a bulk action on a full page of 50 comments on a deployed Worker.
 - **Auth:**
   - Google and Discord sign-in and linking have run only against mocks; test them once their OAuth apps and secrets exist.
 - **Attribution:**
@@ -94,6 +101,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Sexual violence is answered Not shown / Present / Not sure; UM's flags are asked only on Present, and no level is derived from them (user decision, 2026-11-12).
   - Reports count after an account-age wait; contradicting UM, a burst on a title or a busy new account holds a report for a moderator; readers can flag a title's counts (user decision, 2026-11-12).
   - The community Bechdel and DDD tables are dropped, after the reader reports deploy (user decision, 2026-11-12).
+- **Moderation table:**
+  - Staff get an All comments table on `/user/moderation` with Haiku search (a query becomes filters) and a page scan that stores labels; it covers comments and their reader reports, not community reports (user decision, 2026-11-13).
+  - The classifier also tags violence, disparagement and trolling (user decision, 2026-11-13).
 - **Toolchain:**
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).
   - TypeScript 6.0.3 serves the tooling and TypeScript 7 runs `typecheck`, until svelte-check supports TypeScript 7 (user decision, 2026-11-12).

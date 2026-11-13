@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
+	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -10,16 +12,20 @@
 
 	let { data } = $props();
 
-	type Tab = 'pending' | 'reported' | 'reports' | 'recent';
+	type Tab = 'pending' | 'reported' | 'reports' | 'recent' | 'table';
 	/**
-	 * `?tab=reports` and `?title=` open the community-reports tab, every other URL opens Pending. A
-	 * click on a tab overrides it until the URL changes (a title's reports, back to the list).
+	 * `?tab=reports` and `?title=` open the community-reports tab, `?tab=table` the table of every
+	 * comment, every other URL opens Pending. A click on a tab overrides it until the URL changes
+	 * (a title's reports, back to the list).
 	 */
-	let tab = $derived<Tab>(data.titleId || data.tab === 'reports' ? 'reports' : 'pending');
+	let tab = $derived<Tab>(
+		data.titleId || data.tab === 'reports' ? 'reports' : data.tab === 'table' ? 'table' : 'pending'
+	);
 
 	const TABS = $derived([
 		{ id: 'pending' as const, label: 'Pending', count: data.pending.length },
 		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
+		{ id: 'table' as const, label: 'All comments', count: null },
 		{
 			id: 'reports' as const,
 			label: 'MIDB community reports',
@@ -27,6 +33,23 @@
 		},
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
 	]);
+
+	/**
+	 * The table loads from the server with its filters, so choosing it goes to its URL. Leaving it
+	 * drops `tab=table` from the URL: a later action's `update()` reloads the page from the URL, and
+	 * a URL that still named the table would bring it back and run its query again. The navigation
+	 * keeps the focus (`reset: false`), and the chosen tab is set again once it is done, because the
+	 * new data derives Pending or the reports tab from the URL.
+	 */
+	async function select(next: Tab) {
+		tab = next;
+		if (next === 'table') {
+			if (data.tab !== 'table') void goto('?tab=table', { reset: false });
+		} else if (data.tab === 'table') {
+			await goto(next === 'reports' ? '?tab=reports' : '?', { reset: false });
+			tab = next;
+		}
+	}
 
 	/**
 	 * The tab keyboard pattern: one tab is in the tab order, the arrow keys move between tabs
@@ -50,7 +73,7 @@
 							: null;
 		if (target === null) return;
 		event.preventDefault();
-		tab = TABS[target].id;
+		void select(TABS[target].id);
 		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
 	}
 
@@ -61,7 +84,7 @@
 	<title>Moderation · MIDB</title>
 </svelte:head>
 
-<div class="page">
+<div class="page" class:wide={tab === 'table'}>
 	<header>
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
@@ -91,7 +114,7 @@
 				aria-selected={tab === t.id}
 				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
 				tabindex={tab === t.id ? 0 : -1}
-				onclick={() => (tab = t.id)}
+				onclick={() => void select(t.id)}
 				onkeydown={(event) => onTabKeydown(event, i)}
 			>
 				{t.label}{#if t.count !== null}
@@ -101,7 +124,22 @@
 	</div>
 
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
-		{#if tab === 'recent'}
+		{#if tab === 'table'}
+			{#if data.table && data.filters}
+				<TablePanel
+					table={data.table}
+					filters={data.filters}
+					aiAvailable={data.aiAvailable}
+					me={data.me}
+				/>
+			{:else}
+				<div class="card skeleton" aria-busy="true" aria-label="Loading comments">
+					{#each [0, 1, 2, 3, 4, 5] as row (row)}
+						<div class="skeleton-row"></div>
+					{/each}
+				</div>
+			{/if}
+		{:else if tab === 'recent'}
 			{#if data.recent.length === 0}
 				<p class="empty" id="moderation-empty" tabindex="-1">No moderation actions yet.</p>
 			{:else}
@@ -154,6 +192,11 @@
 		@apply text-ink;
 	}
 
+	/* The table takes the layout's whole column; the header and the tabs keep its left edge. */
+	.page.wide {
+		max-width: none;
+	}
+
 	h1 {
 		font-size: 1.875rem;
 	}
@@ -189,5 +232,37 @@
 
 	.list > :global(li + li) {
 		border-top: 1px solid var(--border);
+	}
+
+	/* Room for the filters and the first rows, so the table replaces it without moving what is below. */
+	.skeleton {
+		@apply flex flex-col;
+		min-height: 18rem;
+	}
+
+	.skeleton-row {
+		@apply flex items-center border-b border-border;
+		height: 3rem;
+		animation: pulse 1.6s ease-in-out infinite;
+	}
+
+	.skeleton-row::before {
+		content: '';
+		width: 40%;
+		height: 0.75rem;
+		margin-left: var(--spacing-md);
+		background-color: var(--surface-sunken);
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.5;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.skeleton-row {
+			animation: none;
+		}
 	}
 </style>

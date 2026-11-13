@@ -108,7 +108,7 @@ describe('ModerationItem', () => {
 		cleanup();
 		mount({ aiCategories: ['misogyny', 'slur'] });
 		expect(screen.getByLabelText('Categories from the automatic check').textContent).toMatch(
-			/misogyny.*slur/
+			/Misogyny.*Slur/
 		);
 	});
 

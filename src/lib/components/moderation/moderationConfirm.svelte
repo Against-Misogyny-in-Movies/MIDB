@@ -9,16 +9,30 @@
 		kind: Kind;
 		/** The account's name, for the mute, ban and reject-all sentences. */
 		name: string;
-		/** Hidden inputs the action reads (the comment's id, the account's id). */
-		fields: Record<string, string>;
+		/** Hidden inputs the action reads (the comment's id, the account's id); a list repeats the input. */
+		fields: Record<string, string | string[]>;
 		/** The account's community reports that are not rejected, for `rejectAll`. */
 		reportCount?: number;
+		/** The form action when it is not the kind's own (`bulk`); `fields` then name the operation. */
+		action?: string;
+		/** For `hide` and `reject`: the comments the action covers, when it covers a selection. */
+		count?: number;
 		busy: string | null;
 		submit: ReturnType<typeof rowSubmit>;
 		oncancel: () => void;
 	}
 
-	let { kind, name, fields, reportCount = 0, busy, submit, oncancel }: Props = $props();
+	let {
+		kind,
+		name,
+		fields,
+		reportCount = 0,
+		action,
+		count,
+		busy,
+		submit,
+		oncancel
+	}: Props = $props();
 
 	const ACTIONS: Record<Kind, string> = {
 		hide: 'hide',
@@ -34,15 +48,36 @@
 		ban: 'Ban account',
 		rejectAll: 'Reject all community reports'
 	};
+	const noun = $derived(count === 1 ? 'comment' : 'comments');
+	const button = $derived(
+		count === undefined
+			? BUTTONS[kind]
+			: `${BUTTONS[kind].replace(' comment', '')} ${count} ${noun}`
+	);
 	const shownToAuthor = $derived(kind === 'hide' || kind === 'reject');
 </script>
 
-<form class="plate panel" method="POST" action="?/{ACTIONS[kind]}" use:enhance={submit(kind)}>
+<form
+	class="plate panel"
+	method="POST"
+	action="?/{action ?? ACTIONS[kind]}"
+	use:enhance={submit(kind)}
+>
 	{#each Object.entries(fields) as [field, value] (field)}
-		<input type="hidden" name={field} {value} />
+		{#each [value].flat() as one (one)}
+			<input type="hidden" name={field} value={one} />
+		{/each}
 	{/each}
 	<p class="text-sm">
-		{#if kind === 'hide'}
+		{#if count !== undefined && kind === 'hide'}
+			Hide {count} selected {noun}? A pending or published one is taken out of view, its replies
+			stay under a placeholder, and its author sees it as hidden. A comment in any other status
+			stays as it is.
+		{:else if count !== undefined && kind === 'reject'}
+			Reject {count} selected {noun}? A pending or published one is taken out of view, and its
+			author sees it as rejected, with the reason when one is given. A comment in any other status
+			stays as it is.
+		{:else if kind === 'hide'}
 			Hide this comment? It leaves the public list, and replies stay under a placeholder. The author
 			sees it as hidden.
 		{:else if kind === 'reject'}
@@ -87,7 +122,7 @@
 			aria-busy={busy === kind}
 			disabled={busy !== null && busy !== kind}
 		>
-			{BUTTONS[kind]}
+			{button}
 		</button>
 		<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
 	</div>

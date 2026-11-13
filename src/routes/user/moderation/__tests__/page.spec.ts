@@ -1,7 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const goto = vi.fn();
+
 vi.mock('$app/forms', () => ({ enhance: () => ({ destroy() {} }) }));
+vi.mock('$app/navigation', () => ({ goto: (...args: unknown[]) => goto(...args) }));
 
 const { default: Page } = await import('../+page.svelte');
 
@@ -18,7 +21,10 @@ const DATA = {
 	staleSources: []
 };
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	goto.mockReset();
+});
 
 const tab = (name: RegExp) => screen.getByRole('tab', { name });
 
@@ -26,9 +32,10 @@ describe('the moderation tabs', () => {
 	it('puts one tab in the tab order and controls only the rendered panel', () => {
 		render(Page, { data: DATA, form: null } as never);
 		const tabs = screen.getAllByRole('tab');
-		expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1']);
+		expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1', '-1']);
 		expect(tabs.map((t) => t.getAttribute('aria-controls'))).toEqual([
 			'panel-pending',
+			null,
 			null,
 			null,
 			null
@@ -137,5 +144,165 @@ describe('the community-reports URL', () => {
 		expect(
 			screen.getByRole('link', { name: /Back to community reports/ }).getAttribute('href')
 		).toBe('?tab=reports');
+	});
+});
+
+const FILTERS = { sort: 'newest' as const, page: 1 };
+
+function tableRow(id: string, over: Record<string, unknown> = {}) {
+	return {
+		comment: {
+			id,
+			parentId: null,
+			rootId: null,
+			body: `Body of ${id}`,
+			status: 'published',
+			moderationSource: null,
+			moderationReason: null,
+			createdAt: '2026-11-10T10:00:00Z',
+			editedAt: null
+		},
+		author: { id: `u-${id}`, username: 'anna', avatarKey: null, role: 'user', displayName: 'anna' },
+		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
+		aiCategories: [],
+		reports: [],
+		authorCommentCount: 1,
+		authorMutedUntil: null,
+		severity: null,
+		aiFailure: null,
+		latestLabel: null,
+		...over
+	};
+}
+
+const TABLE_DATA = {
+	...DATA,
+	tab: 'table',
+	filters: FILTERS,
+	aiAvailable: true,
+	table: { rows: [tableRow('c1'), tableRow('c2')], total: 2, page: 1, pageSize: 50 }
+};
+
+describe('the table tab', () => {
+	it('renders the rows in a captioned table with the AI controls on', () => {
+		render(Page, { data: TABLE_DATA, form: null } as never);
+		expect(tab(/All comments/).getAttribute('aria-selected')).toBe('true');
+		expect(screen.getByRole('table')).toBeTruthy();
+		expect(screen.getAllByRole('row')).toHaveLength(3);
+		expect(screen.getByText('Body of c1')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Search with AI' })).toHaveProperty(
+			'disabled',
+			false
+		);
+	});
+
+	it('goes to the table URL when the tab is chosen from another one', async () => {
+		render(Page, { data: DATA, form: null } as never);
+		await fireEvent.click(tab(/All comments/));
+		expect(goto).toHaveBeenCalledWith('?tab=table', { reset: false });
+		expect(tab(/All comments/).getAttribute('aria-selected')).toBe('true');
+	});
+
+	it('does not go again when the table is already the URL', async () => {
+		render(Page, { data: TABLE_DATA, form: null } as never);
+		await fireEvent.click(tab(/Pending/));
+		goto.mockClear();
+		await fireEvent.click(tab(/All comments/));
+		expect(goto).not.toHaveBeenCalled();
+	});
+
+	it('drops tab=table from the URL when another tab is chosen, and keeps the choice', async () => {
+		render(Page, { data: TABLE_DATA, form: null } as never);
+		await fireEvent.click(tab(/Recent actions/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?', { reset: false });
+		await waitFor(() => expect(tab(/Recent actions/).getAttribute('aria-selected')).toBe('true'));
+		goto.mockClear();
+		await fireEvent.click(tab(/MIDB community reports/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=reports', { reset: false });
+	});
+
+	it('reserves room for the table while it loads', () => {
+		render(Page, { data: { ...TABLE_DATA, table: null, filters: null }, form: null } as never);
+		expect(screen.getByLabelText('Loading comments').getAttribute('aria-busy')).toBe('true');
+	});
+
+	it('shows each active filter as a chip that removes only it', () => {
+		render(Page, {
+			data: {
+				...TABLE_DATA,
+				filters: { ...FILTERS, q: 'troll', status: ['pending', 'hidden'], minSeverity: 2 }
+			},
+			form: null
+		} as never);
+		const chips = within(screen.getByRole('list', { name: 'Active filters' }));
+		expect(
+			chips.getByRole('link', { name: 'Remove filter: Text: troll' }).getAttribute('href')
+		).toBe('?tab=table&status=pending&status=hidden&severity=2');
+		expect(
+			chips
+				.getByRole('link', { name: 'Remove filter: Status: Awaiting review' })
+				.getAttribute('href')
+		).toBe('?tab=table&q=troll&status=hidden&severity=2');
+		expect(chips.getAllByRole('link')).toHaveLength(4);
+	});
+
+	it('says why the AI controls are off, and shows none, without a key', () => {
+		render(Page, { data: { ...TABLE_DATA, aiAvailable: false }, form: null } as never);
+		expect(screen.getByText(/AI search and scan are off/)).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Search with AI' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Scan this page' })).toBeNull();
+	});
+
+	it('keeps the filters closed until one is set, with the chips outside them', () => {
+		const { unmount } = render(Page, { data: TABLE_DATA, form: null } as never);
+		expect(document.querySelector<HTMLDetailsElement>('details.fields')?.open).toBe(false);
+		unmount();
+		render(Page, {
+			data: { ...TABLE_DATA, filters: { ...FILTERS, q: 'troll' } },
+			form: null
+		} as never);
+		expect(document.querySelector<HTMLDetailsElement>('details.fields')?.open).toBe(true);
+		const chips = screen.getByRole('list', { name: 'Active filters' });
+		expect(chips.closest('details.fields')).toBeNull();
+	});
+
+	it('sets the sort beside select-all, carrying the filters with it', () => {
+		render(Page, {
+			data: { ...TABLE_DATA, filters: { ...FILTERS, q: 'troll', sort: 'reports' } },
+			form: null
+		} as never);
+		const sort = screen.getByLabelText('Sort') as unknown as HTMLSelectElement;
+		expect(sort.value).toBe('reports');
+		expect(screen.getByRole('option', { name: 'Most open reports' })).toBeTruthy();
+		const formEl = sort.closest('form') as HTMLFormElement;
+		expect(formEl.closest('details.fields')).toBeNull();
+		expect(formEl.querySelector<HTMLInputElement>('input[name=q]')?.value).toBe('troll');
+		expect(formEl.querySelector<HTMLInputElement>('input[name=tab]')?.value).toBe('table');
+	});
+
+	it('shows the bulk bar once a row is selected, and not before', async () => {
+		render(Page, { data: TABLE_DATA, form: null } as never);
+		expect(screen.queryByRole('region', { name: /selected comments/ })).toBeNull();
+		await fireEvent.click(screen.getAllByRole('checkbox', { name: /by anna on Alien/ })[0]);
+		const bar = within(screen.getByRole('region', { name: /selected comments/ }));
+		expect(bar.getByText('selected')).toBeTruthy();
+		expect(bar.getByRole('button', { name: 'Approve' })).toBeTruthy();
+		await fireEvent.click(bar.getByRole('button', { name: 'Clear selection' }));
+		expect(screen.queryByRole('region', { name: /selected comments/ })).toBeNull();
+	});
+
+	it('opens a row’s detail with the comment’s own actions', async () => {
+		render(Page, { data: TABLE_DATA, form: null } as never);
+		await fireEvent.click(screen.getAllByRole('button', { name: /Review/ })[0]);
+		expect(screen.getByRole('button', { name: 'Hide' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Close the comment by anna' })).toBeTruthy();
+	});
+
+	it('says so when no comment matches', () => {
+		render(Page, {
+			data: { ...TABLE_DATA, table: { rows: [], total: 0, page: 1, pageSize: 50 } },
+			form: null
+		} as never);
+		expect(screen.getByText('No comments match these filters.')).toBeTruthy();
 	});
 });

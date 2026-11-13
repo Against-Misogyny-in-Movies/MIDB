@@ -22,6 +22,7 @@ import {
 	COMMENT_BODY_MAX,
 	MODERATION_REASON_MAX,
 	REPORT_NOTE_MAX,
+	SCAN_CONCERN_MAX,
 	commentStatus,
 	moderationAction,
 	moderationSource,
@@ -147,6 +148,8 @@ export const comments = sqliteTable(
 		index('comments_title_status_score_idx').on(t.titleId, t.status, t.score),
 		index('comments_root_idx').on(t.rootId, t.createdAt),
 		index('comments_user_idx').on(t.userId, t.createdAt),
+		index('comments_status_created_idx').on(t.status, t.createdAt),
+		index('comments_created_idx').on(t.createdAt),
 		check(
 			'comments_body_length',
 			sql`length(${t.body}) BETWEEN 1 AND ${sql.raw(String(COMMENT_BODY_MAX))}`
@@ -158,6 +161,40 @@ export const comments = sqliteTable(
 		check('comments_ai_verdict_json', sql`${t.aiVerdict} IS NULL OR json_valid(${t.aiVerdict})`),
 		enumCheck('comments_status_check', t.status, commentStatus),
 		enumCheck('comments_source_check', t.moderationSource, moderationSource)
+	]
+);
+
+/**
+ * What an AI scan found for one comment against a concern a moderator typed. A scan appends a
+ * row; the newest row per comment is the label the table shows and filters on.
+ */
+export const commentAiLabels = sqliteTable(
+	'comment_ai_labels',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		commentId: text('comment_id')
+			.notNull()
+			.references(() => comments.id, { onDelete: 'cascade' }),
+		concern: text('concern').notNull(),
+		matched: integer('matched', { mode: 'boolean' }).notNull(),
+		/** The categories the scan assigned, as JSON text. */
+		categories: text('categories').notNull(),
+		severity: integer('severity').notNull(),
+		reason: text('reason').notNull(),
+		model: text('model').notNull(),
+		scannedBy: text('scanned_by').references(() => users.id, { onDelete: 'set null' }),
+		...timestamps()
+	},
+	(t) => [
+		index('comment_ai_labels_comment_idx').on(t.commentId, t.createdAt),
+		check('comment_ai_labels_categories_json', sql`json_valid(${t.categories})`),
+		check(
+			'comment_ai_labels_concern_length',
+			sql`length(${t.concern}) BETWEEN 1 AND ${sql.raw(String(SCAN_CONCERN_MAX))}`
+		),
+		check('comment_ai_labels_severity_range', sql`${t.severity} >= 0 AND ${t.severity} <= 3`)
 	]
 );
 

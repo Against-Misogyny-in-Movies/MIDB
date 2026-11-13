@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
@@ -29,19 +30,42 @@ export type ModerationItem = {
 	authorMutedUntil: string | null;
 };
 
-/** The categories in a stored verdict; an unreadable one reads as none. */
-function verdictCategories(json: string | null): string[] {
-	if (!json) return [];
+/** What a stored verdict says, read once: the categories, the severity and the failure code. */
+export type ReadVerdict = {
+	categories: string[];
+	/** 0 to 3; null when no verdict ran or it failed. */
+	severity: number | null;
+	/** The failure code when the classifier gave no verdict, otherwise null. */
+	failure: string | null;
+};
+
+/** Reads a stored verdict; an unreadable one reads as none. */
+export function readAiVerdict(json: string | null): ReadVerdict {
+	const none: ReadVerdict = { categories: [], severity: null, failure: null };
+	if (!json) return none;
 	try {
-		const parsed: unknown = JSON.parse(json);
-		const categories = (parsed as { categories?: unknown } | null)?.categories;
-		return Array.isArray(categories) ? categories.filter((c) => typeof c === 'string') : [];
+		const parsed = JSON.parse(json) as {
+			categories?: unknown;
+			severity?: unknown;
+			failure?: unknown;
+		} | null;
+		return {
+			categories: Array.isArray(parsed?.categories)
+				? parsed.categories.filter((c): c is string => typeof c === 'string')
+				: [],
+			severity: typeof parsed?.severity === 'number' ? parsed.severity : null,
+			failure: typeof parsed?.failure === 'string' ? parsed.failure : null
+		};
 	} catch {
-		return [];
+		return none;
 	}
 }
 
-async function toItems(
+/** The number of open reports on the comment of the enclosing select. */
+export const openReportCount = sql`(SELECT count(*) FROM ${commentReports} WHERE ${commentReports.commentId} = ${comments.id} AND ${commentReports.status} = 'open')`;
+
+/** The rows of a moderation list with their open reports and author context. */
+export async function toModerationItems(
 	rows: {
 		comment: typeof comments.$inferSelect;
 		author: UserRow;
@@ -84,7 +108,7 @@ async function toItems(
 		comment: toOwnComment(comment),
 		author: toPublicUser(author),
 		title: { kind: title.kind, tmdbId: title.tmdbId, name: title.title },
-		aiCategories: verdictCategories(comment.aiVerdict),
+		aiCategories: readAiVerdict(comment.aiVerdict).categories,
 		reports: reports
 			.filter((r) => r.commentId === comment.id)
 			.map((r) => ({ reason: r.reason, note: r.note, createdAt: r.createdAt.toISOString() })),
@@ -93,17 +117,21 @@ async function toItems(
 	}));
 }
 
-const withContext = () =>
-	db
-		.select({ comment: comments, author: users, title: titles })
-		.from(comments)
+/** Adds the author and the title to a select from comments, so every list reads the same rows. */
+export const withContext = <Query extends SQLiteSelect>(query: Query) =>
+	query
 		.innerJoin(users, eq(comments.userId, users.id))
 		.innerJoin(titles, eq(comments.titleId, titles.id));
 
+const commentRows = () =>
+	withContext(
+		db.select({ comment: comments, author: users, title: titles }).from(comments).$dynamic()
+	);
+
 /** Comments waiting for a moderator, oldest first. */
 export async function listPendingQueue(): Promise<ModerationItem[]> {
-	return toItems(
-		await withContext()
+	return toModerationItems(
+		await commentRows()
 			.where(eq(comments.status, 'pending'))
 			.orderBy(comments.createdAt)
 			.limit(QUEUE_LIMIT)
@@ -112,11 +140,10 @@ export async function listPendingQueue(): Promise<ModerationItem[]> {
 
 /** Pending and published comments with open reports, most reported first. */
 export async function listReportedQueue(): Promise<ModerationItem[]> {
-	const open = sql`(SELECT count(*) FROM ${commentReports} WHERE ${commentReports.commentId} = ${comments.id} AND ${commentReports.status} = 'open')`;
-	return toItems(
-		await withContext()
-			.where(and(inArray(comments.status, ['pending', 'published']), sql`${open} > 0`))
-			.orderBy(sql`${open} DESC`, comments.createdAt)
+	return toModerationItems(
+		await commentRows()
+			.where(and(inArray(comments.status, ['pending', 'published']), sql`${openReportCount} > 0`))
+			.orderBy(sql`${openReportCount} DESC`, comments.createdAt)
 			.limit(QUEUE_LIMIT)
 	);
 }
