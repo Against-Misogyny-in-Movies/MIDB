@@ -84,14 +84,14 @@ Read the sections your task touches.
     - 712–724 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
   - 725–740 Testing (~1.2K)
     - 735–740 Verification baseline (~80)
-  - 741–749 Known gaps / TODO (~180)
+  - 741–749 Known gaps / TODO (~180) ← 1
   - 750–758 Related docs (~140)
 
 ## Phases
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~2.5K tok)
+- `docs/phases/STATUS.md` — Phase status (~2.6K tok)
 
 ## Policies
 

@@ -4,7 +4,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Rules
 
-- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Rows R1–R5 come from `docs/plans/plan-reader-reports.md`; every earlier row is completed and its plan deleted, and the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
+- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Every row below is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
 - **Starting a phase.**
   - If nothing is active, the only legal start is the lowest phase in the table whose earlier phases are completed.
   - When you start a phase, set it to `active` with a one-line note. Do not mark the next phase active.
@@ -34,10 +34,13 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | R2    | Reader reports: API           | completed | 2026-11-13.                                                                                                       |
 | R3    | Reader reports: moderation    | completed | 2026-11-13. The tab has been reviewed from code only, not in a browser.                                           |
 | R4    | Reader reports: UI            | completed | 2026-11-13. Not rendered in a browser (no TMDB token here); the reserved counts height is computed, not measured. |
-| R5    | Reader reports: copy and docs | active    | 2026-11-13. Started.                                                                                              |
+| R5    | Reader reports: copy and docs | completed | 2026-11-13.                                                                                                       |
 
 ## Open items
 
+- **Reader reports:**
+  - Render the title-page section, the form and the moderation tab in a browser (no TMDB token here), and measure the counts slot's reserved height at phone and desktop widths.
+  - Once the reader reports have deployed, add the migration that drops `community_bechdel_ratings`, `community_um_reports` and `community_ddd_votes` (`docs/architecture.md`, Known gaps).
 - **UX:**
   - Section footer links (`collapsibleSection.svelte`) are 20 px tall, under the 44 px touch target.
   - A film or series page that fails to load from TMDB shows the generic "Something went wrong" heading (`src/routes/+error.svelte`); name what failed.
