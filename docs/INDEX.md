@@ -19,7 +19,7 @@ Read whole.
   - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
   - 108–120 Making a change (~440) ← 3
-  - 121–137 Checking a change (~230) ← 6
+  - 121–137 Checking a change (~230) ← 7
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~480 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
@@ -91,7 +91,24 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~2.8K tok)
+- `docs/phases/STATUS.md` — Phase status (~3.0K tok)
+  - 5–16 Rules (~270)
+  - 17–46 Phases (~1.2K)
+  - 47–78 Open items (~740)
+  - 79–114 Standing decisions (~790)
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-moderation-table.md` — Moderation table with Haiku search and scan (~4.6K tok)
+  - 3–21 Context (~370)
+  - 22–84 M1 — Data: categories, migration, table query (~1.2K)
+  - 85–128 M2 — AI: shared call helpers, query to filters, scan (~780)
+  - 129–183 M3 — Route and UI (~950)
+  - 184–210 M4 — Copy and docs (~320)
+  - 211–225 Reused pieces (~720)
+  - 226–237 Verification (~280)
 
 ## Policies
 

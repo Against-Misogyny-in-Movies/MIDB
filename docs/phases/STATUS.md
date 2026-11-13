@@ -4,7 +4,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Rules
 
-- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Every row below is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
+- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. M1–M4 come from `docs/plans/plan-moderation-table.md`; every other row is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
 - **Starting a phase.**
   - If nothing is active, the only legal start is the lowest phase in the table whose earlier phases are completed.
   - When you start a phase, set it to `active` with a one-line note. Do not mark the next phase active.
@@ -16,29 +16,33 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Phases
 
-| Phase | Work                            | Status    | Note                                                                                                              |
-| ----- | ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
-| T1    | pnpm + Node 22                  | completed | 2026-11-12.                                                                                                       |
-| T2    | TypeScript 6 + TS 7             | completed | 2026-11-12.                                                                                                       |
-| T3    | Oxlint + ESLint Svelte          | completed | 2026-11-12.                                                                                                       |
-| 0     | SvelteKit 3 upgrade             | completed | 2026-11-12. Storybook builds on Kit 3; a story rendering in a browser is unverified.                              |
-| 1     | Cloudflare platform             | completed | 2026-11-12. Workers Caching checks wait for the first preview deploy (Open items).                                |
-| 2     | SQLite / D1 data layer          | completed | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.                  |
-| 2b    | Daily source sync               | completed | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items).         |
-| 3     | Auth (Better Auth)              | completed | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).                    |
-| 4     | Comments                        | completed | 2026-11-12.                                                                                                       |
-| 5     | AI moderation                   | completed | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items).       |
-| 6     | CI, deploy, docs                | completed | 2026-11-12. The workflows have not run against a real account (Open items).                                       |
-| 7     | Avatars and usernames           | completed | 2026-11-12.                                                                                                       |
-| R1    | Reader reports: data            | completed | 2026-11-12.                                                                                                       |
-| R2    | Reader reports: API             | completed | 2026-11-13.                                                                                                       |
-| R3    | Reader reports: moderation      | completed | 2026-11-13. The tab has been reviewed from code only, not in a browser.                                           |
-| R4    | Reader reports: UI              | completed | 2026-11-13. Not rendered in a browser (no TMDB token here); the reserved counts height is computed, not measured. |
-| R5    | Reader reports: copy and docs   | completed | 2026-11-13.                                                                                                       |
-| C1    | Community reports: rename       | completed | 2026-11-13. The migration keeps its name `0001_reader_reports`.                                                   |
-| C2    | Community reports: staff        | completed | 2026-11-13.                                                                                                       |
-| C3    | Community reports: header badge | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
-| C4    | Community reports: flow         | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
+| Phase | Work                            | Status      | Note                                                                                                              |
+| ----- | ------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| T1    | pnpm + Node 22                  | completed   | 2026-11-12.                                                                                                       |
+| T2    | TypeScript 6 + TS 7             | completed   | 2026-11-12.                                                                                                       |
+| T3    | Oxlint + ESLint Svelte          | completed   | 2026-11-12.                                                                                                       |
+| 0     | SvelteKit 3 upgrade             | completed   | 2026-11-12. Storybook builds on Kit 3; a story rendering in a browser is unverified.                              |
+| 1     | Cloudflare platform             | completed   | 2026-11-12. Workers Caching checks wait for the first preview deploy (Open items).                                |
+| 2     | SQLite / D1 data layer          | completed   | 2026-11-12. `--remote` (`/raw`) is tested only against a mocked API until a real account exists.                  |
+| 2b    | Daily source sync               | completed   | 2026-11-12. The scheduled workflow has not run: it needs the canonical repo and its secrets (Open items).         |
+| 3     | Auth (Better Auth)              | completed   | 2026-11-12. Google and Discord sign-in are untested until their OAuth apps exist (Open items).                    |
+| 4     | Comments                        | completed   | 2026-11-12.                                                                                                       |
+| 5     | AI moderation                   | completed   | 2026-11-12. The classifier has run only against a mocked SDK until `ANTHROPIC_API_KEY` exists (Open items).       |
+| 6     | CI, deploy, docs                | completed   | 2026-11-12. The workflows have not run against a real account (Open items).                                       |
+| 7     | Avatars and usernames           | completed   | 2026-11-12.                                                                                                       |
+| R1    | Reader reports: data            | completed   | 2026-11-12.                                                                                                       |
+| R2    | Reader reports: API             | completed   | 2026-11-13.                                                                                                       |
+| R3    | Reader reports: moderation      | completed   | 2026-11-13. The tab has been reviewed from code only, not in a browser.                                           |
+| R4    | Reader reports: UI              | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here); the reserved counts height is computed, not measured. |
+| R5    | Reader reports: copy and docs   | completed   | 2026-11-13.                                                                                                       |
+| C1    | Community reports: rename       | completed   | 2026-11-13. The migration keeps its name `0001_reader_reports`.                                                   |
+| C2    | Community reports: staff        | completed   | 2026-11-13.                                                                                                       |
+| C3    | Community reports: header badge | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
+| C4    | Community reports: flow         | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
+| M1    | Moderation table: data          | not started |                                                                                                                   |
+| M2    | Moderation table: AI            | not started |                                                                                                                   |
+| M3    | Moderation table: UI            | not started |                                                                                                                   |
+| M4    | Moderation table: docs          | not started |                                                                                                                   |
 
 ## Open items
 
