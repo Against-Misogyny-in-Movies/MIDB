@@ -34,7 +34,7 @@ vi.mock('#lib/server/data/comment-title.ts', () => ({
 	parseTitleParams: (kind: string, tmdbId: string) => {
 		if ((kind !== 'movie' && kind !== 'tv') || !/^\d{1,9}$/.test(tmdbId))
 			error(404, 'Title not found');
-		return { kind, tmdbId };
+		return { kind, tmdbId: String(Number(tmdbId)) };
 	}
 }));
 

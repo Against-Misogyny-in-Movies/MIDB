@@ -24,7 +24,7 @@ vi.mock('#lib/server/auth/guards.ts', () => ({
 vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
-vi.mock('#lib/server/http/purge-comments.ts', () => ({
+vi.mock('#lib/server/http/purge-title.ts', () => ({
 	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);

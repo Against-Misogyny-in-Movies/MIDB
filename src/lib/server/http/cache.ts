@@ -63,46 +63,53 @@ export const PUBLIC_IMAGE = { 'cache-control': 'public, max-age=2592000' };
  * PUBLIC_COMMENTS: a title's published comments, the same for everyone. The browser always
  * revalidates; the edge keeps the list for ten minutes and serves it stale for a minute while it
  * refreshes. The response also carries `Cache-Tag: comments:<kind>:<tmdbId>` (`commentsHeaders`),
- * and every comment write or moderation action purges that tag (`purgeComments`), so the list
- * trails a write by at most the purge. Votes do not purge, so a score can trail by up to one TTL.
+ * and every comment write or moderation action purges that tag (`purgeTitleComments`), so the
+ * list trails a write by at most the purge. Votes do not purge, so a score can trail by up to
+ * one TTL.
  */
 export const PUBLIC_COMMENTS = {
 	'cache-control': 'public, max-age=0',
 	'cdn-cache-control': 'max-age=600, stale-while-revalidate=60'
 };
 
-/** The cache tag shared by one title's comment list. */
-export function commentsTag(kind: string, tmdbId: number | string): string {
-	return `comments:${kind}:${tmdbId}`;
-}
-
-/** `PUBLIC_COMMENTS` plus the title's `Cache-Tag`, for the list endpoint. */
-export function commentsHeaders(kind: string, tmdbId: number | string): Record<string, string> {
-	return { ...PUBLIC_COMMENTS, 'cache-tag': commentsTag(kind, tmdbId) };
-}
-
 /**
- * PUBLIC_READER_REPORTS: a title's reader-report counts, the same for everyone. The browser always
- * revalidates; the edge keeps the counts for ten minutes and serves them stale for a minute while
- * they refresh. The response carries `Cache-Tag: reports:<kind>:<tmdbId>` (`readerReportsHeaders`),
- * and every report write or moderation action purges that tag (`purgeTitleReports`). A report
- * that starts counting on its own (its account reaches the minimum age) does not purge, so the
- * counts can trail by up to one TTL.
+ * PUBLIC_READER_REPORTS: a title's reader-report counts, the same for everyone, on the policy of
+ * `PUBLIC_COMMENTS`. The response carries `Cache-Tag: reports:<kind>:<tmdbId>`
+ * (`readerReportsHeaders`), and every report write purges that tag (`purgeTitleReports`). A
+ * report that starts counting on its own (its account reaches the minimum age) does not purge,
+ * so the counts can trail by up to one TTL.
  */
-export const PUBLIC_READER_REPORTS = {
-	'cache-control': 'public, max-age=0',
-	'cdn-cache-control': 'max-age=600, stale-while-revalidate=60'
-};
+export const PUBLIC_READER_REPORTS = PUBLIC_COMMENTS;
 
-/** The cache tag shared by one title's reader-report counts. */
-export function readerReportsTag(kind: string, tmdbId: number | string): string {
-	return `reports:${kind}:${tmdbId}`;
+/** A per-title cache tag: `<prefix>:<kind>:<tmdbId>`. */
+export function titleTag(prefix: string, kind: string, tmdbId: number | string): string {
+	return `${prefix}:${kind}:${tmdbId}`;
 }
 
-/** `PUBLIC_READER_REPORTS` plus the title's `Cache-Tag`, for the counts endpoint. */
-export function readerReportsHeaders(
+/** A title-scoped policy plus the title's `Cache-Tag`. */
+export function titleHeaders(
+	policy: Record<string, string>,
+	prefix: string,
 	kind: string,
 	tmdbId: number | string
 ): Record<string, string> {
-	return { ...PUBLIC_READER_REPORTS, 'cache-tag': readerReportsTag(kind, tmdbId) };
+	return { ...policy, 'cache-tag': titleTag(prefix, kind, tmdbId) };
 }
+
+/** The cache tag shared by one title's comment list. */
+export const commentsTag = (kind: string, tmdbId: number | string): string =>
+	titleTag('comments', kind, tmdbId);
+
+/** `PUBLIC_COMMENTS` plus the title's `Cache-Tag`, for the list endpoint. */
+export const commentsHeaders = (kind: string, tmdbId: number | string): Record<string, string> =>
+	titleHeaders(PUBLIC_COMMENTS, 'comments', kind, tmdbId);
+
+/** The cache tag shared by one title's reader-report counts. */
+export const readerReportsTag = (kind: string, tmdbId: number | string): string =>
+	titleTag('reports', kind, tmdbId);
+
+/** `PUBLIC_READER_REPORTS` plus the title's `Cache-Tag`, for the counts endpoint. */
+export const readerReportsHeaders = (
+	kind: string,
+	tmdbId: number | string
+): Record<string, string> => titleHeaders(PUBLIC_READER_REPORTS, 'reports', kind, tmdbId);

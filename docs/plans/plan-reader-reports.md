@@ -117,7 +117,7 @@ Follow the comments routes (`src/routes/api/titles/[kind]/[tmdbId]/comments/`):
   - `requireUser`, not muted or banned, one per account per title (an upsert).
   - Rate-limited on the existing `RL_REPORT` bucket, which already limits reports to moderators.
 - **Tests.** A `*.db.spec.ts` beside `src/__tests__/api-comments-moderation.db.spec.ts`:
-  - 401 signed out and 403 banned;
+  - 401 signed out or banned (the hook signs a banned account out) and 403 muted;
   - validation;
   - the hold status returned;
   - the purge called;

@@ -35,7 +35,7 @@ vi.mock('#lib/server/data/comment-title.ts', async () => {
 		parseTitleParams: (kind: string, tmdbId: string) => {
 			if ((kind !== 'movie' && kind !== 'tv') || !/^\d{1,9}$/.test(tmdbId))
 				error(404, 'Title not found');
-			return { kind, tmdbId };
+			return { kind, tmdbId: String(Number(tmdbId)) };
 		}
 	};
 });
@@ -207,6 +207,13 @@ describe('PUT a report', () => {
 		expect(purgeCalls).toEqual([]);
 	});
 
+	it('creates no title row when a refused PUT is the first write for a title', async () => {
+		await db.delete(titles).where(eq(titles.id, title.id));
+		expect((await put({ watched: false })).status).toBe(400);
+		expect(await db.select().from(titles)).toEqual([]);
+		expect(await stored()).toEqual([]);
+	});
+
 	it('treats absent or null answers as not sure and drops flags unless sexual violence is present', async () => {
 		await put({ sexualPresent: null, partnerLevel: undefined, flags: { rapeOnScreen: true } });
 		expect(await stored()).toMatchObject([
@@ -257,6 +264,13 @@ describe('GET the public counts', () => {
 		expect(await res.json()).toEqual({ total: 0 });
 		expect(res.headers.get('cache-control')).toBe('public, max-age=0');
 		expect(res.headers.get('cache-tag')).toBe('reports:movie:348');
+	});
+
+	it('tags a padded id path with the same tag a write purges', async () => {
+		const res = await call(reports.GET, { params: { kind: 'movie', tmdbId: '0348' } });
+		expect(res.headers.get('cache-tag')).toBe('reports:movie:348');
+		await put();
+		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }]);
 	});
 
 	it('answers the total only below the minimum, then the counts, and never reads the user', async () => {

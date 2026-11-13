@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readerReportsHeaders } from '#lib/server/http/cache.ts';
-import { purgeTitleReports } from '#lib/server/http/purge-comments.ts';
+import { PRIVATE_NO_STORE, readerReportsHeaders } from '#lib/server/http/cache.ts';
+import { purgeTitleReports } from '#lib/server/http/purge-title.ts';
 import { authorizeWrite, privateJson, readBody } from '#lib/server/http/comment-request.ts';
 import { answersOf, reportSchema } from '#lib/server/http/reader-report-request.ts';
 import {
@@ -43,7 +43,7 @@ export const PUT: RequestHandler = async (event) => {
 	const answers = answersOf(await readBody(event.request, reportSchema));
 
 	const ref = await resolveWriteRef(kind, tmdbId);
-	let result;
+	let result: Awaited<ReturnType<typeof upsertReport>>;
 	try {
 		result = await upsertReport(user.id, kind, ref, answers);
 	} catch (err) {
@@ -62,5 +62,5 @@ export const DELETE: RequestHandler = async (event) => {
 
 	const title = await findCommentTitle(kind, tmdbId);
 	if (title && (await deleteReport(user.id, title.id))) purgeTitleReports({ kind, tmdbId });
-	return new Response(null, { status: 204, headers: privateJson(null).headers });
+	return new Response(null, { status: 204, headers: PRIVATE_NO_STORE });
 };

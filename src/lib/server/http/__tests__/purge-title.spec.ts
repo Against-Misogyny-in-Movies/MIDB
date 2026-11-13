@@ -4,7 +4,7 @@ import {
 	resetCloudflareStub,
 	waitUntilPromises
 } from '#test/cloudflare-workers.stub.ts';
-import { purgeTitleComments } from '../purge-comments.ts';
+import { purgeTitleComments } from '../purge-title.ts';
 
 beforeEach(resetCloudflareStub);
 
