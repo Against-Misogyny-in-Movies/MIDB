@@ -36,7 +36,12 @@ export const moderationAction = [
 	'restore',
 	'dismiss',
 	'mute',
-	'ban'
+	'ban',
+	'approve_report',
+	'reject_report',
+	'reject_account_reports',
+	'resolve_count_flag',
+	'dismiss_count_flag'
 ] as const;
 
 /** A moderator's reason on a hide or a reject is at most this long (the classifier's reason limit). */

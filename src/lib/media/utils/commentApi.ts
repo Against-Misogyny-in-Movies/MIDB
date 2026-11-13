@@ -24,33 +24,57 @@ const FAILED: Record<CommentAction, string> = {
 	report: 'The report was not sent'
 };
 
+/** The sentences an action words for the statuses that differ between actions. */
+export type StatusWording = {
+	/** A 403, whole. */
+	forbidden: string;
+	/** A 400, whole. */
+	badRequest: string;
+	/** A 404, whole; without it a 404 reads as an unknown failure. */
+	notFound?: string;
+	/** A 409, whole; without it a 409 reads as an unknown failure. */
+	conflict?: string;
+};
+
 /**
- * One sentence for a failed request: what failed, and why when the status says. A muted or
- * banned account is named, since the reader cannot fix that by retrying.
+ * One sentence for a failed request, from its status: `failed` says what failed, `wording` the
+ * statuses that differ between actions. The sequence is shared by the comments and the reader reports.
+ */
+export function describeStatus(failed: string, status: number, wording: StatusWording): string {
+	if (status === 0) return `${failed}. The server could not be reached.`;
+	if (status === 401) return `${failed}. The session has ended: sign in again.`;
+	if (status === 403) return wording.forbidden;
+	if (status === 404 && wording.notFound) return wording.notFound;
+	if (status === 409 && wording.conflict) return wording.conflict;
+	if (status === 429) return `${failed}. Too many requests: wait a moment and try again.`;
+	if (status === 400) return wording.badRequest;
+	return `${failed}. Try again in a moment.`;
+}
+
+/**
+ * One sentence for a failed comment request: what failed, and why when the status says. A muted
+ * or banned account is named, since the reader cannot fix that by retrying.
  */
 export function describeFailure(action: CommentAction, status: number, message = ''): string {
 	const failed = FAILED[action];
-	if (status === 0) return `${failed}. The server could not be reached.`;
-	if (status === 401) return `${failed}. The session has ended: sign in again.`;
-	if (status === 403) {
-		if (/banned/i.test(message)) {
-			return 'This account is banned and cannot write, edit, delete, vote on or report comments.';
-		}
-		if (/muted/i.test(message)) {
-			return 'This account is muted and cannot write, edit, delete, vote on or report comments until the mute ends.';
-		}
-		if (action === 'vote') return 'A comment cannot be voted on by its author.';
-		if (action === 'report') return 'A comment cannot be reported by its author.';
-		return 'Only the author can change a comment.';
-	}
-	if (status === 404) return `${failed}. The comment or title no longer exists.`;
-	if (status === 409) return 'This comment changed or can no longer be edited. Reload the page.';
-	if (status === 429) return `${failed}. Too many requests: wait a moment and try again.`;
-	if (status === 400) {
-		if (action === 'report') return `${failed}. A note is at most ${REPORT_NOTE_MAX} characters.`;
-		return `${failed}. A comment is 1 to ${COMMENT_BODY_MAX.toLocaleString('en-US')} characters.`;
-	}
-	return `${failed}. Try again in a moment.`;
+	let forbidden = 'Only the author can change a comment.';
+	if (/banned/i.test(message)) {
+		forbidden =
+			'This account is banned and cannot write, edit, delete, vote on or report comments.';
+	} else if (/muted/i.test(message)) {
+		forbidden =
+			'This account is muted and cannot write, edit, delete, vote on or report comments until the mute ends.';
+	} else if (action === 'vote') forbidden = 'A comment cannot be voted on by its author.';
+	else if (action === 'report') forbidden = 'A comment cannot be reported by its author.';
+	return describeStatus(failed, status, {
+		forbidden,
+		badRequest:
+			action === 'report'
+				? `${failed}. A note is at most ${REPORT_NOTE_MAX} characters.`
+				: `${failed}. A comment is 1 to ${COMMENT_BODY_MAX.toLocaleString('en-US')} characters.`,
+		notFound: `${failed}. The comment or title no longer exists.`,
+		conflict: 'This comment changed or can no longer be edited. Reload the page.'
+	});
 }
 
 export type Reply<T> =
@@ -58,8 +82,9 @@ export type Reply<T> =
 	| { ok: false; status: number; message: string };
 
 /**
- * One JSON request to a comment endpoint. A network failure is status 0; a failed response keeps
- * the `message` the endpoint sent (SvelteKit's error body), which names a muted or banned account.
+ * One JSON request to a comment or reader report endpoint. A network failure is status 0; a
+ * failed response keeps the `message` the endpoint sent (SvelteKit's error body), which names a
+ * muted or banned account. A 204 has no body, so its `data` is undefined.
  */
 export async function requestJson<T>(
 	fetcher: Fetcher,
@@ -74,7 +99,10 @@ export async function requestJson<T>(
 				? {}
 				: { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
 		});
-		if (res.ok) return { ok: true, status: res.status, data: (await res.json()) as T };
+		if (res.ok) {
+			const data = res.status === 204 ? undefined : await res.json();
+			return { ok: true, status: res.status, data: data as T };
+		}
 		let message = '';
 		try {
 			const failure: { message?: string } = await res.json();

@@ -1,20 +1,31 @@
 <script lang="ts">
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
+	import ReaderReportsPanel from '#lib/components/moderation/readerReportsPanel.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import type { ActionOutcome } from '#lib/media/types/moderation.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 
 	let { data, form } = $props();
 
-	type Tab = 'pending' | 'reported' | 'recent';
-	let tab = $state<Tab>('pending');
+	type Tab = 'pending' | 'reported' | 'reports' | 'recent';
+	/**
+	 * `?tab=reports` and `?title=` open the reader-reports tab, every other URL opens Pending. A
+	 * click on a tab overrides it until the URL changes (a title's reports, back to the list).
+	 */
+	let tab = $derived<Tab>(data.titleId || data.tab === 'reports' ? 'reports' : 'pending');
 
 	const TABS = $derived([
 		{ id: 'pending' as const, label: 'Pending', count: data.pending.length },
 		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
+		{
+			id: 'reports' as const,
+			label: 'Reader reports',
+			count: data.held.length
+		},
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
 	]);
 
@@ -46,12 +57,6 @@
 
 	const outcome = $derived((form ?? null) as ActionOutcome);
 	const items = $derived(tab === 'reported' ? data.reported : data.pending);
-
-	/** An administrator acts on moderators too; nobody acts on an administrator or on themselves. */
-	const canActOn = (author: { id: string; role: string }) =>
-		author.id !== data.me.id &&
-		author.role !== 'administrator' &&
-		(author.role !== 'moderator' || data.me.role === 'administrator');
 </script>
 
 <svelte:head>
@@ -108,6 +113,15 @@
 					{/each}
 				</ul>
 			{/if}
+		{:else if tab === 'reports'}
+			<ReaderReportsPanel
+				held={data.held}
+				flagged={data.flagged}
+				openTitle={data.openTitle}
+				titleId={data.titleId}
+				me={data.me}
+				{outcome}
+			/>
 		{:else if items.length === 0}
 			<p class="empty" id="moderation-empty" tabindex="-1">
 				{tab === 'pending'
@@ -117,7 +131,7 @@
 		{:else}
 			<ul class="card list">
 				{#each items as item (item.comment.id)}
-					<ModerationItemRow {item} {outcome} canActOnAuthor={canActOn(item.author)} />
+					<ModerationItemRow {item} {outcome} canActOnAuthor={canActOn(data.me, item.author)} />
 				{/each}
 			</ul>
 		{/if}

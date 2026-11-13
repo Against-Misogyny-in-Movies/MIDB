@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import {
 	authorizeWrite,
 	commentIdParam,

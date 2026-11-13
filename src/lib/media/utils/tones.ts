@@ -1,4 +1,5 @@
 import type { CommentStatus } from '#lib/media/types/comments.ts';
+import type { ContentReportStatus } from '#lib/media/utils/readerReports.ts';
 import type { UmFlagKey } from './metrics';
 import { SAFETY_CAUTION_FLAGS, SAFETY_HARMFUL_FLAGS, type SafetyTier } from './verdict';
 
@@ -37,5 +38,12 @@ export function commentStatusTone(status: CommentStatus): BadgeTone {
 	if (status === 'pending') return 'mid';
 	if (status === 'rejected' || status === 'hidden') return 'neg';
 	if (status === 'published') return 'pos';
+	return 'neutral';
+}
+
+/** A reader report's status: counted green, held copper, rejected neutral. */
+export function reportStatusTone(status: ContentReportStatus): BadgeTone {
+	if (status === 'counted') return 'pos';
+	if (status === 'held') return 'mid';
 	return 'neutral';
 }

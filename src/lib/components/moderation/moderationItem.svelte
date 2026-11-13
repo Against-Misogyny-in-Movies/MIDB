@@ -1,17 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import type { ActionOutcome, ModerationItem } from '#lib/media/types/moderation.ts';
-	import {
-		COMMENT_STATUS_LABELS,
-		MODERATION_REASON_MAX,
-		MUTE_HOURS,
-		REPORT_REASON_LABELS
-	} from '#lib/media/utils/comments.ts';
-	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { COMMENT_STATUS_LABELS, REPORT_REASON_LABELS } from '#lib/media/utils/comments.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
+	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
@@ -44,21 +40,11 @@
 	 * A form action. When the comment leaves the queue its row is gone, so the focus goes to the
 	 * next row, the previous one, or the empty-state line; a row that stays takes it back.
 	 */
-	const submit = (name: string) => () => {
-		busy = name;
-		const neighbour = root?.nextElementSibling ?? root?.previousElementSibling;
-		return async ({ update }: { update: () => Promise<void> }) => {
-			await update();
-			busy = null;
-			panel = null;
-			await focusAfterUpdate(() =>
-				root?.isConnected
-					? root
-					: ((neighbour?.isConnected ? (neighbour as HTMLElement) : null) ??
-						document.getElementById('moderation-empty'))
-			);
-		};
-	};
+	const submit = rowSubmit(
+		() => root,
+		(name) => (busy = name),
+		() => (panel = null)
+	);
 
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 
@@ -168,56 +154,14 @@
 	</div>
 
 	{#if panel}
-		<form class="plate panel" method="POST" action="?/{panel}" use:enhance={submit(panel)}>
-			<input type="hidden" name="id" value={comment.id} />
-			<input type="hidden" name="userId" value={author.id} />
-			<p class="text-sm">
-				{#if panel === 'hide'}
-					Hide this comment? It leaves the public list, and replies stay under a placeholder. The
-					author sees it as hidden.
-				{:else if panel === 'reject'}
-					Reject this comment? It leaves the public list, and the author sees it as rejected with
-					the reason.
-				{:else if panel === 'mute'}
-					Mute {author.displayName}? The account cannot write, edit, delete, vote on or report
-					comments until the mute ends.
-				{:else}
-					Ban {author.displayName}? Its sessions end, it cannot sign in again, and this page has no
-					way to undo a ban.
-				{/if}
-			</p>
-			{#if panel === 'mute'}
-				<label class="field">
-					<span class="label">Length</span>
-					<select name="hours" class="input">
-						{#each MUTE_HOURS as hours (hours)}
-							<option value={hours}>{hours === 24 ? '1 day' : `${hours / 24} days`}</option>
-						{/each}
-					</select>
-				</label>
-			{/if}
-			<label class="field">
-				<span class="label">
-					{panel === 'hide' || panel === 'reject'
-						? 'Reason, shown to the author (optional)'
-						: 'Reason, kept in the log (optional)'}
-				</span>
-				<input class="input" name="reason" maxlength={MODERATION_REASON_MAX} autocomplete="off" />
-			</label>
-			<div class="actions">
-				<button class="btn btn--ink" disabled={busy !== null}>
-					{busy === panel
-						? 'Working…'
-						: {
-								hide: 'Hide comment',
-								reject: 'Reject comment',
-								mute: 'Mute account',
-								ban: 'Ban account'
-							}[panel]}
-				</button>
-				<button class="btn btn--ghost" type="button" onclick={() => (panel = null)}>Cancel</button>
-			</div>
-		</form>
+		<ModerationConfirm
+			kind={panel}
+			name={author.displayName}
+			fields={{ id: comment.id, userId: author.id }}
+			{busy}
+			{submit}
+			oncancel={() => (panel = null)}
+		/>
 	{/if}
 
 	{#if mine?.error}
@@ -278,15 +222,5 @@
 		@apply flex flex-wrap;
 		gap: var(--spacing-sm);
 		margin-top: var(--spacing-xs);
-	}
-
-	.panel {
-		@apply flex flex-col;
-		gap: var(--spacing-sm);
-	}
-
-	.field {
-		@apply flex flex-col;
-		gap: var(--spacing-xs);
 	}
 </style>

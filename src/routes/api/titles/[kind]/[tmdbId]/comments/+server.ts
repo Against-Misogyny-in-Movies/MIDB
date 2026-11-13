@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { commentsHeaders } from '#lib/server/http/cache.ts';
-import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import {
 	authorizeWrite,
 	createSchema,

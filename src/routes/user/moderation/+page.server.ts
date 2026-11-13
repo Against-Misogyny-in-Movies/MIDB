@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import { purgeTitleComments } from '#lib/server/http/purge-comments.ts';
+import { purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
 import {
 	approveComment,
@@ -18,6 +18,18 @@ import {
 	listRecentActions,
 	listReportedQueue
 } from '#lib/server/data/moderation-queue.ts';
+import {
+	approveReport,
+	rejectAccountReports,
+	rejectReport,
+	type ReportModerationResult
+} from '#lib/server/data/reader-report-moderation.ts';
+import {
+	getOpenTitle,
+	listFlaggedTitles,
+	listHeldReports
+} from '#lib/server/data/reader-report-queue.ts';
+import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
@@ -25,15 +37,34 @@ import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
 
 const STAFF = ['moderator', 'administrator'] as const;
 
-export const load: PageServerLoad = async ({ locals }) => {
+/**
+ * The page and both of its views. `?tab=reports` opens the reader-reports tab, and
+ * `?title=<id>` opens one title's reader reports in it; without a title the tab lists the held
+ * reports and the flagged titles.
+ */
+export const load: PageServerLoad = async ({ locals, url }) => {
 	await requireRole(locals, STAFF, { page: true });
-	const [pending, reported, recent, syncDates] = await Promise.all([
+	const titleId = url.searchParams.get('title')?.trim() || null;
+	const [pending, reported, recent, held, flagged, openTitle, syncDates] = await Promise.all([
 		listPendingQueue(),
 		listReportedQueue(),
 		listRecentActions(),
+		listHeldReports(),
+		listFlaggedTitles(),
+		titleId ? getOpenTitle(titleId) : null,
 		getSourceSyncDates()
 	]);
-	return { pending, reported, recent, staleSources: staleSyncSources(syncDates) };
+	return {
+		tab: url.searchParams.get('tab'),
+		titleId,
+		pending,
+		reported,
+		recent,
+		held,
+		flagged,
+		openTitle,
+		staleSources: staleSyncSources(syncDates)
+	};
 };
 
 type InvalidRequest = { ok: false; reason: 'invalid' };
@@ -47,35 +78,37 @@ function text(data: FormData, name: string): string | null {
 }
 
 const refusals: Record<
-	Extract<ModerationResult, { ok: false }>['reason'] | 'invalid',
+	Extract<ModerationResult | ReportModerationResult, { ok: false }>['reason'] | 'invalid',
 	[number, string]
 > = {
 	invalid: [400, 'The request was not valid.'],
-	'not-found': [404, 'The comment or account no longer exists.'],
-	'invalid-state': [409, 'The comment is no longer in a state this action applies to.'],
+	'not-found': [404, 'The comment, report or account no longer exists.'],
+	'invalid-state': [409, 'It is no longer in a state this action applies to.'],
 	'forbidden-target': [
 		403,
 		'A moderator can act only on ordinary accounts, an administrator also on moderators; no one acts on an administrator or on their own account.'
 	]
 };
 
+type Outcome = ModerationResult | ReportModerationResult | InvalidRequest;
+
 /**
  * One moderator action: the guard (403 for anyone else), the rate limit, then `run` over the
- * form. A comment action purges its title's list, so the change is public at once; a user
- * action touches no list.
+ * form. `key` names the row the answer belongs to; `after` runs on success (a comment action
+ * purges its title's list there, so the change is public at once). The reader-report data
+ * functions purge their own counts.
  */
 async function act(
 	event: ActionEvent,
 	name: string,
-	run: (
-		staff: UserRow,
-		data: FormData
-	) => Promise<ModerationResult | InvalidRequest> | ModerationResult | InvalidRequest
+	key: (data: FormData) => string | null,
+	run: (staff: UserRow, data: FormData) => Promise<Outcome> | Outcome,
+	after?: (result: Extract<Outcome, { ok: true }>) => void
 ) {
 	const staff = await requireRole(event.locals, STAFF);
 	await rateLimit(event, 'RL_MODERATE', { userId: staff.id });
 	const data = await event.request.formData();
-	const target = text(data, 'id') ?? text(data, 'userId');
+	const target = key(data);
 	if (!target) return fail(400, { id: null, error: 'The request had no target.' });
 
 	const result = await run(staff, data);
@@ -83,34 +116,111 @@ async function act(
 		const [status, message] = refusals[result.reason];
 		return fail(status, { id: target, error: message });
 	}
-	if (result.title) purgeTitleComments(result.title);
+	after?.(result);
 	return { id: target, done: name };
 }
+
+/** A comment action answers for the comment row, or for the account row when it names only an account. */
+const commentKey = (data: FormData) => text(data, 'id') ?? text(data, 'userId');
+const accountKey = (data: FormData) => text(data, 'userId');
+const flagKey = (data: FormData) => text(data, 'id');
+const reportKey = (data: FormData) => {
+	const userId = text(data, 'userId');
+	const titleId = text(data, 'titleId');
+	return userId && titleId ? `${userId}:${titleId}` : null;
+};
+
+/** A comment action's title list is purged once it succeeds; a user action has no title. */
+const purgeComments = (result: Extract<Outcome, { ok: true }>) => {
+	if ('title' in result && result.title) purgeTitleComments(result.title);
+};
+
+/** A closed flag changes no counts, so it names no title; a flag that was not open is refused. */
+const flagResult = (closed: boolean): ReportModerationResult =>
+	closed ? { ok: true, titles: [] } : { ok: false, reason: 'invalid-state' };
 
 /** A reason for a hide or a reject, cut to the limit the author's page shows. */
 const reasonOf = (data: FormData) => text(data, 'reason')?.slice(0, MODERATION_REASON_MAX) ?? null;
 
 export const actions: Actions = {
 	approve: (event) =>
-		act(event, 'approve', (staff, data) => approveComment(staff, text(data, 'id') ?? '')),
+		act(
+			event,
+			'approve',
+			commentKey,
+			(staff, data) => approveComment(staff, text(data, 'id') ?? ''),
+			purgeComments
+		),
 	hide: (event) =>
-		act(event, 'hide', (staff, data) => hideComment(staff, text(data, 'id') ?? '', reasonOf(data))),
+		act(
+			event,
+			'hide',
+			commentKey,
+			(staff, data) => hideComment(staff, text(data, 'id') ?? '', reasonOf(data)),
+			purgeComments
+		),
 	reject: (event) =>
-		act(event, 'reject', (staff, data) =>
-			rejectComment(staff, text(data, 'id') ?? '', reasonOf(data))
+		act(
+			event,
+			'reject',
+			commentKey,
+			(staff, data) => rejectComment(staff, text(data, 'id') ?? '', reasonOf(data)),
+			purgeComments
 		),
 	restore: (event) =>
-		act(event, 'restore', (staff, data) => restoreComment(staff, text(data, 'id') ?? '')),
+		act(
+			event,
+			'restore',
+			commentKey,
+			(staff, data) => restoreComment(staff, text(data, 'id') ?? ''),
+			purgeComments
+		),
 	dismiss: (event) =>
-		act(event, 'dismiss', (staff, data) => dismissReports(staff, text(data, 'id') ?? '')),
+		act(
+			event,
+			'dismiss',
+			commentKey,
+			(staff, data) => dismissReports(staff, text(data, 'id') ?? ''),
+			purgeComments
+		),
 	mute: (event) =>
-		act(event, 'mute', (staff, data) => {
-			const hours = Number(text(data, 'hours'));
-			if (!MUTE_HOURS.some((h) => h === hours)) return { ok: false, reason: 'invalid' };
-			return muteUser(staff, text(data, 'userId') ?? '', hours, reasonOf(data));
-		}),
+		act(
+			event,
+			'mute',
+			commentKey,
+			(staff, data) => {
+				const hours = Number(text(data, 'hours'));
+				if (!MUTE_HOURS.some((h) => h === hours)) return { ok: false, reason: 'invalid' as const };
+				return muteUser(staff, text(data, 'userId') ?? '', hours, reasonOf(data));
+			},
+			purgeComments
+		),
 	ban: (event) =>
-		act(event, 'ban', (staff, data) =>
-			banAccount(staff, text(data, 'userId') ?? '', reasonOf(data))
+		act(
+			event,
+			'ban',
+			commentKey,
+			(staff, data) => banAccount(staff, text(data, 'userId') ?? '', reasonOf(data)),
+			purgeComments
+		),
+	countReport: (event) =>
+		act(event, 'countReport', reportKey, (staff, data) =>
+			approveReport(staff, text(data, 'userId') ?? '', text(data, 'titleId') ?? '')
+		),
+	rejectReport: (event) =>
+		act(event, 'rejectReport', reportKey, (staff, data) =>
+			rejectReport(staff, text(data, 'userId') ?? '', text(data, 'titleId') ?? '')
+		),
+	rejectAccountReports: (event) =>
+		act(event, 'rejectAccountReports', accountKey, (staff, data) =>
+			rejectAccountReports(staff, text(data, 'userId') ?? '')
+		),
+	resolveFlag: (event) =>
+		act(event, 'resolveFlag', flagKey, async (staff, data) =>
+			flagResult(await resolveCountFlag(text(data, 'id') ?? '', staff.id))
+		),
+	dismissFlag: (event) =>
+		act(event, 'dismissFlag', flagKey, async (staff, data) =>
+			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff.id))
 		)
 };

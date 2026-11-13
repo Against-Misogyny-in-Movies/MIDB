@@ -1,14 +1,12 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { formatDate } from '#lib/media/utils/format.ts';
+	import { effectiveStanding, readerStandingLabel } from '#lib/media/utils/reportStanding.ts';
+	import Notice from '#lib/components/ui/notice.svelte';
+	import Badge from '#lib/components/ui/badge.svelte';
 
 	let { data }: { data: PageData } = $props();
-
-	function ratingLabel(row: PageData['ratings'][number]) {
-		return row.metric === 'bechdel'
-			? `Bechdel Test · ${row.value}/3`
-			: `Unconsenting Media · ${row.value} concern${row.value === 1 ? '' : 's'}`;
-	}
 </script>
 
 <div class="account-page">
@@ -16,21 +14,31 @@
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
-		<h1 class="display">Rating history</h1>
+		<h1 class="display">Reader reports</h1>
 	</header>
 
+	{#if data.banned}
+		<Notice tone="warn">This account is banned, so none of its reader reports count.</Notice>
+	{:else if data.mutedUntil}
+		<Notice tone="warn">
+			This account is muted until {formatDate(data.mutedUntil)}, so none of its reader reports
+			count.
+		</Notice>
+	{/if}
+
 	{#if data.ratings.length === 0}
-		<p class="empty">No ratings yet.</p>
+		<p class="empty">No reader reports yet. Reports are added from a film or series page.</p>
 	{:else}
 		<ul class="card history">
-			{#each data.ratings as row (`${row.metric}:${row.titleId}`)}
+			{#each data.ratings as row (row.titleId)}
+				{@const standing = readerStandingLabel(effectiveStanding(row))}
 				<li>
 					<a href={titleHref(row.kind, row.tmdbId)}>
 						<span class="title">{row.title}</span>
 						<span class="meta">
-							{ratingLabel(row)} ·
+							<Badge tone={standing.tone}>{standing.label}</Badge>
 							<time datetime={row.updatedAt.toISOString()}
-								>{row.updatedAt.toLocaleDateString()}</time
+								>Updated {formatDate(row.updatedAt.toISOString())}</time
 							>
 						</span>
 					</a>
@@ -89,6 +97,6 @@
 	}
 
 	.meta {
-		@apply text-sm text-ink-muted;
+		@apply flex flex-wrap items-center gap-sm text-sm text-ink-muted;
 	}
 </style>

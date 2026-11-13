@@ -11,7 +11,13 @@ import {
 import { sql } from 'drizzle-orm';
 import { titles } from './titles.ts';
 import { users } from './auth.ts';
-import { createdAt, enumCheck, timestamps, umFlagColumns } from './columns.ts';
+import {
+	createdAt,
+	enumCheck,
+	timestamps,
+	umConcernFlagColumns,
+	umFlagColumns
+} from './columns.ts';
 import {
 	COMMENT_BODY_MAX,
 	MODERATION_REASON_MAX,
@@ -22,6 +28,14 @@ import {
 	reportReason,
 	reportStatus
 } from '../lib/comments.ts';
+import {
+	contentReportStatus,
+	holdReason,
+	objectificationLevel,
+	reportFraming,
+	reportLevel,
+	sexualLevel
+} from '../lib/readerReports.ts';
 
 // One table per metric shape, so each can hold what it names.
 
@@ -213,6 +227,8 @@ export const moderationActions = sqliteTable(
 			onDelete: 'set null'
 		}),
 		targetUserId: text('target_user_id').references(() => users.id, { onDelete: 'set null' }),
+		/** The title a reader-report or count-flag action concerns; null on comment and user actions. */
+		targetTitleId: text('target_title_id').references(() => titles.id, { onDelete: 'set null' }),
 		action: text('action', { enum: moderationAction }).notNull(),
 		reason: text('reason'),
 		/** The length of a mute, in hours; null on every other action. */
@@ -228,5 +244,72 @@ export const moderationActions = sqliteTable(
 			'moderation_actions_reason_length',
 			sql`length(${t.reason}) <= ${sql.raw(String(MODERATION_REASON_MAX))}`
 		)
+	]
+);
+
+/**
+ * A reader's report of what a title shows. One per account per title (a series report covers
+ * any episode). A NULL level, flag or framing means not sure or not answered. `status` says
+ * whether it counts; an account's age is applied when the counts are read, not stored here
+ * (`#lib/server/data/reader-reports.ts`).
+ */
+export const communityContentReports = sqliteTable(
+	'community_content_reports',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		titleId: text('title_id')
+			.notNull()
+			.references(() => titles.id, { onDelete: 'cascade' }),
+		sexualPresent: text('sexual_present', { enum: sexualLevel }),
+		partnerLevel: text('partner_level', { enum: reportLevel }),
+		physicalLevel: text('physical_level', { enum: reportLevel }),
+		stalkingLevel: text('stalking_level', { enum: reportLevel }),
+		objectificationLevel: text('objectification_level', { enum: objectificationLevel }),
+		...umConcernFlagColumns(),
+		framing: text('framing', { enum: reportFraming }),
+		status: text('status', { enum: contentReportStatus }).notNull().default('counted'),
+		holdReason: text('hold_reason', { enum: holdReason }),
+		...timestamps()
+	},
+	(t) => [
+		primaryKey({ columns: [t.userId, t.titleId] }),
+		index('ccr_title_status_idx').on(t.titleId, t.status),
+		index('ccr_user_created_idx').on(t.userId, t.createdAt),
+		enumCheck('ccr_sexual_present_check', t.sexualPresent, sexualLevel),
+		enumCheck('ccr_partner_level_check', t.partnerLevel, reportLevel),
+		enumCheck('ccr_physical_level_check', t.physicalLevel, reportLevel),
+		enumCheck('ccr_stalking_level_check', t.stalkingLevel, reportLevel),
+		enumCheck('ccr_objectification_level_check', t.objectificationLevel, objectificationLevel),
+		enumCheck('ccr_framing_check', t.framing, reportFraming),
+		enumCheck('ccr_status_check', t.status, contentReportStatus),
+		enumCheck('ccr_hold_reason_check', t.holdReason, holdReason)
+	]
+);
+
+/** A reader's "counts look wrong" flag on a title's reader report counts. One per account per title. */
+export const titleCountFlags = sqliteTable(
+	'title_count_flags',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		titleId: text('title_id')
+			.notNull()
+			.references(() => titles.id, { onDelete: 'cascade' }),
+		reporterId: text('reporter_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		note: text('note'),
+		status: text('status', { enum: reportStatus }).notNull().default('open'),
+		resolvedBy: text('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+		...timestamps()
+	},
+	(t) => [
+		uniqueIndex('tcf_title_reporter_uniq').on(t.titleId, t.reporterId),
+		index('tcf_status_title_idx').on(t.status, t.titleId),
+		enumCheck('tcf_status_check', t.status, reportStatus),
+		check('tcf_note_length', sql`length(${t.note}) <= ${sql.raw(String(REPORT_NOTE_MAX))}`)
 	]
 );

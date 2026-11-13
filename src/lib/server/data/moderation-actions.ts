@@ -6,6 +6,8 @@ import type { CommentStatus } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
+import { targetAllowed } from './moderation-target.ts';
+import { purgeReportedTitles } from './reader-report-moderation.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -33,6 +35,7 @@ function logCommentAction(
 				actorId: sql<string>`${actorId}`.as('actorId'),
 				targetCommentId: comments.id,
 				targetUserId: sql<string | null>`NULL`.as('targetUserId'),
+				targetTitleId: sql<string | null>`NULL`.as('targetTitleId'),
 				action: sql<Action>`${action}`.as('action'),
 				reason: sql<string | null>`${reason}`.as('reason'),
 				muteHours: sql<number | null>`NULL`.as('muteHours'),
@@ -183,22 +186,6 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 	return { ok: true, title };
 }
 
-/**
- * A moderator may act on an ordinary account; only an administrator may act on a moderator; no
- * one acts on an administrator or on themselves.
- */
-async function targetAllowed(
-	actor: UserRow,
-	targetId: string
-): Promise<UserRow | 'not-found' | 'forbidden-target'> {
-	if (actor.id === targetId) return 'forbidden-target';
-	const [target] = await db.select().from(users).where(eq(users.id, targetId));
-	if (!target) return 'not-found';
-	if (target.role === 'administrator') return 'forbidden-target';
-	if (target.role === 'moderator' && actor.role !== 'administrator') return 'forbidden-target';
-	return target;
-}
-
 function logUserAction(
 	actorId: string,
 	targetUserId: string,
@@ -209,7 +196,10 @@ function logUserAction(
 	return db.insert(moderationActions).values({ actorId, targetUserId, action, reason, muteHours });
 }
 
-/** Stops a user from commenting for `hours` hours from now; the log row keeps the length. */
+/**
+ * Stops a user from commenting for `hours` hours from now; the log row keeps the length. The
+ * counts of every title the account reported leave it out, so their cached counts are purged.
+ */
 export async function muteUser(
 	actor: UserRow,
 	targetId: string,
@@ -223,10 +213,14 @@ export async function muteUser(
 		db.update(users).set({ mutedUntil: until }).where(eq(users.id, targetId)),
 		logUserAction(actor.id, targetId, 'mute', reason, hours)
 	]);
+	await purgeReportedTitles(targetId);
 	return { ok: true, title: null };
 }
 
-/** Bans a user and ends their sessions (`banStatements`), with the log row in the same batch. */
+/**
+ * Bans a user and ends their sessions (`banStatements`), with the log row in the same batch.
+ * The counts of every title the account reported leave it out, so their cached counts are purged.
+ */
 export async function banAccount(
 	actor: UserRow,
 	targetId: string,
@@ -238,5 +232,6 @@ export async function banAccount(
 		...banStatements(targetId, reason),
 		logUserAction(actor.id, targetId, 'ban', reason)
 	]);
+	await purgeReportedTitles(targetId);
 	return { ok: true, title: null };
 }

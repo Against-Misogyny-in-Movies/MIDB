@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import type { ActionOutcome, RecentAction } from '#lib/media/types/moderation.ts';
+	import { formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
@@ -23,8 +24,24 @@
 		restore: 'restored a comment',
 		dismiss: 'dismissed the reports on a comment',
 		mute: 'muted',
-		ban: 'banned'
+		ban: 'banned',
+		approve_report: 'counted a reader report by',
+		reject_report: 'rejected a reader report by',
+		reject_account_reports: 'rejected every reader report by',
+		resolve_count_flag: 'resolved Counts look wrong on',
+		dismiss_count_flag: 'dismissed Counts look wrong on'
 	};
+	/** The actions on a title's counts: the title ends the sentence, and the moderation view opens it. */
+	const ON_COUNTS = new Set<RecentAction['action']>([
+		'approve_report',
+		'reject_report',
+		'resolve_count_flag',
+		'dismiss_count_flag'
+	]);
+	const FLAG_ACTIONS = new Set<RecentAction['action']>([
+		'resolve_count_flag',
+		'dismiss_count_flag'
+	]);
 
 	/** A hide or a reject can be undone while the comment is still in that state. */
 	const restorable = $derived(
@@ -37,28 +54,34 @@
 	const editedSince = $derived(
 		entry.commentEditedAt !== null && entry.commentEditedAt > entry.createdAt
 	);
-	const href = $derived(entry.title ? titleHref(entry.title.kind, entry.title.tmdbId) : undefined);
+	/** A comment action links to the title's page, a reader-report action to its reports here. */
+	const href = $derived(
+		!entry.title
+			? undefined
+			: ON_COUNTS.has(entry.action)
+				? `?title=${entry.title.id}`
+				: titleHref(entry.title.kind, entry.title.tmdbId)
+	);
+	const inline = $derived(FLAG_ACTIONS.has(entry.action));
 	const muteLength = $derived(
-		entry.muteHours === null
-			? ''
-			: entry.muteHours === 24
-				? ' for 1 day'
-				: ` for ${entry.muteHours / 24} days`
+		entry.muteHours === null ? '' : ` for ${formatMuteHours(entry.muteHours)}`
 	);
 </script>
+
+{#snippet titleLink(name: string)}
+	{#if href}<a class="link" {href}>{name}</a>{:else}{name}{/if}
+{/snippet}
 
 <li class="entry" tabindex="-1" bind:this={root}>
 	<p class="line">
 		<span class="name">{entry.actor?.displayName ?? 'A removed account'}</span>
 		{VERBS[entry.action]}{#if entry.targetUser}
-			<span class="name">{entry.targetUser.displayName}</span>{/if}{muteLength}
+			<span class="name">{entry.targetUser.displayName}</span
+			>{/if}{#if inline && entry.title}{@render titleLink(entry.title.name)}{/if}{muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
 	</p>
-	{#if entry.title}
-		<p class="label">
-			On
-			{#if href}<a class="link" {href}>{entry.title.name}</a>{:else}{entry.title.name}{/if}
-		</p>
+	{#if entry.title && !inline}
+		<p class="label">On {@render titleLink(entry.title.name)}</p>
 	{/if}
 	{#if entry.commentBody}
 		<p class="body">{entry.commentBody}</p>

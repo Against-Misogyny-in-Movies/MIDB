@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ModerationItem, RecentAction } from '#lib/media/types/moderation.ts';
+import type { HeldReport, ModerationItem, RecentAction } from '#lib/media/types/moderation.ts';
 
 const form = vi.hoisted(() => ({ update: async () => {} }));
 
@@ -22,6 +22,7 @@ vi.mock('$app/forms', () => ({
 
 const { default: ModerationItemRow } = await import('../moderationItem.svelte');
 const { default: RecentActionRow } = await import('../recentActionRow.svelte');
+const { default: HeldReportRow } = await import('../heldReportRow.svelte');
 
 const AUTHOR = {
 	id: 'u1',
@@ -253,7 +254,7 @@ describe('RecentActionRow', () => {
 		commentId: 'c1',
 		commentStatus: 'rejected',
 		commentEditedAt: null,
-		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
+		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
 
@@ -316,5 +317,76 @@ describe('RecentActionRow', () => {
 		);
 		expect(screen.getByText(/banned/)).toBeTruthy();
 		expect(screen.getByText('anna')).toBeTruthy();
+	});
+});
+
+describe('the held report row', () => {
+	const answers = {
+		sexualPresent: 'present',
+		partnerLevel: null,
+		physicalLevel: null,
+		stalkingLevel: null,
+		objectificationLevel: null,
+		framing: null,
+		rapeMenDisImp: null,
+		sexHarOnScrn: true,
+		sexAdultTeen: null,
+		childSexAbuse: null,
+		incest: null,
+		attemptedRape: null,
+		rapeOffScrn: null,
+		rapeOnScreen: false
+	} as const;
+	const base: HeldReport = {
+		titleId: 't1',
+		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
+		account: {
+			userId: 'u1',
+			username: 'anna',
+			createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+			reportCount: 4,
+			commentCount: 1,
+			role: 'user',
+			countsFrom: new Date(Date.now() + 4 * 86_400_000).toISOString(),
+			restricted: null
+		},
+		holdReason: 'busy_new_account',
+		createdAt: '2026-11-10T10:00:00.000Z',
+		answers: { ...answers },
+		um: null
+	};
+	const UM = {
+		rapeMenDisImp: false,
+		sexHarOnScrn: false,
+		sexAdultTeen: false,
+		childSexAbuse: false,
+		incest: false,
+		attemptedRape: false,
+		rapeOffScrn: false,
+		rapeOnScreen: true
+	};
+
+	it('shows the title, the account, the hold reason and the two actions', () => {
+		render(HeldReportRow, { report: base, outcome: null });
+		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
+		expect(
+			screen.getByText(/anna, 3 days old, 4 reader reports not rejected, 1 comment/)
+		).toBeTruthy();
+		expect(screen.getByText('Busy new account')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Count it' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
+	});
+
+	it('shows UM flags only when the report contradicts the source', () => {
+		const { unmount } = render(HeldReportRow, { report: base, outcome: null });
+		expect(screen.queryByText('Unconsenting Media')).toBeNull();
+		unmount();
+		render(HeldReportRow, {
+			report: { ...base, holdReason: 'contradicts_source', um: UM },
+			outcome: null
+		});
+		expect(screen.getByText('Contradicts Unconsenting Media')).toBeTruthy();
+		expect(screen.getByRole('columnheader', { name: 'Unconsenting Media' })).toBeTruthy();
+		expect(screen.getByRole('rowheader', { name: /Rape on screen/ })).toBeTruthy();
 	});
 });

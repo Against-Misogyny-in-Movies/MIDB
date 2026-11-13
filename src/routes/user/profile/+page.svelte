@@ -133,7 +133,7 @@
 			>Comment history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
 		<a href="/user/metrics"
-			>Rating history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+			>Reader reports <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
 	</nav>
 
