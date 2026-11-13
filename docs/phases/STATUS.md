@@ -4,7 +4,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Rules
 
-- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Rows C1–C4 come from `docs/plans/plan-community-reports.md`; every earlier row is completed and its plan deleted, and the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
+- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Every row below is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
 - **Starting a phase.**
   - If nothing is active, the only legal start is the lowest phase in the table whose earlier phases are completed.
   - When you start a phase, set it to `active` with a one-line note. Do not mark the next phase active.
@@ -38,12 +38,12 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | C1    | Community reports: rename       | completed | 2026-11-13. The migration keeps its name `0001_reader_reports`.                                                   |
 | C2    | Community reports: staff        | completed | 2026-11-13.                                                                                                       |
 | C3    | Community reports: header badge | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
-| C4    | Community reports: flow         | active    | 2026-11-13.                                                                                                       |
+| C4    | Community reports: flow         | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
 
 ## Open items
 
 - **Community reports:**
-  - Render the title-page section, the form and the moderation tab in a browser (no TMDB token here), and measure the counts slot's reserved height at phone and desktop widths.
+  - Render the title-page section, the header badge, the form and the moderation tab in a browser (no TMDB token here), and measure the counts slot's reserved height at phone and desktop widths; check the compact flag rows when a legend wraps.
   - Once the reader reports have deployed, add the migration that drops `community_bechdel_ratings`, `community_um_reports` and `community_ddd_votes` (`docs/architecture.md`, Known gaps).
 - **UX:**
   - Section footer links (`collapsibleSection.svelte`) are 20 px tall, under the 44 px touch target.

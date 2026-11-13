@@ -69,7 +69,7 @@ Read the sections your task touches.
   - 489–508 UM Disambiguation (~630)
   - 509–517 UM flag rendering (~250)
   - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K) ← 1
+  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
   - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
   - 550–590 Component library (`src/lib/components/`) (~5.9K)
   - 591–601 Live search (`src/lib/components/search/`) (~710)
@@ -92,12 +92,6 @@ Read the sections your task touches.
 STATUS.md, then the live plan section for the active phase.
 
 - `docs/phases/STATUS.md` — Phase status (~2.8K tok)
-
-## Live plans
-
-Read when a task names the plan.
-
-- `docs/plans/plan-community-reports.md` — Plan: MIDB community reports (~2.5K tok)
 
 ## Policies
 
