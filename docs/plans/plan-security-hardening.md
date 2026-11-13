@@ -21,7 +21,7 @@ These findings meet a standing decision in `docs/phases/STATUS.md`, so they are 
 6. **The scan cannot address its neighbours.** In `src/lib/server/moderation/scan.ts`, each item in a batch is labelled with a random token made per call (not a sequential `n`), and answers are matched back by token, so one comment's text cannot name another item's label.
 7. **Edit and delete do not reveal a comment.** `editComment` and `softDeleteComment` answer `not-found` (404) to anyone but the author, whatever the comment's status.
 
-Tests: each rule above, in the existing `*.db.spec.ts` and unit specs of the files it changes. Docs: `SECURITY.md` (Comments, Moderation table) and `docs/architecture.md` sections on comments and moderation.
+Tests: each rule above, in the existing `*.db.spec.ts` and unit specs of the files it changes. Docs: `SECURITY.md`, Network (its Comments and Moderation table items) and `docs/architecture.md` sections on comments and moderation.
 
 ## Phase SH2: sock puppets and brigades
 
@@ -35,7 +35,7 @@ Tests: each rule above, in the existing `*.db.spec.ts` and unit specs of the fil
 
 4. **Bursts from fresh accounts.** `isBurst` (`community-report-holds.ts`) counts only other reports from accounts that pass the counting rule in step 1, so new accounts cannot hold a title's honest reports. Re-checking a burst hold after its window passes is not built (an Open item).
 
-Tests: each rule, in `*.db.spec.ts`. Docs: `SECURITY.md` (Comments, MIDB community reports), `docs/architecture.md`, and `/resources` Methodology if it describes reports or votes (`copy-standards.md`).
+Tests: each rule, in `*.db.spec.ts`. Docs: `SECURITY.md`, Network (its Comments and MIDB community reports items), `docs/architecture.md`, and `/resources` Methodology if it describes reports or votes (`copy-standards.md`).
 
 ## Phase SH3: accounts
 
@@ -51,7 +51,7 @@ Tests: each rule, in `*.db.spec.ts`. Docs: `SECURITY.md` (Comments, MIDB communi
    - The profile form shows each new refusal as it shows the existing ones.
 3. **Sign-up without Turnstile is refused outside localhost.** `guardPasskeySignUp` (`src/lib/server/auth/turnstile.ts`): with no `TURNSTILE_SECRET_KEY` and a non-local origin (`isLocalOrigin`), a passkey sign-up fails with `UNKNOWN_ERROR` and logs that the secret is missing. In `wrangler.jsonc`, the comment above `PUBLIC_TURNSTILE_SITE_KEY` says it is the widget's public site key; the value is not changed.
 
-Tests: each rule. Docs: `SECURITY.md` (Sign-in methods), `PRIVACY.md` for the retired names it now stores, `docs/architecture.md` (schema, auth).
+Tests: each rule. Docs: `SECURITY.md`, Network (its Sign-in methods item), `PRIVACY.md` for the retired names it now stores, `docs/architecture.md` (schema, auth).
 
 ## Phase SH4: platform
 
@@ -67,4 +67,4 @@ Tests: each rule. Docs: `SECURITY.md` (Sign-in methods), `PRIVACY.md` for the re
 4. **Public timestamps to the minute.** Comment `createdAt` and `editedAt` in public responses (a title's list, `/api/comments/[id]` for comments not the reader's own, profile comments) are rounded down to the minute. The author's own and staff views keep the exact time. The pagination cursor is not changed.
 5. **Dependencies.** Move postcss, vite, vitest and esbuild in the lockfile to patched versions (`pnpm update` within the ranges, or `pnpm.overrides` for a transitive copy) so `pnpm audit --prod` reports nothing but the unpatched `deepmerge`.
 
-Docs: `SECURITY.md` (Network, Supply chain) and `docs/architecture.md` (request hook).
+Docs: `SECURITY.md`, Network and Supply chain and `docs/architecture.md` (request hook).
