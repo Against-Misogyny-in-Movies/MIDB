@@ -79,7 +79,7 @@ describe('comment moderation through the endpoint', () => {
 		create.mockResolvedValueOnce(reply({ decision: 'allow', severity: 0 }));
 		const { comment } = await post('The film frames the scene as a warning.');
 		expect(comment.status).toBe('published');
-		expect(purgeCalls).toEqual([{ tags: ['comments:movie:348'] }]);
+		expect(purgeCalls).toEqual([{ tags: ['comments:movie:348'] }, { tags: ['profile:author'] }]);
 		const list = await listTitleComments(title.id, { sort: 'new' });
 		expect(list.comments.map((c) => c.id)).toEqual([comment.id]);
 		const [stored] = await db.select().from(comments).where(eq(comments.id, comment.id));
@@ -173,7 +173,7 @@ describe('comment edits through the endpoint', () => {
 		expect(comment.status).toBe('published');
 		expect((await row('root')).replyCount).toBe(1);
 		expect(await row('r1')).toMatchObject({ status: 'published', moderationSource: 'ai' });
-		expect(purgeCalls).toEqual([{ tags: ['comments:movie:348'] }]);
+		expect(purgeCalls).toEqual([{ tags: ['comments:movie:348'] }, { tags: ['profile:author'] }]);
 	});
 
 	it('rejects an edit that hits the blocklist without calling the model', async () => {

@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.ts';
 import { realEmail } from '#lib/server/auth/placeholder-email.ts';
+import { purgeProfile } from '#lib/server/http/purge-title.ts';
 import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 
 // The one page allowed to send the email to the client; everything else uses PublicUser.
@@ -32,6 +33,8 @@ export const actions: Actions = {
 		});
 
 		if (!result.ok) return fail(422, { error: result.reason });
+		// The public profile shows the username and the avatar; the tag is per account, so the old address is purged too.
+		purgeProfile(user.id);
 		return { success: true, me: toPublicUser(result.user) };
 	}
 };

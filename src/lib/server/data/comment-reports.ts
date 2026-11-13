@@ -14,6 +14,8 @@ export type ReportResult =
 			/** The comment's status afterwards: `pending` once the report threshold is reached. */
 			status: CommentStatus;
 			title: CommentWithTitle['title'];
+			/** The comment's author, whose public profile lists it while it is published. */
+			authorId: string;
 	  }
 	| { ok: false; reason: 'not-found' | 'own-comment' };
 
@@ -62,6 +64,7 @@ export async function reportComment(input: {
 		ok: true,
 		alreadyReported: Boolean(existing),
 		status: after?.status ?? found.comment.status,
-		title: found.title
+		title: found.title,
+		authorId: found.comment.userId
 	};
 }

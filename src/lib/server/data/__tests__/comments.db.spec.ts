@@ -136,7 +136,11 @@ describe('threading and reply counts', () => {
 		expect(list).toHaveLength(1);
 		expect(list[0].replies.map((r) => r.body)).toEqual(['Reply', 'Deeper']);
 		expect(list[0].replies[0].inReplyTo).toBeNull();
-		expect(list[0].replies[1].inReplyTo).toEqual({ id: reply, displayName: expect.any(String) });
+		expect(list[0].replies[1].inReplyTo).toEqual({
+			id: reply,
+			displayName: expect.any(String),
+			username: null
+		});
 	});
 
 	it('pages roots in newest order and in score order with a cursor', async () => {

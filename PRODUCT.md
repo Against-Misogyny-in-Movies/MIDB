@@ -13,6 +13,7 @@ People deciding whether to watch something, often right before watching, often o
 - `/resources`: how each metric works. (Read.)
 - MIDB community reports on `/movie/[id]` and `/tv/[id]`: a section after Unconsenting Media shows counts of what readers report, and a signed-in reader adds, edits or deletes their own report and can flag a title's counts as wrong. Reports never change a verdict. (Read / Operate.)
 - Comments on `/movie/[id]` and `/tv/[id]`: readers discuss a title. A comment is reviewed before others see it; its author sees its status. (Operate.)
+- `/u/[username]`: an account's public profile: avatar, name, join date, staff role, comment score total, published comments and counted community reports. Names in comments and moderation link to it. (Read.)
 - `/user/comments`: an account's own comments with their status. (Operate.)
 - `/user/metrics`: an account's own community reports with their status. (Operate.)
 - `/user/moderation`: moderators and administrators review pending and reported comments, community reports held for review and titles whose counts readers flagged, mute or ban an account, and read the action log. (Operate.)

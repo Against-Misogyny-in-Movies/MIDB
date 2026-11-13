@@ -4,6 +4,7 @@
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import type { ModerationItem } from '#lib/media/types/moderation.ts';
 	import {
 		COMMENT_STATUS_LABELS,
@@ -61,7 +62,7 @@
 <li class="item" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<header class="meta">
 		<Avatar avatarKey={author.avatarKey} size={24} />
-		<span class="name">{author.displayName}</span>
+		<span class="name"><ProfileLink username={author.username} name={author.displayName} /></span>
 		{#if author.role !== 'user'}
 			<Badge tone="brand">{author.role === 'moderator' ? 'Moderator' : 'Administrator'}</Badge>
 		{/if}
@@ -102,7 +103,12 @@
 				{#each item.reports as report (report.createdAt + report.reason)}
 					<li>
 						<Badge tone="neutral">{REPORT_REASON_LABELS[report.reason]}</Badge>
-						<span class="label">Reported by {report.reporter ?? 'An account'}</span>
+						<span class="label"
+							>Reported by <ProfileLink
+								username={report.reporter}
+								name={report.reporter ?? 'An account'}
+							/></span
+						>
 						<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
 						{#if report.note}<span class="note">{report.note}</span>{/if}
 					</li>

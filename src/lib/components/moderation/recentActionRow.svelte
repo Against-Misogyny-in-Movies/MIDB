@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
 	import { formatMuteHours } from '#lib/media/utils/comments.ts';
@@ -78,9 +79,18 @@
 
 <li class="entry" tabindex="-1" bind:this={root}>
 	<p class="line">
-		<span class="name">{entry.actor?.displayName ?? 'A removed account'}</span>
+		<span class="name"
+			><ProfileLink
+				username={entry.actor?.username}
+				name={entry.actor?.displayName ?? 'A removed account'}
+			/></span
+		>
 		{VERBS[entry.action]}{#if entry.targetUser}
-			<span class="name">{entry.targetUser.displayName}</span
+			<span class="name"
+				><ProfileLink
+					username={entry.targetUser.username}
+					name={entry.targetUser.displayName}
+				/></span
 			>{/if}{#if inline && entry.title}{@render titleLink(entry.title.name)}{/if}{muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
 	</p>

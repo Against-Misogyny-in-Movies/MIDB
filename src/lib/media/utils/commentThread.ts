@@ -15,14 +15,18 @@ const asShown = (view: CommentView): ShownComment => {
 	return { ...rest, review: null };
 };
 
-function ownAsShown(own: OwnComment, me: PublicUser, names: Map<string, string>): ShownComment {
+type Name = { displayName: string; username: string | null };
+
+const nameOf = ({ displayName, username }: PublicUser): Name => ({ displayName, username });
+
+function ownAsShown(own: OwnComment, me: PublicUser, names: Map<string, Name>): ShownComment {
 	const answered = own.parentId && own.parentId !== own.rootId ? own.parentId : null;
 	const name = answered ? names.get(answered) : undefined;
 	return {
 		id: own.id,
 		parentId: own.parentId,
 		rootId: own.rootId,
-		inReplyTo: answered && name ? { id: answered, displayName: name } : null,
+		inReplyTo: answered && name ? { id: answered, ...name } : null,
 		removed: false,
 		body: own.body,
 		author: me,
@@ -61,11 +65,11 @@ export function buildThreads(
 		return list.map((root) => ({ root: asShown(root), replies: root.replies.map(asShown) }));
 	}
 
-	const names = new Map<string, string>();
+	const names = new Map<string, Name>();
 	for (const view of list) {
-		if (view.author) names.set(view.id, view.author.displayName);
+		if (view.author) names.set(view.id, nameOf(view.author));
 		for (const reply of view.replies) {
-			if (reply.author) names.set(reply.id, reply.author.displayName);
+			if (reply.author) names.set(reply.id, nameOf(reply.author));
 		}
 	}
 	const ownById = new Map(own.map((c) => [c.id, ownAsShown(c, me, names)]));

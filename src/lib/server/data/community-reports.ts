@@ -230,16 +230,13 @@ const levelsOf = (set: 'violence' | 'sexual' | 'objectification') =>
 const count = (cond: SQL) => sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 ELSE 0 END), 0)`;
 
 /**
- * The counts for a title: only reports that are `counted`, whose account is staff or at least
- * `REPORT_ACCOUNT_MIN_AGE_DAYS` old and is neither banned nor muted. The age is applied here,
- * so a report starts counting on its own, and a cached count can lag by its TTL. Two grouped
- * reads: the categories with the framing and the total, then the flags, which only the reports
- * that said sexual violence is present were asked.
+ * The rule for a report that counts, over `reports` joined to `users`: it is `counted`, and its
+ * account is staff or at least `REPORT_ACCOUNT_MIN_AGE_DAYS` old and is neither banned nor
+ * muted. The age is applied here, so a report starts counting on its own, and a cached count
+ * can lag by its TTL. A title's counts and an account's public profile both read it.
  */
-export async function getReportCounts(titleId: string): Promise<ReportCounts> {
-	const now = Date.now();
-	const where = and(
-		eq(reports.titleId, titleId),
+export function countedReportsWhere(now: number = Date.now()): SQL {
+	return and(
 		eq(reports.status, 'counted'),
 		or(
 			inArray(users.role, [...STAFF_ROLES]),
@@ -247,7 +244,16 @@ export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 		),
 		sql`${users.bannedAt} IS NULL`,
 		sql`(${users.mutedUntil} IS NULL OR ${users.mutedUntil} <= ${now})`
-	);
+	) as SQL;
+}
+
+/**
+ * The counts for a title: only reports that count (`countedReportsWhere`). Two grouped
+ * reads: the categories with the framing and the total, then the flags, which only the reports
+ * that said sexual violence is present were asked.
+ */
+export async function getReportCounts(titleId: string): Promise<ReportCounts> {
+	const where = and(eq(reports.titleId, titleId), countedReportsWhere());
 
 	const selection: Record<string, SQL<number>> = {
 		total: count(sql`1 = 1`)

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
 const purgeTitleComments = vi.fn();
+const purgeProfiles = vi.fn();
 const actionsFns = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -40,7 +41,9 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args)
+	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
+	purgeProfile: vi.fn(),
+	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
 }));
 vi.mock('#lib/server/env.ts', () => ({ env: serverEnv }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => actionsFns);
@@ -95,6 +98,7 @@ beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(STAFF);
 	rateLimit.mockReset().mockResolvedValue(undefined);
 	purgeTitleComments.mockReset();
+	purgeProfiles.mockReset();
 	for (const fn of Object.values(actionsFns)) fn.mockReset();
 	for (const fn of Object.values(queue)) fn.mockReset().mockResolvedValue([]);
 	reports.listHeldReports.mockReset().mockResolvedValue([]);
@@ -393,6 +397,17 @@ describe('?/bulk', () => {
 		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
 		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
 		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
+	});
+
+	it('purges each author’s profile once, also when a later write throws', async () => {
+		actionsFns.hideComment
+			.mockResolvedValueOnce({ ok: true, title: ALIEN, authorId: 'a1' })
+			.mockResolvedValueOnce({ ok: true, title: ALIEN, authorId: 'a1' })
+			.mockResolvedValueOnce({ ok: true, title: DARK, authorId: 'a2' })
+			.mockRejectedValueOnce(new Error('D1 down'));
+		await expect(run('bulk', [['op', 'hide'], ...ids(4)])).rejects.toThrow('D1 down');
+		expect(purgeProfiles).toHaveBeenCalledOnce();
+		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'a2']);
 	});
 
 	it('purges no title for a comment with none', async () => {

@@ -6,6 +6,8 @@ import {
 } from '#test/cloudflare-workers.stub.ts';
 import {
 	PURGE_TAGS_PER_REQUEST,
+	purgeProfile,
+	purgeProfiles,
 	purgeTitleComments,
 	purgeTitleReports,
 	purgeTitlesReports
@@ -44,5 +46,22 @@ describe('purgeTitlesReports', () => {
 		purgeTitleReports({ kind: 'tv', tmdbId: 7 });
 		await Promise.all(waitUntilPromises);
 		expect(purgeCalls).toEqual([{ tags: ['reports:tv:7'] }]);
+	});
+});
+
+describe('purgeProfile', () => {
+	it('purges the account’s profile tag after the response', async () => {
+		purgeProfile('anna-id');
+		await Promise.all(waitUntilPromises);
+		expect(purgeCalls).toEqual([{ tags: ['profile:anna-id'] }]);
+	});
+
+	it('purges several accounts once each, in requests of at most the chunk size', async () => {
+		const ids = Array.from({ length: PURGE_TAGS_PER_REQUEST + 2 }, (_, i) => `u${i}`);
+		purgeProfiles([...ids, 'u0']);
+		purgeProfiles([]);
+		await Promise.all(waitUntilPromises);
+		expect(purgeCalls.map((c) => c.tags?.length)).toEqual([PURGE_TAGS_PER_REQUEST, 2]);
+		expect(purgeCalls[0].tags?.[0]).toBe('profile:u0');
 	});
 });

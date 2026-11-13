@@ -7,13 +7,19 @@ import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
 import { targetAllowed } from './moderation-target.ts';
+import { purgeProfile } from '#lib/server/http/purge-title.ts';
 import { purgeReportedTitles } from './community-report-moderation.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
 
 export type ModerationResult =
-	| { ok: true; title: CommentWithTitle['title'] | null }
+	| {
+			ok: true;
+			title: CommentWithTitle['title'] | null;
+			/** The comment's author, when the action changed what their public profile shows. */
+			authorId?: string;
+	  }
 	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
 
 /**
@@ -106,7 +112,9 @@ async function moveComment(
 			moderationReason: spec.reason
 		})
 	]);
-	return moved ? { ok: true, title } : { ok: false, reason: 'invalid-state' };
+	return moved
+		? { ok: true, title, authorId: comment.userId }
+		: { ok: false, reason: 'invalid-state' };
 }
 
 /** Publishes a pending comment; its reports, if any, are dismissed. */
@@ -183,7 +191,7 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 	if (!Array.isArray(resolved) || resolved.length === 0) {
 		return { ok: false, reason: 'invalid-state' };
 	}
-	return { ok: true, title };
+	return { ok: true, title, ...(restores ? { authorId: comment.userId } : {}) };
 }
 
 function logUserAction(
@@ -198,7 +206,8 @@ function logUserAction(
 
 /**
  * Stops a user from commenting for `hours` hours from now; the log row keeps the length. The
- * counts of every title the account reported leave it out, so their cached counts are purged.
+ * counts of every title the account reported leave it out, and so does its profile's list of
+ * counted reports, so their cached counts and the profile are purged.
  */
 export async function muteUser(
 	actor: UserRow,
@@ -214,12 +223,14 @@ export async function muteUser(
 		logUserAction(actor.id, targetId, 'mute', reason, hours)
 	]);
 	await purgeReportedTitles(targetId);
+	purgeProfile(targetId);
 	return { ok: true, title: null };
 }
 
 /**
  * Bans a user and ends their sessions (`banStatements`), with the log row in the same batch.
- * The counts of every title the account reported leave it out, so their cached counts are purged.
+ * The counts of every title the account reported leave it out, so their cached counts are
+ * purged, and so is the profile, which is a 404 from now on.
  */
 export async function banAccount(
 	actor: UserRow,
@@ -233,5 +244,6 @@ export async function banAccount(
 		logUserAction(actor.id, targetId, 'ban', reason)
 	]);
 	await purgeReportedTitles(targetId);
+	purgeProfile(targetId);
 	return { ok: true, title: null };
 }

@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { PRIVATE_NO_STORE, communityReportsHeaders } from '#lib/server/http/cache.ts';
-import { purgeTitleReports } from '#lib/server/http/purge-title.ts';
+import { purgeProfile, purgeTitleReports } from '#lib/server/http/purge-title.ts';
 import { authorizeWrite, privateJson, readBody } from '#lib/server/http/comment-request.ts';
 import { answersOf, reportSchema } from '#lib/server/http/community-report-request.ts';
 import {
@@ -35,7 +35,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 /**
  * Stores or replaces the reader's report and answers its status and hold reason (200). A
- * contradictory body is a 400. Purges the title's counts.
+ * contradictory body is a 400. Purges the title's counts and the reader's profile.
  */
 export const PUT: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
@@ -52,15 +52,19 @@ export const PUT: RequestHandler = async (event) => {
 	}
 
 	purgeTitleReports({ kind, tmdbId });
+	purgeProfile(user.id);
 	return privateJson({ status: result.status, holdReason: result.holdReason });
 };
 
-/** Withdraws the reader's report (204, also when there was none). Purges the title's counts. */
+/** Withdraws the reader's report (204, also when there was none). Purges the title's counts and the reader's profile when one existed. */
 export const DELETE: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
 	const user = await authorizeWrite(event, 'RL_CONTENT_REPORT');
 
 	const title = await findCommentTitle(kind, tmdbId);
-	if (title && (await deleteReport(user.id, title.id))) purgeTitleReports({ kind, tmdbId });
+	if (title && (await deleteReport(user.id, title.id))) {
+		purgeTitleReports({ kind, tmdbId });
+		purgeProfile(user.id);
+	}
 	return new Response(null, { status: 204, headers: PRIVATE_NO_STORE });
 };

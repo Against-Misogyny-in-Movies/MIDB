@@ -33,15 +33,18 @@ export const COMMENT_PAGE_SIZE = 20;
 /** Published comments, plus any other one that still has published replies (shown as a placeholder). */
 const shown = or(eq(comments.status, 'published'), gt(comments.replyCount, 0));
 
-type CursorParts = { score: number | null; createdAt: number; id: string };
+export type CursorParts = { score: number | null; createdAt: number; id: string };
 
-function encodeCursor(row: CommentRow, sort: CommentSort): string {
+export function encodeCursor(row: CommentRow, sort: CommentSort): string {
 	const time = row.createdAt.getTime();
 	return sort === 'top' ? `${row.score}.${time}.${row.id}` : `${time}.${row.id}`;
 }
 
 /** Null for a cursor that is not one this module made, which reads as the first page. */
-function decodeCursor(cursor: string | null | undefined, sort: CommentSort): CursorParts | null {
+export function decodeCursor(
+	cursor: string | null | undefined,
+	sort: CommentSort
+): CursorParts | null {
 	if (!cursor) return null;
 	const match =
 		sort === 'top' ? /^(-?\d+)\.(\d+)\.([\w-]+)$/.exec(cursor) : /^()(\d+)\.([\w-]+)$/.exec(cursor);
@@ -52,7 +55,7 @@ function decodeCursor(cursor: string | null | undefined, sort: CommentSort): Cur
 	return { score: sort === 'top' ? Number(match[1]) : null, createdAt, id: match[3] };
 }
 
-function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {
+export function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {
 	const at = new Date(cursor.createdAt);
 	const older = or(
 		lt(comments.createdAt, at),
@@ -80,7 +83,11 @@ function toView(
 		rootId: comment.rootId,
 		inReplyTo:
 			parent && parent.comment.status === 'published'
-				? { id: parent.comment.id, displayName: toPublicUser(parent.author).displayName }
+				? {
+						id: parent.comment.id,
+						displayName: toPublicUser(parent.author).displayName,
+						username: parent.author.username
+					}
 				: null,
 		removed,
 		body: removed ? null : comment.body,

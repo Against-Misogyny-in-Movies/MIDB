@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { commentsHeaders } from '#lib/server/http/cache.ts';
-import { purgeTitleComments } from '#lib/server/http/purge-title.ts';
+import { purgeProfile, purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import {
 	authorizeWrite,
 	createSchema,
@@ -41,7 +41,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	return Response.json(list, { headers: commentsHeaders(kind, tmdbId) });
 };
 
-/** Stores a comment or a reply and answers it with its status (201). Purges the title's list. */
+/** Stores a comment or a reply and answers it with its status (201). Purges the title's list and the author's profile. */
 export const POST: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
 	const user = await authorizeWrite(event, 'RL_COMMENT');
@@ -52,5 +52,6 @@ export const POST: RequestHandler = async (event) => {
 	if (!result.ok) error(404, 'The comment to answer was not found');
 
 	purgeTitleComments({ kind, tmdbId });
+	purgeProfile(user.id);
 	return privateJson({ comment: result.comment }, 201);
 };

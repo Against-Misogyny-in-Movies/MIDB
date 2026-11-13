@@ -18,8 +18,8 @@ export type CommentView = {
 	parentId: string | null;
 	/** The thread's root; null on a root. */
 	rootId: string | null;
-	/** Set on a reply to a reply, for "in reply to @name"; null otherwise. */
-	inReplyTo: { id: string; displayName: string } | null;
+	/** Set on a reply to a reply, for "In reply to name" (linked to the profile when it has a username); null otherwise. */
+	inReplyTo: { id: string; displayName: string; username: string | null } | null;
 	removed: boolean;
 	body: string | null;
 	author: PublicUser | null;

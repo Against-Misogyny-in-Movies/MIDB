@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import CountRejectForms from '#lib/components/moderation/countRejectForms.svelte';
 	import ReportAccountActions from '#lib/components/moderation/reportAccountActions.svelte';
@@ -44,7 +45,10 @@
 	bind:root
 	readOnly={canAct ? undefined : 'An administrator decides on this report.'}
 >
-	{#snippet name()}{report.account.username ?? 'An account'}{/snippet}
+	{#snippet name()}<ProfileLink
+			username={report.account.username}
+			name={report.account.username ?? 'An account'}
+		/>{/snippet}
 	{#snippet meta()}
 		<Badge tone={standing.tone}>{standing.label}</Badge>
 		{#if report.holdReason}

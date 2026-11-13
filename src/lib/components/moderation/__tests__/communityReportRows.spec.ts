@@ -262,7 +262,10 @@ describe('the open title view', () => {
 		expect(screen.getByRole('heading', { name: 'Counts look wrong' }).className).toContain(
 			'heading'
 		);
-		expect(screen.getByText('Reported by bo')).toBeTruthy();
+		expect(
+			screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by bo')
+		).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe('/u/bo');
 		expect(screen.getByText('Reported by An account')).toBeTruthy();
 		expect(screen.queryByText('A removed account')).toBeNull();
 	});

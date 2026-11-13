@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -25,7 +26,12 @@
 
 <li class="flag" tabindex="-1" bind:this={root}>
 	<p class="line">
-		<span class="label">Reported by {flag.reporter ?? 'An account'}</span>
+		<span class="label"
+			>Reported by <ProfileLink
+				username={flag.reporter}
+				name={flag.reporter ?? 'An account'}
+			/></span
+		>
 		<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 		{#if flag.note}<span class="note">{flag.note}</span>{/if}
 	</p>

@@ -130,7 +130,10 @@ describe('ModerationItem', () => {
 			]
 		});
 		expect(screen.getByText('2 open reports')).toBeTruthy();
-		expect(screen.getByText('Reported by bo')).toBeTruthy();
+		expect(
+			screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by bo')
+		).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe('/u/bo');
 		expect(screen.getByText('Reported by An account')).toBeTruthy();
 		expect(screen.getByText('Spam')).toBeTruthy();
 		expect(screen.getByText('An advert')).toBeTruthy();

@@ -145,7 +145,7 @@ describe('CommentsSection signed out', () => {
 			parentId: 'a',
 			rootId: 'a',
 			body: 'A reply',
-			inReplyTo: { id: 'x', displayName: 'bea' }
+			inReplyTo: { id: 'x', displayName: 'bea', username: 'bea' }
 		});
 		mount(
 			api({
@@ -156,7 +156,7 @@ describe('CommentsSection signed out', () => {
 		);
 		expect(await screen.findByText('This comment was removed.')).toBeTruthy();
 		expect(screen.getByText('A reply')).toBeTruthy();
-		expect(screen.getByText('In reply to bea')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bea' })).toBeTruthy();
 	});
 
 	it('loads the next page on request', async () => {

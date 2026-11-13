@@ -68,7 +68,8 @@ describe('links to a comment from the moderation views', () => {
 			authorMutedUntil: null
 		};
 		inList(ModerationItemRow, { item, me: MOD });
-		expect(screen.queryByRole('link')).toBeNull();
+		expect(document.querySelector('a[href*="#comment-"]')).toBeNull();
+		expect(screen.queryByRole('link', { name: /Alien/ })).toBeNull();
 	});
 
 	it('links the Posted date of a table row to the comment', () => {

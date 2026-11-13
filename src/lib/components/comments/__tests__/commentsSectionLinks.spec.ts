@@ -238,7 +238,32 @@ describe('CommentsSection links to a comment', () => {
 	it('links each comment date to the comment', async () => {
 		mount(api());
 		await screen.findByText('Text of first');
-		const link = document.querySelector('#comment-first a.link');
+		const link = document.querySelector('#comment-first a.link[href*="#comment-"]');
 		expect(link?.getAttribute('href')).toBe('/movie/603#comment-first');
+	});
+
+	it('links each author name to their public profile', async () => {
+		mount(api());
+		await screen.findByText('Text of first');
+		const link = document.querySelector('#comment-first .name a.link');
+		expect(link?.getAttribute('href')).toMatch(/^\/u\//);
+	});
+
+	it('links the author a reply answers to their public profile', async () => {
+		const reply = view('r1', {
+			parentId: 'first',
+			rootId: 'first',
+			inReplyTo: { id: 'x', displayName: 'bea', username: 'bea' }
+		});
+		mount(
+			vi.fn(async (input: string) =>
+				input.endsWith('/viewer')
+					? json({ votes: {}, scores: {}, comments: [], mutedUntil: null })
+					: json({ comments: [view('first', { replies: [reply] })], nextCursor: null })
+			)
+		);
+		const link = await screen.findByRole('link', { name: 'bea' });
+		expect(link.getAttribute('href')).toBe('/u/bea');
+		expect(link.parentElement?.textContent?.trim()).toBe('In reply to bea');
 	});
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
@@ -93,7 +94,9 @@
 							<p class="clamp body">{row.comment.body}</p>
 						</td>
 						<td class="author" role="cell" data-label="Author">
-							<span class="name">{row.author.displayName}</span>
+							<span class="name"
+								><ProfileLink username={row.author.username} name={row.author.displayName} /></span
+							>
 							{#if row.author.role !== 'user'}
 								<Badge tone="brand">
 									{row.author.role === 'moderator' ? 'Moderator' : 'Administrator'}

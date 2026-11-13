@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
 const purgeTitleComments = vi.fn();
+const purgeProfile = vi.fn();
 const queries = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -34,7 +35,8 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args)
+	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
+	purgeProfile: (...args: unknown[]) => purgeProfile(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
@@ -90,6 +92,7 @@ beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(MOD);
 	rateLimit.mockReset().mockResolvedValue(undefined);
 	purgeTitleComments.mockReset();
+	purgeProfile.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	for (const fn of Object.values(reports))
@@ -237,11 +240,36 @@ describe('purging', () => {
 		}
 	);
 
+	it.each([
+		['approve', 'approveComment'],
+		['hide', 'hideComment'],
+		['reject', 'rejectComment'],
+		['restore', 'restoreComment'],
+		['dismiss', 'dismissReports']
+	] as const)(
+		'%s purges the author’s public profile when the result names the author',
+		async (name, fn) => {
+			queries[fn].mockResolvedValue({
+				ok: true,
+				title: TITLE,
+				authorId: 'author-1'
+			});
+			await run(name);
+			expect(purgeProfile).toHaveBeenCalledExactlyOnceWith('author-1');
+		}
+	);
+
+	it('a result with no author (a dismiss that restored nothing) purges no profile', async () => {
+		await run('dismiss');
+		expect(purgeProfile).not.toHaveBeenCalled();
+	});
+
 	it('a refused action purges nothing and says why', async () => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		const result = await run('approve');
 		expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
 		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeProfile).not.toHaveBeenCalled();
 	});
 
 	it('mute and ban touch no list', async () => {

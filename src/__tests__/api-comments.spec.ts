@@ -121,7 +121,8 @@ beforeEach(async () => {
 		ok: true,
 		alreadyReported: false,
 		status: 'published',
-		title: { kind: 'movie', tmdbId: 348 }
+		title: { kind: 'movie', tmdbId: 348 },
+		authorId: 'author'
 	});
 	listTitleComments.mockResolvedValue({ comments: [], nextCursor: null });
 	getViewerCommentState.mockResolvedValue({
@@ -212,7 +213,7 @@ describe('POST a comment', () => {
 		expect(await status(post({ user: null, rawBody: '{nope', body: undefined }))).toBe(401);
 	});
 
-	it('stores the trimmed body, answers 201 with the comment, and purges the title tag', async () => {
+	it('stores the trimmed body, answers 201 with the comment, and purges the title tag and the author’s profile', async () => {
 		const res = await post({ body: { body: ' Hello ', parentId: 'p1' } });
 		expect(res.status).toBe(201);
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
@@ -224,7 +225,7 @@ describe('POST a comment', () => {
 			parentId: 'p1'
 		});
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: [TAG] }]);
+		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1'] }]);
 	});
 
 	it('answers 404 for a reply to a comment that is not there', async () => {
@@ -272,7 +273,7 @@ describe('PATCH and DELETE a comment', () => {
 		expect(res.status).toBe(200);
 		expect(editComment).toHaveBeenCalledWith('c1', 'u1', 'Edited');
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: [TAG] }]);
+		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1'] }]);
 
 		editComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
 		expect(
@@ -317,7 +318,7 @@ describe('PATCH and DELETE a comment', () => {
 		expect(res.status).toBe(200);
 		expect(softDeleteComment).toHaveBeenCalledWith('c1', 'u1');
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: [TAG] }]);
+		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1'] }]);
 
 		softDeleteComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
 		expect(
@@ -385,7 +386,7 @@ describe('POST a report', () => {
 		expect(await status(post())).toBe(429);
 	});
 
-	it('stores a report without purging, and purges when it sends the comment to review', async () => {
+	it('stores a report without purging, and purges the list and the author’s profile when it sends the comment to review', async () => {
 		const res = await post();
 		expect(res.status).toBe(201);
 		expect(reportComment).toHaveBeenCalledWith({
@@ -401,11 +402,12 @@ describe('POST a report', () => {
 			ok: true,
 			alreadyReported: false,
 			status: 'pending',
-			title: { kind: 'movie', tmdbId: 348 }
+			title: { kind: 'movie', tmdbId: 348 },
+			authorId: 'author'
 		});
 		await post({ user: user({ id: 'u2' }) });
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: [TAG] }]);
+		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:author'] }]);
 	});
 
 	it('answers 200 for a repeat, 403 for your own comment, 404 for a missing one, 400 for a bad reason', async () => {

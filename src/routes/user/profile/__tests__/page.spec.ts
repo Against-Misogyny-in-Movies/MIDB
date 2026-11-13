@@ -52,6 +52,20 @@ function mount() {
 	return render(Page, { data: { me: ME, email: null }, form: null } as never);
 }
 
+describe('the public profile link', () => {
+	it('links the reader’s own public profile', () => {
+		mount();
+		expect(screen.getByRole('link', { name: /Public profile/ }).getAttribute('href')).toBe(
+			'/u/mary'
+		);
+	});
+
+	it('is absent for an account with no username', () => {
+		render(Page, { data: { me: { ...ME, username: null }, email: null }, form: null } as never);
+		expect(screen.queryByRole('link', { name: /Public profile/ })).toBeNull();
+	});
+});
+
 describe('saving the profile', () => {
 	it('toasts a save that went through, and shows the button busy while it runs', async () => {
 		let release!: () => void;

@@ -1,5 +1,5 @@
 import { cache, waitUntil } from 'cloudflare:workers';
-import { commentsTag, communityReportsTag } from './cache.ts';
+import { commentsTag, communityReportsTag, profileTag } from './cache.ts';
 
 type PurgeTitle = { kind: string; tmdbId: number | string | null };
 
@@ -52,5 +52,21 @@ export function purgeTitlesReports(titles: PurgeTitle[]): void {
 	);
 	for (let i = 0; i < tags.length; i += PURGE_TAGS_PER_REQUEST) {
 		purgeTags('community-reports', tags.slice(i, i + PURGE_TAGS_PER_REQUEST));
+	}
+}
+
+/**
+ * Purges an account's edge-cached public profile (`profileTag`): the page and its comment
+ * pages. `PUBLIC_PAGE` bounds a failed purge.
+ */
+export function purgeProfile(userId: string): void {
+	purgeTags('profile', [profileTag(userId)]);
+}
+
+/** Purges the profiles of several accounts, `PURGE_TAGS_PER_REQUEST` tags to a request. */
+export function purgeProfiles(userIds: Iterable<string>): void {
+	const tags = [...new Set(userIds)].map(profileTag);
+	for (let i = 0; i < tags.length; i += PURGE_TAGS_PER_REQUEST) {
+		purgeTags('profile', tags.slice(i, i + PURGE_TAGS_PER_REQUEST));
 	}
 }

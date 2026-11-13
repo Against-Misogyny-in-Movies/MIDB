@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentDate from './commentDate.svelte';
@@ -112,7 +113,12 @@
 	{:else}
 		<header class="meta">
 			<Avatar avatarKey={comment.author?.avatarKey} size={28} />
-			<span class="name">{comment.author?.displayName ?? 'Account'}</span>
+			<span class="name"
+				><ProfileLink
+					username={comment.author?.username}
+					name={comment.author?.displayName ?? 'Account'}
+				/></span
+			>
 			{#if own && !comment.review}<Badge tone="brand">Author</Badge>{/if}
 			{#if role}<Badge tone="brand">{role}</Badge>{/if}
 			<CommentDate class="label" {href} createdAt={comment.createdAt} />
@@ -125,7 +131,12 @@
 		</header>
 
 		{#if comment.inReplyTo}
-			<p class="label">In reply to {comment.inReplyTo.displayName}</p>
+			<p class="label">
+				In reply to <ProfileLink
+					username={comment.inReplyTo.username}
+					name={comment.inReplyTo.displayName}
+				/>
+			</p>
 		{/if}
 
 		{#if mode === 'edit'}

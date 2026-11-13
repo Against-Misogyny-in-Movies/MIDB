@@ -84,7 +84,11 @@ describe('buildThreads', () => {
 			ME
 		);
 		expect(thread.replies.map((r) => r.id)).toEqual(['r1', 'mine', 'r2']);
-		expect(thread.replies[1].inReplyTo).toEqual({ id: 'r1', displayName: 'anna' });
+		expect(thread.replies[1].inReplyTo).toEqual({
+			id: 'r1',
+			displayName: 'anna',
+			username: 'anna'
+		});
 	});
 
 	it('shows an own reply whose root is not loaded as a thread of its own', () => {
