@@ -1,11 +1,12 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
 	import { formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { toastActionResult } from '#lib/media/utils/rowSubmit.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		entry: RecentAction;
@@ -60,6 +61,12 @@
 				? `?title=${entry.title.id}`
 				: titleHref(entry.title.kind, entry.title.tmdbId)
 	);
+	/** A comment action also links to the comment itself on its title's page. */
+	const commentLink = $derived(
+		entry.commentId !== null && entry.title
+			? commentHref(entry.title.kind, entry.title.tmdbId, entry.commentId)
+			: undefined
+	);
 	const inline = $derived(FLAG_ACTIONS.has(entry.action));
 	const muteLength = $derived(
 		entry.muteHours === null ? '' : ` for ${formatMuteHours(entry.muteHours)}`
@@ -72,9 +79,18 @@
 
 <li class="entry" tabindex="-1" bind:this={root}>
 	<p class="line">
-		<span class="name">{entry.actor?.displayName ?? 'A removed account'}</span>
+		<span class="name"
+			><ProfileLink
+				username={entry.actor?.username}
+				name={entry.actor?.displayName ?? 'A removed account'}
+			/></span
+		>
 		{VERBS[entry.action]}{#if entry.targetUser}
-			<span class="name">{entry.targetUser.displayName}</span
+			<span class="name"
+				><ProfileLink
+					username={entry.targetUser.username}
+					name={entry.targetUser.displayName}
+				/></span
 			>{/if}{#if inline && entry.title}{@render titleLink(entry.title.name)}{/if}{muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
 	</p>
@@ -86,6 +102,9 @@
 	{/if}
 	{#if editedSince}
 		<p class="label">Edited since</p>
+	{/if}
+	{#if commentLink}
+		<a class="chip" href={commentLink}>View comment</a>
 	{/if}
 	{#if entry.reason}
 		<p class="label">Reason: {entry.reason}</p>

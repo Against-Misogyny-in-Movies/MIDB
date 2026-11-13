@@ -4,6 +4,7 @@
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
+	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import type { SubmitFunction } from '$app/forms';
@@ -11,6 +12,7 @@
 	let { data, form } = $props();
 
 	const user = $derived(form?.me ?? data.me);
+	const publicHref = $derived(profileHref(user?.username));
 
 	let selectedAvatar = $state<string | null>(null);
 	let usernameInput = $state('');
@@ -180,6 +182,11 @@
 	</form>
 
 	<nav class="card account-nav" aria-label="Account">
+		{#if publicHref}
+			<a href={publicHref}
+				>Public profile <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+			>
+		{/if}
 		<a href="/user/security"
 			>Sign-in methods <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>

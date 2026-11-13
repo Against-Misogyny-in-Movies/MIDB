@@ -1,28 +1,31 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import type { ModerationItem } from '#lib/media/types/moderation.ts';
 	import {
 		COMMENT_STATUS_LABELS,
 		REPORT_REASON_LABELS,
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
 		item: ModerationItem;
-		/** False for an account this reader's role cannot mute or ban (an administrator, oneself, a moderator for a moderator). */
-		canActOnAuthor: boolean;
+		/** The acting staff member; `canActOn` decides which controls the author's account allows. */
+		me: { id: string; role: string };
 		/** The element that takes the focus when an action takes this row off the page and no neighbour can (default: the empty-state line). */
 		fallbackId?: string;
 	}
 
-	let { item, canActOnAuthor, fallbackId = 'moderation-empty' }: Props = $props();
+	let { item, me, fallbackId = 'moderation-empty' }: Props = $props();
 
 	type Panel = 'hide' | 'reject' | 'mute' | 'ban';
 	let panel = $state<Panel | null>(null);
@@ -31,7 +34,10 @@
 	let root: HTMLElement | undefined = $state();
 
 	const { comment, author } = $derived(item);
+	const canModerate = $derived(canActOn(me, author));
+	const canRestrict = $derived(canActOn(me, author, 'restrict'));
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
+	const permalink = $derived(commentHref(item.title.kind, item.title.tmdbId, comment.id));
 	const SOURCES: Record<string, string> = {
 		ai: 'Held by the automatic check',
 		blocklist: 'Matched the blocklist',
@@ -56,7 +62,7 @@
 <li class="item" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<header class="meta">
 		<Avatar avatarKey={author.avatarKey} size={24} />
-		<span class="name">{author.displayName}</span>
+		<span class="name"><ProfileLink username={author.username} name={author.displayName} /></span>
 		{#if author.role !== 'user'}
 			<Badge tone="brand">{author.role === 'moderator' ? 'Moderator' : 'Administrator'}</Badge>
 		{/if}
@@ -67,7 +73,7 @@
 		{#if item.authorMutedUntil}
 			<span class="label">Muted until {formatDate(item.authorMutedUntil)}</span>
 		{/if}
-		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		<CommentDate class="label" href={permalink} createdAt={comment.createdAt} />
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		{#if heldBy}<span class="label">{heldBy}</span>{/if}
@@ -97,68 +103,80 @@
 				{#each item.reports as report (report.createdAt + report.reason)}
 					<li>
 						<Badge tone="neutral">{REPORT_REASON_LABELS[report.reason]}</Badge>
-						{#if report.note}<span class="note">{report.note}</span>{/if}
+						<span class="label"
+							>Reported by <ProfileLink
+								username={report.reporter}
+								name={report.reporter ?? 'An account'}
+							/></span
+						>
 						<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
+						{#if report.note}<span class="note">{report.note}</span>{/if}
 					</li>
 				{/each}
 			</ul>
 		</section>
 	{/if}
 
-	<div class="actions">
-		{#if comment.status === 'pending'}
-			<form method="POST" action="?/approve" use:enhance={submit('approve')}>
-				<input type="hidden" name="id" value={comment.id} />
-				<button
-					class="btn btn--ink"
-					aria-busy={busy === 'approve'}
-					disabled={busy !== null && busy !== 'approve'}
-				>
-					Approve
-				</button>
-			</form>
-		{/if}
-		{#if item.reports.length > 0}
-			<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
-				<input type="hidden" name="id" value={comment.id} />
-				<button
-					class="btn btn--ink"
-					aria-busy={busy === 'dismiss'}
-					disabled={busy !== null && busy !== 'dismiss'}
-				>
-					Dismiss reports
-				</button>
-			</form>
-		{/if}
-		<button
-			class="btn btn--ghost"
-			type="button"
-			aria-expanded={panel === 'hide'}
-			onclick={() => toggle('hide')}>Hide</button
-		>
-		<button
-			class="btn btn--ghost"
-			type="button"
-			aria-expanded={panel === 'reject'}
-			onclick={() => toggle('reject')}>Reject</button
-		>
-		{#if canActOnAuthor}
-			{#if !item.authorMutedUntil}
+	{#if !canModerate && !canRestrict}
+		<p class="label decides">An administrator decides on this comment.</p>
+	{:else}
+		<div class="actions">
+			{#if canModerate && comment.status === 'pending'}
+				<form method="POST" action="?/approve" use:enhance={submit('approve')}>
+					<input type="hidden" name="id" value={comment.id} />
+					<button
+						class="btn btn--ink"
+						aria-busy={busy === 'approve'}
+						disabled={busy !== null && busy !== 'approve'}
+					>
+						Approve
+					</button>
+				</form>
+			{/if}
+			{#if canModerate && item.reports.length > 0}
+				<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
+					<input type="hidden" name="id" value={comment.id} />
+					<button
+						class="btn btn--ink"
+						aria-busy={busy === 'dismiss'}
+						disabled={busy !== null && busy !== 'dismiss'}
+					>
+						Dismiss reports
+					</button>
+				</form>
+			{/if}
+			{#if canModerate}
 				<button
 					class="btn btn--ghost"
 					type="button"
-					aria-expanded={panel === 'mute'}
-					onclick={() => toggle('mute')}>Mute author</button
+					aria-expanded={panel === 'hide'}
+					onclick={() => toggle('hide')}>Hide</button
+				>
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'reject'}
+					onclick={() => toggle('reject')}>Reject</button
 				>
 			{/if}
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'ban'}
-				onclick={() => toggle('ban')}>Ban author</button
-			>
-		{/if}
-	</div>
+			{#if canRestrict}
+				{#if !item.authorMutedUntil}
+					<button
+						class="btn btn--ghost"
+						type="button"
+						aria-expanded={panel === 'mute'}
+						onclick={() => toggle('mute')}>Mute author</button
+					>
+				{/if}
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'ban'}
+					onclick={() => toggle('ban')}>Ban author</button
+				>
+			{/if}
+		</div>
+	{/if}
 
 	{#if panel}
 		<ModerationConfirm
@@ -222,6 +240,10 @@
 	.actions {
 		@apply flex flex-wrap;
 		gap: var(--spacing-sm);
+		margin-top: var(--spacing-xs);
+	}
+
+	.decides {
 		margin-top: var(--spacing-xs);
 	}
 </style>

@@ -4,6 +4,7 @@ import { commentReports, comments } from '#db/schema/community.ts';
 import type { CommentStatus, ReportReason } from '#lib/media/types/comments.ts';
 import { REPORT_THRESHOLD } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
+import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { runBatch, statusMove } from './comment-status.ts';
 
 export type ReportResult =
@@ -14,6 +15,10 @@ export type ReportResult =
 			/** The comment's status afterwards: `pending` once the report threshold is reached. */
 			status: CommentStatus;
 			title: CommentWithTitle['title'];
+			/** The comment's author, whose public profile lists it while it is published. */
+			authorId: string;
+			/** The authors of its published replies, whose profiles name it, when the report sent it to review. */
+			replyAuthorIds: string[];
 	  }
 	| { ok: false; reason: 'not-found' | 'own-comment' };
 
@@ -35,6 +40,7 @@ export async function reportComment(input: {
 	if (!found || found.comment.status !== 'published') return { ok: false, reason: 'not-found' };
 	if (found.comment.userId === reporterId) return { ok: false, reason: 'own-comment' };
 
+	const replyAuthorIds = await replyAuthorsAffected(commentId, 'published', 'pending');
 	const [existing] = await db
 		.select({ id: commentReports.id })
 		.from(commentReports)
@@ -62,6 +68,8 @@ export async function reportComment(input: {
 		ok: true,
 		alreadyReported: Boolean(existing),
 		status: after?.status ?? found.comment.status,
-		title: found.title
+		title: found.title,
+		authorId: found.comment.userId,
+		replyAuthorIds: (after?.status ?? 'published') === 'published' ? [] : replyAuthorIds
 	};
 }

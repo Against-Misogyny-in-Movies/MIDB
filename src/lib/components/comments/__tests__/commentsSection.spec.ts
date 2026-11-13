@@ -75,7 +75,7 @@ function mount(fetcher: ReturnType<typeof api>) {
 }
 
 const viewer = (state: Partial<ViewerCommentState> = {}): Handler => {
-	return () => json({ votes: {}, comments: [], mutedUntil: null, ...state });
+	return () => json({ votes: {}, scores: {}, comments: [], mutedUntil: null, ...state });
 };
 
 const list = (comments: CommentView[], nextCursor: string | null = null): Handler => {
@@ -145,7 +145,7 @@ describe('CommentsSection signed out', () => {
 			parentId: 'a',
 			rootId: 'a',
 			body: 'A reply',
-			inReplyTo: { id: 'x', displayName: 'bea' }
+			inReplyTo: { id: 'x', displayName: 'bea', username: 'bea' }
 		});
 		mount(
 			api({
@@ -156,7 +156,7 @@ describe('CommentsSection signed out', () => {
 		);
 		expect(await screen.findByText('This comment was removed.')).toBeTruthy();
 		expect(screen.getByText('A reply')).toBeTruthy();
-		expect(screen.getByText('In reply to bea')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bea' })).toBeTruthy();
 	});
 
 	it('loads the next page on request', async () => {
@@ -289,9 +289,10 @@ describe('CommentsSection signed in', () => {
 		await waitFor(() => expect(up.getAttribute('aria-pressed')).toBe('true'));
 		const down = screen.getByRole('button', { name: 'Downvote' });
 		await fireEvent.click(down);
-		await waitFor(() => expect(down.getAttribute('aria-pressed')).toBe('true'));
+		expect(down.getAttribute('aria-pressed')).toBe('true');
 		expect(up.getAttribute('aria-pressed')).toBe('false');
-		expect(document.querySelector('#comment-a .score')?.textContent).toBe('Score 4');
+		const score = () => document.querySelector('#comment-a .score')?.textContent;
+		await waitFor(() => expect(score()).toBe('Score 4'));
 	});
 
 	it('names what is lost before a delete, then keeps a comment with replies as a placeholder', async () => {

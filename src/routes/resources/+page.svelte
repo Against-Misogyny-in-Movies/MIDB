@@ -31,6 +31,7 @@
 		{ id: 'unconsenting', label: 'Unconsenting Media' },
 		{ id: 'community-reports', label: 'MIDB community reports' },
 		{ id: 'ddd', label: 'Does the Dog Die' },
+		{ id: 'letterboxd', label: 'Letterboxd' },
 		{ id: 'moderation', label: 'Moderation' }
 	];
 </script>
@@ -259,6 +260,22 @@
 					A warning is shown when it has at least one yes vote and at least as many yes votes as no
 					votes. The data is fetched from Does the Dog Die when a title page opens (films by IMDb
 					id, series by title) and cached for one hour.
+				</p>
+			</MetricArticle>
+
+			<MetricArticle
+				id="letterboxd"
+				title="Letterboxd"
+				icon="ri-star-fill"
+				hue="var(--src-letterboxd)"
+				sourceLabel="letterboxd.com"
+				sourceHref="https://letterboxd.com"
+			>
+				<p>
+					Film pages show the average rating from Letterboxd, out of 5, with a link to the film
+					there. It does not affect either verdict. The rating is fetched when a film page opens and
+					cached. Series have none. A film that Letterboxd has no rating for shows no data, and a
+					failed lookup shows not available.
 				</p>
 			</MetricArticle>
 

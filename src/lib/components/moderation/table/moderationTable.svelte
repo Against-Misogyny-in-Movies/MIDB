@@ -1,15 +1,16 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
-	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import {
 		COMMENT_STATUS_LABELS,
 		REPORT_REASON_LABELS,
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
-	import { formatDate } from '#lib/media/utils/format.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
 
@@ -37,6 +38,12 @@
 	{#if rows.length === 0}
 		<p class="empty">No comments match these filters.</p>
 	{:else}
+		{#if rows.some((row) => !canActOn(me, row.author))}
+			<p id="not-selectable" class="sr-only">
+				An administrator decides on comments by moderators and administrators, so these are not
+				selectable.
+			</p>
+		{/if}
 		<!-- The stacked layout below `lg` sets `display: block`, which drops the table semantics unless the roles are explicit. -->
 		<!-- svelte-ignore a11y_no_redundant_roles -->
 		<table role="table">
@@ -67,6 +74,7 @@
 				{#each rows as row (row.comment.id)}
 					{@const id = row.comment.id}
 					{@const href = titleHref(row.title.kind, row.title.tmdbId)}
+					{@const permalink = commentHref(row.title.kind, row.title.tmdbId, id)}
 					{@const open = openId === id}
 					<!-- svelte-ignore a11y_no_redundant_roles -->
 					<tr class="row" role="row" data-open={open || undefined}>
@@ -76,7 +84,9 @@
 									type="checkbox"
 									value={id}
 									bind:group={selected}
+									disabled={!canActOn(me, row.author)}
 									aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
+									aria-describedby={canActOn(me, row.author) ? undefined : 'not-selectable'}
 								/>
 							</label>
 						</td>
@@ -84,7 +94,9 @@
 							<p class="clamp body">{row.comment.body}</p>
 						</td>
 						<td class="author" role="cell" data-label="Author">
-							<span class="name">{row.author.displayName}</span>
+							<span class="name"
+								><ProfileLink username={row.author.username} name={row.author.displayName} /></span
+							>
 							{#if row.author.role !== 'user'}
 								<Badge tone="brand">
 									{row.author.role === 'moderator' ? 'Moderator' : 'Administrator'}
@@ -146,9 +158,7 @@
 							{/if}
 						</td>
 						<td role="cell" data-label="Posted">
-							<time class="num" datetime={row.comment.createdAt}>
-								{formatDate(row.comment.createdAt)}
-							</time>
+							<CommentDate class="num" href={permalink} createdAt={row.comment.createdAt} />
 						</td>
 						<td class="actions" role="cell">
 							<button
@@ -178,11 +188,7 @@
 									</p>
 								{/if}
 								<ul class="item">
-									<ModerationItemRow
-										item={row}
-										canActOnAuthor={canActOn(me, row.author)}
-										fallbackId={TABLE_FOCUS.card}
-									/>
+									<ModerationItemRow item={row} {me} fallbackId={TABLE_FOCUS.card} />
 								</ul>
 							</td>
 						</tr>
@@ -297,6 +303,13 @@
 	}
 
 	@media (pointer: coarse) {
+		/* The author's profile link is a standalone link: a 44px touch target. */
+		.author .name :global(a) {
+			display: inline-flex;
+			align-items: center;
+			min-height: 2.75rem;
+		}
+
 		.actions .chip {
 			height: 2.75rem;
 		}

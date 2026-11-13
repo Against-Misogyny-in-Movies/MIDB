@@ -76,7 +76,14 @@ export type TitleReport = {
 export type FlaggedTitle = {
 	titleId: string;
 	title: ReportedTitle;
-	flags: { id: string; note: string | null; reporter: string | null; createdAt: string }[];
+	flags: {
+		id: string;
+		note: string | null;
+		reporter: string | null;
+		/** The reporter's account, so the page hides the buttons for a moderator's own flag. */
+		reporterId: string;
+		createdAt: string;
+	}[];
 };
 
 const answerSelect = {
@@ -269,7 +276,8 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 				titleId: titleCountFlags.titleId,
 				note: titleCountFlags.note,
 				createdAt: titleCountFlags.createdAt,
-				reporter: users.username
+				reporter: users.username,
+				reporterId: users.id
 			})
 			.from(titleCountFlags)
 			.innerJoin(users, eq(titleCountFlags.reporterId, users.id))
@@ -280,6 +288,7 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 				id: f.id,
 				note: f.note,
 				reporter: f.reporter,
+				reporterId: f.reporterId,
 				createdAt: f.createdAt.toISOString()
 			});
 			flags.set(f.titleId, list);

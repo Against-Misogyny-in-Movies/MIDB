@@ -7,6 +7,7 @@ export type CommentAction =
 	| 'load'
 	| 'more'
 	| 'viewer'
+	| 'link'
 	| 'create'
 	| 'edit'
 	| 'delete'
@@ -16,6 +17,7 @@ export type CommentAction =
 const FAILED: Record<CommentAction, string> = {
 	load: 'The comments could not be loaded',
 	more: 'More comments could not be loaded',
+	link: 'The linked comment could not be loaded',
 	viewer: 'This account’s votes and unpublished comments could not be loaded',
 	create: 'The comment was not posted',
 	edit: 'The edit was not saved',
@@ -53,10 +55,17 @@ export function describeStatus(failed: string, status: number, wording: StatusWo
 
 /**
  * One sentence for a failed comment request: what failed, and why when the status says. A muted
- * or banned account is named, since the reader cannot fix that by retrying.
+ * or banned account is named, since the reader cannot fix that by retrying. `author` names the
+ * comment a vote was on, so two failed votes do not read alike.
  */
-export function describeFailure(action: CommentAction, status: number, message = ''): string {
-	const failed = FAILED[action];
+export function describeFailure(
+	action: CommentAction,
+	status: number,
+	message = '',
+	author?: string
+): string {
+	const failed =
+		action === 'vote' && author ? `The vote on ${author}’s comment was not saved` : FAILED[action];
 	let forbidden = 'Only the author can change a comment.';
 	if (/banned/i.test(message)) {
 		forbidden =

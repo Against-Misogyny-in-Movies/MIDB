@@ -55,20 +55,26 @@
 			<CommunityReportsSection kind="tv" tmdbId={series.tmdbId} {reports} />
 		{/key}
 
-		<DddMetricSection {ddd} visibleTags={view.visibleTags}>
-			{#snippet selector()}
-				{#if ddd?.isSeries && series.seasons.length > 0}
-					<DddEpisodeSelector
-						seasons={series.seasons}
-						tags={ddd.tags}
-						selectedSeason={episodes.season}
-						selectedEpisode={episodes.episode}
-						onchange={(season: number | null, episode: number | null) =>
-							episodes.select(season, episode)}
-					/>
-				{/if}
-			{/snippet}
-		</DddMetricSection>
+		{#key series.tmdbId}
+			<DddMetricSection
+				{ddd}
+				visibleTags={view.visibleTags}
+				seasonPicked={episodes.season !== null}
+			>
+				{#snippet selector()}
+					{#if ddd?.isSeries && series.seasons.length > 0}
+						<DddEpisodeSelector
+							seasons={series.seasons}
+							tags={ddd.tags}
+							selectedSeason={episodes.season}
+							selectedEpisode={episodes.episode}
+							onchange={(season: number | null, episode: number | null) =>
+								episodes.select(season, episode)}
+						/>
+					{/if}
+				{/snippet}
+			</DddMetricSection>
+		{/key}
 
 		<CastAndCrew media={series} />
 

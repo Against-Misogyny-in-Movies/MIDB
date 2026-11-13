@@ -21,28 +21,31 @@ beforeEach(() => {
 });
 
 describe('authorizeWrite', () => {
-	it('rate-limits a user, with or without the staff exemption', async () => {
+	it('rate-limits an ordinary user on every bucket', async () => {
 		requireUser.mockResolvedValue(account({}));
 		await authorizeWrite(event, 'RL_CONTENT_REPORT');
-		await authorizeWrite(event, 'RL_CONTENT_REPORT', { staffExempt: true });
+		await authorizeWrite(event, 'RL_COMMENT');
 		expect(rateLimit).toHaveBeenCalledTimes(2);
+		expect(rateLimit).toHaveBeenCalledWith(event, 'RL_COMMENT', { userId: 'u1' });
 	});
 
-	it('skips the rate limit for staff only when the exemption is asked for', async () => {
-		requireUser.mockResolvedValue(account({ role: 'moderator' }));
-		await authorizeWrite(event, 'RL_CONTENT_REPORT', { staffExempt: true });
+	it('skips the rate limit for a moderator and an administrator on every bucket', async () => {
+		for (const role of ['moderator', 'administrator'] as const) {
+			requireUser.mockResolvedValue(account({ role }));
+			await authorizeWrite(event, 'RL_CONTENT_REPORT');
+			await authorizeWrite(event, 'RL_COMMENT');
+			await authorizeWrite(event, 'RL_VOTE');
+		}
 		expect(rateLimit).not.toHaveBeenCalled();
-		await authorizeWrite(event, 'RL_COMMENT');
-		expect(rateLimit).toHaveBeenCalledOnce();
 	});
 
 	it('still refuses a muted staff account', async () => {
 		requireUser.mockResolvedValue(
 			account({ role: 'administrator', mutedUntil: new Date(Date.now() + 60_000) })
 		);
-		await expect(
-			authorizeWrite(event, 'RL_CONTENT_REPORT', { staffExempt: true })
-		).rejects.toMatchObject({ status: 403 });
+		await expect(authorizeWrite(event, 'RL_CONTENT_REPORT')).rejects.toMatchObject({
+			status: 403
+		});
 		expect(rateLimit).not.toHaveBeenCalled();
 	});
 });

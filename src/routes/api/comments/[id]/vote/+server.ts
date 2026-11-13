@@ -10,12 +10,14 @@ import {
 import { removeVote, setVote, type VoteResult } from '#lib/server/data/comment-votes.ts';
 
 function answer(result: VoteResult): Response {
-	if (result.ok) return privateJson({ score: result.score, vote: result.vote });
+	if (result.ok) {
+		return privateJson({ score: result.score, vote: result.vote });
+	}
 	if (result.reason === 'own-comment') error(403, 'A comment cannot be voted on by its author');
 	error(404, 'Comment not found');
 }
 
-/** Sets the reader's vote (+1 or -1). A vote does not purge the list's edge cache. */
+/** Sets the reader's vote (+1 or -1). A vote purges nothing: the voter's score comes back in the response and in the viewer state. */
 export const PUT: RequestHandler = async (event) => {
 	const id = commentIdParam(event.params.id);
 	const user = await authorizeWrite(event, 'RL_VOTE');

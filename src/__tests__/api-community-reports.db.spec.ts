@@ -176,13 +176,13 @@ describe('staff and the write limits', () => {
 });
 
 describe('PUT a report', () => {
-	it('stores the answers, answers the status and purges the counts tag', async () => {
+	it('stores the answers, answers the status and purges the counts tag and the reader’s profile', async () => {
 		const res = await put();
 		expect(res.status).toBe(200);
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		expect(await res.json()).toEqual({ status: 'counted', holdReason: null });
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }]);
+		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }, { tags: ['profile:reader'] }]);
 		expect(await stored()).toMatchObject([
 			{ userId: 'reader', titleId: title.id, sexualPresent: 'present', rapeOnScreen: true }
 		]);
@@ -239,14 +239,14 @@ describe('PUT a report', () => {
 });
 
 describe('DELETE a report', () => {
-	it('withdraws it, answers 204 and purges only when there was one', async () => {
+	it('withdraws it, answers 204 and purges the counts and the profile only when there was one', async () => {
 		await put();
 		purgeCalls.length = 0;
 		const res = await call(reports.DELETE, { method: 'DELETE' });
 		expect(res.status).toBe(204);
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }]);
+		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }, { tags: ['profile:reader'] }]);
 		expect(await stored()).toEqual([]);
 
 		purgeCalls.length = 0;
@@ -286,7 +286,7 @@ describe('GET the public counts', () => {
 		const res = await call(reports.GET, { params: { kind: 'movie', tmdbId: '0348' } });
 		expect(res.headers.get('cache-tag')).toBe('reports:movie:348');
 		await put();
-		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }]);
+		expect(purgeCalls).toEqual([{ tags: ['reports:movie:348'] }, { tags: ['profile:reader'] }]);
 	});
 
 	it('answers the total only below the minimum, then the counts, and never reads the user', async () => {

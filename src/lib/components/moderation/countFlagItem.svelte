@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -6,9 +7,11 @@
 
 	interface Props {
 		flag: FlaggedTitle['flags'][number];
+		/** Whether the acting staff member may close this flag (`canCloseFlag`). */
+		canAct: boolean;
 	}
 
-	let { flag }: Props = $props();
+	let { flag, canAct }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -23,24 +26,33 @@
 
 <li class="flag" tabindex="-1" bind:this={root}>
 	<p class="line">
-		<span class="label">{flag.reporter ?? 'An account'}</span>
+		<span class="label"
+			>Reported by <ProfileLink
+				username={flag.reporter}
+				name={flag.reporter ?? 'An account'}
+			/></span
+		>
 		<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 		{#if flag.note}<span class="note">{flag.note}</span>{/if}
 	</p>
-	<div class="actions">
-		{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
-			<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
-				<input type="hidden" name="id" value={flag.id} />
-				<button
-					class="btn {action.style}"
-					aria-busy={busy === action.name}
-					disabled={busy !== null && busy !== action.name}
-				>
-					{action.label}
-				</button>
-			</form>
-		{/each}
-	</div>
+	{#if canAct}
+		<div class="actions">
+			{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
+				<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
+					<input type="hidden" name="id" value={flag.id} />
+					<button
+						class="btn {action.style}"
+						aria-busy={busy === action.name}
+						disabled={busy !== null && busy !== action.name}
+					>
+						{action.label}
+					</button>
+				</form>
+			{/each}
+		</div>
+	{:else}
+		<p class="label">Another moderator or an administrator closes this flag.</p>
+	{/if}
 </li>
 
 <style lang="postcss">

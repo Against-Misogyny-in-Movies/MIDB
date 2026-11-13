@@ -136,7 +136,11 @@ describe('threading and reply counts', () => {
 		expect(list).toHaveLength(1);
 		expect(list[0].replies.map((r) => r.body)).toEqual(['Reply', 'Deeper']);
 		expect(list[0].replies[0].inReplyTo).toBeNull();
-		expect(list[0].replies[1].inReplyTo).toEqual({ id: reply, displayName: expect.any(String) });
+		expect(list[0].replies[1].inReplyTo).toEqual({
+			id: reply,
+			displayName: expect.any(String),
+			username: null
+		});
 	});
 
 	it('pages roots in newest order and in score order with a cursor', async () => {
@@ -288,6 +292,26 @@ describe('votes', () => {
 		const votes = await db.select().from(commentVotes).where(eq(commentVotes.commentId, id));
 		expect(votes.reduce((sum, v) => sum + v.value, 0)).toBe((await row(id)).score);
 		expect((await row(id)).score).toBe(0);
+	});
+
+	it('gives the viewer state the current scores of the comments the reader voted on, on this title only', async () => {
+		const voted = await published('author', 'Voted');
+		const unvoted = await published('author', 'Not voted');
+		await setVote(voted, 'u1', 1);
+		await setVote(voted, 'u2', 1);
+		await setVote(unvoted, 'u2', 1);
+		const [other] = await db
+			.insert(titles)
+			.values({ kind: 'movie', title: 'Aliens', cleanTitle: 'aliens', tmdbId: 679 })
+			.returning();
+		const [elsewhere] = await db
+			.insert(comments)
+			.values({ titleId: other.id, userId: 'author', body: 'Elsewhere', status: 'published' })
+			.returning();
+		await setVote(elsewhere.id, 'u1', 1);
+		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		expect(state.votes).toEqual({ [voted]: 1 });
+		expect(state.scores).toEqual({ [voted]: 2 });
 	});
 
 	it('refuses a vote on your own comment, on a pending one, and on a missing one', async () => {

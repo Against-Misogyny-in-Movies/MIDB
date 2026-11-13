@@ -43,6 +43,12 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | M2    | Moderation table: AI            | completed | 2026-11-13. The scan and query calls have run only against a mocked SDK (Open items).                             |
 | M3    | Moderation table: UI            | completed | 2026-11-13. Rendered against seeded local data only; the AI controls seen only in their disabled state.           |
 | M4    | Moderation table: docs          | completed | 2026-11-13.                                                                                                       |
+| S1    | Staff powers and rate limits    | completed | 2026-11-13. Moderation rows reviewed from code only, not rendered.                                                |
+| S2    | DDD section starts closed       | completed | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
+| S3    | Snappy comment votes            | completed | 2026-11-13. Not rendered in a browser; voter-fresh scores came after the review round.                            |
+| S4    | Links to a comment              | completed | 2026-11-13. Not rendered in a browser; `e2e-tests/commentLinks.spec.ts` not run (no TMDB token here).             |
+| S5    | Public user profiles            | completed | 2026-11-13. `/u` rendered on seeded local data; moderation name links reviewed from code only.                    |
+| S6    | Letterboxd score                | completed | 2026-11-13. Never run against the real API: no key exists (Open items).                                           |
 
 ## Open items
 
@@ -79,6 +85,11 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Sources:**
   - Write to the Unconsenting Media team (`/contactus`) about the daily `list.json` sync, and ask whether they would add IMDb ids.
 
+- **Letterboxd:**
+  - Test the client against the real API once keys exist; the assumptions are listed in `src/lib/server/integrations/letterboxd.ts`.
+- **Comment links and profiles:**
+  - Run `e2e-tests/commentLinks.spec.ts` once a TMDB token and the preview environment exist, and render a linked comment and the profile name links in moderation in a browser.
+
 ## Standing decisions
 
 - **Hosting:**
@@ -104,6 +115,12 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Moderation table:**
   - Staff get an All comments table on `/user/moderation` with Haiku search (a query becomes filters) and a page scan that stores labels; it covers comments and their reader reports, not community reports (user decision, 2026-11-13).
   - The classifier also tags violence, disparagement and trolling (user decision, 2026-11-13).
+- **Community polish:**
+  - Administrators act on any account and comment, their own and other administrators' included, except muting or banning themselves (user decision, 2026-11-13).
+  - Staff are not rate-limited, except on the AI moderation calls (user decision, 2026-11-13).
+  - Public profiles show avatar, name, join date, staff role, comment score total, published comments and counted community reports (user decision, 2026-11-13).
+  - Votes do not purge the cached comment list; the reader's private viewer state carries current scores for comments they voted on (user decision, 2026-11-13).
+  - Film pages show the Letterboxd average rating from the official API with a secret key, as the only outside rating (user decision, 2026-11-13).
 - **Toolchain:**
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).
   - TypeScript 6.0.3 serves the tooling and TypeScript 7 runs `typecheck`, until svelte-check supports TypeScript 7 (user decision, 2026-11-12).

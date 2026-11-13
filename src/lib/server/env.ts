@@ -8,6 +8,8 @@ import { env as workersEnv } from 'cloudflare:workers';
 export interface Secrets {
 	TMDB_API_TOKEN?: string;
 	DDD_API_KEY?: string;
+	LETTERBOXD_API_KEY?: string;
+	LETTERBOXD_API_SECRET?: string;
 	BETTER_AUTH_SECRET?: string;
 	GOOGLE_CLIENT_ID?: string;
 	GOOGLE_CLIENT_SECRET?: string;

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
 const purgeTitleComments = vi.fn();
+const purgeProfiles = vi.fn();
 const actionsFns = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -40,7 +41,9 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args)
+	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
+	purgeProfile: vi.fn(),
+	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
 }));
 vi.mock('#lib/server/env.ts', () => ({ env: serverEnv }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => actionsFns);
@@ -95,6 +98,7 @@ beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(STAFF);
 	rateLimit.mockReset().mockResolvedValue(undefined);
 	purgeTitleComments.mockReset();
+	purgeProfiles.mockReset();
 	for (const fn of Object.values(actionsFns)) fn.mockReset();
 	for (const fn of Object.values(queue)) fn.mockReset().mockResolvedValue([]);
 	reports.listHeldReports.mockReset().mockResolvedValue([]);
@@ -180,12 +184,21 @@ describe.each(['aiSearch', 'scan', 'bulk'] as const)('?/%s guards', (name) => {
 		expect(actionsFns.approveComment).not.toHaveBeenCalled();
 	});
 
-	it('passes a 429 from the rate limit through before any work', async () => {
-		rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
-		await expect(run(name, FIELDS)).rejects.toMatchObject({ status: 429 });
-		expect(queryToFilters).not.toHaveBeenCalled();
-		expect(scanComments).not.toHaveBeenCalled();
-		expect(actionsFns.approveComment).not.toHaveBeenCalled();
+	it.skipIf(name === 'bulk')(
+		'passes a 429 from the rate limit through before any work',
+		async () => {
+			rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
+			await expect(run(name, FIELDS)).rejects.toMatchObject({ status: 429 });
+			expect(queryToFilters).not.toHaveBeenCalled();
+			expect(scanComments).not.toHaveBeenCalled();
+			expect(actionsFns.approveComment).not.toHaveBeenCalled();
+		}
+	);
+
+	it.skipIf(name !== 'bulk')('applies no rate limit to staff', async () => {
+		actionsFns.approveComment.mockResolvedValue({ ok: true, title: null });
+		await run(name, FIELDS);
+		expect(rateLimit).not.toHaveBeenCalled();
 	});
 });
 
@@ -335,7 +348,7 @@ describe('?/bulk', () => {
 			['ids', 'c4'],
 			['ids', 'c1']
 		]);
-		expect(rateLimit).toHaveBeenCalledWith(expect.anything(), 'RL_MODERATE', { userId: 'mod-1' });
+		expect(rateLimit).not.toHaveBeenCalled();
 		expect(actionsFns.hideComment.mock.calls.map(([, id, reason]) => [id, reason])).toEqual([
 			['c1', 'Off topic'],
 			['c2', 'Off topic'],
@@ -384,6 +397,30 @@ describe('?/bulk', () => {
 		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
 		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
 		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
+	});
+
+	it('purges each author’s profile once, also when a later write throws', async () => {
+		actionsFns.hideComment
+			.mockResolvedValueOnce({ ok: true, title: ALIEN, authorId: 'a1' })
+			.mockResolvedValueOnce({ ok: true, title: ALIEN, authorId: 'a1' })
+			.mockResolvedValueOnce({ ok: true, title: DARK, authorId: 'a2' })
+			.mockRejectedValueOnce(new Error('D1 down'));
+		await expect(run('bulk', [['op', 'hide'], ...ids(4)])).rejects.toThrow('D1 down');
+		expect(purgeProfiles).toHaveBeenCalledOnce();
+		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'a2']);
+	});
+
+	it('also purges the profiles of the authors of the published replies', async () => {
+		actionsFns.hideComment
+			.mockResolvedValueOnce({ ok: true, title: ALIEN, authorId: 'a1', replyAuthorIds: ['r1'] })
+			.mockResolvedValueOnce({
+				ok: true,
+				title: DARK,
+				authorId: 'a2',
+				replyAuthorIds: ['r1', 'r2']
+			});
+		await run('bulk', [['op', 'hide'], ...ids(2)]);
+		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'r1', 'a2', 'r2']);
 	});
 
 	it('purges no title for a comment with none', async () => {

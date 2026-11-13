@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
 const purgeTitleComments = vi.fn();
+const purgeProfiles = vi.fn();
 const queries = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -34,7 +35,8 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args)
+	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
+	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
@@ -90,11 +92,12 @@ beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(MOD);
 	rateLimit.mockReset().mockResolvedValue(undefined);
 	purgeTitleComments.mockReset();
+	purgeProfiles.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	for (const fn of Object.values(reports))
 		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
-	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue(true);
+	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue({ ok: true });
 	reports.listHeldReports.mockResolvedValue([]);
 	reports.listFlaggedTitles.mockResolvedValue([]);
 	reports.getOpenTitle.mockResolvedValue(null);
@@ -149,16 +152,10 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 		expect(rateLimit).not.toHaveBeenCalled();
 	});
 
-	it('calls the guard for staff, without a page redirect, then the rate limit with the user', async () => {
+	it('calls the guard for staff, without a page redirect, and applies no rate limit', async () => {
 		await run(name);
 		expect(requireRole).toHaveBeenCalledWith({}, ['moderator', 'administrator']);
-		expect(rateLimit).toHaveBeenCalledWith(expect.anything(), 'RL_MODERATE', { userId: 'mod-1' });
-	});
-
-	it('answers 429 from the rate limit before any change', async () => {
-		rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
-		await expect(run(name)).rejects.toMatchObject({ status: 429 });
-		for (const fn of allFns()) expect(fn).not.toHaveBeenCalled();
+		expect(rateLimit).not.toHaveBeenCalled();
 	});
 });
 
@@ -207,9 +204,9 @@ describe('community-report actions', () => {
 
 	it('resolve and dismiss close the flag as the acting moderator', async () => {
 		expect(await run('resolveFlag', REPORT_FIELDS)).toEqual({ id: 'f1', done: 'resolveFlag' });
-		expect(flags.resolveCountFlag).toHaveBeenCalledWith('f1', 'mod-1');
+		expect(flags.resolveCountFlag).toHaveBeenCalledWith('f1', MOD);
 		await run('dismissFlag', REPORT_FIELDS);
-		expect(flags.dismissCountFlag).toHaveBeenCalledWith('f1', 'mod-1');
+		expect(flags.dismissCountFlag).toHaveBeenCalledWith('f1', MOD);
 	});
 
 	it('answers 400 when the report is not named', async () => {
@@ -223,8 +220,13 @@ describe('community-report actions', () => {
 			status: 404,
 			data: { id: 'u1:t1' }
 		});
-		flags.resolveCountFlag.mockResolvedValue(false);
+		flags.resolveCountFlag.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		expect(await run('resolveFlag', REPORT_FIELDS)).toMatchObject({ status: 409 });
+		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
+		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({
+			status: 403,
+			data: { error: 'A moderator cannot close their own flag.' }
+		});
 	});
 });
 
@@ -238,11 +240,47 @@ describe('purging', () => {
 		}
 	);
 
+	it.each([
+		['approve', 'approveComment'],
+		['hide', 'hideComment'],
+		['reject', 'rejectComment'],
+		['restore', 'restoreComment'],
+		['dismiss', 'dismissReports']
+	] as const)(
+		'%s purges the author’s public profile when the result names the author',
+		async (name, fn) => {
+			queries[fn].mockResolvedValue({
+				ok: true,
+				title: TITLE,
+				authorId: 'author-1'
+			});
+			await run(name);
+			expect(purgeProfiles).toHaveBeenCalledExactlyOnceWith(['author-1']);
+		}
+	);
+
+	it('purges the profiles of the authors of the published replies with the author’s', async () => {
+		queries.hideComment.mockResolvedValue({
+			ok: true,
+			title: TITLE,
+			authorId: 'author-1',
+			replyAuthorIds: ['replier-1', 'replier-2']
+		});
+		await run('hide');
+		expect(purgeProfiles).toHaveBeenCalledExactlyOnceWith(['author-1', 'replier-1', 'replier-2']);
+	});
+
+	it('a result with no author (a dismiss that restored nothing) purges no profile', async () => {
+		await run('dismiss');
+		expect(purgeProfiles).not.toHaveBeenCalled();
+	});
+
 	it('a refused action purges nothing and says why', async () => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		const result = await run('approve');
 		expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
 		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 
 	it('mute and ban touch no list', async () => {

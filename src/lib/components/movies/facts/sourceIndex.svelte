@@ -10,22 +10,33 @@
 	const ICON = {
 		bechdel: { icon: 'ri-chat-3-fill', hue: 'var(--src-bechdel)' },
 		um: { icon: 'ri-flag-2-fill', hue: 'var(--src-um)' },
-		ddd: { icon: 'ri-alarm-warning-fill', hue: 'var(--src-ddd)' }
+		ddd: { icon: 'ri-alarm-warning-fill', hue: 'var(--src-ddd)' },
+		letterboxd: { icon: 'ri-star-fill', hue: 'var(--src-letterboxd)' }
 	} as const;
 </script>
 
-<!-- Fixed three columns (one row each on phones), so the DDD value streaming in replaces
-     "Loading…" in place without moving anything. -->
-<ul class="source-index" aria-label="Sources">
+<!-- Fixed columns (one row each on phones), so a streamed value replaces "Loading…" in place
+     without moving anything. A film with the Letterboxd keys set has a fourth column. -->
+<ul class="source-index" class:source-index--four={items.length > 3} aria-label="Sources">
 	{#each items as item (item.label)}
 		{@const meta = ICON[item.source]}
 		<li>
-			<svelte:element this={item.href ? 'a' : 'span'} class="item" href={item.href ?? undefined}>
+			<svelte:element
+				this={item.href ? 'a' : 'span'}
+				class="item"
+				href={item.href ?? undefined}
+				target={item.external ? '_blank' : undefined}
+				rel={item.external ? 'noopener noreferrer' : undefined}
+				aria-label={item.href ? item.ariaLabel : undefined}
+			>
 				<i class={meta.icon} style="--hue: {meta.hue}" aria-hidden="true"></i>
 				<span class="text">
 					<span class="name">{item.label}</span>
 					<span class="value" class:value--empty={!item.hasData} aria-busy={item.busy || undefined}
-						>{item.value}</span
+						>{item.value}{#if item.external}<i
+								class="ri-external-link-line external"
+								aria-hidden="true"
+							></i>{/if}</span
 					>
 				</span>
 			</svelte:element>
@@ -46,6 +57,16 @@
 		.source-index {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
 		}
+
+		.source-index--four {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 900px) {
+		.source-index--four {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
 	}
 
 	.item {
@@ -53,10 +74,18 @@
 		gap: 10px;
 	}
 
-	i {
+	i:not(.external) {
 		@apply shrink-0;
 		font-size: 1rem;
 		color: var(--hue);
+	}
+
+	.external {
+		margin-inline-start: 4px;
+		font-size: 0.875rem;
+		font-weight: 400;
+		color: var(--ink-muted);
+		vertical-align: -1px;
 	}
 
 	.text {

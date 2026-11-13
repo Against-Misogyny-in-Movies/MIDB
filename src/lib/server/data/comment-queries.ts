@@ -7,11 +7,14 @@ import { titles } from '#db/schema/titles.ts';
 import type {
 	CommentList,
 	CommentSort,
+	CommentThread,
 	CommentView,
 	OwnComment,
 	ViewerCommentState
 } from '#lib/media/types/comments.ts';
+import { isStaff } from '#lib/media/utils/staff.ts';
 import { decideStatus } from '#lib/server/moderation/decide.ts';
+import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { activeMute } from './mute.ts';
 import { toPublicUser } from './user-queries.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
@@ -31,15 +34,18 @@ export const COMMENT_PAGE_SIZE = 20;
 /** Published comments, plus any other one that still has published replies (shown as a placeholder). */
 const shown = or(eq(comments.status, 'published'), gt(comments.replyCount, 0));
 
-type CursorParts = { score: number | null; createdAt: number; id: string };
+export type CursorParts = { score: number | null; createdAt: number; id: string };
 
-function encodeCursor(row: CommentRow, sort: CommentSort): string {
+export function encodeCursor(row: CommentRow, sort: CommentSort): string {
 	const time = row.createdAt.getTime();
 	return sort === 'top' ? `${row.score}.${time}.${row.id}` : `${time}.${row.id}`;
 }
 
 /** Null for a cursor that is not one this module made, which reads as the first page. */
-function decodeCursor(cursor: string | null | undefined, sort: CommentSort): CursorParts | null {
+export function decodeCursor(
+	cursor: string | null | undefined,
+	sort: CommentSort
+): CursorParts | null {
 	if (!cursor) return null;
 	const match =
 		sort === 'top' ? /^(-?\d+)\.(\d+)\.([\w-]+)$/.exec(cursor) : /^()(\d+)\.([\w-]+)$/.exec(cursor);
@@ -50,7 +56,7 @@ function decodeCursor(cursor: string | null | undefined, sort: CommentSort): Cur
 	return { score: sort === 'top' ? Number(match[1]) : null, createdAt, id: match[3] };
 }
 
-function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {
+export function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {
 	const at = new Date(cursor.createdAt);
 	const older = or(
 		lt(comments.createdAt, at),
@@ -62,12 +68,14 @@ function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {
 
 type ListedRow = { comment: CommentRow; author: typeof users.$inferSelect };
 
+/** `open` shows a comment that is not published as it is, for the reader allowed to see it. */
 function toView(
 	{ comment, author }: ListedRow,
 	authors: Map<string, ListedRow>,
-	replies: CommentView[] = []
+	replies: CommentView[] = [],
+	open = false
 ): CommentView {
-	const removed = comment.status !== 'published';
+	const removed = !open && comment.status !== 'published';
 	const parent =
 		comment.parentId && comment.parentId !== comment.rootId ? authors.get(comment.parentId) : null;
 	return {
@@ -76,7 +84,11 @@ function toView(
 		rootId: comment.rootId,
 		inReplyTo:
 			parent && parent.comment.status === 'published'
-				? { id: parent.comment.id, displayName: toPublicUser(parent.author).displayName }
+				? {
+						id: parent.comment.id,
+						displayName: toPublicUser(parent.author).displayName,
+						username: parent.author.username
+					}
 				: null,
 		removed,
 		body: removed ? null : comment.body,
@@ -156,6 +168,55 @@ export async function listTitleComments(
 	};
 }
 
+/**
+ * The thread of one comment, for a link to it: its root and the root's published replies,
+ * oldest first. The linked comment itself is returned whatever its status when the reader is
+ * its author or staff, with its status in `review`, and the thread names its title (`kind`, `tmdbId`); otherwise, or when it does not exist,
+ * the answer is null, so a hidden or pending comment's existence is not revealed. An
+ * unpublished root around a published reply is a placeholder, as in the list. Read-only.
+ */
+export async function getCommentThread(
+	id: string,
+	viewer: { id: string; role: string } | null
+): Promise<CommentThread | null> {
+	const [target] = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+	if (!target) return null;
+	const allowed = viewer !== null && (isStaff(viewer.role) || viewer.id === target.userId);
+	if (target.status !== 'published' && !allowed) return null;
+
+	const rootId = target.rootId ?? target.id;
+	const rows = await db
+		.select({ comment: comments, author: users })
+		.from(comments)
+		.innerJoin(users, eq(comments.userId, users.id))
+		.where(or(eq(comments.id, rootId), eq(comments.rootId, rootId)))
+		.orderBy(asc(comments.createdAt), asc(comments.id));
+	const rootRow = rows.find((r) => r.comment.id === rootId);
+	if (!rootRow) return null;
+	const [title] = await db
+		.select({ kind: titles.kind, tmdbId: titles.tmdbId })
+		.from(titles)
+		.where(eq(titles.id, target.titleId))
+		.limit(1);
+	if (!title || title.tmdbId === null) return null;
+
+	const byId = new Map(rows.map((r) => [r.comment.id, r]));
+	const replies = rows
+		.filter(
+			(r) => r.comment.id !== rootId && (r.comment.status === 'published' || r.comment.id === id)
+		)
+		.map((r) => toView(r, byId, [], r.comment.id === id));
+	return {
+		kind: title.kind,
+		tmdbId: title.tmdbId,
+		root: toView(rootRow, byId, replies, rootRow.comment.id === id),
+		review:
+			target.status === 'published'
+				? null
+				: { status: target.status, reason: target.moderationReason }
+	};
+}
+
 export function toOwnComment(row: CommentRow): OwnComment {
 	return {
 		id: row.id,
@@ -173,7 +234,8 @@ export function toOwnComment(row: CommentRow): OwnComment {
 }
 
 /**
- * What only the signed-in reader sees on a title: their votes on its comments and their own
+ * What only the signed-in reader sees on a title: their votes on its comments with those
+ * comments' current scores (the cached list trails them), and their own
  * pending and rejected comments (the public list leaves those out). Never cached.
  */
 export async function getViewerCommentState(
@@ -183,7 +245,11 @@ export async function getViewerCommentState(
 	const userId = user.id;
 	const [votes, own] = await Promise.all([
 		db
-			.select({ commentId: commentVotes.commentId, value: commentVotes.value })
+			.select({
+				commentId: commentVotes.commentId,
+				value: commentVotes.value,
+				score: comments.score
+			})
 			.from(commentVotes)
 			.innerJoin(comments, eq(commentVotes.commentId, comments.id))
 			.where(and(eq(commentVotes.userId, userId), eq(comments.titleId, titleId))),
@@ -201,6 +267,7 @@ export async function getViewerCommentState(
 	]);
 	return {
 		votes: Object.fromEntries(votes.map((v) => [v.commentId, v.value === 1 ? 1 : -1])),
+		scores: Object.fromEntries(votes.map((v) => [v.commentId, v.score])),
 		comments: own.map(toOwnComment),
 		mutedUntil: activeMute(user.mutedUntil)
 	};
@@ -233,7 +300,13 @@ export async function getCommentWithTitle(id: string): Promise<CommentWithTitle 
 
 type WriteFailure = 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict';
 export type CommentWrite =
-	| { ok: true; comment: OwnComment; title: CommentWithTitle['title'] }
+	| {
+			ok: true;
+			comment: OwnComment;
+			title: CommentWithTitle['title'];
+			/** An edit that moved the comment into or out of `published`: the authors of its published replies. */
+			replyAuthorIds?: string[];
+	  }
 	| { ok: false; reason: WriteFailure };
 
 /**
@@ -324,6 +397,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		kind: title.kind,
 		parentBody
 	});
+	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, decision.status);
 	const moved = await runMove(
 		statusMove(comment.id, comment.status, decision.status, {
 			body,
@@ -335,7 +409,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 	);
 	if (!moved) return { ok: false, reason: 'conflict' };
 	const [stored] = await db.select().from(comments).where(eq(comments.id, id));
-	return { ok: true, comment: toOwnComment(stored), title };
+	return { ok: true, comment: toOwnComment(stored), title, replyAuthorIds };
 }
 
 /**
@@ -346,12 +420,16 @@ export async function editComment(id: string, userId: string, body: string): Pro
 export async function softDeleteComment(
 	id: string,
 	userId: string
-): Promise<{ ok: true; title: CommentWithTitle['title'] } | { ok: false; reason: WriteFailure }> {
+): Promise<
+	| { ok: true; title: CommentWithTitle['title']; replyAuthorIds: string[] }
+	| { ok: false; reason: WriteFailure }
+> {
 	const found = await getCommentWithTitle(id);
 	if (!found || found.comment.status === 'deleted') return { ok: false, reason: 'not-found' };
 	if (found.comment.userId !== userId) return { ok: false, reason: 'forbidden' };
+	const replyAuthorIds = await replyAuthorsAffected(id, found.comment.status, 'deleted');
 	if (!(await runMove(statusMove(id, found.comment.status, 'deleted')))) {
 		return { ok: false, reason: 'conflict' };
 	}
-	return { ok: true, title: found.title };
+	return { ok: true, title: found.title, replyAuthorIds };
 }

@@ -16,8 +16,11 @@ const scoreFromVotes = (commentId: string) =>
 		})
 		.where(eq(comments.id, commentId));
 
-/** Only a published comment of someone else's can be voted on. */
-async function votable(commentId: string, userId: string): Promise<VoteResult | null> {
+/** Only a published comment of someone else's can be voted on. Returns the refusal, or null. */
+async function votable(
+	commentId: string,
+	userId: string
+): Promise<Extract<VoteResult, { ok: false }> | null> {
 	const [row] = await db
 		.select({ userId: comments.userId, status: comments.status })
 		.from(comments)
@@ -31,15 +34,16 @@ async function votable(commentId: string, userId: string): Promise<VoteResult | 
  * Sets the reader's vote on a comment (+1 or -1; a repeated or changed vote rewrites the row).
  * The vote row and the score are one `db.batch`, and the score is recomputed from the votes
  * rather than nudged by a delta, so a repeat, a flip or a concurrent vote cannot leave it wrong.
- * Votes do not bump `updated_at` and do not purge the list's edge cache (`PUBLIC_COMMENTS`).
+ * Votes do not bump `updated_at` and purge nothing: the cached list trails the score, and the
+ * voter's own reload shows it through the viewer state (`getViewerCommentState`).
  */
 export async function setVote(
 	commentId: string,
 	userId: string,
 	value: 1 | -1
 ): Promise<VoteResult> {
-	const refused = await votable(commentId, userId);
-	if (refused) return refused;
+	const found = await votable(commentId, userId);
+	if (found) return found;
 	const [, , [row]] = await db.batch([
 		db
 			.insert(commentVotes)
@@ -56,8 +60,8 @@ export async function setVote(
 
 /** Removes the reader's vote, if any. */
 export async function removeVote(commentId: string, userId: string): Promise<VoteResult> {
-	const refused = await votable(commentId, userId);
-	if (refused) return refused;
+	const found = await votable(commentId, userId);
+	if (found) return found;
 	const [, , [row]] = await db.batch([
 		db
 			.delete(commentVotes)

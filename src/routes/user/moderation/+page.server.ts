@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import { purgeTitleComments } from '#lib/server/http/purge-title.ts';
+import { purgeProfiles, purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import { act, text, type ActionEvent, type Outcome } from '#lib/server/http/moderation-action.ts';
 import { env } from '#lib/server/env.ts';
 import {
@@ -22,8 +22,7 @@ import {
 import {
 	approveReport,
 	rejectAccountReports,
-	rejectReport,
-	type ReportModerationResult
+	rejectReport
 } from '#lib/server/data/community-report-moderation.ts';
 import {
 	getOpenTitle,
@@ -34,7 +33,11 @@ import { listModerationTable } from '#lib/server/data/moderation-table.ts';
 import { listScanItems, saveScanLabels } from '#lib/server/data/comment-ai-labels.ts';
 import { queryToFilters } from '#lib/server/moderation/search-filters.ts';
 import { scanComments } from '#lib/server/moderation/scan.ts';
-import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
+import {
+	dismissCountFlag,
+	resolveCountFlag,
+	type FlagCloseResult
+} from '#lib/server/data/count-flags.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import {
 	AI_QUERY_MAX,
@@ -90,7 +93,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	};
 };
 
-/** A comment action answers for the comment row, or for the account row when it names only an account. */
+/**
+ * A comment action answers for the comment row, or for the account row when it names only an
+ * account.
+ */
 const commentKey = (data: FormData) => text(data, 'id') ?? text(data, 'userId');
 const accountKey = (data: FormData) => text(data, 'userId');
 const flagKey = (data: FormData) => text(data, 'id');
@@ -100,14 +106,21 @@ const reportKey = (data: FormData) => {
 	return userId && titleId ? `${userId}:${titleId}` : null;
 };
 
-/** A comment action's title list is purged once it succeeds; a user action has no title. */
+/**
+ * A comment action's title list is purged once it succeeds, and so are its author's profile and
+ * those of its published replies when the action changed what they show; a user action has no
+ * title (mute and ban purge the profile themselves).
+ */
 const purgeComments = (result: Extract<Outcome, { ok: true }>) => {
 	if ('title' in result && result.title) purgeTitleComments(result.title);
+	if ('authorId' in result && result.authorId) {
+		purgeProfiles([result.authorId, ...(result.replyAuthorIds ?? [])]);
+	}
 };
 
 /** A closed flag changes no counts, so it names no title; a flag that was not open is refused. */
-const flagResult = (closed: boolean): ReportModerationResult =>
-	closed ? { ok: true, titles: [] } : { ok: false, reason: 'invalid-state' };
+const flagResult = (closed: FlagCloseResult): Outcome =>
+	closed.ok ? { ok: true, titles: [] } : closed;
 
 /** A reason for a hide or a reject, cut to the limit the author's page shows. */
 const reasonOf = (data: FormData) => text(data, 'reason')?.slice(0, MODERATION_REASON_MAX) ?? null;
@@ -142,9 +155,10 @@ function pageIds(data: FormData): string[] | null {
 
 /**
  * Applies one operation to each comment in turn. Each function checks the comment's state and
- * the author's standing itself, so a refusal costs only its own comment. Every title touched is
- * purged once, however many of its comments changed, and also when a later write throws: the
- * changes already made are public by then.
+ * the author's standing itself, so a refusal costs only its own comment. Every title touched and
+ * every profile (the authors' and those of their published replies) is purged once, however many
+ * comments changed, and also when a later write throws: the changes already made are public by
+ * then.
  */
 function bulk(event: ActionEvent) {
 	return act(
@@ -160,6 +174,7 @@ function bulk(event: ActionEvent) {
 				string,
 				NonNullable<Extract<ModerationResult, { ok: true }>['title']>
 			>();
+			const authors = new Set<string>();
 			let applied = 0;
 			try {
 				for (const id of ids) {
@@ -167,9 +182,12 @@ function bulk(event: ActionEvent) {
 					if (!result.ok) continue;
 					applied += 1;
 					if (result.title) touched.set(result.title.id, result.title);
+					if (result.authorId) authors.add(result.authorId);
+					for (const id of result.replyAuthorIds ?? []) authors.add(id);
 				}
 			} finally {
 				for (const title of touched.values()) purgeTitleComments(title);
+				purgeProfiles(authors);
 			}
 			if (applied === 0) return { ok: false, reason: 'bulk-unchanged' };
 			return { ok: true, extra: { op, applied, refused: ids.length - applied } };
@@ -297,10 +315,10 @@ export const actions: Actions = {
 		),
 	resolveFlag: (event) =>
 		act(event, 'resolveFlag', flagKey, async (staff, data) =>
-			flagResult(await resolveCountFlag(text(data, 'id') ?? '', staff.id))
+			flagResult(await resolveCountFlag(text(data, 'id') ?? '', staff))
 		),
 	dismissFlag: (event) =>
 		act(event, 'dismissFlag', flagKey, async (staff, data) =>
-			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff.id))
+			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff))
 		)
 };

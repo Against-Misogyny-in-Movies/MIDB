@@ -1,12 +1,31 @@
 import { describe, expect, test } from 'vitest';
+import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
 import { sourceIndex } from '#lib/media/utils/sourceIndex.ts';
+
+const tag = (season: number | null): TriggerTag => ({
+	topicItemId: 1,
+	topicId: 1,
+	doesName: 'a dog dies',
+	yesSum: 5,
+	noSum: 1,
+	comment: null,
+	category: 'Animals',
+	season,
+	episode: season === null ? null : 1
+});
+const entry = (tags: TriggerTag[], itemId: number | null = 1): DddResult => ({
+	itemId,
+	tags,
+	isSeries: false
+});
 
 const base = {
 	kind: 'movie' as const,
 	bechdelRating: null,
 	umConcerns: null,
 	umCandidateCount: 0,
-	dddTagCount: 0
+	ddd: entry([], null),
+	dddVisibleCount: 0
 };
 
 describe('sourceIndex', () => {
@@ -15,7 +34,8 @@ describe('sourceIndex', () => {
 			...base,
 			bechdelRating: 3,
 			umConcerns: 1,
-			dddTagCount: 4
+			ddd: entry([tag(null)]),
+			dddVisibleCount: 4
 		});
 		expect(bechdel).toMatchObject({ value: '3/3', href: '#bechdel', hasData: true });
 		expect(um).toMatchObject({ value: '1 concern', href: '#unconsenting', hasData: true });
@@ -42,7 +62,27 @@ describe('sourceIndex', () => {
 	});
 
 	test('DDD still streaming', () => {
-		const [, , ddd] = sourceIndex({ ...base, dddTagCount: null });
+		const [, , ddd] = sourceIndex({ ...base, ddd: null });
 		expect(ddd).toMatchObject({ value: 'Loading…', busy: true, hasData: false });
+	});
+
+	test('DDD entry with no warnings reads "No warnings"', () => {
+		const [, , ddd] = sourceIndex({ ...base, ddd: entry([]) });
+		expect(ddd).toMatchObject({ value: 'No warnings', hasData: false, busy: false });
+	});
+
+	test('DDD series with a season picked and no warnings reads "No warnings"', () => {
+		const [, , ddd] = sourceIndex({
+			...base,
+			ddd: entry([tag(2)]),
+			dddVisibleCount: 0,
+			dddSeasonPicked: true
+		});
+		expect(ddd).toMatchObject({ value: 'No warnings', hasData: false });
+	});
+
+	test('DDD series with warnings only on episodes reads "Warnings by episode"', () => {
+		const [, , ddd] = sourceIndex({ ...base, ddd: entry([tag(2)]), dddVisibleCount: 0 });
+		expect(ddd).toMatchObject({ value: 'Warnings by episode', hasData: true });
 	});
 });

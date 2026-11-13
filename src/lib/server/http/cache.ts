@@ -64,8 +64,8 @@ export const PUBLIC_IMAGE = { 'cache-control': 'public, max-age=2592000' };
  * revalidates; the edge keeps the list for ten minutes and serves it stale for a minute while it
  * refreshes. The response also carries `Cache-Tag: comments:<kind>:<tmdbId>` (`commentsHeaders`),
  * and every comment write or moderation action purges that tag (`purgeTitleComments`), so the
- * list trails a write by at most the purge. Votes do not purge, so a score can trail by up to
- * one TTL.
+ * list trails a write by at most the purge. A vote purges nothing: the list's scores trail by the
+ * edge TTL, and the signed-in voter sees current ones through the viewer state.
  */
 export const PUBLIC_COMMENTS = {
 	'cache-control': 'public, max-age=0',
@@ -113,3 +113,17 @@ export const communityReportsHeaders = (
 	kind: string,
 	tmdbId: number | string
 ): Record<string, string> => titleHeaders(PUBLIC_COMMUNITY_REPORTS, 'reports', kind, tmdbId);
+
+/** The cache tag shared by one account's public profile page and its comment pages. */
+export const profileTag = (userId: string): string => `profile:${userId}`;
+
+/**
+ * `PUBLIC_PAGE` plus the account's `Cache-Tag`, for the public profile page and its comment
+ * pages. Comment writes and moderation, a username or avatar change, a community report that
+ * counts or is rejected, and a mute or ban purge the tag (`purgeProfile`). A vote does not, so
+ * the score total and each comment's score trail by up to one TTL.
+ */
+export const profileHeaders = (userId: string): Record<string, string> => ({
+	...PUBLIC_PAGE,
+	'cache-tag': profileTag(userId)
+});

@@ -77,7 +77,7 @@ function mount(fetcher: ReturnType<typeof api>) {
 }
 
 const viewer = (state: Partial<ViewerCommentState> = {}): Handler => {
-	return () => json({ votes: {}, comments: [], mutedUntil: null, ...state });
+	return () => json({ votes: {}, scores: {}, comments: [], mutedUntil: null, ...state });
 };
 
 const list = (comments: CommentView[], nextCursor: string | null = null): Handler => {

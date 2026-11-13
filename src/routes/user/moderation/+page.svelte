@@ -5,7 +5,6 @@
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
-	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
@@ -166,7 +165,7 @@
 		{:else}
 			<ul class="card list">
 				{#each items as item (item.comment.id)}
-					<ModerationItemRow {item} canActOnAuthor={canActOn(data.me, item.author)} />
+					<ModerationItemRow {item} me={data.me} />
 				{/each}
 			</ul>
 		{/if}

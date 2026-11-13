@@ -28,3 +28,37 @@ export function seedTitle(kind: 'movie' | 'tv', tmdbId: number, title: string): 
 export function makeModerator(username: string): void {
 	d1(`UPDATE user SET role = 'moderator' WHERE username = '${username.replace(/'/g, "''")}'`);
 }
+
+export interface SeededComment {
+	id: string;
+	body: string;
+	status?: 'published' | 'pending' | 'hidden' | 'rejected' | 'deleted';
+	score?: number;
+}
+
+/**
+ * Inserts root comments by an existing account on a seeded title, in the given status, with no
+ * moderation. `removeSeededComments` takes them out again by id prefix.
+ */
+export function seedComments(
+	kind: 'movie' | 'tv',
+	tmdbId: number,
+	username: string,
+	rows: SeededComment[]
+): void {
+	const quote = (value: string) => `'${value.replace(/'/g, "''")}'`;
+	for (const { id, body, status = 'published', score = 0 } of rows) {
+		d1(
+			`INSERT INTO comments (id, title_id, user_id, body, status, score, created_at, updated_at)
+			 SELECT ${quote(id)}, titles.id, user.id, ${quote(body)}, '${status}', ${score},
+			        unixepoch() * 1000, unixepoch() * 1000
+			 FROM titles, user
+			 WHERE titles.kind = '${kind}' AND titles.tmdb_id = ${tmdbId} AND user.username = ${quote(username)}`
+		);
+	}
+}
+
+/** Deletes the comments whose id starts with `prefix`. */
+export function removeSeededComments(prefix: string): void {
+	d1(`DELETE FROM comments WHERE id LIKE '${prefix.replace(/'/g, "''")}%'`);
+}

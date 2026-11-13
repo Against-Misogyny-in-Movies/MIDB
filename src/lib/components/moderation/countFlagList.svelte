@@ -1,17 +1,20 @@
 <script lang="ts">
 	import CountFlagItem from '#lib/components/moderation/countFlagItem.svelte';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
+	import { canCloseFlag } from '#lib/media/utils/canActOn.ts';
 
 	interface Props {
 		flags: FlaggedTitle['flags'];
+		/** The acting staff member, whose role decides which flags the buttons offer (a moderator's own gets none). */
+		me: { id: string; role: string };
 	}
 
-	let { flags }: Props = $props();
+	let { flags, me }: Props = $props();
 </script>
 
 <ul class="flags">
 	{#each flags as flag (flag.id)}
-		<CountFlagItem {flag} />
+		<CountFlagItem {flag} canAct={canCloseFlag(me, flag.reporterId)} />
 	{/each}
 </ul>
 

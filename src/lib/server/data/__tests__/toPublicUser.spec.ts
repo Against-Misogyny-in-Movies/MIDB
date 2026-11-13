@@ -4,7 +4,7 @@ import type { UserRow } from '#lib/server/data/user-queries.ts';
 // toPublicUser is pure; stub the DB client so importing the module opens no connection.
 vi.mock('#lib/server/db.ts', () => ({ db: {} }));
 
-const { toPublicUser } = await import('#lib/server/data/user-queries.ts');
+const { displayNameOf, toPublicUser } = await import('#lib/server/data/user-queries.ts');
 
 function row(overrides: Partial<UserRow> = {}): UserRow {
 	return {
@@ -53,5 +53,15 @@ describe('toPublicUser', () => {
 		const pub = toPublicUser(row({ username: null, email: 'abc-123@users.invalid' }));
 		expect(pub.displayName).toBe('Account');
 		expect(JSON.stringify(pub)).not.toMatch(/abc-123|invalid/);
+	});
+});
+
+describe('displayNameOf', () => {
+	it('is the username, and "Account" for none, which toPublicUser shares', () => {
+		expect(displayNameOf('mary')).toBe('mary');
+		expect(displayNameOf(null)).toBe('Account');
+		expect(displayNameOf(undefined)).toBe('Account');
+		expect(displayNameOf('')).toBe('Account');
+		expect(toPublicUser(row({ username: null })).displayName).toBe(displayNameOf(null));
 	});
 });

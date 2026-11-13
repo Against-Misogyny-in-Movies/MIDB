@@ -1,21 +1,20 @@
 import { eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
+import { canActOn, type TargetAction } from '#lib/media/utils/canActOn.ts';
 import type { UserRow } from './user-queries.ts';
 
 /**
- * A moderator may act on an ordinary account; only an administrator may act on a moderator; no
- * one acts on an administrator or on themselves. It returns the target account, or why the
- * actor may not act on it.
+ * The target account when the actor may act on it (`canActOn`: an administrator on any account,
+ * a moderator on ordinary accounts only; no one mutes or bans themselves), otherwise why not.
+ * `action` is `restrict` for a mute or a ban.
  */
 export async function targetAllowed(
 	actor: UserRow,
-	targetId: string
+	targetId: string,
+	action: TargetAction = 'moderate'
 ): Promise<UserRow | 'not-found' | 'forbidden-target'> {
-	if (actor.id === targetId) return 'forbidden-target';
 	const [target] = await db.select().from(users).where(eq(users.id, targetId));
 	if (!target) return 'not-found';
-	if (target.role === 'administrator') return 'forbidden-target';
-	if (target.role === 'moderator' && actor.role !== 'administrator') return 'forbidden-target';
-	return target;
+	return canActOn(actor, target, action) ? target : 'forbidden-target';
 }

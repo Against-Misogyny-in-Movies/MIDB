@@ -1,8 +1,8 @@
-import type { CommentView, OwnComment } from '#lib/media/types/comments.ts';
+import type { CommentStatus, CommentView, OwnComment } from '#lib/media/types/comments.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 
-/** What an author's own unpublished comment shows: its state and, once rejected, the reason. */
-export type ReviewState = { status: 'pending' | 'rejected'; reason: string | null };
+/** What an unpublished comment shows its author and staff: its status and the moderation reason. */
+export type ReviewState = { status: Exclude<CommentStatus, 'published'>; reason: string | null };
 
 /** A comment as the section draws it: the public view, plus the review state on the reader's own. */
 export type ShownComment = Omit<CommentView, 'replies'> & { review: ReviewState | null };
@@ -15,14 +15,18 @@ const asShown = (view: CommentView): ShownComment => {
 	return { ...rest, review: null };
 };
 
-function ownAsShown(own: OwnComment, me: PublicUser, names: Map<string, string>): ShownComment {
+type Name = { displayName: string; username: string | null };
+
+const nameOf = ({ displayName, username }: PublicUser): Name => ({ displayName, username });
+
+function ownAsShown(own: OwnComment, me: PublicUser, names: Map<string, Name>): ShownComment {
 	const answered = own.parentId && own.parentId !== own.rootId ? own.parentId : null;
 	const name = answered ? names.get(answered) : undefined;
 	return {
 		id: own.id,
 		parentId: own.parentId,
 		rootId: own.rootId,
-		inReplyTo: answered && name ? { id: answered, displayName: name } : null,
+		inReplyTo: answered && name ? { id: answered, ...name } : null,
 		removed: false,
 		body: own.body,
 		author: me,
@@ -61,11 +65,11 @@ export function buildThreads(
 		return list.map((root) => ({ root: asShown(root), replies: root.replies.map(asShown) }));
 	}
 
-	const names = new Map<string, string>();
+	const names = new Map<string, Name>();
 	for (const view of list) {
-		if (view.author) names.set(view.id, view.author.displayName);
+		if (view.author) names.set(view.id, nameOf(view.author));
 		for (const reply of view.replies) {
-			if (reply.author) names.set(reply.id, reply.author.displayName);
+			if (reply.author) names.set(reply.id, nameOf(reply.author));
 		}
 	}
 	const ownById = new Map(own.map((c) => [c.id, ownAsShown(c, me, names)]));
@@ -93,4 +97,11 @@ export function buildThreads(
 		else strays.push({ root: reply, replies: [] });
 	}
 	return [...ownRoots.map((root) => byRoot.get(root.id) as Thread), ...strays, ...threads];
+}
+
+/** Marks the comment `id` in `threads` as unpublished, for a linked comment only its author or staff can read. */
+export function withReview(threads: Thread[], id: string, review: ReviewState | null): Thread[] {
+	if (!review) return threads;
+	const mark = (c: ShownComment): ShownComment => (c.id === id && !c.review ? { ...c, review } : c);
+	return threads.map((t) => ({ root: mark(t.root), replies: t.replies.map(mark) }));
 }

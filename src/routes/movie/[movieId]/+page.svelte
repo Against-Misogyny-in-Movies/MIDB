@@ -89,7 +89,9 @@
 			<CommunityReportsSection kind="movie" tmdbId={movie.tmdbId} {reports} />
 		{/key}
 
-		<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} />
+		{#key movie.tmdbId}
+			<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} />
+		{/key}
 
 		<CastAndCrew media={movie} />
 

@@ -1,16 +1,31 @@
 /**
- * Whether a moderator can mute, ban or reject the reports of an account. An administrator acts
- * on moderators too; nobody acts on an administrator or on themselves
- * (`targetAllowed`, `docs/architecture.md`, Comments). The server decides; this only hides
- * the controls that would be refused.
+ * What an actor does to an account: `moderate` acts on its comments, reports and flags;
+ * `restrict` mutes or bans it.
+ */
+export type TargetAction = 'moderate' | 'restrict';
+
+/**
+ * Whether a staff member may act on an account. An administrator may act on any account,
+ * administrators and themselves included, except that they cannot mute or ban themselves. A
+ * moderator may act on an ordinary account only: not on themselves, an administrator or another
+ * moderator. The server decides (`targetAllowed`, `docs/architecture.md`, Comments); this is the
+ * one rule it and the pages share, so a control the server would refuse stays hidden.
  */
 export function canActOn(
 	me: { id: string; role: string },
-	target: { id: string; role: string }
+	target: { id: string; role: string },
+	action: TargetAction = 'moderate'
 ): boolean {
-	return (
-		target.id !== me.id &&
-		target.role !== 'administrator' &&
-		(target.role !== 'moderator' || me.role === 'administrator')
-	);
+	if (me.role === 'administrator') return !(action === 'restrict' && target.id === me.id);
+	return target.id !== me.id && target.role === 'user';
+}
+
+/**
+ * Whether a staff member may close a "Counts look wrong" flag raised by `reporterId`. An
+ * administrator may close any flag; a moderator any but their own. The server decides
+ * (`closeFlag`, `docs/architecture.md`, Comments), and the flag list hides the buttons it would
+ * refuse.
+ */
+export function canCloseFlag(me: { id: string; role: string }, reporterId: string): boolean {
+	return me.role === 'administrator' || reporterId !== me.id;
 }

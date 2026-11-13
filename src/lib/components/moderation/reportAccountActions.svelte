@@ -5,11 +5,13 @@
 
 	interface Props {
 		account: ReportAccount;
-		/** False for an account the acting moderator cannot mute, ban or reject (`canActOn`). */
+		/** False for an account the acting staff member cannot reject reports of (`canActOn`). */
 		canAct: boolean;
+		/** False for an account they cannot mute or ban (`canActOn` with `restrict`). */
+		canRestrict: boolean;
 	}
 
-	let { account, canAct }: Props = $props();
+	let { account, canAct, canRestrict }: Props = $props();
 
 	type Panel = 'mute' | 'ban' | 'rejectAll';
 	let panel = $state<Panel | null>(null);
@@ -25,11 +27,11 @@
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 </script>
 
-{#if canAct}
+{#if (canAct && account.reportCount > 0) || canRestrict}
 	<div class="account" bind:this={root} tabindex="-1">
 		<p class="label">Account</p>
 		<div class="actions">
-			{#if account.reportCount > 0}
+			{#if canAct && account.reportCount > 0}
 				<button
 					class="btn btn--ghost"
 					type="button"
@@ -37,18 +39,20 @@
 					onclick={() => toggle('rejectAll')}>Reject all from this account</button
 				>
 			{/if}
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'mute'}
-				onclick={() => toggle('mute')}>Mute account</button
-			>
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'ban'}
-				onclick={() => toggle('ban')}>Ban account</button
-			>
+			{#if canRestrict}
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'mute'}
+					onclick={() => toggle('mute')}>Mute account</button
+				>
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'ban'}
+					onclick={() => toggle('ban')}>Ban account</button
+				>
+			{/if}
 		</div>
 
 		{#if panel}

@@ -52,6 +52,16 @@ describe('CommentHistoryRow', () => {
 		expect(screen.getByText(/Reply on/)).toBeTruthy();
 	});
 
+	it('links the date to the comment on its title page, or shows it plain with no TMDB id', () => {
+		mount(row());
+		expect(screen.getByRole('link', { name: /Nov/ }).getAttribute('href')).toBe(
+			'/movie/348#comment-c1'
+		);
+		cleanup();
+		mount(row({ tmdbId: null }));
+		expect(screen.queryByRole('link')).toBeNull();
+	});
+
 	it('shows the reason of a rejected comment and who hid a hidden one', () => {
 		mount(row({ status: 'rejected', moderationReason: 'Contains a slur' }));
 		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
