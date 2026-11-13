@@ -35,9 +35,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | R3    | Reader reports: moderation      | completed   | 2026-11-13. The tab has been reviewed from code only, not in a browser.                                           |
 | R4    | Reader reports: UI              | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here); the reserved counts height is computed, not measured. |
 | R5    | Reader reports: copy and docs   | completed   | 2026-11-13.                                                                                                       |
-| C1    | Community reports: rename | completed | 2026-11-13. The migration keeps its name `0001_reader_reports`. |
-| C2    | Community reports: staff | active | 2026-11-13. |
-| C3    | Community reports: header badge | not started |                                                                                                                   |
+| C1    | Community reports: rename       | completed   | 2026-11-13. The migration keeps its name `0001_reader_reports`.                                                   |
+| C2    | Community reports: staff        | completed   | 2026-11-13.                                                                                                       |
+| C3    | Community reports: header badge | active      | 2026-11-13.                                                                                                       |
 | C4    | Community reports: flow         | not started |                                                                                                                   |
 
 ## Open items
