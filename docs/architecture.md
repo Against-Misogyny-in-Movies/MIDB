@@ -1,6 +1,6 @@
 # MIDB — Architecture Reference
 
-> The detail pages are built around a **multi-source metrics model**: a `titles` spine (movies and TV), synced source-of-truth tables (`title_bechdel`, and `title_um` bindings into the **spine-independent UM catalogue** `um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric shows its authoritative source; the per-metric community rating tables exist without a write path (see _Known gaps_). Titles have a **comments section** with AI-assisted moderation (see _Comments_).
+> The detail pages are built around a **multi-source metrics model**: a `titles` spine (movies and TV), synced source-of-truth tables (`title_bechdel`, and `title_um` bindings into the **spine-independent UM catalogue** `um_source`) and a **live-fetched, streamed** Does-The-Dog-Die client. Both **movies and TV series** are supported (`/movie/[movieId]`, `/tv/[seriesId]`). Each metric shows its authoritative source; **reader reports** add community counts of violence against women and sexual objectification (see _Reader reports_). Titles have a **comments section** with AI-assisted moderation (see _Comments_).
 >
 > Living document: update it in the same change as any structural change (`.claude/rules/code-standards.md`, Making a change). It states what is true now (`.claude/rules/docs-standards.md`).
 
@@ -10,7 +10,7 @@
 
 Title facts (poster, overview, release/air date, credits, seasons) are **not stored** — they're fetched live from **TMDB** on each request. What _is_ stored locally is a thin spine (`titles`, keyed by `(kind, tmdb_id)` for films and series) plus **synced, authoritative metric data** (Bechdel rating, UM advisory flags) and a **spine-independent UM catalogue** (`um_source`) that powers the runtime disambiguation picker. DDD data is fetched live and streamed, not persisted.
 
-Each metric is designed to show **two scores side by side**: the original authoritative source (Bechdel, UM, DDD) and a **MIDB community rating** contributed by users who have watched the film. Movies will also have a **comments section** for viewer context and discussion. Community ratings and comments are the next major feature milestone: the per-metric community tables and `comments` exist (remediation PR 4), and the `/user/*` area already has the profile editor and the (empty) rating and comment history views.
+Each metric shows its authoritative source (Bechdel, UM, DDD). Readers who watched a title add **reader reports** (counts per answer, beside the verdicts, never changing them) and **comments**; the `/user/*` area has the profile editor and the comment and reader-report history views.
 
 ---
 
@@ -289,7 +289,7 @@ User-facing copy follows a small house style. Apply it when writing or editing a
 - **Essentials only.** Each fact once, in the fewest words that keep it. No taglines, no intros restating headings, no template subheadings, no stock phrasing ("at a glance", "distilling", "so you decide"). `/resources` was rewritten to this standard: one short lede, then plain paragraphs per source, with subheadings only for the two verdict axes.
 - **Terminology.** film / series (not movie / TV), verdict, warning (DDD), flag and concern (UM), source, Bechdel Test. Sentence-case labels.
 - **No em dashes (—) in copy.** Restructure instead: split into separate sentences, or use a colon when a list/expansion follows. En dashes (–) are correct in number and relationship ranges (`0–3`, `adult–teen`) and stay.
-- **Claims must be code-backed.** Anything asserted to the user (privacy properties, how a metric is computed, thresholds) must match the code. The verdict-card explainer mirrors `verdict.ts` (exact flag tiers and scoring thresholds); the landing privacy line was verified against the codebase (no trackers, analytics or ads). The copy pass removed two claims the code did not back: "ratings submitted by the MIDB community" (no rating UI exists yet) and DDD warnings being "sorted by margin of the vote and grouped by category" (the client does neither). When the code changes, update the copy.
+- **Claims must be code-backed.** Anything asserted to the user (privacy properties, how a metric is computed, thresholds) must match the code. The verdict-card explainer mirrors `verdict.ts` (exact flag tiers and scoring thresholds); the landing privacy line was verified against the codebase (no trackers, analytics or ads). The `/resources` Reader reports section imports its thresholds from `readerReports.ts`, so a changed threshold changes the copy. When the code changes, update the copy.
 
 ---
 
@@ -344,7 +344,7 @@ Users are Better Auth users: `user.id` is Better Auth's opaque id (text). `hooks
 
 **Auth tables** (`auth.ts`) — Better Auth's `user`, `session`, `account`, `verification` and `passkey`, generated with the `auth` CLI and merged by hand; `create-auth.ts` maps them by model name. `user`: `id` text PK, `name`, `email` (unique, not null), `email_verified`, `image`, `role` text `user`|`moderator`|`administrator` default `user` (CHECK), `username` text(32) nullable, `avatar_key` text(48) nullable, `banned_at`, `ban_reason` text(500), `muted_until`, `timestamps()`. Unique index on `lower(username)` (case-insensitive, NULLs don't collide); index on `role`. `session`, `account` and `passkey` reference `user` with `ON DELETE CASCADE`. `passkey` stores the credential's public key, never a private one.
 
-**Community tables** (`community.ts`) — one table per metric shape so each can hold what it names. The Bechdel, UM and DDD tables are empty and have no write path (see Known gaps); `community_content_reports` and `title_count_flags` are the live reader-report tables.
+**Community tables** (`community.ts`) — one table per metric shape so each can hold what it names. The Bechdel, UM and DDD tables are empty and have no write path,; the current code reads none of them, and a later migration drops them (the previous Worker version still reads them, so it ships after the deploy); `community_content_reports` and `title_count_flags` are the live reader-report tables.
 
 - **`community_bechdel_ratings`**: `user_id` → `user.id` (cascade), `title_id` → `titles.id` (cascade), `rating` integer (**CHECK 0..3**, `cbr_rating_range`), `timestamps()`. PK `(user_id, title_id)` (resubmit = upsert), index `cbr_title_idx (title_id)`.
 - **`community_um_reports`**: `user_id`, `title_id` (both cascade), the 9 flag columns as explicit booleans (`umFlagColumns()`, same shape as `um_source`, aggregatable as `avg(col)`), `timestamps()`. PK `(user_id, title_id)`, index `cur_title_idx (title_id)`.
@@ -514,6 +514,14 @@ UM is the only source with no `imdb_id`, matched purely by normalized title. Whe
 - **Flag list** — every flag is a row using the **shared circular marker** (see _Shared marker pattern_ below). `noRape === true` renders with `.um-flag--reassurance`: `ri-check-line` on `--success-soft`. All other present flags (`true`) → `.um-flag--present` with `ri-alert-line` on `--warn-soft`. Absent flags (`ri-subtract-line`) stay quiet (a transparent marker with a `--border` hairline) so present concerns lead the eye. The list is a column-gap-only grid (`minmax(17rem, 1fr)`, `gap: 0 --spacing-lg`). The UM note renders through `umComment.svelte`: notes over 360 characters (series notes run to thousands) clamp to four lines behind a "Show full notes" toggle.
 
 ---
+
+## Reader reports (`src/lib/server/data/reader-report*.ts`, `src/routes/api/titles/…/reports`)
+
+- **Vocabulary.** `media/utils/readerReports.ts` holds the categories, level and framing labels, `CONCERN_FLAGS` and every threshold (`READER_REPORT_MIN`, `REPORT_ACCOUNT_MIN_AGE_DAYS`, `BURST_*`, `NEW_ACCOUNT_*`); the enum tuples are in `db/lib/readerReports.ts`. The Methodology section on `/resources` imports the thresholds, so copy and code cannot differ.
+- **One report per account per title** (`community_content_reports`), a whole-title report for a series. `upsertReport` runs the hold rules on every write, an edit included; a rejected report stays rejected in the write statement itself.
+- **Counts.** `getReportCounts` reads only `counted` reports whose account is old enough and neither muted nor banned. The flag tallies cover only the reports that answered sexual violence Present; a null answer is counted as not sure. Below `READER_REPORT_MIN` the endpoint answers the total only.
+- **Hold rules** (`reader-report-holds.ts`, pure over `HoldFacts`): contradicts UM (the title has a UM entry with a concern, and the report says sexual violence is Not shown or No to a flag UM marks; Not sure never contradicts), burst (reports on the title inside the window, the report counting itself only when created inside it), busy new account. The first rule that applies is the hold reason.
+- **Moderation.** `reader-report-moderation.ts` approves or rejects a report, rejects all of an account's reports and lists the held and flagged queues; each action logs to `moderation_actions` and purges the title's counts in one `db.batch`. `count-flags.ts` holds the "Counts look wrong" flags, which a moderator resolves or dismisses; that changes no counts. Mute and ban purge the counts of every title the account reported. Reports never feed `verdict.ts`.
 
 ## Reader reports section (`movies/metrics/readerReportsSection.svelte`)
 
@@ -732,7 +740,7 @@ The baseline every finished task reports is `.claude/rules/code-standards.md`, C
 
 ## Known gaps / TODO
 
-1. **Community ratings write path not built** — `community_bechdel_ratings`, `community_um_reports` and `community_ddd_votes` exist with their constraints but have no write endpoints (they will resolve titles with `getOrCreateTitleRow`). The empty-state history view is wired at `/user/metrics`. DDD stays live and cached; if persistence is ever needed it will be a `ddd_snapshot (title_id, payload jsonb, fetched_at)` cache table, not normalised rows.
+1. **Unused community tables** — `community_bechdel_ratings`, `community_um_reports` and `community_ddd_votes` have no write path; a later migration drops them. DDD stays live and cached.
 2. **UM data is sparse by design** — most spine movies have no UM binding (the last `db:sync:um` printed the counts). "No data" is the common, correct state. Title collisions with an unknown year are left as runtime-picker cases, and many films have no UM entry at all.
 3. **No Storybook stories** for detail-page components.
 4. **`movie.tagline` mapped but unused** — the overview now shows under the title; the tagline stays in the `Movie` shape for later use.

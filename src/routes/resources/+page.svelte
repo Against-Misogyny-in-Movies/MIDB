@@ -5,11 +5,28 @@
 	import BechdelLadderExample from '#lib/components/resources/bechdelLadderExample.svelte';
 	import UmFlagsExample from '#lib/components/resources/umFlagsExample.svelte';
 	import VerdictTierExample from '#lib/components/resources/verdictTierExample.svelte';
+	import {
+		BURST_COUNT,
+		BURST_WINDOW_HOURS,
+		CONCERN_FLAGS,
+		NEW_ACCOUNT_DAYS,
+		NEW_ACCOUNT_REPORT_MAX,
+		OBJECTIFICATION_LEVEL_LABELS,
+		READER_REPORT_MIN,
+		REPORT_ACCOUNT_MIN_AGE_DAYS,
+		REPORT_CATEGORIES,
+		REPORT_LEVEL_LABELS,
+		SEXUAL_LEVEL_LABELS
+	} from '#lib/media/utils/readerReports.ts';
+
+	const category = (key: (typeof REPORT_CATEGORIES)[number]['key']) =>
+		REPORT_CATEGORIES.find((c) => c.key === key)?.label ?? key;
 
 	const navItems = [
 		{ id: 'verdict', label: 'Verdicts' },
 		{ id: 'bechdel', label: 'Bechdel Test' },
 		{ id: 'unconsenting', label: 'Unconsenting Media' },
+		{ id: 'reader-reports', label: 'Reader reports' },
 		{ id: 'ddd', label: 'Does the Dog Die' },
 		{ id: 'moderation', label: 'Moderation' }
 	];
@@ -125,6 +142,99 @@
 					could match, the title page lists them. The choice applies to that page view only and is
 					not saved.
 				</p>
+			</MetricArticle>
+
+			<MetricArticle
+				id="reader-reports"
+				title="Reader reports"
+				icon="ri-team-fill"
+				hue="var(--brand)"
+			>
+				<p>
+					Readers who watched a film or series report what it shows about violence against women and
+					sexual objectification. Reports cover women and girls, trans women included. They appear
+					as counts beside the verdicts and never change a verdict.
+				</p>
+
+				<SubBlock label="Questions">
+					<p>
+						<strong>{category('sexual')}:</strong>
+						{SEXUAL_LEVEL_LABELS.none}, {SEXUAL_LEVEL_LABELS.present} or Not sure. Present opens the {CONCERN_FLAGS.length}
+						Unconsenting Media concern flags, each Yes, No or Not sure, so the counts line up with that
+						source's entry. No level is derived from the flags.
+					</p>
+					<p>
+						<strong
+							>{category('partner')}, {category('physical').toLowerCase()} and {category(
+								'stalking'
+							).toLowerCase()}:</strong
+						>
+						{REPORT_LEVEL_LABELS.none}, {REPORT_LEVEL_LABELS.mentioned}, {REPORT_LEVEL_LABELS.on_screen}
+						or Not sure.
+					</p>
+					<p>
+						<strong>{category('objectification')}:</strong>
+						{OBJECTIFICATION_LEVEL_LABELS.none}, {OBJECTIFICATION_LEVEL_LABELS.some_scenes},
+						{OBJECTIFICATION_LEVEL_LABELS.throughout} or Not sure. It means the camera dwelling on women's
+						bodies, or women written only as sexual objects. It is not an Unconsenting Media flag.
+					</p>
+					<p>
+						An optional question on how the title treats the violence is asked when sexual violence
+						is Present or another violence category is mentioned or on screen. Its counts cover the
+						reports that answered it.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="Who reports and what counts">
+					<p>
+						A signed-in account that is not muted or banned can report a film or series once, after
+						confirming it watched the title, and can edit or delete the report. Not sure answers are
+						counted and shown as such. The flag counts cover the reports that answered Present.
+					</p>
+					<p>
+						A report counts once its account is {REPORT_ACCOUNT_MIN_AGE_DAYS} days old. A title shows
+						counts once {READER_REPORT_MIN} reports count; below that the page shows the number of reports
+						only. Counts are cached briefly, so a new report or a lapsed wait can take a short time to
+						show. A muted or banned account's reports are not counted while the mute or ban lasts, and
+						a report a moderator rejected is never counted.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="Held for review">
+					<p>
+						Three rules hold a report for a moderator instead of counting it. They run on every
+						save, an edit included, and the first that applies is recorded. The author sees the
+						report as waiting for review.
+					</p>
+					<p>
+						<strong>Contradicts Unconsenting Media:</strong> the title has an Unconsenting Media entry
+						with at least one concern flag, and the report answers Not shown for sexual violence or No
+						to a flag that entry marks. Not sure never contradicts.
+					</p>
+					<p>
+						<strong>Burst:</strong>
+						{BURST_COUNT} or more reports on one title, this one included, fall within {BURST_WINDOW_HOURS}
+						hours. A report made before that window counts only the reports inside it.
+					</p>
+					<p>
+						<strong>Busy new account:</strong> the account is under {NEW_ACCOUNT_DAYS} days old and has
+						more than {NEW_ACCOUNT_REPORT_MAX} reports, this one included.
+					</p>
+					<p>
+						A moderator counts or rejects a held report, and can reject every report from an
+						account. An edit does not reinstate a rejected report.
+					</p>
+				</SubBlock>
+
+				<SubBlock label="Counts look wrong">
+					<p>
+						A signed-in account that is not muted can flag a title's counts as wrong, with an
+						optional note, once per title. Moderators see flagged titles with every report behind
+						the counts. They can reject a report, reject all reports from an account, or mute or ban
+						the account, then resolve or dismiss the flags. Flags do not change counts by
+						themselves.
+					</p>
+				</SubBlock>
 			</MetricArticle>
 
 			<MetricArticle
