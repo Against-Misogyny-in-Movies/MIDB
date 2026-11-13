@@ -38,12 +38,6 @@
 	<title>Sign-in methods | MIDB</title>
 </svelte:head>
 
-{#snippet result(at: string)}
-	{#if methods.notice?.at === at}
-		<Notice tone={methods.notice.tone}>{methods.notice.text}</Notice>
-	{/if}
-{/snippet}
-
 <div class="account-page">
 	<header>
 		<a href="/user/profile" class="back"
@@ -100,11 +94,11 @@
 									Remove {providerLabel(account.providerId)}? The account can no longer sign in with
 									it.
 								</p>
-								{@render result(key)}
 								<div class="actions">
 									<button
 										type="button"
 										class="btn btn--ink"
+										aria-busy={methods.running === `unlink:${account.id}`}
 										disabled={methods.busy}
 										onclick={() => methods.unlink(account)}
 										>Remove {providerLabel(account.providerId)}</button
@@ -117,8 +111,6 @@
 									>
 								</div>
 							</div>
-						{:else}
-							{@render result(key)}
 						{/if}
 					</li>
 				{/each}
@@ -177,11 +169,11 @@
 									autocomplete="off"
 									required
 								/>
-								{@render result(key)}
 								<div class="actions">
 									<button
 										type="submit"
 										class="btn btn--ink"
+										aria-busy={methods.running === `rename:${passkey.id}`}
 										disabled={methods.busy || !methods.nameDraft.trim()}>Save name</button
 									>
 									<button
@@ -198,11 +190,11 @@
 									Delete “{passkeyName(passkey)}”? It can no longer sign in to MIDB. The copy on the
 									device stays until it is deleted in the device's passkey settings.
 								</p>
-								{@render result(key)}
 								<div class="actions">
 									<button
 										type="button"
 										class="btn btn--ink"
+										aria-busy={methods.running === `delete:${passkey.id}`}
 										disabled={methods.busy}
 										onclick={() => methods.removePasskey(passkey)}>Delete passkey</button
 									>
@@ -214,8 +206,6 @@
 									>
 								</div>
 							</div>
-						{:else}
-							{@render result(key)}
 						{/if}
 					</li>
 				{/each}
@@ -226,6 +216,7 @@
 					<button
 						type="button"
 						class="btn btn--brand"
+						aria-busy={methods.running === 'add-passkey'}
 						disabled={methods.busy}
 						onclick={() => methods.addPasskey()}
 					>
@@ -236,6 +227,7 @@
 						<button
 							type="button"
 							class="btn btn--ghost"
+							aria-busy={methods.running === `link:${provider.id}`}
 							disabled={methods.busy}
 							onclick={() => methods.link(provider)}
 						>
@@ -244,7 +236,6 @@
 						</button>
 					{/each}
 				</div>
-				{@render result('add')}
 			</div>
 		{/if}
 	</section>

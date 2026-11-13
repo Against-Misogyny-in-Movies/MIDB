@@ -82,8 +82,8 @@
 		</label>
 	{/if}
 	<div class="actions">
-		<button class="btn btn--ink" disabled={busy !== null}>
-			{busy === kind ? 'Working…' : BUTTONS[kind]}
+		<button class="btn btn--ink" aria-busy={busy === kind} disabled={busy !== null}>
+			{BUTTONS[kind]}
 		</button>
 		<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
 	</div>

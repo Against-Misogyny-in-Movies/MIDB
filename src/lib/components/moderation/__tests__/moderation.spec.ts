@@ -2,18 +2,24 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/sv
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HeldReport, ModerationItem, RecentAction } from '#lib/media/types/moderation.ts';
 
-const form = vi.hoisted(() => ({ update: async () => {} }));
+const form = vi.hoisted(() => ({
+	update: async () => {},
+	result: { type: 'success', data: {} } as { type: string; data?: Record<string, unknown> }
+}));
 
 // `enhance` runs the component's submit callback and its result handler, with an `update` the
 // test replaces to stand for the page re-rendering after the action.
 vi.mock('$app/forms', () => ({
 	enhance: (
 		node: HTMLFormElement,
-		submit?: () => (opts: { update: () => Promise<void> }) => Promise<void>
+		submit?: () => (opts: {
+			result: typeof form.result;
+			update: () => Promise<void>;
+		}) => Promise<void>
 	) => {
 		const onSubmit = (event: Event) => {
 			event.preventDefault();
-			void submit?.()({ update: () => form.update() });
+			void submit?.()({ result: form.result, update: () => form.update() });
 		};
 		node.addEventListener('submit', onSubmit);
 		return { destroy: () => node.removeEventListener('submit', onSubmit) };
@@ -57,18 +63,22 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 	};
 }
 
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+
 afterEach(() => {
 	cleanup();
 	form.update = async () => {};
+	form.result = { type: 'success', data: {} };
+	toasts.clear();
 });
 
-function mount(
-	over: Partial<ModerationItem> = {},
-	extra: { canActOnAuthor?: boolean; outcome?: never } = {}
-) {
+/** The toasts showing, as `tone: text`. */
+const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
+
+function mount(over: Partial<ModerationItem> = {}, extra: { canActOnAuthor?: boolean } = {}) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(ModerationItemRow, {
-		props: { item: item(over), outcome: null, canActOnAuthor: true, ...extra },
+		props: { item: item(over), canActOnAuthor: true, ...extra },
 		target: list
 	});
 }
@@ -164,24 +174,33 @@ describe('ModerationItem', () => {
 		expect((form.querySelector('[name=userId]') as HTMLInputElement).value).toBe('u1');
 	});
 
-	it('shows a refusal beside the row it concerns, and not on another row', () => {
-		const list = document.body.appendChild(document.createElement('ul'));
-		render(ModerationItemRow, {
-			props: {
-				item: item(),
-				outcome: { id: 'c1', error: 'The comment is no longer in a state this action applies to.' },
-				canActOnAuthor: true
-			},
-			target: list
-		});
-		expect(screen.getByRole('alert').textContent).toMatch(/no longer in a state/);
-		cleanup();
-		const other = document.body.appendChild(document.createElement('ul'));
-		render(ModerationItemRow, {
-			props: { item: item(), outcome: { id: 'other', error: 'x' }, canActOnAuthor: true },
-			target: other
-		});
-		expect(screen.queryByRole('alert')).toBeNull();
+	it('toasts a refusal and keeps the row', async () => {
+		form.result = {
+			type: 'failure',
+			data: { id: 'c1', error: 'The comment is no longer in a state this action applies to.' }
+		};
+		mount();
+		await fireEvent.submit(
+			screen.getByRole('button', { name: 'Approve' }).closest('form') as HTMLFormElement
+		);
+		await waitFor(() =>
+			expect(shown()).toEqual([
+				'error: The comment is no longer in a state this action applies to.'
+			])
+		);
+		expect(document.getElementById('comment-c1')).toBeTruthy();
+	});
+
+	it('marks the pressed button busy and holds the others until the action ends', async () => {
+		let release!: () => void;
+		form.update = () => new Promise<void>((r) => (release = r));
+		mount();
+		const approve = screen.getByRole('button', { name: 'Approve' });
+		await fireEvent.submit(approve.closest('form') as HTMLFormElement);
+		await waitFor(() => expect(approve.getAttribute('aria-busy')).toBe('true'));
+		expect((approve as HTMLButtonElement).disabled).toBe(true);
+		release();
+		await waitFor(() => expect(approve.getAttribute('aria-busy')).toBe('false'));
 	});
 });
 
@@ -189,14 +208,13 @@ describe('focus after an action', () => {
 	function mountTwo(second = true) {
 		const list = document.body.appendChild(document.createElement('ul'));
 		const first = render(ModerationItemRow, {
-			props: { item: item(), outcome: null, canActOnAuthor: true },
+			props: { item: item(), canActOnAuthor: true },
 			target: list
 		});
 		if (second) {
 			render(ModerationItemRow, {
 				props: {
 					item: item({ comment: { ...item().comment, id: 'c2' } }),
-					outcome: null,
 					canActOnAuthor: true
 				},
 				target: list
@@ -260,7 +278,7 @@ describe('RecentActionRow', () => {
 
 	function mountEntry(e: RecentAction) {
 		const list = document.body.appendChild(document.createElement('ul'));
-		return render(RecentActionRow, { props: { entry: e, outcome: null }, target: list });
+		return render(RecentActionRow, { props: { entry: e }, target: list });
 	}
 
 	it('reads as who did what to which comment, with the reason', () => {
@@ -367,7 +385,7 @@ describe('the held report row', () => {
 	};
 
 	it('shows the title, the account, the hold reason and the two actions', () => {
-		render(HeldReportRow, { report: base, outcome: null });
+		render(HeldReportRow, { report: base });
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
 		expect(
 			screen.getByText(/anna, 3 days old, 4 community reports not rejected, 1 comment/)
@@ -378,12 +396,11 @@ describe('the held report row', () => {
 	});
 
 	it('shows UM flags only when the report contradicts the source', () => {
-		const { unmount } = render(HeldReportRow, { report: base, outcome: null });
+		const { unmount } = render(HeldReportRow, { report: base });
 		expect(screen.queryByText('Unconsenting Media')).toBeNull();
 		unmount();
 		render(HeldReportRow, {
-			report: { ...base, holdReason: 'contradicts_source', um: UM },
-			outcome: null
+			report: { ...base, holdReason: 'contradicts_source', um: UM }
 		});
 		expect(screen.getByText('Contradicts Unconsenting Media')).toBeTruthy();
 		expect(screen.getByRole('columnheader', { name: 'Unconsenting Media' })).toBeTruthy();

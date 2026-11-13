@@ -10,6 +10,7 @@
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
@@ -24,8 +25,8 @@
 	let mode = $state<'edit' | 'delete' | null>(null);
 	let root: HTMLElement | undefined = $state();
 	let busy = $state(false);
+	/** The server refused the edited text (a 400): shown under the field. Other failures are toasts. */
 	let error = $state<string | undefined>();
-	let errorStatus = $state<number | undefined>();
 
 	/** A hidden or deleted comment cannot be edited (the endpoint answers 409). */
 	const editable = $derived(comment.status !== 'hidden' && comment.status !== 'deleted');
@@ -35,13 +36,11 @@
 	function toggle(next: 'edit' | 'delete') {
 		mode = mode === next ? null : next;
 		error = undefined;
-		errorStatus = undefined;
 	}
 
 	async function save(body: string): Promise<boolean> {
 		busy = true;
 		error = undefined;
-		errorStatus = undefined;
 		const reply = await requestJson<{ comment: OwnComment }>(
 			fetch,
 			'PATCH',
@@ -50,8 +49,9 @@
 		);
 		busy = false;
 		if (!reply.ok) {
-			error = describeFailure('edit', reply.status, reply.message);
-			errorStatus = reply.status;
+			const message = describeFailure('edit', reply.status, reply.message);
+			if (reply.status === 400) error = message;
+			else toasts.error(message);
 			return false;
 		}
 		const saved = reply.data.comment;
@@ -69,11 +69,10 @@
 
 	async function remove() {
 		busy = true;
-		error = undefined;
 		const reply = await requestJson<{ ok: true }>(fetch, 'DELETE', `/api/comments/${comment.id}`);
 		busy = false;
 		if (!reply.ok) {
-			error = describeFailure('delete', reply.status, reply.message);
+			toasts.error(describeFailure('delete', reply.status, reply.message));
 			return;
 		}
 		comment = { ...comment, status: 'deleted' };
@@ -100,7 +99,6 @@
 			initial={comment.body}
 			{busy}
 			{error}
-			invalid={errorStatus === 400}
 			hint="Saving runs moderation again."
 			nested
 			autofocus
@@ -142,10 +140,8 @@
 				? ' Replies stay under a placeholder.'
 				: ''}"
 			confirmLabel="Delete comment"
-			busyLabel="Deleting…"
 			cancelLabel="Keep comment"
 			{busy}
-			{error}
 			onconfirm={remove}
 			oncancel={() => (mode = null)}
 		/>

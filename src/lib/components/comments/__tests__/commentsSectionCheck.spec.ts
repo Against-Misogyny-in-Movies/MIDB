@@ -7,6 +7,10 @@ vi.mock('$app/env', () => ({ browser: true }));
 
 const { default: CommentsSection } = await import('../commentsSection.svelte');
 const { session } = await import('#lib/media/utils/session.svelte.js');
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+
+/** The toasts showing, as `tone: text`. */
+const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
 
 const ME: PublicUser = {
 	id: 'me',
@@ -87,12 +91,13 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	session.clear();
+	toasts.clear();
 });
 
 describe('CommentsSection check', () => {
 	beforeEach(() => session.set(ME));
 
-	it('keeps the field read-only and names the check while it runs, then keeps the text on failure', async () => {
+	it('keeps the field read-only and the button busy while the check runs, then keeps the text on failure', async () => {
 		let release!: () => void;
 		const gate = new Promise<void>((r) => (release = r));
 		mount(
@@ -109,14 +114,16 @@ describe('CommentsSection check', () => {
 		await fireEvent.input(field, { target: { value: 'My draft' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 
-		const busyButton = await screen.findByRole('button', { name: 'Checking…' });
+		const busyButton = screen.getByRole('button', { name: 'Comment' });
+		await waitFor(() => expect(busyButton.getAttribute('aria-busy')).toBe('true'));
 		expect((busyButton as HTMLButtonElement).disabled).toBe(true);
 		expect((field as HTMLTextAreaElement).readOnly).toBe(true);
 		expect(field.closest('form')?.getAttribute('aria-busy')).toBe('true');
 		expect(screen.getByText('Checking the comment…').closest('[aria-live="polite"]')).toBeTruthy();
 
 		release();
-		await screen.findByRole('alert');
+		await waitFor(() => expect(shown()).toEqual([expect.stringMatching(/^error: /)]));
+		expect(busyButton.getAttribute('aria-busy')).toBe('false');
 		expect((field as HTMLTextAreaElement).readOnly).toBe(false);
 		expect((field as HTMLTextAreaElement).value).toBe('My draft');
 		expect(field.closest('form')?.getAttribute('aria-busy')).toBe('false');
@@ -149,14 +156,14 @@ describe('CommentsSection check', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 		expect(await screen.findByText('Fresh')).toBeTruthy();
 		expect(screen.getAllByText('Fresh')).toHaveLength(1);
-		expect(screen.getByRole('status').textContent).toBe('Comment posted.');
+		expect(shown()).toEqual(['success: Comment posted.']);
 		expect(screen.queryByText('Awaiting review')).toBeNull();
 
 		await fireEvent.input(field, { target: { value: 'Bad' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 		await waitFor(() =>
-			expect(screen.getAllByRole('status').map((n) => n.textContent)).toContain(
-				'Rejected: Attacks a person. Only the author and moderators see the comment.'
+			expect(shown()).toContain(
+				'warn: Rejected: Attacks a person. Only the author and moderators see the comment.'
 			)
 		);
 	});

@@ -3,13 +3,12 @@
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
-	import type { ActionOutcome } from '#lib/media/types/moderation.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 
-	let { data, form } = $props();
+	let { data } = $props();
 
 	type Tab = 'pending' | 'reported' | 'reports' | 'recent';
 	/**
@@ -55,7 +54,6 @@
 		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
 	}
 
-	const outcome = $derived((form ?? null) as ActionOutcome);
 	const items = $derived(tab === 'reported' ? data.reported : data.pending);
 </script>
 
@@ -109,7 +107,7 @@
 			{:else}
 				<ul class="card list">
 					{#each data.recent as entry (entry.id)}
-						<RecentActionRow {entry} {outcome} />
+						<RecentActionRow {entry} />
 					{/each}
 				</ul>
 			{/if}
@@ -120,7 +118,6 @@
 				openTitle={data.openTitle}
 				titleId={data.titleId}
 				me={data.me}
-				{outcome}
 			/>
 		{:else if items.length === 0}
 			<p class="empty" id="moderation-empty" tabindex="-1">
@@ -131,7 +128,7 @@
 		{:else}
 			<ul class="card list">
 				{#each items as item (item.comment.id)}
-					<ModerationItemRow {item} {outcome} canActOnAuthor={canActOn(data.me, item.author)} />
+					<ModerationItemRow {item} canActOnAuthor={canActOn(data.me, item.author)} />
 				{/each}
 			</ul>
 		{/if}

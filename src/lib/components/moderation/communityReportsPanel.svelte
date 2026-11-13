@@ -3,13 +3,7 @@
 	import FlaggedTitleRow from '#lib/components/moderation/flaggedTitleRow.svelte';
 	import HeldReportRow from '#lib/components/moderation/heldReportRow.svelte';
 	import TitleReportRow from '#lib/components/moderation/titleReportRow.svelte';
-	import Notice from '#lib/components/ui/notice.svelte';
-	import type {
-		ActionOutcome,
-		FlaggedTitle,
-		HeldReport,
-		OpenTitle
-	} from '#lib/media/types/moderation.ts';
+	import type { FlaggedTitle, HeldReport, OpenTitle } from '#lib/media/types/moderation.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
@@ -22,18 +16,12 @@
 		titleId?: string | null;
 		/** The acting moderator, whose role decides which accounts the buttons offer. */
 		me: { id: string; role: string };
-		outcome: ActionOutcome;
 	}
 
-	let { held, flagged, openTitle, titleId = null, me, outcome }: Props = $props();
+	let { held, flagged, openTitle, titleId = null, me }: Props = $props();
 
 	const openFlags = $derived(flagged.find((f) => f.titleId === openTitle?.id)?.flags ?? []);
 	const openHref = $derived(openTitle ? titleHref(openTitle.kind, openTitle.tmdbId) : undefined);
-	const FLAG_DONE: Record<string, string> = {
-		resolveFlag: 'Marked resolved.',
-		dismissFlag: 'Dismissed.'
-	};
-	const flagDone = $derived(outcome?.done ? FLAG_DONE[outcome.done] : undefined);
 </script>
 
 {#if openTitle}
@@ -44,11 +32,10 @@
 		<h2 id="open-title" class="heading" tabindex="-1">
 			{#if openHref}<a class="link" href={openHref}>{openTitle.name}</a>{:else}{openTitle.name}{/if}
 		</h2>
-		{#if flagDone}<Notice tone="success">{flagDone}</Notice>{/if}
 		{#if openFlags.length > 0}
 			<div class="card flags">
 				<h3 class="heading">Counts look wrong</h3>
-				<CountFlagList flags={openFlags} {outcome} />
+				<CountFlagList flags={openFlags} />
 			</div>
 		{/if}
 		{#if openTitle.reports.length === 0}
@@ -59,7 +46,6 @@
 					<TitleReportRow
 						{report}
 						titleId={openTitle.id}
-						{outcome}
 						canAct={canActOn(me, { id: report.account.userId, role: report.account.role })}
 					/>
 				{/each}
@@ -81,7 +67,7 @@
 		{:else}
 			<ul class="card list">
 				{#each held as report (`${report.account.userId}:${report.titleId}`)}
-					<HeldReportRow {report} {outcome} />
+					<HeldReportRow {report} />
 				{/each}
 			</ul>
 		{/if}

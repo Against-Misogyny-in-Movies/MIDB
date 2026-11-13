@@ -12,7 +12,7 @@
 		children?: Snippet;
 		/** The row's own buttons. */
 		actions?: Snippet;
-		/** Notices after the actions. */
+		/** Further actions after the row's own. */
 		footer?: Snippet;
 	}
 

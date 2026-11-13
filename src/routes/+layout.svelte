@@ -5,6 +5,7 @@
 	import Navbar from '#lib/components/layout/navbar.svelte';
 	import Footer from '#lib/components/layout/footer.svelte';
 	import NavProgress from '#lib/components/layout/navProgress.svelte';
+	import Toaster from '#lib/components/layout/toaster.svelte';
 
 	interface Props {
 		children: Snippet;
@@ -26,6 +27,8 @@
 
 	<Footer />
 </div>
+
+<Toaster />
 
 <style lang="postcss">
 	@reference "../app.css";

@@ -1,18 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import Notice from '#lib/components/ui/notice.svelte';
-	import type { ActionOutcome, RecentAction } from '#lib/media/types/moderation.ts';
+	import type { RecentAction } from '#lib/media/types/moderation.ts';
 	import { formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
+	import { toastActionResult } from '#lib/media/utils/rowSubmit.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		entry: RecentAction;
-		outcome: ActionOutcome;
 	}
 
-	let { entry, outcome }: Props = $props();
+	let { entry }: Props = $props();
 
 	let busy = $state(false);
 	let root: HTMLElement | undefined = $state();
@@ -49,7 +48,6 @@
 			(entry.action === 'hide' || entry.action === 'reject') &&
 			(entry.commentStatus === 'hidden' || entry.commentStatus === 'rejected')
 	);
-	const mine = $derived(outcome?.id === entry.commentId ? outcome : null);
 	/** The author changed the text after this action, so the text below is not what was acted on. */
 	const editedSince = $derived(
 		entry.commentEditedAt !== null && entry.commentEditedAt > entry.createdAt
@@ -98,19 +96,18 @@
 			action="?/restore"
 			use:enhance={() => {
 				busy = true;
-				return async ({ update }) => {
+				return async ({ result, update }) => {
 					await update();
 					busy = false;
+					toastActionResult(result);
 					await focusAfterUpdate(() => root);
 				};
 			}}
 		>
 			<input type="hidden" name="id" value={entry.commentId} />
-			<button class="btn btn--ink" disabled={busy}>{busy ? 'Restoring…' : 'Restore comment'}</button
-			>
+			<button class="btn btn--ink" aria-busy={busy} disabled={busy}>Restore comment</button>
 		</form>
 	{/if}
-	{#if mine?.error}<Notice tone="error">{mine.error}</Notice>{/if}
 </li>
 
 <style lang="postcss">

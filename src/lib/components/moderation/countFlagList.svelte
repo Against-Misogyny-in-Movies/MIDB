@@ -1,18 +1,17 @@
 <script lang="ts">
 	import CountFlagItem from '#lib/components/moderation/countFlagItem.svelte';
-	import type { ActionOutcome, FlaggedTitle } from '#lib/media/types/moderation.ts';
+	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
 
 	interface Props {
 		flags: FlaggedTitle['flags'];
-		outcome: ActionOutcome;
 	}
 
-	let { flags, outcome }: Props = $props();
+	let { flags }: Props = $props();
 </script>
 
 <ul class="flags">
 	{#each flags as flag (flag.id)}
-		<CountFlagItem {flag} {outcome} />
+		<CountFlagItem {flag} />
 	{/each}
 </ul>
 

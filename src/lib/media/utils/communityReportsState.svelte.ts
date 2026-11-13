@@ -6,6 +6,7 @@ import { REPORT_NOTE_MAX } from '#lib/media/utils/comments.ts';
 import { describeStatus, requestJson, type Fetcher } from '#lib/media/utils/commentApi.ts';
 import type { ContentReportStatus } from '#lib/media/utils/communityReports.ts';
 import { reportBody, type ReportDraft } from '#lib/media/utils/reportDraft.ts';
+import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 type Action = 'load' | 'viewer' | 'save' | 'delete' | 'flag';
 
@@ -32,8 +33,10 @@ function describe(action: Action, status: number): string {
 /**
  * One title's community reports: the public counts (edge-cached, the same for every reader), the
  * signed-in reader's own report (`private, no-store`) and the writes. Counts are not refetched
- * after a write, because they are edge-cached and a purge lands a moment later. Each failure
- * is stored under the key of its action, so the component shows it beside that control.
+ * after a write, because they are edge-cached and a purge lands a moment later. A failed load
+ * is stored under its key (`load`, `viewer`), so the section shows it in place; a failed write
+ * is a toast (`toasts.svelte.ts`), and so is the result of one that went through, which the
+ * component words.
  */
 export class CommunityReportsState {
 	readonly #base: string;
@@ -44,13 +47,8 @@ export class CommunityReportsState {
 	viewer = $state<ViewerReportResponse | null>(null);
 	/** `idle` until a signed-in reader's report is requested; `ready` also after a 401. */
 	viewerPhase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
-	errors = $state<Partial<Record<Action, string>>>({});
+	errors = $state<Partial<Record<'load' | 'viewer', string>>>({});
 	busy = $state<Partial<Record<Action, boolean>>>({});
-	/** The status a save answered, shown once beside the reader's report. */
-	saved = $state<{ status: ContentReportStatus } | null>(null);
-	/** Set by a delete that went through, so "Add a report" can say so; cleared by a save, by `clearViewer()` and when the form opens. */
-	deleted = $state(false);
-	flagged = $state(false);
 
 	constructor(kind: 'movie' | 'tv', tmdbId: string, fetcher?: Fetcher) {
 		this.#base = `/api/titles/${kind}/${tmdbId}/reports`;
@@ -94,19 +92,15 @@ export class CommunityReportsState {
 	clearViewer(): void {
 		this.viewer = null;
 		this.viewerPhase = 'idle';
-		this.saved = null;
-		this.deleted = false;
 		delete this.errors.viewer;
 	}
 
-	#start(action: Action): void {
-		this.busy[action] = true;
-		delete this.errors[action];
-	}
-
-	/** Stores the reader's report, then reads it back for its status and the date it counts from. True when stored. */
-	async save(draft: ReportDraft): Promise<boolean> {
-		this.#start('save');
+	/**
+	 * Stores the reader's report, then reads it back for its status and the date it counts from.
+	 * Returns the status the save answered, or null when it failed.
+	 */
+	async save(draft: ReportDraft): Promise<ContentReportStatus | null> {
+		this.busy.save = true;
 		const reply = await requestJson<{ status: ContentReportStatus }>(
 			this.#fetch,
 			'PUT',
@@ -115,42 +109,39 @@ export class CommunityReportsState {
 		);
 		if (!reply.ok) {
 			this.busy.save = false;
-			this.errors.save = describe('save', reply.status);
-			return false;
+			toasts.error(describe('save', reply.status));
+			return null;
 		}
-		this.saved = { status: reply.data.status };
-		this.deleted = false;
 		await this.loadViewer();
 		this.busy.save = false;
-		return true;
+		return reply.data.status;
 	}
 
 	async remove(): Promise<boolean> {
-		this.#start('delete');
+		this.busy.delete = true;
 		const reply = await requestJson<undefined>(this.#fetch, 'DELETE', this.#base);
 		this.busy.delete = false;
 		if (!reply.ok) {
-			this.errors.delete = describe('delete', reply.status);
+			toasts.error(describe('delete', reply.status));
 			return false;
 		}
-		this.saved = null;
-		this.deleted = true;
 		if (this.viewer) this.viewer = { ...this.viewer, report: null };
+		toasts.success('Report deleted. A reload shows the counts without it.');
 		return true;
 	}
 
-	/** "Counts look wrong", with an optional note. True when sent. */
+	/** "Counts look wrong", with an optional note. True when sent; a second flag replaces the note. */
 	async flag(note: string): Promise<boolean> {
-		this.#start('flag');
+		this.busy.flag = true;
 		const reply = await requestJson<{ flagged: true }>(this.#fetch, 'POST', `${this.#base}/flag`, {
 			note: note.trim() || null
 		});
 		this.busy.flag = false;
 		if (!reply.ok) {
-			this.errors.flag = describe('flag', reply.status);
+			toasts.error(describe('flag', reply.status));
 			return false;
 		}
-		this.flagged = true;
+		toasts.success('Sent to the moderators.');
 		return true;
 	}
 }

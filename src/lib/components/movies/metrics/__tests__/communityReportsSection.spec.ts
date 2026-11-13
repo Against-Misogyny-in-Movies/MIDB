@@ -9,8 +9,12 @@ const { default: CommunityReportsSection } = await import('../communityReportsSe
 const { CommunityReportsState } = await import('#lib/media/utils/communityReportsState.svelte.js');
 const { default: CommunityReportsBadge } = await import('../communityReportsBadge.svelte');
 const { session } = await import('#lib/media/utils/session.svelte.js');
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+const { default: Toaster } = await import('#lib/components/layout/toaster.svelte');
 
+/** The section with the layout's toasts, which carry the outcome of each write. */
 function mount(fetcher: ReturnType<typeof api>) {
+	render(Toaster);
 	return render(CommunityReportsSection, {
 		kind: 'movie',
 		tmdbId: '603',
@@ -18,7 +22,10 @@ function mount(fetcher: ReturnType<typeof api>) {
 	});
 }
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	toasts.clear();
+});
 
 describe('CommunityReportsSection counts', () => {
 	beforeEach(() => session.clear());
@@ -282,7 +289,7 @@ describe('CommunityReportsSection reader states', () => {
 		expect(screen.getByRole('button', { name: 'Counts look wrong' })).toBeTruthy();
 	});
 
-	it('keeps "Report saved." when the read-back fails', async () => {
+	it('says "Report saved." when the read-back fails', async () => {
 		let reads = 0;
 		mount(
 			api({

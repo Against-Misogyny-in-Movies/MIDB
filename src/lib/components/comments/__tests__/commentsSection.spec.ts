@@ -7,6 +7,8 @@ vi.mock('$app/env', () => ({ browser: true }));
 
 const { default: CommentsSection } = await import('../commentsSection.svelte');
 const { session } = await import('#lib/media/utils/session.svelte.js');
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
 
 const ME: PublicUser = {
 	id: 'me',
@@ -87,6 +89,7 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	session.clear();
+	toasts.clear();
 });
 
 describe('CommentsSection signed out', () => {
@@ -238,9 +241,9 @@ describe('CommentsSection signed in', () => {
 			expect.objectContaining({ body: JSON.stringify({ body: 'Hello there' }) })
 		);
 		expect(screen.getByText('Awaiting review')).toBeTruthy();
-		expect(screen.getByRole('status').textContent).toBe(
-			'Comment sent. Only the author and moderators see the comment until a moderator decides.'
-		);
+		expect(shown()).toEqual([
+			'warn: Comment sent. Only the author and moderators see the comment until a moderator decides.'
+		]);
 	});
 
 	it('names a muted account when a write is refused', async () => {
@@ -254,7 +257,7 @@ describe('CommentsSection signed in', () => {
 		const field = await screen.findByRole('textbox', { name: 'Write a comment' });
 		await fireEvent.input(field, { target: { value: 'Hi' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
-		expect((await screen.findByRole('alert')).textContent).toMatch(/muted/);
+		await waitFor(() => expect(shown()).toEqual([expect.stringMatching(/^error: .*muted/)]));
 	});
 
 	it('says when the rate limit stops a write', async () => {
@@ -268,7 +271,9 @@ describe('CommentsSection signed in', () => {
 		const field = await screen.findByRole('textbox', { name: 'Write a comment' });
 		await fireEvent.input(field, { target: { value: 'Hi' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
-		expect((await screen.findByRole('alert')).textContent).toMatch(/Too many requests/);
+		await waitFor(() =>
+			expect(shown()).toEqual([expect.stringMatching(/^error: .*Too many requests/)])
+		);
 	});
 
 	it('shows the reader’s vote and updates the score from the response', async () => {
@@ -331,7 +336,7 @@ describe('CommentsSection signed in', () => {
 		await fireEvent.click(screen.getByLabelText('Spam'));
 		await fireEvent.input(screen.getByLabelText('Note (optional)'), { target: { value: 'Ad' } });
 		await fireEvent.click(send);
-		expect((await screen.findByRole('status')).textContent).toMatch(/Report sent/);
+		await waitFor(() => expect(shown()).toEqual(['success: Report sent. Moderators review it.']));
 		expect(report).toHaveBeenCalledWith(
 			expect.objectContaining({ body: JSON.stringify({ reason: 'spam', note: 'Ad' }) })
 		);
@@ -399,7 +404,7 @@ describe('CommentsSection signed in', () => {
 		await waitFor(() => expect(document.activeElement?.id).toBe('comment-a'));
 	});
 
-	it('puts the focus on Close once a report is sent', async () => {
+	it('closes the report form and puts the focus on the comment once a report is sent', async () => {
 		mount(
 			api({
 				[`GET ${LIST}`]: list([view('a')]),
@@ -411,8 +416,8 @@ describe('CommentsSection signed in', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Report' }));
 		await fireEvent.click(screen.getByLabelText('Spam'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
-		const close = await screen.findByRole('button', { name: 'Close' });
-		await waitFor(() => expect(document.activeElement).toBe(close));
+		await waitFor(() => expect(document.activeElement?.id).toBe('comment-a'));
+		expect(screen.queryByRole('button', { name: 'Send report' })).toBeNull();
 	});
 
 	it('replaces the composer with the mute, and disables votes, replies and reports until it ends', async () => {
@@ -454,7 +459,7 @@ describe('CommentsSection signed in', () => {
 		await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
 	});
 
-	it('marks the field invalid only for a length error, and ties the message to it', async () => {
+	it('marks the field invalid for a length error and ties the message to it; other failures are toasts', async () => {
 		let status = 400;
 		mount(
 			api({
@@ -469,11 +474,13 @@ describe('CommentsSection signed in', () => {
 		const alert = await screen.findByRole('alert');
 		expect(field.getAttribute('aria-invalid')).toBe('true');
 		expect(field.getAttribute('aria-describedby')).toBe(alert.id);
+		expect(toasts.items).toEqual([]);
 		status = 429;
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
-		await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/Too many/));
+		await waitFor(() => expect(shown()).toEqual([expect.stringMatching(/^error: .*Too many/)]));
 		expect(field.getAttribute('aria-invalid')).toBeNull();
-		expect(field.getAttribute('aria-describedby')).toBe(screen.getByRole('alert').id);
+		expect(field.getAttribute('aria-describedby')).toBeNull();
+		expect(screen.queryByRole('alert')).toBeNull();
 	});
 
 	it('keeps one primary button: a reply composer submits with the secondary one', async () => {

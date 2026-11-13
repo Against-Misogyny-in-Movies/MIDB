@@ -11,6 +11,7 @@
 	import { currentDeviceName } from '#lib/media/utils/deviceName.ts';
 	import { DEFAULT_RETURN_PATH, safeReturnPath } from '#lib/media/utils/returnPath.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
+	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -27,12 +28,6 @@
 	const passkeysSupported = typeof PublicKeyCredential !== 'undefined';
 	const providers = $derived(AUTH_PROVIDERS.filter((p) => data.providers[p.id]));
 
-	// A provider sign-in that failed redirects back here with `?error=<code>`.
-	const providerError = $derived.by(() => {
-		const code = page.url.searchParams.get('error');
-		return code ? providerErrorMessage(code) : null;
-	});
-
 	// The form renders once two things are known, so nothing moves after it appears: whether
 	// the browser offers saved passkeys in a field (`autofill`) and whether the reader is
 	// already signed in, who is sent on instead.
@@ -40,8 +35,8 @@
 	const ready = $derived(autofill !== null && session.status === 'anon');
 
 	let signInBusy = $state(false);
-	let signInError = $state<string | null>(null);
-	let socialError = $state<string | null>(null);
+	/** The provider whose sign-in is starting; the browser then leaves for it. */
+	let socialBusy = $state<Provider['id'] | null>(null);
 
 	// Sign-up with Turnstile runs in steps: `checking` while the widget works, `ready` once it
 	// has a token and the next click may start the passkey prompt (browsers want a fresh click
@@ -49,7 +44,6 @@
 	// check again.
 	type SignUp = 'idle' | 'checking' | 'ready' | 'failed' | 'working';
 	let signUp = $state<SignUp>('idle');
-	let signUpError = $state<string | null>(null);
 	let token: string | null = null;
 	/** Whether a token that arrives may start the prompt at once (the click that began the check). */
 	let continueOnToken = false;
@@ -74,32 +68,28 @@
 		await goto(afterSignIn);
 	}
 
-	function clearErrors() {
-		signInError = null;
-		signUpError = null;
-		socialError = null;
-	}
-
 	async function signInWithPasskey() {
-		clearErrors();
 		signInBusy = true;
 		const { error } = await authClient.signIn.passkey();
 		signInBusy = false;
 		if (error) {
-			signInError = passkeyErrorMessage(error, 'sign-in');
+			toasts.error(passkeyErrorMessage(error, 'sign-in'));
 			return;
 		}
 		await enter();
 	}
 
 	async function signInWithProvider(provider: Provider) {
-		clearErrors();
+		socialBusy = provider.id;
 		const { error } = await authClient.signIn.social({
 			provider: provider.id,
 			callbackURL: afterSignIn,
 			errorCallbackURL: errorReturn
 		});
-		if (error) socialError = providerErrorMessage(error.code ?? '');
+		if (error) {
+			socialBusy = null;
+			toasts.error(providerErrorMessage(error.code ?? ''));
+		}
 	}
 
 	/** Starts a Turnstile check; `after` says whether its token may start the prompt by itself. */
@@ -125,7 +115,7 @@
 			createSession: true
 		});
 		if (error) {
-			signUpError = passkeyErrorMessage(error, 'sign-up');
+			toasts.error(passkeyErrorMessage(error, 'sign-up'));
 			// A token is single-use: the next attempt needs a new check, and the reader's next
 			// click, not this failure, decides when the prompt opens.
 			continueOnToken = false;
@@ -137,7 +127,6 @@
 	}
 
 	function startSignUp() {
-		clearErrors();
 		if (!captchaOn || (signUp === 'ready' && token)) void createAccount();
 		else runCheck(true);
 	}
@@ -154,6 +143,9 @@
 	}
 
 	onMount(() => {
+		// A provider sign-in that failed redirects back here with `?error=<code>`.
+		const code = page.url.searchParams.get('error');
+		if (code) toasts.error(providerErrorMessage(code));
 		void session.load();
 		void (async () => {
 			autofill =
@@ -187,25 +179,20 @@
 <p class="lead">MIDB stores no passwords.</p>
 
 {#if ready}
-	{#if providerError}
-		<Notice tone="error">{providerError}</Notice>
-	{/if}
-
 	{#if providers.length > 0}
 		<div class="group">
 			{#each providers as provider (provider.id)}
 				<button
 					type="button"
 					class="btn btn--ink wide"
+					aria-busy={socialBusy === provider.id}
+					disabled={socialBusy !== null}
 					onclick={() => signInWithProvider(provider)}
 				>
 					<i class={provider.icon} aria-hidden="true"></i>
 					Continue with {provider.label}
 				</button>
 			{/each}
-			{#if socialError}
-				<Notice tone="error">{socialError}</Notice>
-			{/if}
 		</div>
 		<p class="or" aria-hidden="true"><span>or</span></p>
 	{/if}
@@ -243,15 +230,12 @@
 			<i class="ri-fingerprint-line" aria-hidden="true"></i>
 			Sign in with a passkey
 		</button>
-		{#if signInError}
-			<Notice tone="error">{signInError}</Notice>
-		{/if}
 
 		<button
 			type="button"
 			class="btn btn--ghost wide"
 			disabled={!passkeysSupported || signInBusy || signUp === 'working' || signUp === 'checking'}
-			aria-busy={signUp === 'checking' || signUp === 'working'}
+			aria-busy={signUp === 'working'}
 			onclick={startSignUp}
 		>
 			{signUpLabel}
@@ -276,9 +260,6 @@
 				The check against automated sign-ups could not run. A browser extension or the network may
 				be blocking it.
 			</Notice>
-		{/if}
-		{#if signUpError}
-			<Notice tone="error">{signUpError}</Notice>
 		{/if}
 	</div>
 {/if}
