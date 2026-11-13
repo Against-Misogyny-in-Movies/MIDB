@@ -102,7 +102,16 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-security-hardening.md` — Plan: security hardening (~2.8K tok)
+- `docs/plans/plan-security-hardening.md` — Plan: security hardening (~4.4K tok)
+  - 5–8 Kept as they are (~100)
+  - 9–25 Phase SH1: moderation decisions stick (~790)
+  - 26–39 Phase SH2: sock puppets and brigades (~430)
+  - 40–55 Phase SH3: accounts (~460)
+  - 56–71 Phase SH4: platform (~550)
+  - 72–87 Phase SH5: username shape (~390)
+  - 88–142 Review fixes (~1.5K)
+    - 92–118 Fix A: server (~930)
+    - 119–142 Fix B: screens and copy (~590)
 
 ## Policies
 

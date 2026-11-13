@@ -84,3 +84,58 @@ A new or changed username follows these rules (user instruction, 2026-11-13). Na
 3. **The form says the rule.** The profile form's hint and its format refusal state the new shape (`.claude/rules/copy-standards.md`), and the input's `minlength` and `pattern` match it.
 
 Tests: each rule, including a stored 3-character name still resolving at `/u/<name>`, and a look-alike of a current and of a retired name. Docs: `docs/architecture.md` (usernames) and `SECURITY.md`, Network.
+
+## Review fixes
+
+The review round's findings, fixed in two tasks run one after the other.
+
+### Fix A: server
+
+1. **Title page sources load from the browser** (user decision, 2026-11-13). SvelteKit writes streamed promises as inline scripts that the hash CSP blocks, so `loadTitle` no longer returns the Does the Dog Die and Letterboxd promises.
+   - A new public endpoint, `GET /api/titles/[kind]/[tmdbId]/sources`, returns both. It validates the id with the title-id rule. It never reads the user, and it is rate-limited by IP on a new `RL_TITLE_SOURCES` bucket (60 a minute), added as SH3 added `RL_PROFILE`.
+   - A success is edge-cached with its own policy in `cache.ts`, sized to the TTLs the two integrations already cache with. A source that failed is answered without a public policy, so an outage is not kept.
+   - The title page starts the request after mount and fills the existing reserved, `aria-busy` slots in place (`dddStream.svelte.ts`, `letterboxdStream.svelte.ts`), with no layout shift. First paint never waits for it.
+   - The CSP is not widened.
+2. **The username shape is checked only on a rename.** `updateProfile` runs the shape, reserved and blocklist checks only when the name changes, so an account with an older name still saves its avatar.
+3. **A hold survives every edit.** A comment that is `pending` with source `moderator` or `reports` stays `pending` with that source and reason after any edit, whatever the check decides. The new body and the AI verdict are stored. Test the two-edit paths (through a blocklist reject, and through an AI review).
+4. **One helper for the moderator's version.** The `viewedEditedAt` check and refusal is one helper in `moderation-action.ts`, used by the three single actions and the bulk operations.
+5. **Refusals name their cause.**
+   - A comment edited since the moderator's view answers a new `edited` reason, not `invalid-state`.
+   - An administrator's last action answers a new `admin-acted` reason, not `forbidden-target`.
+   - Bulk results count `edited` refusals separately.
+6. **Sign-up names follow the rename rules.** `generateUsername`'s taken check uses the look-alike and retired-name check (`isTakenByOthers`), not only `lower(username)`.
+7. **The reserved-word check reads the name as typed.** The substring test keeps `_`, so `brad_mine` and `sad_mint` pass, and digits are still folded so `m1db` is refused.
+8. **The availability check gives its reason.** The availability endpoint returns `available`, `taken`, `reserved`, `blocked` or `format`.
+9. **A failed sign-up says why.** A sign-up refused for a missing Turnstile secret returns its own code, mapped in `#lib/auth-errors.ts` to "Account creation is not available right now."
+10. **One copy of each value.**
+    - `DAY_MS` is defined once.
+    - `accountOldEnough` reuses the age rule in `community-reports.ts` instead of repeating it.
+    - The title-id rule moves out of `comment-title.ts` into a title module that both `loadTitle` and the comment routes import.
+    - The ban's weight removal (`banReach` and its statements) moves out of `moderation-actions.ts` into its own file.
+11. **Ban tests.** Add cases for a nested reply whose parent is not its root, and for a banned account replying under its own comment.
+12. **Docs cite the constants, not their numbers.** `PRIVACY.md`, `SECURITY.md` and `docs/architecture.md` name `USERNAME_CHANGE_WAIT_DAYS`, `RETIRED_USERNAME_DAYS`, `NEW_USERNAME_RE` and `USERNAME_LOOKUP_RE` instead of writing out 30, 90, or the lengths.
+13. **Static assets carry the security headers.** A `static/_headers` file, if adapter-cloudflare publishes it to Workers Assets, gives every asset the hook's security headers, and gives `/theme-init.js` a one-hour `max-age`. If the adapter does not publish it, STOP and report.
+
+### Fix B: screens and copy
+
+1. **The profile form.**
+   - The form has `novalidate`; `pattern` and `minlength` stay, and `title` goes.
+   - The field's value is trimmed and lowercased as the reader types.
+   - The shape rule is a static line under the field, not inside the live region.
+   - A one-line live slot of fixed height shows the availability state or a refusal, so typing moves nothing.
+   - After a failed save the refusal replaces "Available".
+   - Each availability reason shows its `USERNAME_ERRORS` text.
+   - An invalid shape shows the rule in the field's error state (`aria-invalid`).
+2. **Username copy.**
+   - The rule reads "A new username is 4–32 characters: lowercase letters, numbers and single underscores. It starts with a letter and does not end with an underscore." The lengths come from the constants.
+   - `username-taken` reads "That username, or one that looks like it, belongs to another account or was given up in the last N days.", with N from `RETIRED_USERNAME_DAYS`.
+3. **Moderation refusals.**
+   - On a failed action the row reloads its data (`invalidateAll()`), so the new text and `editedAt` show.
+   - `edited` reads "The comment was edited after this page loaded. Read the new text, then decide."
+   - `admin-acted` reads "An administrator acted on this comment last, so only an administrator can approve, restore or dismiss its reports."
+   - A bulk result with edited rows says how many were edited and were not changed.
+   - `bulk-unchanged` reads "None of the selected comments could be changed."
+4. **The count-flag line.** On an administrator's flag, a moderator sees "An administrator closes this flag." The line on a moderator's own flag is unchanged.
+5. **Votes from a new account.** The viewer state carries the time votes open for the reader. Until then the vote group is locked as it is for a mute, and its hint reads "Votes open on <date>."
+6. **Methodology.** The "Reviewed by people" passage reads: "Reports from {REPORT_THRESHOLD} different accounts send a published comment back to review. Only reports from staff, or from accounts at least {REPORT_ACCOUNT_MIN_AGE_DAYS} days old, count, and none from a muted or banned account; the others are kept for moderators. Votes follow the same age rule." The numbers are interpolated.
+7. **`static/theme-init.js`.** Its first comment describes the cookie block it sits on.
