@@ -48,7 +48,7 @@ Read the sections your task touches.
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–64 Components (~2.8K) ← 1
-  - 65–71 Pages (~450)
+  - 65–71 Pages (~480)
   - 72–75 Motion (~110)
   - 76–79 Browser surfaces (~50)
   - 80–83 Avoid (~90)

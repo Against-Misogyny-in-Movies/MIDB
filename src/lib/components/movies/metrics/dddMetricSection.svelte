@@ -40,7 +40,7 @@
 				? `${visibleTags.length} warning${visibleTags.length === 1 ? '' : 's'}`
 				: 'No data'}
 		busy={ddd === null}
-		open={ddd === null || visibleTags.length > 0}
+		open={false}
 		sourceLabel="DoesTheDogDie.com"
 		sourceHref={dddUrl(ddd?.itemId ?? null)}
 		learnHref="/resources#ddd"
