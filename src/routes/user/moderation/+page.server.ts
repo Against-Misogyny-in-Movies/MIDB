@@ -38,8 +38,9 @@ import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
 const STAFF = ['moderator', 'administrator'] as const;
 
 /**
- * The page and both of its views. `?title=<id>` opens one title's reader reports in the
- * reader-reports tab; without it the tab lists the held reports and the flagged titles.
+ * The page and both of its views. `?tab=reports` opens the reader-reports tab, and
+ * `?title=<id>` opens one title's reader reports in it; without a title the tab lists the held
+ * reports and the flagged titles.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
 	await requireRole(locals, STAFF, { page: true });
@@ -54,6 +55,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		getSourceSyncDates()
 	]);
 	return {
+		tab: url.searchParams.get('tab'),
+		titleId,
 		pending,
 		reported,
 		recent,

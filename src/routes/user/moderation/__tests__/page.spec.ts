@@ -9,6 +9,8 @@ const DATA = {
 	me: { id: 'mod', role: 'moderator' },
 	pending: [],
 	reported: [],
+	tab: null,
+	titleId: null,
 	held: [],
 	flagged: [],
 	openTitle: null,
@@ -77,16 +79,19 @@ describe('the reader-reports tab', () => {
 		} as never);
 		await fireEvent.click(tab(/Reader reports/));
 		expect(screen.getByRole('heading', { name: 'Held' })).toBeTruthy();
-		expect(screen.getByRole('heading', { name: 'Flagged titles' })).toBeTruthy();
-		expect(screen.getByRole('link', { name: 'Open reports' }).getAttribute('href')).toBe(
+		expect(screen.getByRole('heading', { name: 'Flagged titles 1' })).toBeTruthy();
+		expect(screen.getByText('Counts look wrong: 1 open')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'See reader reports' }).getAttribute('href')).toBe(
 			'?title=t2'
 		);
+		expect(tab(/Reader reports/).textContent).toContain('0');
 	});
 
 	it('opens on the reader-reports tab when a title is open', () => {
 		render(Page, {
 			data: {
 				...DATA,
+				titleId: 't2',
 				openTitle: {
 					id: 't2',
 					kind: 'tv',
@@ -99,5 +104,36 @@ describe('the reader-reports tab', () => {
 		} as never);
 		expect(tab(/Reader reports/).getAttribute('aria-selected')).toBe('true');
 		expect(screen.getByText('This title has no reader reports.')).toBeTruthy();
+	});
+});
+
+describe('the reader-reports URL', () => {
+	it('opens the tab for ?tab=reports, and Pending otherwise', () => {
+		const { unmount } = render(Page, { data: { ...DATA, tab: 'reports' }, form: null } as never);
+		expect(tab(/Reader reports/).getAttribute('aria-selected')).toBe('true');
+		unmount();
+		render(Page, { data: DATA, form: null } as never);
+		expect(tab(/Pending/).getAttribute('aria-selected')).toBe('true');
+	});
+
+	it('counts only the held reports on the tab', () => {
+		render(Page, {
+			data: {
+				...DATA,
+				held: [],
+				flagged: [{ titleId: 't2', title: { kind: 'tv', tmdbId: 1, name: 'Dark' }, flags: [] }]
+			},
+			form: null
+		} as never);
+		expect(tab(/Reader reports/).textContent?.trim()).toBe('Reader reports0');
+	});
+
+	it('says so, with a way back, when the title has no reports or does not exist', () => {
+		render(Page, { data: { ...DATA, titleId: 'gone' }, form: null } as never);
+		expect(tab(/Reader reports/).getAttribute('aria-selected')).toBe('true');
+		expect(screen.getByText('That title has no reader reports or no longer exists.')).toBeTruthy();
+		expect(screen.getByRole('link', { name: /Back to reader reports/ }).getAttribute('href')).toBe(
+			'?tab=reports'
+		);
 	});
 });

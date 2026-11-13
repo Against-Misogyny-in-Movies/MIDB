@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ReportAnswerColumns } from '#lib/media/types/moderation.ts';
 	import {
 		CONCERN_FLAGS,
@@ -17,8 +18,18 @@
 	let { answers, um = null }: Props = $props();
 
 	const lines = $derived(answerLines(answers));
-	const answered = (value: boolean | null) => (value === null ? NOT_SURE : value ? 'Yes' : 'No');
+	/** The flags are asked only when sexual violence is Present, so otherwise they were not asked. */
+	const asked = $derived(answers.sexualPresent === 'present');
+	const answered = (value: boolean | null) =>
+		!asked ? 'Not asked' : value === null ? NOT_SURE : value ? 'Yes' : 'No';
 	const flagged = $derived(CONCERN_FLAGS.filter((f) => answers[f.key] === true));
+	/** The rows where the reader's Yes or No is the opposite of UM's, first. */
+	const rows = $derived(
+		CONCERN_FLAGS.map((flag) => {
+			const reader = answers[flag.key];
+			return { flag, differs: um !== null && reader !== null && reader !== um[flag.key] };
+		}).sort((a, b) => Number(b.differs) - Number(a.differs))
+	);
 </script>
 
 <dl class="answers">
@@ -47,9 +58,12 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each CONCERN_FLAGS as flag (flag.key)}
+			{#each rows as { flag, differs } (flag.key)}
 				<tr>
-					<th scope="row">{flag.label}</th>
+					<th scope="row">
+						{flag.label}
+						{#if differs}<Badge tone="mid">Differs</Badge>{/if}
+					</th>
 					<td>{answered(answers[flag.key])}</td>
 					<td>{um[flag.key] ? 'Yes' : 'No'}</td>
 				</tr>
@@ -91,6 +105,7 @@
 	.flags th,
 	.flags td {
 		padding-block: var(--spacing-xs);
+		padding-inline: var(--spacing-sm);
 		border-top: 1px solid var(--border);
 	}
 

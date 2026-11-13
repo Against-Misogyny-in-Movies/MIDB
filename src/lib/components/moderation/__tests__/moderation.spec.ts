@@ -369,7 +369,9 @@ describe('the held report row', () => {
 	it('shows the title, the account, the hold reason and the two actions', () => {
 		render(HeldReportRow, { report: base, outcome: null });
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
-		expect(screen.getByText(/anna, 3 days old, 4 reports, 1 comment/)).toBeTruthy();
+		expect(
+			screen.getByText(/anna, 3 days old, 4 reader reports not rejected, 1 comment/)
+		).toBeTruthy();
 		expect(screen.getByText('Busy new account')).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Count it' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
@@ -385,6 +387,6 @@ describe('the held report row', () => {
 		});
 		expect(screen.getByText('Contradicts Unconsenting Media')).toBeTruthy();
 		expect(screen.getByRole('columnheader', { name: 'Unconsenting Media' })).toBeTruthy();
-		expect(screen.getByRole('rowheader', { name: 'Rape on screen' })).toBeTruthy();
+		expect(screen.getByRole('rowheader', { name: /Rape on screen/ })).toBeTruthy();
 	});
 });

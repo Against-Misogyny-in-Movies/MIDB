@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import Badge from '#lib/components/ui/badge.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
+	import CountRejectForms from '#lib/components/moderation/countRejectForms.svelte';
 	import ReportAnswers from '#lib/components/moderation/reportAnswers.svelte';
+	import ReportRowShell from '#lib/components/moderation/reportRowShell.svelte';
 	import type { ActionOutcome, HeldReport } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { HOLD_REASON_LABELS } from '#lib/media/utils/readerReports.ts';
@@ -28,53 +30,28 @@
 	const href = $derived(titleHref(report.title.kind, report.title.tmdbId));
 </script>
 
-<li class="item" tabindex="-1" bind:this={root}>
-	<header class="meta">
-		<span class="name">
-			{#if href}<a class="link" {href}>{report.title.name}</a>{:else}{report.title.name}{/if}
-		</span>
-		<span class="label">{report.holdReason ? HOLD_REASON_LABELS[report.holdReason] : 'Held'}</span>
+<ReportRowShell bind:root>
+	{#snippet name()}
+		{#if href}<a class="link" {href}>{report.title.name}</a>{:else}{report.title.name}{/if}
+	{/snippet}
+	{#snippet meta()}
+		<Badge tone="neutral">
+			{report.holdReason ? HOLD_REASON_LABELS[report.holdReason] : 'Held'}
+		</Badge>
 		<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
-	</header>
+	{/snippet}
 	<p class="label">{accountLine(report.account)}</p>
-
 	<ReportAnswers answers={report.answers} um={report.um} />
-
-	<div class="actions">
-		{#each [{ name: 'countReport', label: 'Count it', busy: 'Counting…', style: 'btn--ink' }, { name: 'rejectReport', label: 'Reject', busy: 'Rejecting…', style: 'btn--ghost' }] as action (action.name)}
-			<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
-				<input type="hidden" name="userId" value={report.account.userId} />
-				<input type="hidden" name="titleId" value={report.titleId} />
-				<button class="btn {action.style}" disabled={busy !== null}>
-					{busy === action.name ? action.busy : action.label}
-				</button>
-			</form>
-		{/each}
-	</div>
-
-	{#if mine?.error}<Notice tone="error">{mine.error}</Notice>{/if}
-</li>
-
-<style lang="postcss">
-	@reference "../../../app.css";
-
-	.item {
-		@apply flex flex-col;
-		gap: var(--spacing-sm);
-		padding: 16px 20px;
-	}
-
-	.meta {
-		@apply flex flex-wrap items-center text-sm;
-		gap: var(--spacing-xs) var(--spacing-sm);
-	}
-
-	.name {
-		@apply font-semibold;
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
-	}
-</style>
+	{#snippet actions()}
+		<CountRejectForms
+			userId={report.account.userId}
+			titleId={report.titleId}
+			status="held"
+			{busy}
+			{submit}
+		/>
+	{/snippet}
+	{#snippet footer()}
+		{#if mine?.error}<Notice tone="error">{mine.error}</Notice>{/if}
+	{/snippet}
+</ReportRowShell>

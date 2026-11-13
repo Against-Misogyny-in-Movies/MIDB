@@ -3,12 +3,14 @@
 	import FlaggedTitleRow from '#lib/components/moderation/flaggedTitleRow.svelte';
 	import HeldReportRow from '#lib/components/moderation/heldReportRow.svelte';
 	import TitleReportRow from '#lib/components/moderation/titleReportRow.svelte';
+	import Notice from '#lib/components/ui/notice.svelte';
 	import type {
 		ActionOutcome,
 		FlaggedTitle,
 		HeldReport,
 		OpenTitle
 	} from '#lib/media/types/moderation.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
@@ -16,24 +18,36 @@
 		flagged: FlaggedTitle[];
 		/** The title whose reports are open, from `?title=`. */
 		openTitle: OpenTitle | null;
+		/** The id `?title=` named, which opens no title when none has it. */
+		titleId?: string | null;
+		/** The acting moderator, whose role decides which accounts the buttons offer. */
+		me: { id: string; role: string };
 		outcome: ActionOutcome;
 	}
 
-	let { held, flagged, openTitle, outcome }: Props = $props();
+	let { held, flagged, openTitle, titleId = null, me, outcome }: Props = $props();
 
 	const openFlags = $derived(flagged.find((f) => f.titleId === openTitle?.id)?.flags ?? []);
 	const openHref = $derived(openTitle ? titleHref(openTitle.kind, openTitle.tmdbId) : undefined);
+	const FLAG_DONE: Record<string, string> = {
+		resolveFlag: 'Marked resolved.',
+		dismissFlag: 'Dismissed.'
+	};
+	const flagDone = $derived(outcome?.done ? FLAG_DONE[outcome.done] : undefined);
 </script>
 
 {#if openTitle}
 	<section class="group" aria-labelledby="open-title">
-		<a class="back link" href="/user/moderation">Back to reader reports</a>
-		<h2 id="open-title" class="heading">
+		<a class="back" href="?tab=reports"
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Back to reader reports</a
+		>
+		<h2 id="open-title" class="heading" tabindex="-1">
 			{#if openHref}<a class="link" href={openHref}>{openTitle.name}</a>{:else}{openTitle.name}{/if}
 		</h2>
+		{#if flagDone}<Notice tone="success">{flagDone}</Notice>{/if}
 		{#if openFlags.length > 0}
 			<div class="card flags">
-				<h3 class="label">Counts look wrong</h3>
+				<h3 class="heading">Counts look wrong</h3>
 				<CountFlagList flags={openFlags} {outcome} />
 			</div>
 		{/if}
@@ -42,10 +56,22 @@
 		{:else}
 			<ul class="card list">
 				{#each openTitle.reports as report (report.account.userId)}
-					<TitleReportRow {report} titleId={openTitle.id} {outcome} />
+					<TitleReportRow
+						{report}
+						titleId={openTitle.id}
+						{outcome}
+						canAct={canActOn(me, { id: report.account.userId, role: report.account.role })}
+					/>
 				{/each}
 			</ul>
 		{/if}
+	</section>
+{:else if titleId}
+	<section class="group">
+		<a class="back" href="?tab=reports"
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Back to reader reports</a
+		>
+		<p class="empty">That title has no reader reports or no longer exists.</p>
 	</section>
 {:else}
 	<section class="group" aria-labelledby="held-heading">
@@ -61,9 +87,11 @@
 		{/if}
 	</section>
 	<section class="group" aria-labelledby="flagged-heading">
-		<h2 id="flagged-heading" class="heading">Flagged titles</h2>
+		<h2 id="flagged-heading" class="heading">
+			Flagged titles <span class="count">{flagged.length}</span>
+		</h2>
 		{#if flagged.length === 0}
-			<p class="empty">No titles have open counts flags.</p>
+			<p class="empty">No titles are marked Counts look wrong.</p>
 		{:else}
 			<ul class="card list">
 				{#each flagged as entry (entry.titleId)}
@@ -88,7 +116,23 @@
 	}
 
 	.back {
-		@apply text-sm;
+		@apply inline-flex items-center self-start text-sm text-ink-muted no-underline;
+	}
+
+	.back:hover {
+		@apply text-ink;
+	}
+
+	/* A touch target is 44px on a coarse pointer, like the buttons. */
+	@media (pointer: coarse) {
+		.back {
+			min-height: 2.75rem;
+		}
+	}
+
+	.count {
+		@apply text-ink-muted font-normal;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.flags {

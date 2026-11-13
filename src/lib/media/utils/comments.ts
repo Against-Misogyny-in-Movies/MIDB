@@ -41,6 +41,10 @@ export const COMMENT_STATUS_LABELS: Record<(typeof commentStatus)[number], strin
 /** The mute lengths a moderator picks from, in hours. */
 export const MUTE_HOURS = [24, 168, 720] as const;
 
+/** A mute length as the moderator reads it: "1 day" or "7 days". */
+export const formatMuteHours = (hours: number): string =>
+	hours === 24 ? '1 day' : `${hours / 24} days`;
+
 /**
  * What the author reads under a comment that is not public: for a rejected one the reason
  * first, then who can see it.
