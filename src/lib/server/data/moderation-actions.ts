@@ -206,7 +206,7 @@ export async function muteUser(
 	hours: number,
 	reason: string | null
 ): Promise<ModerationResult> {
-	const target = await targetAllowed(actor, targetId);
+	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
 	const until = new Date(Date.now() + hours * 3_600_000);
 	await runBatch([
@@ -226,7 +226,7 @@ export async function banAccount(
 	targetId: string,
 	reason: string | null
 ): Promise<ModerationResult> {
-	const target = await targetAllowed(actor, targetId);
+	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
 	await runBatch([
 		...banStatements(targetId, reason),

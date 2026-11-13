@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { ReportAccount } from '#lib/media/types/moderation.ts';
-import { canActOn } from '../canActOn.ts';
 import { formatMuteHours } from '../comments.ts';
 import { accountLine } from '../reportAccount.ts';
 
@@ -28,19 +27,6 @@ describe('accountLine', () => {
 			'3 days old, 1 community report not rejected, 2 comments'
 		);
 		expect(accountLine({ ...account, username: null }, true, NOW)).toMatch(/^An account, /);
-	});
-});
-
-describe('canActOn', () => {
-	const mod = { id: 'm', role: 'moderator' };
-	const admin = { id: 'a', role: 'administrator' };
-	it('matches the server rule', () => {
-		expect(canActOn(mod, { id: 'u', role: 'user' })).toBe(true);
-		expect(canActOn(mod, { id: 'm', role: 'moderator' })).toBe(false);
-		expect(canActOn(mod, { id: 'm2', role: 'moderator' })).toBe(false);
-		expect(canActOn(mod, admin)).toBe(false);
-		expect(canActOn(admin, { id: 'm2', role: 'moderator' })).toBe(true);
-		expect(canActOn(admin, admin)).toBe(false);
 	});
 });
 

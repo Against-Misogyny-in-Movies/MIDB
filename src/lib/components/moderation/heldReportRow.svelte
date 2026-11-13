@@ -12,9 +12,11 @@
 
 	interface Props {
 		report: HeldReport;
+		/** Whether the acting staff member may count or reject this account's reports (`canActOn`). */
+		canAct: boolean;
 	}
 
-	let { report }: Props = $props();
+	let { report, canAct }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -39,12 +41,14 @@
 	<p class="label">{accountLine(report.account)}</p>
 	<ReportAnswers answers={report.answers} um={report.um} />
 	{#snippet actions()}
-		<CountRejectForms
-			userId={report.account.userId}
-			titleId={report.titleId}
-			status="held"
-			{busy}
-			{submit}
-		/>
+		{#if canAct}
+			<CountRejectForms
+				userId={report.account.userId}
+				titleId={report.titleId}
+				status="held"
+				{busy}
+				{submit}
+			/>
+		{/if}
 	{/snippet}
 </ReportRowShell>

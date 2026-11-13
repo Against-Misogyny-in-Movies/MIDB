@@ -180,12 +180,21 @@ describe.each(['aiSearch', 'scan', 'bulk'] as const)('?/%s guards', (name) => {
 		expect(actionsFns.approveComment).not.toHaveBeenCalled();
 	});
 
-	it('passes a 429 from the rate limit through before any work', async () => {
-		rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
-		await expect(run(name, FIELDS)).rejects.toMatchObject({ status: 429 });
-		expect(queryToFilters).not.toHaveBeenCalled();
-		expect(scanComments).not.toHaveBeenCalled();
-		expect(actionsFns.approveComment).not.toHaveBeenCalled();
+	it.skipIf(name === 'bulk')(
+		'passes a 429 from the rate limit through before any work',
+		async () => {
+			rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
+			await expect(run(name, FIELDS)).rejects.toMatchObject({ status: 429 });
+			expect(queryToFilters).not.toHaveBeenCalled();
+			expect(scanComments).not.toHaveBeenCalled();
+			expect(actionsFns.approveComment).not.toHaveBeenCalled();
+		}
+	);
+
+	it.skipIf(name !== 'bulk')('applies no rate limit to staff', async () => {
+		actionsFns.approveComment.mockResolvedValue({ ok: true, title: null });
+		await run(name, FIELDS);
+		expect(rateLimit).not.toHaveBeenCalled();
 	});
 });
 
@@ -335,7 +344,7 @@ describe('?/bulk', () => {
 			['ids', 'c4'],
 			['ids', 'c1']
 		]);
-		expect(rateLimit).toHaveBeenCalledWith(expect.anything(), 'RL_MODERATE', { userId: 'mod-1' });
+		expect(rateLimit).not.toHaveBeenCalled();
 		expect(actionsFns.hideComment.mock.calls.map(([, id, reason]) => [id, reason])).toEqual([
 			['c1', 'Off topic'],
 			['c2', 'Off topic'],

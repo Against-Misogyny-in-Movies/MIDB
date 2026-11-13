@@ -131,7 +131,7 @@ describe('moderation actions', () => {
 		expect(log.find((l) => l.action === 'ban')?.muteHours).toBeNull();
 	});
 
-	it('refuses to act on yourself, an administrator, or (as a moderator) a moderator', async () => {
+	it('refuses a moderator on themselves, an administrator or a moderator, and an administrator on themselves', async () => {
 		expect(await muteUser(mod, 'mod', 24, null)).toEqual({
 			ok: false,
 			reason: 'forbidden-target'
@@ -147,6 +147,10 @@ describe('moderation actions', () => {
 			reason: 'forbidden-target'
 		});
 		expect(await muteUser(admin, 'mod2', 24, null)).toMatchObject({ ok: true });
+		expect(await banAccount(admin, 'admin', null)).toEqual({
+			ok: false,
+			reason: 'forbidden-target'
+		});
 		expect(await banAccount(mod, 'nobody', null)).toEqual({ ok: false, reason: 'not-found' });
 	});
 });
@@ -236,14 +240,22 @@ describe('moderator authority over a comment', () => {
 		expect(report.status).toBe('open');
 	});
 
-	it('lets an administrator act on a moderator’s comment, not on their own', async () => {
-		const byMod = await createComment({ title, userId: 'mod', body: 'By mod' });
-		const byAdmin = await createComment({ title, userId: 'admin', body: 'By admin' });
-		if (!byMod.ok || !byAdmin.ok) throw new Error('create failed');
-		expect(await approveComment(admin, byMod.comment.id)).toMatchObject({ ok: true });
-		expect(await approveComment(admin, byAdmin.comment.id)).toEqual({
-			ok: false,
-			reason: 'forbidden-target'
-		});
+	it('lets an administrator act on a moderator’s, an administrator’s and their own comment', async () => {
+		await db.insert(users).values(userValues('admin2', { role: 'administrator' }));
+		for (const userId of ['mod', 'admin2', 'admin']) {
+			const result = await createComment({ title, userId, body: `By ${userId}` });
+			if (!result.ok) throw new Error(result.reason);
+			expect(await approveComment(admin, result.comment.id)).toMatchObject({ ok: true });
+			expect(await hideComment(admin, result.comment.id, null)).toMatchObject({ ok: true });
+		}
+	});
+
+	it('lets an administrator dismiss the reports on their own comment', async () => {
+		const result = await createComment({ title, userId: 'admin', body: 'Reported' });
+		if (!result.ok) throw new Error(result.reason);
+		await db
+			.insert(commentReports)
+			.values({ commentId: result.comment.id, reporterId: 'u1', reason: 'spam' });
+		expect(await dismissReports(admin, result.comment.id)).toMatchObject({ ok: true });
 	});
 });

@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from '@sveltejs/kit';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import { rateLimit, type RateLimitBucket } from '#lib/server/http/rate-limit.ts';
+import { rateLimit } from '#lib/server/http/rate-limit.ts';
 import type { ModerationResult } from '#lib/server/data/moderation-actions.ts';
 import type { ReportModerationResult } from '#lib/server/data/community-report-moderation.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
@@ -44,7 +44,7 @@ const refusals: Record<Refusal, [number, string]> = {
 	'invalid-state': [409, 'It is no longer in a state this action applies to.'],
 	'forbidden-target': [
 		403,
-		'A moderator can act only on ordinary accounts, an administrator also on moderators; no one acts on an administrator or on their own account.'
+		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
 	'bulk-unchanged': [
 		409,
@@ -61,10 +61,11 @@ const refusals: Record<Refusal, [number, string]> = {
 };
 
 /**
- * One moderator action: the guard (403 for anyone else), the rate limit (`bucket`), then `run`
+ * One moderator action: the guard (403 for anyone else), the AI rate limit when `bucket` is given, then `run`
  * over the form. `key` reads the action's target, and a form without one is refused; `after`
  * runs on success (a comment action purges its title's list there, so the change is public at
- * once). The community-report data functions purge their own counts.
+ * once). The community-report data functions purge their own counts. Staff are not
+ * rate-limited; only the AI calls, which cost money, pass `bucket` (`RL_MODERATE_AI`).
  */
 export async function act(
 	event: ActionEvent,
@@ -72,10 +73,10 @@ export async function act(
 	key: (data: FormData) => string | null,
 	run: (staff: UserRow, data: FormData) => Promise<Outcome> | Outcome,
 	after?: (result: Extract<Outcome, { ok: true }>) => void,
-	bucket: RateLimitBucket = 'RL_MODERATE'
+	bucket?: 'RL_MODERATE_AI'
 ) {
 	const staff = await requireRole(event.locals, STAFF_ROLES);
-	await rateLimit(event, bucket, { userId: staff.id });
+	if (bucket) await rateLimit(event, bucket, { userId: staff.id });
 	const data = await event.request.formData();
 	const target = key(data);
 	if (!target) return fail(400, { id: null, error: 'The request had no target.' });

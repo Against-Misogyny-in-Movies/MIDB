@@ -6,9 +6,11 @@
 
 	interface Props {
 		flag: FlaggedTitle['flags'][number];
+		/** False for a moderator's own flag. */
+		canAct: boolean;
 	}
 
-	let { flag }: Props = $props();
+	let { flag, canAct }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -27,20 +29,22 @@
 		<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 		{#if flag.note}<span class="note">{flag.note}</span>{/if}
 	</p>
-	<div class="actions">
-		{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
-			<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
-				<input type="hidden" name="id" value={flag.id} />
-				<button
-					class="btn {action.style}"
-					aria-busy={busy === action.name}
-					disabled={busy !== null && busy !== action.name}
-				>
-					{action.label}
-				</button>
-			</form>
-		{/each}
-	</div>
+	{#if canAct}
+		<div class="actions">
+			{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
+				<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
+					<input type="hidden" name="id" value={flag.id} />
+					<button
+						class="btn {action.style}"
+						aria-busy={busy === action.name}
+						disabled={busy !== null && busy !== action.name}
+					>
+						{action.label}
+					</button>
+				</form>
+			{/each}
+		</div>
+	{/if}
 </li>
 
 <style lang="postcss">

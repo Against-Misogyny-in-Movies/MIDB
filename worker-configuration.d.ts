@@ -8,7 +8,6 @@ interface __BaseEnv_Env {
 	RL_COMMENT: RateLimit;
 	RL_VOTE: RateLimit;
 	RL_REPORT: RateLimit;
-	RL_MODERATE: RateLimit;
 	RL_CONTENT_REPORT: RateLimit;
 	RL_MODERATE_AI: RateLimit;
 	ASSETS: Fetcher;
@@ -27,7 +26,6 @@ declare namespace Cloudflare {
 		RL_COMMENT: RateLimit;
 		RL_VOTE: RateLimit;
 		RL_REPORT: RateLimit;
-		RL_MODERATE: RateLimit;
 		RL_CONTENT_REPORT: RateLimit;
 		RL_MODERATE_AI: RateLimit;
 		ASSETS: Fetcher;

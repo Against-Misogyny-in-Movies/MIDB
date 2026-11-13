@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 72–75 Motion (~110)
   - 76–79 Browser surfaces (~50)
   - 80–83 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~54.5K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~54.7K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -65,7 +65,7 @@ Read the sections your task touches.
     - 366–373 Migrations (~330)
   - 374–403 Source sync (~1.8K) ← 3
   - 404–469 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
-  - 470–502 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.7K) ← 2
+  - 470–502 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.8K) ← 2
   - 503–522 UM Disambiguation (~630)
   - 523–531 UM flag rendering (~250)
   - 532–540 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
@@ -108,8 +108,8 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~3.3K tok)
-  - 5–18 Network (~2.7K)
+- `SECURITY.md` — Security (~3.4K tok)
+  - 5–18 Network (~2.8K)
   - 19–29 Supply chain (~490)
   - 30–35 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~2.9K tok)

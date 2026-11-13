@@ -94,7 +94,7 @@ beforeEach(() => {
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	for (const fn of Object.values(reports))
 		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
-	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue(true);
+	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue({ ok: true });
 	reports.listHeldReports.mockResolvedValue([]);
 	reports.listFlaggedTitles.mockResolvedValue([]);
 	reports.getOpenTitle.mockResolvedValue(null);
@@ -149,16 +149,10 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 		expect(rateLimit).not.toHaveBeenCalled();
 	});
 
-	it('calls the guard for staff, without a page redirect, then the rate limit with the user', async () => {
+	it('calls the guard for staff, without a page redirect, and applies no rate limit', async () => {
 		await run(name);
 		expect(requireRole).toHaveBeenCalledWith({}, ['moderator', 'administrator']);
-		expect(rateLimit).toHaveBeenCalledWith(expect.anything(), 'RL_MODERATE', { userId: 'mod-1' });
-	});
-
-	it('answers 429 from the rate limit before any change', async () => {
-		rateLimit.mockImplementation(async () => error(429, 'Too many requests'));
-		await expect(run(name)).rejects.toMatchObject({ status: 429 });
-		for (const fn of allFns()) expect(fn).not.toHaveBeenCalled();
+		expect(rateLimit).not.toHaveBeenCalled();
 	});
 });
 
@@ -207,9 +201,9 @@ describe('community-report actions', () => {
 
 	it('resolve and dismiss close the flag as the acting moderator', async () => {
 		expect(await run('resolveFlag', REPORT_FIELDS)).toEqual({ id: 'f1', done: 'resolveFlag' });
-		expect(flags.resolveCountFlag).toHaveBeenCalledWith('f1', 'mod-1');
+		expect(flags.resolveCountFlag).toHaveBeenCalledWith('f1', MOD);
 		await run('dismissFlag', REPORT_FIELDS);
-		expect(flags.dismissCountFlag).toHaveBeenCalledWith('f1', 'mod-1');
+		expect(flags.dismissCountFlag).toHaveBeenCalledWith('f1', MOD);
 	});
 
 	it('answers 400 when the report is not named', async () => {
@@ -223,8 +217,10 @@ describe('community-report actions', () => {
 			status: 404,
 			data: { id: 'u1:t1' }
 		});
-		flags.resolveCountFlag.mockResolvedValue(false);
+		flags.resolveCountFlag.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		expect(await run('resolveFlag', REPORT_FIELDS)).toMatchObject({ status: 409 });
+		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'forbidden-target' });
+		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({ status: 403 });
 	});
 });
 

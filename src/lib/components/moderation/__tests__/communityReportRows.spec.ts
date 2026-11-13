@@ -97,10 +97,10 @@ const titleReport = (over: Partial<TitleReport> = {}): TitleReport => ({
 	...over
 });
 
-function mountRow(report: TitleReport, canAct = true) {
+function mountRow(report: TitleReport, canAct = true, canRestrict = canAct) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(TitleReportRow, {
-		props: { report, titleId: 't1', canAct },
+		props: { report, titleId: 't1', canAct, canRestrict },
 		target: list
 	});
 }
@@ -149,7 +149,16 @@ describe('the title report row', () => {
 		expect(screen.queryByText('Account')).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Reject all from this account' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
+	});
+
+	it('offers an administrator their own report but not Mute or Ban on themselves', () => {
+		mountRow(titleReport(), true, false);
 		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Reject all from this account' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
 	});
 
 	it('asks before rejecting every report, naming the count and the consequence', async () => {
@@ -218,8 +227,20 @@ describe('the open title view', () => {
 		titleId: 't1',
 		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 		flags: [
-			{ id: 'f1', note: 'Too low', reporter: 'bo', createdAt: '2026-11-10T10:00:00Z' },
-			{ id: 'f2', note: null, reporter: null, createdAt: '2026-11-11T10:00:00Z' }
+			{
+				id: 'f1',
+				note: 'Too low',
+				reporter: 'bo',
+				reporterId: 'u1',
+				createdAt: '2026-11-10T10:00:00Z'
+			},
+			{
+				id: 'f2',
+				note: null,
+				reporter: null,
+				reporterId: 'u2',
+				createdAt: '2026-11-11T10:00:00Z'
+			}
 		]
 	};
 	const open = { id: 't1', kind: 'movie' as const, tmdbId: 348, name: 'Alien', reports: [] };
@@ -278,6 +299,25 @@ describe('the open title view', () => {
 		await waitFor(() =>
 			expect(shown()).toEqual(['success: Marked resolved.', 'success: Dismissed.'])
 		);
+	});
+
+	it('hides the buttons of a moderator’s own flag only; an administrator keeps theirs', () => {
+		const own = { ...flagged.flags[0], id: 'f3', reporterId: 'mod' };
+		const props = { held: [], openTitle: open, titleId: 't1' };
+		const { unmount } = render(CommunityReportsPanel, {
+			...props,
+			flagged: [{ ...flagged, flags: [own] }],
+			me
+		});
+		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull();
+		unmount();
+		render(CommunityReportsPanel, {
+			...props,
+			flagged: [{ ...flagged, flags: [own, flagged.flags[1]] }],
+			me: { id: 'mod', role: 'administrator' }
+		});
+		expect(screen.getAllByRole('button', { name: 'Resolve' })).toHaveLength(2);
 	});
 
 	it('shows no actions for a report of an administrator', () => {

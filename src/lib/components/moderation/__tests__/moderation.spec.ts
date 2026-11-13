@@ -75,10 +75,15 @@ afterEach(() => {
 /** The toasts showing, as `tone: text`. */
 const shown = () => toasts.items.map((t) => `${t.tone}: ${t.text}`);
 
-function mount(over: Partial<ModerationItem> = {}, extra: { canActOnAuthor?: boolean } = {}) {
+const MOD = { id: 'mod', role: 'moderator' };
+
+function mount(
+	over: Partial<ModerationItem> = {},
+	extra: { me?: { id: string; role: string } } = {}
+) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(ModerationItemRow, {
-		props: { item: item(over), canActOnAuthor: true, ...extra },
+		props: { item: item(over), me: MOD, ...extra },
 		target: list
 	});
 }
@@ -115,11 +120,18 @@ describe('ModerationItem', () => {
 	it('lists each open report with its reason and note', () => {
 		mount({
 			reports: [
-				{ reason: 'spam', note: 'An advert', createdAt: '2026-11-02T10:00:00.000Z' },
-				{ reason: 'hate', note: null, createdAt: '2026-11-02T11:00:00.000Z' }
+				{
+					reason: 'spam',
+					note: 'An advert',
+					createdAt: '2026-11-02T10:00:00.000Z',
+					reporter: 'bo'
+				},
+				{ reason: 'hate', note: null, createdAt: '2026-11-02T11:00:00.000Z', reporter: null }
 			]
 		});
 		expect(screen.getByText('2 open reports')).toBeTruthy();
+		expect(screen.getByText('bo')).toBeTruthy();
+		expect(screen.getByText('Account')).toBeTruthy();
 		expect(screen.getByText('Spam')).toBeTruthy();
 		expect(screen.getByText('An advert')).toBeTruthy();
 		expect(screen.getByText('Hate or bigotry')).toBeTruthy();
@@ -135,11 +147,38 @@ describe('ModerationItem', () => {
 		expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
 	});
 
-	it('hides the mute and ban buttons for an account the role cannot act on', () => {
-		mount({}, { canActOnAuthor: false });
+	it('hides every control for an author the moderator cannot act on', () => {
+		mount(
+			{
+				author: { ...AUTHOR, role: 'administrator' },
+				reports: [
+					{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: 'bo' }
+				]
+			},
+			{}
+		);
+		for (const name of [
+			'Approve',
+			'Dismiss reports',
+			'Hide',
+			'Reject',
+			'Mute author',
+			'Ban author'
+		])
+			expect(screen.queryByRole('button', { name })).toBeNull();
+	});
+
+	it('offers an administrator every control on an administrator’s comment, Mute and Ban excepted on themselves', () => {
+		const admin = { ...AUTHOR, id: 'boss', role: 'administrator' as const };
+		mount({ author: admin }, { me: { id: 'other', role: 'administrator' } });
+		for (const name of ['Approve', 'Hide', 'Reject', 'Mute author', 'Ban author'])
+			expect(screen.getByRole('button', { name })).toBeTruthy();
+		cleanup();
+		mount({ author: admin }, { me: { id: 'boss', role: 'administrator' } });
+		for (const name of ['Approve', 'Hide', 'Reject'])
+			expect(screen.getByRole('button', { name })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Mute author' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Ban author' })).toBeNull();
-		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
 	});
 
 	it('asks for a confirmation that names the consequence of a ban', async () => {
@@ -203,7 +242,11 @@ describe('ModerationItem', () => {
 	it('marks the pressed button busy and holds the others until the action ends', async () => {
 		let release!: () => void;
 		form.update = () => new Promise<void>((r) => (release = r));
-		mount({ reports: [{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z' }] });
+		mount({
+			reports: [
+				{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: null }
+			]
+		});
 		const approve = screen.getByRole('button', { name: 'Approve' });
 		await fireEvent.submit(approve.closest('form') as HTMLFormElement);
 		await waitFor(() => expect(approve.getAttribute('aria-busy')).toBe('true'));
@@ -222,14 +265,14 @@ describe('focus after an action', () => {
 	function mountTwo(second = true) {
 		const list = document.body.appendChild(document.createElement('ul'));
 		const first = render(ModerationItemRow, {
-			props: { item: item(), canActOnAuthor: true },
+			props: { item: item(), me: MOD },
 			target: list
 		});
 		if (second) {
 			render(ModerationItemRow, {
 				props: {
 					item: item({ comment: { ...item().comment, id: 'c2' } }),
-					canActOnAuthor: true
+					me: MOD
 				},
 				target: list
 			});
@@ -399,7 +442,7 @@ describe('the held report row', () => {
 	};
 
 	it('shows the title, the account, the hold reason and the two actions', () => {
-		render(HeldReportRow, { report: base });
+		render(HeldReportRow, { report: base, canAct: true });
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
 		expect(
 			screen.getByText(/anna, 3 days old, 4 community reports not rejected, 1 comment/)
@@ -409,12 +452,19 @@ describe('the held report row', () => {
 		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
 	});
 
+	it('offers no actions for an account the actor cannot act on', () => {
+		render(HeldReportRow, { report: base, canAct: false });
+		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
+	});
+
 	it('shows UM flags only when the report contradicts the source', () => {
-		const { unmount } = render(HeldReportRow, { report: base });
+		const { unmount } = render(HeldReportRow, { report: base, canAct: true });
 		expect(screen.queryByText('Unconsenting Media')).toBeNull();
 		unmount();
 		render(HeldReportRow, {
-			report: { ...base, holdReason: 'contradicts_source', um: UM }
+			report: { ...base, holdReason: 'contradicts_source', um: UM },
+			canAct: true
 		});
 		expect(screen.getByText('Contradicts Unconsenting Media')).toBeTruthy();
 		expect(screen.getByRole('columnheader', { name: 'Unconsenting Media' })).toBeTruthy();

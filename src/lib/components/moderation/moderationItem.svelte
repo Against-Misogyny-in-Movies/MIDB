@@ -9,6 +9,7 @@
 		REPORT_REASON_LABELS,
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
@@ -16,13 +17,13 @@
 
 	interface Props {
 		item: ModerationItem;
-		/** False for an account this reader's role cannot mute or ban (an administrator, oneself, a moderator for a moderator). */
-		canActOnAuthor: boolean;
+		/** The acting staff member; `canActOn` decides which controls the author's account allows. */
+		me: { id: string; role: string };
 		/** The element that takes the focus when an action takes this row off the page and no neighbour can (default: the empty-state line). */
 		fallbackId?: string;
 	}
 
-	let { item, canActOnAuthor, fallbackId = 'moderation-empty' }: Props = $props();
+	let { item, me, fallbackId = 'moderation-empty' }: Props = $props();
 
 	type Panel = 'hide' | 'reject' | 'mute' | 'ban';
 	let panel = $state<Panel | null>(null);
@@ -31,6 +32,8 @@
 	let root: HTMLElement | undefined = $state();
 
 	const { comment, author } = $derived(item);
+	const canModerate = $derived(canActOn(me, author));
+	const canRestrict = $derived(canActOn(me, author, 'restrict'));
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
 	const SOURCES: Record<string, string> = {
 		ai: 'Held by the automatic check',
@@ -97,6 +100,7 @@
 				{#each item.reports as report (report.createdAt + report.reason)}
 					<li>
 						<Badge tone="neutral">{REPORT_REASON_LABELS[report.reason]}</Badge>
+						<span class="label">{report.reporter ?? 'Account'}</span>
 						{#if report.note}<span class="note">{report.note}</span>{/if}
 						<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
 					</li>
@@ -106,7 +110,7 @@
 	{/if}
 
 	<div class="actions">
-		{#if comment.status === 'pending'}
+		{#if canModerate && comment.status === 'pending'}
 			<form method="POST" action="?/approve" use:enhance={submit('approve')}>
 				<input type="hidden" name="id" value={comment.id} />
 				<button
@@ -118,7 +122,7 @@
 				</button>
 			</form>
 		{/if}
-		{#if item.reports.length > 0}
+		{#if canModerate && item.reports.length > 0}
 			<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
 				<input type="hidden" name="id" value={comment.id} />
 				<button
@@ -130,19 +134,21 @@
 				</button>
 			</form>
 		{/if}
-		<button
-			class="btn btn--ghost"
-			type="button"
-			aria-expanded={panel === 'hide'}
-			onclick={() => toggle('hide')}>Hide</button
-		>
-		<button
-			class="btn btn--ghost"
-			type="button"
-			aria-expanded={panel === 'reject'}
-			onclick={() => toggle('reject')}>Reject</button
-		>
-		{#if canActOnAuthor}
+		{#if canModerate}
+			<button
+				class="btn btn--ghost"
+				type="button"
+				aria-expanded={panel === 'hide'}
+				onclick={() => toggle('hide')}>Hide</button
+			>
+			<button
+				class="btn btn--ghost"
+				type="button"
+				aria-expanded={panel === 'reject'}
+				onclick={() => toggle('reject')}>Reject</button
+			>
+		{/if}
+		{#if canRestrict}
 			{#if !item.authorMutedUntil}
 				<button
 					class="btn btn--ghost"

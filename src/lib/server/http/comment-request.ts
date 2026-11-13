@@ -12,20 +12,14 @@ type WriteEvent = Pick<RequestEvent, 'locals' | 'request' | 'getClientAddress'>;
 /**
  * The first three steps of every comment write, in order: the guard (401; a banned account is
  * signed out, because `locals.getUser` reads the row on each request and resolves a banned user
- * to none), the mute check on that fresh row (403), then the rate limit (429), which
- * `staffExempt` skips for a moderator or administrator (the community-report writes only). It returns the
- * user; the caller then reads and validates the body, so a refused or throttled request never costs a parse. Call it
- * outside any `try`.
+ * to none), the mute check on that fresh row (403), then the rate limit (429), which a moderator
+ * or administrator skips. It returns the user; the caller then reads and validates the body, so
+ * a refused or throttled request never costs a parse. Call it outside any `try`.
  */
-export async function authorizeWrite(
-	event: WriteEvent,
-	bucket: RateLimitBucket,
-	options: { staffExempt?: boolean } = {}
-): Promise<UserRow> {
+export async function authorizeWrite(event: WriteEvent, bucket: RateLimitBucket): Promise<UserRow> {
 	const user = await requireUser(event.locals);
 	if (user.mutedUntil && user.mutedUntil.getTime() > Date.now()) error(403, 'Account muted');
-	if (!(options.staffExempt && isStaff(user.role)))
-		await rateLimit(event, bucket, { userId: user.id });
+	if (!isStaff(user.role)) await rateLimit(event, bucket, { userId: user.id });
 	return user;
 }
 

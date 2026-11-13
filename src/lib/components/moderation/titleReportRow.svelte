@@ -14,11 +14,13 @@
 	interface Props {
 		report: TitleReport;
 		titleId: string;
-		/** Whether the acting moderator may mute, ban or reject the reports of this account. */
+		/** Whether the acting staff member may count, reject or reject all the reports of this account. */
 		canAct: boolean;
+		/** Whether they may mute or ban it. */
+		canRestrict: boolean;
 	}
 
-	let { report, titleId, canAct }: Props = $props();
+	let { report, titleId, canAct, canRestrict }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -50,15 +52,17 @@
 	<p class="label">{accountLine(report.account, false)}</p>
 	<ReportAnswers answers={report.answers} um={report.um} />
 	{#snippet actions()}
-		<CountRejectForms
-			userId={report.account.userId}
-			{titleId}
-			status={report.status}
-			{busy}
-			{submit}
-		/>
+		{#if canAct}
+			<CountRejectForms
+				userId={report.account.userId}
+				{titleId}
+				status={report.status}
+				{busy}
+				{submit}
+			/>
+		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<ReportAccountActions account={report.account} {canAct} />
+		<ReportAccountActions account={report.account} {canAct} {canRestrict} />
 	{/snippet}
 </ReportRowShell>

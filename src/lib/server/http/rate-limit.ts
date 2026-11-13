@@ -10,7 +10,6 @@ export type RateLimitBucket =
 	| 'RL_COMMENT'
 	| 'RL_VOTE'
 	| 'RL_REPORT'
-	| 'RL_MODERATE'
 	| 'RL_CONTENT_REPORT'
 	| 'RL_MODERATE_AI';
 
@@ -22,7 +21,6 @@ const FALLBACK_LIMITS: Record<RateLimitBucket, { limit: number; windowMs: number
 	RL_COMMENT: { limit: 5, windowMs: 60_000 },
 	RL_VOTE: { limit: 30, windowMs: 60_000 },
 	RL_REPORT: { limit: 10, windowMs: 60_000 },
-	RL_MODERATE: { limit: 60, windowMs: 60_000 },
 	RL_CONTENT_REPORT: { limit: 10, windowMs: 60_000 },
 	RL_MODERATE_AI: { limit: 10, windowMs: 60_000 }
 };

@@ -34,7 +34,11 @@ import { listModerationTable } from '#lib/server/data/moderation-table.ts';
 import { listScanItems, saveScanLabels } from '#lib/server/data/comment-ai-labels.ts';
 import { queryToFilters } from '#lib/server/moderation/search-filters.ts';
 import { scanComments } from '#lib/server/moderation/scan.ts';
-import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
+import {
+	dismissCountFlag,
+	resolveCountFlag,
+	type FlagCloseResult
+} from '#lib/server/data/count-flags.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import {
 	AI_QUERY_MAX,
@@ -106,8 +110,8 @@ const purgeComments = (result: Extract<Outcome, { ok: true }>) => {
 };
 
 /** A closed flag changes no counts, so it names no title; a flag that was not open is refused. */
-const flagResult = (closed: boolean): ReportModerationResult =>
-	closed ? { ok: true, titles: [] } : { ok: false, reason: 'invalid-state' };
+const flagResult = (closed: FlagCloseResult): ReportModerationResult =>
+	closed.ok ? { ok: true, titles: [] } : closed;
 
 /** A reason for a hide or a reject, cut to the limit the author's page shows. */
 const reasonOf = (data: FormData) => text(data, 'reason')?.slice(0, MODERATION_REASON_MAX) ?? null;
@@ -297,10 +301,10 @@ export const actions: Actions = {
 		),
 	resolveFlag: (event) =>
 		act(event, 'resolveFlag', flagKey, async (staff, data) =>
-			flagResult(await resolveCountFlag(text(data, 'id') ?? '', staff.id))
+			flagResult(await resolveCountFlag(text(data, 'id') ?? '', staff))
 		),
 	dismissFlag: (event) =>
 		act(event, 'dismissFlag', flagKey, async (staff, data) =>
-			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff.id))
+			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff))
 		)
 };

@@ -2,7 +2,6 @@
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
-	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import {
 		COMMENT_STATUS_LABELS,
 		REPORT_REASON_LABELS,
@@ -178,11 +177,7 @@
 									</p>
 								{/if}
 								<ul class="item">
-									<ModerationItemRow
-										item={row}
-										canActOnAuthor={canActOn(me, row.author)}
-										fallbackId={TABLE_FOCUS.card}
-									/>
+									<ModerationItemRow item={row} {me} fallbackId={TABLE_FOCUS.card} />
 								</ul>
 							</td>
 						</tr>

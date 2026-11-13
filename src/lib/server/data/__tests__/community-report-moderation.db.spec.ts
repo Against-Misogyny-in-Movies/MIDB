@@ -171,6 +171,18 @@ describe('who may be acted on', () => {
 			.returning();
 		expect((await rejectReport(admin, 'mod2', a)).ok).toBe(true);
 	});
+
+	it('lets an administrator act on an administrator’s reports and their own', async () => {
+		const [admin] = await db
+			.insert(users)
+			.values(userValues('boss', { role: 'administrator' }))
+			.returning();
+		await db.insert(users).values(userValues('boss2', { role: 'administrator' }));
+		await report('boss2', a);
+		await report('boss', b);
+		expect((await rejectReport(admin, 'boss2', a)).ok).toBe(true);
+		expect((await rejectReport(admin, 'boss', b)).ok).toBe(true);
+	});
 });
 
 describe('mute and ban purge the counts of every reported title', () => {
@@ -207,9 +219,9 @@ describe('count flag actions', () => {
 			.insert(titleCountFlags)
 			.values({ titleId: b, reporterId: 'r2' })
 			.returning();
-		expect(await resolveCountFlag(f1.id, 'mod')).toBe(true);
-		expect(await dismissCountFlag(f2.id, 'mod')).toBe(true);
-		expect(await resolveCountFlag(f1.id, 'mod')).toBe(false);
+		expect(await resolveCountFlag(f1.id, mod)).toEqual({ ok: true });
+		expect(await dismissCountFlag(f2.id, mod)).toEqual({ ok: true });
+		expect(await resolveCountFlag(f1.id, mod)).toEqual({ ok: false, reason: 'invalid-state' });
 		const rows = (await log()).map((r) => [r.action, r.targetTitleId, r.actorId]).sort();
 		expect(rows).toEqual([
 			['dismiss_count_flag', b, 'mod'],
@@ -219,7 +231,7 @@ describe('count flag actions', () => {
 	});
 
 	it('writes no log row for a missing flag', async () => {
-		expect(await resolveCountFlag('nope', 'mod')).toBe(false);
+		expect(await resolveCountFlag('nope', mod)).toEqual({ ok: false, reason: 'not-found' });
 		expect(await log()).toHaveLength(0);
 	});
 });
@@ -233,7 +245,7 @@ describe('the action log', () => {
 			.values({ titleId: b, reporterId: 'r2' })
 			.returning();
 		await rejectReport(mod, 'r1', a);
-		await resolveCountFlag(flag.id, 'mod');
+		await resolveCountFlag(flag.id, mod);
 		await rejectAccountReports(mod, 'r1');
 		const byAction = new Map((await listRecentActions()).map((e) => [e.action, e.title]));
 		expect(byAction.get('reject_report')).toMatchObject({ id: a, name: 'Alien' });
@@ -295,7 +307,7 @@ describe('queues', () => {
 		const flagged = await listFlaggedTitles();
 		expect(flagged.map((f) => f.titleId)).toEqual([a, b]);
 		expect(flagged[0].flags.map((f) => f.note)).toEqual(expect.arrayContaining([null, 'Too low']));
-		await resolveCountFlag(flagged[1].flags[0].id, 'mod');
+		await resolveCountFlag(flagged[1].flags[0].id, mod);
 		expect((await listFlaggedTitles()).map((f) => f.titleId)).toEqual([a]);
 	});
 });

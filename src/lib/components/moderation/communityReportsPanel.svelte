@@ -35,7 +35,7 @@
 		{#if openFlags.length > 0}
 			<div class="card flags">
 				<h3 class="heading">Counts look wrong</h3>
-				<CountFlagList flags={openFlags} />
+				<CountFlagList flags={openFlags} {me} />
 			</div>
 		{/if}
 		{#if openTitle.reports.length === 0}
@@ -43,10 +43,12 @@
 		{:else}
 			<ul class="card list">
 				{#each openTitle.reports as report (report.account.userId)}
+					{@const account = { id: report.account.userId, role: report.account.role }}
 					<TitleReportRow
 						{report}
 						titleId={openTitle.id}
-						canAct={canActOn(me, { id: report.account.userId, role: report.account.role })}
+						canAct={canActOn(me, account)}
+						canRestrict={canActOn(me, account, 'restrict')}
 					/>
 				{/each}
 			</ul>
@@ -67,7 +69,10 @@
 		{:else}
 			<ul class="card list">
 				{#each held as report (`${report.account.userId}:${report.titleId}`)}
-					<HeldReportRow {report} />
+					<HeldReportRow
+						{report}
+						canAct={canActOn(me, { id: report.account.userId, role: report.account.role })}
+					/>
 				{/each}
 			</ul>
 		{/if}

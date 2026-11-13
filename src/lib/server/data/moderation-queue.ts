@@ -23,7 +23,13 @@ export type ModerationItem = {
 	title: { kind: CommentWithTitle['title']['kind']; tmdbId: number | null; name: string };
 	/** The classifier's categories, when it ran. */
 	aiCategories: string[];
-	reports: { reason: ReportReason; note: string | null; createdAt: string }[];
+	/** Each open report with its reporter's username (staff see it); null when the account has none. */
+	reports: {
+		reason: ReportReason;
+		note: string | null;
+		createdAt: string;
+		reporter: string | null;
+	}[];
 	/** How many comments the author has written in all, as context for the decision. */
 	authorCommentCount: number;
 	/** When the author's mute ends, while it is in the future; otherwise null. */
@@ -79,6 +85,7 @@ export async function toModerationItems(
 		reason: ReportReason;
 		note: string | null;
 		createdAt: Date;
+		reporter: string | null;
 	}[] = [];
 	for (const chunk of chunkForD1(ids, 1, 1)) {
 		reports.push(
@@ -87,9 +94,11 @@ export async function toModerationItems(
 					commentId: commentReports.commentId,
 					reason: commentReports.reason,
 					note: commentReports.note,
-					createdAt: commentReports.createdAt
+					createdAt: commentReports.createdAt,
+					reporter: users.username
 				})
 				.from(commentReports)
+				.leftJoin(users, eq(commentReports.reporterId, users.id))
 				.where(and(inArray(commentReports.commentId, chunk), eq(commentReports.status, 'open')))
 				.orderBy(desc(commentReports.createdAt)))
 		);
@@ -111,7 +120,12 @@ export async function toModerationItems(
 		aiCategories: readAiVerdict(comment.aiVerdict).categories,
 		reports: reports
 			.filter((r) => r.commentId === comment.id)
-			.map((r) => ({ reason: r.reason, note: r.note, createdAt: r.createdAt.toISOString() })),
+			.map((r) => ({
+				reason: r.reason,
+				note: r.note,
+				createdAt: r.createdAt.toISOString(),
+				reporter: r.reporter
+			})),
 		authorCommentCount: counts.get(author.id) ?? 0,
 		authorMutedUntil: activeMute(author.mutedUntil)
 	}));

@@ -2,6 +2,12 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { moderationActions, titleCountFlags } from '#db/schema/community.ts';
 import { runBatch } from './comment-status.ts';
+import type { UserRow } from './user-queries.ts';
+
+/** How a close ends: `forbidden-target` when a moderator closes their own flag. */
+export type FlagCloseResult =
+	| { ok: true }
+	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
 
 /** The "counts look wrong" flags on a title, by status. */
 export async function flagCounts(
@@ -19,14 +25,22 @@ export async function flagCounts(
 
 /**
  * Moves an open flag to `status` and logs it in the same batch, the log row only while the flag
- * is still open; false when it is not open (or does not exist). Counts do not change, so
- * nothing is purged.
+ * is still open. A moderator cannot close their own flag; an administrator can. `invalid-state` when the flag is not open, `not-found`
+ * when it does not exist. Counts do not change, so nothing is purged.
  */
 async function closeFlag(
 	flagId: string,
-	actorId: string,
+	actor: UserRow,
 	status: 'resolved' | 'dismissed'
-): Promise<boolean> {
+): Promise<FlagCloseResult> {
+	const actorId = actor.id;
+	const [flag] = await db
+		.select({ reporterId: titleCountFlags.reporterId })
+		.from(titleCountFlags)
+		.where(eq(titleCountFlags.id, flagId));
+	if (!flag) return { ok: false, reason: 'not-found' };
+	if (flag.reporterId === actorId && actor.role !== 'administrator')
+		return { ok: false, reason: 'forbidden-target' };
 	const action = status === 'resolved' ? 'resolve_count_flag' : 'dismiss_count_flag';
 	const open = and(eq(titleCountFlags.id, flagId), eq(titleCountFlags.status, 'open'));
 	const results = await runBatch([
@@ -53,16 +67,18 @@ async function closeFlag(
 			.returning({ id: titleCountFlags.id })
 	]);
 	const closed = results[1];
-	return Array.isArray(closed) && closed.length > 0;
+	return Array.isArray(closed) && closed.length > 0
+		? { ok: true }
+		: { ok: false, reason: 'invalid-state' };
 }
 
 /** A moderator acted on the counts the flag pointed at. */
-export const resolveCountFlag = (flagId: string, actorId: string) =>
-	closeFlag(flagId, actorId, 'resolved');
+export const resolveCountFlag = (flagId: string, actor: UserRow) =>
+	closeFlag(flagId, actor, 'resolved');
 
 /** A moderator found the counts fine. */
-export const dismissCountFlag = (flagId: string, actorId: string) =>
-	closeFlag(flagId, actorId, 'dismissed');
+export const dismissCountFlag = (flagId: string, actor: UserRow) =>
+	closeFlag(flagId, actor, 'dismissed');
 
 /**
  * Stores a reader's "counts look wrong" flag on a title: one per account per title. A second
