@@ -42,48 +42,48 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~470 tok)
-- `DESIGN.md` — Design (~3.4K tok)
+- `DESIGN.md` — Design (~3.5K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–61 Components (~1.5K)
+  - 37–61 Components (~1.6K)
   - 62–68 Pages (~410)
   - 69–72 Motion (~90)
   - 73–76 Browser surfaces (~50)
   - 77–80 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~48.8K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~49.1K tok)
   - 7–16 What it is (~410)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–266 Directory layout (~8.0K)
-    - 257–266 File-organisation conventions (~450)
-  - 267–280 Styling & theming (~950)
-  - 281–293 Copy & voice (~570) ← 1
-  - 294–324 Routes (~9.8K)
-  - 325–364 User & roles (~2.5K)
-    - 357–364 Migrations (~350)
-  - 365–394 Source sync (~1.8K) ← 3
-  - 395–460 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
-  - 461–486 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.1K) ← 1
-  - 487–506 UM Disambiguation (~630)
-  - 507–515 UM flag rendering (~250)
-  - 516–527 Shared marker pattern (metric row markers) (~410) ← 5
-  - 528–568 Component library (`src/lib/components/`) (~5.6K)
-  - 569–579 Live search (`src/lib/components/search/`) (~710)
-  - 580–593 Server cache (`src/lib/server/cache/`) (~690)
-  - 594–609 TMDB integration (~810)
-  - 610–628 Auth flow (Better Auth) (~1.9K)
-  - 629–648 Caching policy (~1.4K) ← 6
-  - 649–705 Configuration & environment (~3.2K)
-    - 665–677 Local run sequence (~130)
-    - 678–681 npm scripts (~200)
-    - 682–692 CI (`.github/workflows/tests.yml`) (~490)
-    - 693–705 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 706–721 Testing (~1.2K)
-    - 716–721 Verification baseline (~80)
-  - 722–730 Known gaps / TODO (~240)
-  - 731–739 Related docs (~140)
+  - 68–268 Directory layout (~8.2K)
+    - 259–268 File-organisation conventions (~450)
+  - 269–282 Styling & theming (~950)
+  - 283–295 Copy & voice (~570) ← 1
+  - 296–326 Routes (~9.8K)
+  - 327–366 User & roles (~2.5K)
+    - 359–366 Migrations (~350)
+  - 367–396 Source sync (~1.8K) ← 3
+  - 397–462 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 463–488 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.2K) ← 2
+  - 489–508 UM Disambiguation (~630)
+  - 509–517 UM flag rendering (~250)
+  - 518–529 Shared marker pattern (metric row markers) (~410) ← 5
+  - 530–570 Component library (`src/lib/components/`) (~5.8K)
+  - 571–581 Live search (`src/lib/components/search/`) (~710)
+  - 582–595 Server cache (`src/lib/server/cache/`) (~690)
+  - 596–611 TMDB integration (~810)
+  - 612–630 Auth flow (Better Auth) (~1.9K)
+  - 631–650 Caching policy (~1.4K) ← 6
+  - 651–707 Configuration & environment (~3.2K)
+    - 667–679 Local run sequence (~130)
+    - 680–683 npm scripts (~200)
+    - 684–694 CI (`.github/workflows/tests.yml`) (~490)
+    - 695–707 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 708–723 Testing (~1.2K)
+    - 718–723 Verification baseline (~80)
+  - 724–732 Known gaps / TODO (~240)
+  - 733–741 Related docs (~140)
 
 ## Phases
 
@@ -129,5 +129,5 @@ The sections each area's comments cite, most cited first. Read these before chan
 - `scripts/ci`: docs/architecture.md, Deploy (`.github/workflows/deploy.yml`) (1)
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
-- `src/lib`: docs/architecture.md, Caching policy (2); docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (1); docs/architecture.md, Source sync (1)
+- `src/lib`: docs/architecture.md, Caching policy (2); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (2); docs/architecture.md, Shared marker pattern (metric row markers) (2); docs/architecture.md, Source sync (1)
 - `src/routes`: docs/architecture.md, Shared marker pattern (metric row markers) (1)
