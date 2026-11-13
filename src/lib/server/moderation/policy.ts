@@ -28,7 +28,8 @@ export const blocklistReason = (term: string | null): string =>
 
 /**
  * Turns the automatic check into a status, the same way for every comment: a blocklist hit
- * rejects; `allow` publishes; `review`, and any failure of the check, wait for a person; `reject`
+ * rejects; `allow` publishes only with severity 0 and no categories, and any other `allow` waits for
+ * a person; `review`, and any failure of the check, wait for a person; `reject`
  * rejects at severity `REJECT_MIN_SEVERITY` or more and waits for a person below it.
  */
 export function applyPolicy(outcome: CheckOutcome): PolicyResult {
@@ -37,8 +38,10 @@ export function applyPolicy(outcome: CheckOutcome): PolicyResult {
 	}
 	if (outcome.kind === 'failure') return { status: 'pending', source: null, reason: null };
 
-	const { decision, severity, reason } = outcome.verdict;
-	if (decision === 'allow') return { status: 'published', source: 'ai', reason: null };
+	const { decision, severity, categories, reason } = outcome.verdict;
+	if (decision === 'allow' && severity === 0 && categories.length === 0) {
+		return { status: 'published', source: 'ai', reason: null };
+	}
 	if (decision === 'reject' && severity >= REJECT_MIN_SEVERITY) {
 		return { status: 'rejected', source: 'ai', reason };
 	}

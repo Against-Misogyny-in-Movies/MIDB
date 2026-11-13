@@ -12,6 +12,7 @@
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
+	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
@@ -124,6 +125,7 @@
 			{#if canModerate && comment.status === 'pending'}
 				<form method="POST" action="?/approve" use:enhance={submit('approve')}>
 					<input type="hidden" name="id" value={comment.id} />
+					<input type="hidden" name="editedAt" value={editedAtValue(comment.editedAt)} />
 					<button
 						class="btn btn--ink"
 						aria-busy={busy === 'approve'}
@@ -136,6 +138,7 @@
 			{#if canModerate && item.reports.length > 0}
 				<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
 					<input type="hidden" name="id" value={comment.id} />
+					<input type="hidden" name="editedAt" value={editedAtValue(comment.editedAt)} />
 					<button
 						class="btn btn--ink"
 						aria-busy={busy === 'dismiss'}

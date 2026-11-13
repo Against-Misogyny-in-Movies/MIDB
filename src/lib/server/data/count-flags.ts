@@ -1,11 +1,12 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
+import { users } from '#db/schema/auth.ts';
 import { moderationActions, titleCountFlags } from '#db/schema/community.ts';
 import { canCloseFlag } from '#lib/media/utils/canActOn.ts';
 import { runBatch } from './comment-status.ts';
 import type { UserRow } from './user-queries.ts';
 
-/** How a close ends: `own-flag` when a moderator closes their own flag. */
+/** How a close ends: `own-flag` when a moderator closes their own flag or an administrator's. */
 export type FlagCloseResult =
 	| { ok: true }
 	| { ok: false; reason: 'not-found' | 'invalid-state' | 'own-flag' };
@@ -26,8 +27,8 @@ export async function flagCounts(
 
 /**
  * Moves an open flag to `status` and logs it in the same batch, the log row only while the flag
- * is still open. `canCloseFlag` decides who may: a moderator cannot close their own flag, and
- * gets `own-flag`. `invalid-state` when the flag is not open, `not-found` when it does not
+ * is still open. `canCloseFlag` decides who may: a moderator cannot close their own flag or an
+ * administrator's, and gets `own-flag`. `invalid-state` when the flag is not open, `not-found` when it does not
  * exist. Counts do not change, so nothing is purged.
  */
 async function closeFlag(
@@ -37,11 +38,12 @@ async function closeFlag(
 ): Promise<FlagCloseResult> {
 	const actorId = actor.id;
 	const [flag] = await db
-		.select({ reporterId: titleCountFlags.reporterId })
+		.select({ id: users.id, role: users.role })
 		.from(titleCountFlags)
+		.innerJoin(users, eq(titleCountFlags.reporterId, users.id))
 		.where(eq(titleCountFlags.id, flagId));
 	if (!flag) return { ok: false, reason: 'not-found' };
-	if (!canCloseFlag(actor, flag.reporterId)) return { ok: false, reason: 'own-flag' };
+	if (!canCloseFlag(actor, flag)) return { ok: false, reason: 'own-flag' };
 	const action = status === 'resolved' ? 'resolve_count_flag' : 'dismiss_count_flag';
 	const open = and(eq(titleCountFlags.id, flagId), eq(titleCountFlags.status, 'open'));
 	const results = await runBatch([

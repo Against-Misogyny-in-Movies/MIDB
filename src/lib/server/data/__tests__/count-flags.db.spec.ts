@@ -60,6 +60,15 @@ describe('count flags', () => {
 		expect((await flagCounts(titleId)).dismissed).toBe(1);
 	});
 
+	it('refuses a moderator closing an administrator’s flag, changing nothing', async () => {
+		const raised = await flag('admin');
+		const refused = { ok: false, reason: 'own-flag' };
+		expect(await resolveCountFlag(raised, mod)).toEqual(refused);
+		expect(await dismissCountFlag(raised, mod)).toEqual(refused);
+		expect(await flagCounts(titleId)).toEqual({ open: 1, resolved: 0, dismissed: 0 });
+		expect(await resolveCountFlag(raised, admin)).toEqual({ ok: true });
+	});
+
 	it('refuses a moderator closing their own flag, changing nothing', async () => {
 		const own = await flag('mod');
 		const refused = { ok: false, reason: 'own-flag' };
@@ -69,12 +78,10 @@ describe('count flags', () => {
 		expect(await db.select().from(moderationActions)).toHaveLength(0);
 	});
 
-	it('lets a moderator close a peer’s or an administrator’s flag', async () => {
+	it('lets a moderator close a peer’s flag', async () => {
 		await db.insert(users).values(userValues('mod2', { role: 'moderator' }));
 		const peer = await flag('mod2');
-		const boss = await flag('admin');
 		expect(await resolveCountFlag(peer, mod)).toEqual({ ok: true });
-		expect(await dismissCountFlag(boss, mod)).toEqual({ ok: true });
 	});
 
 	it('lets an administrator close their own flag and a moderator’s', async () => {

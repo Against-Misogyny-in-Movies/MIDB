@@ -233,6 +233,7 @@ describe('the open title view', () => {
 				note: 'Too low',
 				reporter: 'bo',
 				reporterId: 'u1',
+				reporterRole: 'user',
 				createdAt: '2026-11-10T10:00:00Z'
 			},
 			{
@@ -240,6 +241,7 @@ describe('the open title view', () => {
 				note: null,
 				reporter: null,
 				reporterId: 'u2',
+				reporterRole: 'user',
 				createdAt: '2026-11-11T10:00:00Z'
 			}
 		]

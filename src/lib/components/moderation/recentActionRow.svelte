@@ -4,6 +4,7 @@
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
 	import { formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { toastActionResult } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
@@ -124,6 +125,7 @@
 			}}
 		>
 			<input type="hidden" name="id" value={entry.commentId} />
+			<input type="hidden" name="editedAt" value={editedAtValue(entry.commentEditedAt)} />
 			<button class="btn btn--ink" aria-busy={busy}>Restore comment</button>
 		</form>
 	{/if}

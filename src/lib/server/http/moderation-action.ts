@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions } from '@sveltejs/kit';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
+import type { EditedAt } from '#lib/server/data/comment-status.ts';
 import type { ModerationResult } from '#lib/server/data/moderation-actions.ts';
 import type { ReportModerationResult } from '#lib/server/data/community-report-moderation.ts';
 import type { FlagCloseResult } from '#lib/server/data/count-flags.ts';
@@ -16,6 +17,18 @@ export type ActionEvent = Parameters<Actions[string]>[0];
 export function text(data: FormData, name: string): string | null {
 	const value = data.get(name);
 	return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/**
+ * The `editedAt` a moderator's view carried for a comment, in the form field `name`: empty for a
+ * comment never edited, otherwise the time in milliseconds. Undefined when the field is absent
+ * or not that, so the action is refused instead of publishing text nobody saw.
+ */
+export function viewedEditedAt(data: FormData, name = 'editedAt'): EditedAt | undefined {
+	const value = data.get(name);
+	if (typeof value !== 'string') return undefined;
+	if (value === '') return null;
+	return /^\d{1,15}$/.test(value) ? Number(value) : undefined;
 }
 
 type FlagCloseRefusal = Extract<FlagCloseResult, { ok: false }>['reason'];
@@ -54,7 +67,7 @@ const refusals: Record<Refusal, [number, string]> = {
 		403,
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
-	'own-flag': [403, 'A moderator cannot close their own flag.'],
+	'own-flag': [403, "A moderator cannot close their own flag or an administrator's."],
 	'bulk-unchanged': [
 		409,
 		'None of the selected comments could be changed: none is in a status this action applies to.'

@@ -273,14 +273,14 @@ describe('PATCH and DELETE a comment', () => {
 		).toBe(403);
 	});
 
-	it('edits as the owner, purges the tag, and answers 403 for someone else', async () => {
+	it('edits as the owner, purges the tag, and answers 404 for someone else', async () => {
 		const res = await call(comment.PATCH, { params, method: 'PATCH', body: { body: 'Edited' } });
 		expect(res.status).toBe(200);
 		expect(editComment).toHaveBeenCalledWith('c1', 'u1', 'Edited');
 		await Promise.all(waitUntilPromises);
 		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1'] }]);
 
-		editComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
+		editComment.mockResolvedValue({ ok: false, reason: 'not-found' });
 		expect(
 			await status(
 				call(comment.PATCH, {
@@ -290,7 +290,7 @@ describe('PATCH and DELETE a comment', () => {
 					user: user({ id: 'u2' })
 				})
 			)
-		).toBe(403);
+		).toBe(404);
 	});
 
 	it('answers 409 for a comment that can no longer be edited and 404 for a missing one', async () => {
@@ -335,12 +335,12 @@ describe('PATCH and DELETE a comment', () => {
 		await Promise.all(waitUntilPromises);
 		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1', 'profile:replier'] }]);
 
-		softDeleteComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
+		softDeleteComment.mockResolvedValue({ ok: false, reason: 'not-found' });
 		expect(
 			await status(
 				call(comment.DELETE, { params, method: 'DELETE', body: {}, user: user({ id: 'u2' }) })
 			)
-		).toBe(403);
+		).toBe(404);
 	});
 });
 

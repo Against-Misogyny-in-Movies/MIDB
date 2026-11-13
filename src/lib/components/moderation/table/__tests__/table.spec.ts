@@ -55,7 +55,12 @@ const FILTERS = { sort: 'newest' as const, page: 1 };
 describe('bulkBar', () => {
 	it('counts the selection and posts each id with the operation chosen', async () => {
 		const onclear = vi.fn();
-		render(BulkBar, { ids: ['c1', 'c2', 'c3'], onclear, fallbackIds: [] });
+		render(BulkBar, {
+			ids: ['c1', 'c2', 'c3'],
+			editedAts: { c1: '', c2: '1762077600000', c3: '' },
+			onclear,
+			fallbackIds: []
+		});
 		const bar = within(screen.getByRole('region', { name: /selected comments/ }));
 		expect(bar.getByText('3')).toBeTruthy();
 		const approve = bar.getByRole('button', { name: 'Approve' }) as HTMLButtonElement;
@@ -66,10 +71,15 @@ describe('bulkBar', () => {
 		expect(
 			[...formEl.querySelectorAll<HTMLInputElement>('input[name=ids]')].map((i) => i.value)
 		).toEqual(['c1', 'c2', 'c3']);
+		expect(
+			['c1', 'c2', 'c3'].map(
+				(id) => formEl.querySelector<HTMLInputElement>(`input[name="editedAt.${id}"]`)?.value
+			)
+		).toEqual(['', '1762077600000', '']);
 	});
 
 	it('asks before hiding the selection, naming how many, with a reason field', async () => {
-		render(BulkBar, { ids: ['c1', 'c2'], onclear: () => {}, fallbackIds: [] });
+		render(BulkBar, { ids: ['c1', 'c2'], editedAts: {}, onclear: () => {}, fallbackIds: [] });
 		await fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
 		expect(screen.getByText(/Hide 2 selected comments\?/)).toBeTruthy();
 		const confirm = screen.getByRole('button', { name: 'Hide 2 comments' });
@@ -86,7 +96,7 @@ describe('bulkBar', () => {
 	});
 
 	it('words the bulk confirmations for the statuses they change', async () => {
-		render(BulkBar, { ids: ['c1'], onclear: () => {}, fallbackIds: [] });
+		render(BulkBar, { ids: ['c1'], editedAts: {}, onclear: () => {}, fallbackIds: [] });
 		await fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
 		expect(
 			screen.getByText(
@@ -103,7 +113,7 @@ describe('bulkBar', () => {
 	it('clears the selection once the action ends', async () => {
 		const onclear = vi.fn();
 		form.result = { type: 'success', data: { done: 'bulk', applied: 2, refused: 0 } };
-		render(BulkBar, { ids: ['c1', 'c2'], onclear, fallbackIds: [] });
+		render(BulkBar, { ids: ['c1', 'c2'], editedAts: {}, onclear, fallbackIds: [] });
 		await fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
 		await waitFor(() => expect(onclear).toHaveBeenCalled());
 		expect(toasts.success).toHaveBeenCalledWith('2 comments changed.');

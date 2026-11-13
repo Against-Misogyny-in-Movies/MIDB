@@ -7,12 +7,14 @@
 	interface Props {
 		/** The ids of the selected comments. */
 		ids: string[];
+		/** Each selected comment's `editedAt` as its row shows it (`editedAtValue`), by id. */
+		editedAts: Record<string, string>;
 		onclear: () => void;
 		/** Where the focus goes once the action clears the selection and the bar leaves: the first of these on the page. */
 		fallbackIds: string[];
 	}
 
-	let { ids, onclear, fallbackIds }: Props = $props();
+	let { ids, editedAts, onclear, fallbackIds }: Props = $props();
 
 	type Confirm = 'hide' | 'reject';
 	let panel = $state<Confirm | null>(null);
@@ -62,6 +64,7 @@
 		>
 			{#each ids as id (id)}
 				<input type="hidden" name="ids" value={id} />
+				<input type="hidden" name="editedAt.{id}" value={editedAts[id] ?? ''} />
 			{/each}
 			{#each DIRECT as { op, label } (op)}
 				<button

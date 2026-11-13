@@ -65,10 +65,10 @@ const comment = async (status: (typeof comments.$inferInsert)['status']) => {
 
 describe('a moderator action on a comment names the author for the profile purge', () => {
 	it.each([
-		['approve', 'pending', approveComment],
+		['approve', 'pending', (a: UserRow, id: string) => approveComment(a, id, null)],
 		['hide', 'published', (a: UserRow, id: string) => hideComment(a, id, null)],
 		['reject', 'published', (a: UserRow, id: string) => rejectComment(a, id, null)],
-		['restore', 'hidden', restoreComment]
+		['restore', 'hidden', (a: UserRow, id: string) => restoreComment(a, id, null)]
 	] as const)('%s', async (_name, from, act) => {
 		const id = await comment(from);
 		expect(await act(mod, id)).toMatchObject({ ok: true, authorId: 'author' });
@@ -76,18 +76,18 @@ describe('a moderator action on a comment names the author for the profile purge
 
 	it('a refused action names no author', async () => {
 		const id = await comment('hidden');
-		expect(await approveComment(mod, id)).toEqual({ ok: false, reason: 'invalid-state' });
+		expect(await approveComment(mod, id, null)).toEqual({ ok: false, reason: 'invalid-state' });
 	});
 
 	it('a dismiss names the author only when it puts the comment back in public', async () => {
 		const sent = await comment('pending');
 		await db.update(comments).set({ moderationSource: 'reports' }).where(eq(comments.id, sent));
 		await db.insert(commentReports).values({ commentId: sent, reporterId: 'rep0', reason: 'spam' });
-		expect(await dismissReports(mod, sent)).toMatchObject({ ok: true, authorId: 'author' });
+		expect(await dismissReports(mod, sent, null)).toMatchObject({ ok: true, authorId: 'author' });
 
 		const live = await comment('published');
 		await db.insert(commentReports).values({ commentId: live, reporterId: 'rep0', reason: 'spam' });
-		const result = await dismissReports(mod, live);
+		const result = await dismissReports(mod, live, null);
 		expect(result.ok && result.authorId).toBeFalsy();
 	});
 

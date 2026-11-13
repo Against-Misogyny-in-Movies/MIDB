@@ -40,7 +40,7 @@ beforeEach(async () => {
 async function store(userId: string, body: string, parentId?: string, publish = true) {
 	const result = await createComment({ title, userId, body, parentId });
 	if (!result.ok) throw new Error(result.reason);
-	if (publish) await approveComment(mod, result.comment.id);
+	if (publish) await approveComment(mod, result.comment.id, null);
 	return result.comment.id;
 }
 
@@ -71,7 +71,7 @@ describe('getCommentThread', () => {
 			.returning();
 		const result = await createComment({ title: other, userId: 'author', body: 'On a series' });
 		if (!result.ok) throw new Error(result.reason);
-		await approveComment(mod, result.comment.id);
+		await approveComment(mod, result.comment.id, null);
 		const root = await store('author', 'Root');
 		const reply = await store('replier', 'Reply', root);
 		expect(await getCommentThread(reply, null)).toMatchObject({ kind: 'movie', tmdbId: 348 });

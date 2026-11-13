@@ -298,7 +298,7 @@ export async function getCommentWithTitle(id: string): Promise<CommentWithTitle 
 	};
 }
 
-type WriteFailure = 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict';
+type WriteFailure = 'not-found' | 'not-editable' | 'parent-not-found' | 'conflict';
 export type CommentWrite =
 	| {
 			ok: true;
@@ -368,16 +368,23 @@ export async function createComment(input: {
 
 /**
  * The author edits a comment: the body changes, `edited_at` is set and moderation runs again,
- * so a published comment goes back through `decideStatus`. A hidden or deleted comment cannot be
- * edited, which keeps an author from reviving what a moderator removed. A comment that left
- * the status the edit read (a moderator acted meanwhile) answers `conflict`.
+ * so a published comment goes back through `decideStatus`. A hidden or deleted comment, and one
+ * a moderator rejected, cannot be edited, which keeps an author from reviving what a moderator
+ * removed (an automatic reject stays editable). A pending comment that a moderator or the
+ * reports sent to review stays pending after an edit that the check would publish. Anyone but
+ * the author gets `not-found`, whatever the comment's status. A comment that left the status the
+ * edit read (a moderator acted meanwhile) answers `conflict`.
  */
 export async function editComment(id: string, userId: string, body: string): Promise<CommentWrite> {
 	const found = await getCommentWithTitle(id);
 	if (!found) return { ok: false, reason: 'not-found' };
 	const { comment, title } = found;
-	if (comment.userId !== userId) return { ok: false, reason: 'forbidden' };
-	if (comment.status === 'hidden' || comment.status === 'deleted') {
+	if (comment.userId !== userId) return { ok: false, reason: 'not-found' };
+	if (
+		comment.status === 'hidden' ||
+		comment.status === 'deleted' ||
+		(comment.status === 'rejected' && comment.moderationSource === 'moderator')
+	) {
 		return { ok: false, reason: 'not-editable' };
 	}
 	if (body === comment.body) return { ok: true, comment: toOwnComment(comment), title };
@@ -397,13 +404,18 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		kind: title.kind,
 		parentBody
 	});
-	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, decision.status);
+	// A person's or the reports' hold on a pending comment is lifted only by a moderator.
+	const held =
+		comment.status === 'pending' &&
+		decision.status === 'published' &&
+		(comment.moderationSource === 'moderator' || comment.moderationSource === 'reports');
+	const status = held ? 'pending' : decision.status;
+	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, status);
 	const moved = await runMove(
-		statusMove(comment.id, comment.status, decision.status, {
+		statusMove(comment.id, comment.status, status, {
 			body,
 			editedAt: new Date(),
-			moderationSource: decision.source,
-			moderationReason: decision.reason,
+			...(held ? {} : { moderationSource: decision.source, moderationReason: decision.reason }),
 			aiVerdict: decision.aiVerdict
 		})
 	);
@@ -415,7 +427,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 /**
  * The author deletes a comment. It stays in the table as `deleted`, so replies keep their
  * thread; the public list shows a bodiless placeholder when it has published replies. A
- * comment a moderator moved meanwhile answers `conflict`.
+ * comment a moderator moved meanwhile answers `conflict`. Anyone but the author gets `not-found`.
  */
 export async function softDeleteComment(
 	id: string,
@@ -425,8 +437,9 @@ export async function softDeleteComment(
 	| { ok: false; reason: WriteFailure }
 > {
 	const found = await getCommentWithTitle(id);
-	if (!found || found.comment.status === 'deleted') return { ok: false, reason: 'not-found' };
-	if (found.comment.userId !== userId) return { ok: false, reason: 'forbidden' };
+	if (!found || found.comment.userId !== userId || found.comment.status === 'deleted') {
+		return { ok: false, reason: 'not-found' };
+	}
 	const replyAuthorIds = await replyAuthorsAffected(id, found.comment.status, 'deleted');
 	if (!(await runMove(statusMove(id, found.comment.status, 'deleted')))) {
 		return { ok: false, reason: 'conflict' };

@@ -1,8 +1,15 @@
 import type { Actions, PageServerLoad } from './$types';
+import type { EditedAt } from '#lib/server/data/comment-status.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { purgeProfiles, purgeTitleComments } from '#lib/server/http/purge-title.ts';
-import { act, text, type ActionEvent, type Outcome } from '#lib/server/http/moderation-action.ts';
+import {
+	act,
+	text,
+	viewedEditedAt,
+	type ActionEvent,
+	type Outcome
+} from '#lib/server/http/moderation-action.ts';
 import { env } from '#lib/server/env.ts';
 import {
 	approveComment,
@@ -125,16 +132,28 @@ const flagResult = (closed: FlagCloseResult): Outcome =>
 /** A reason for a hide or a reject, cut to the limit the author's page shows. */
 const reasonOf = (data: FormData) => text(data, 'reason')?.slice(0, MODERATION_REASON_MAX) ?? null;
 
-/** The five operations a bulk action applies to each comment, by the single-comment functions. */
+/** What a bulk operation reads for one comment: the reason, and the `editedAt` its row showed. */
+type BulkInput = { reason: string | null; editedAt: EditedAt | undefined };
+
+const invalidState = (): Promise<ModerationResult> =>
+	Promise.resolve({ ok: false, reason: 'invalid-state' });
+
+/**
+ * The five operations a bulk action applies to each comment, by the single-comment functions.
+ * The operations that publish need the row's `editedAt`; a row without one is refused.
+ */
 const BULK_OPS = {
-	approve: (staff, id) => approveComment(staff, id),
-	hide: (staff, id, reason) => hideComment(staff, id, reason),
-	reject: (staff, id, reason) => rejectComment(staff, id, reason),
-	restore: (staff, id) => restoreComment(staff, id),
-	dismiss: (staff, id) => dismissReports(staff, id)
+	approve: (staff, id, { editedAt }) =>
+		editedAt === undefined ? invalidState() : approveComment(staff, id, editedAt),
+	hide: (staff, id, { reason }) => hideComment(staff, id, reason),
+	reject: (staff, id, { reason }) => rejectComment(staff, id, reason),
+	restore: (staff, id, { editedAt }) =>
+		editedAt === undefined ? invalidState() : restoreComment(staff, id, editedAt),
+	dismiss: (staff, id, { editedAt }) =>
+		editedAt === undefined ? invalidState() : dismissReports(staff, id, editedAt)
 } satisfies Record<
 	string,
-	(staff: UserRow, id: string, reason: string | null) => Promise<ModerationResult>
+	(staff: UserRow, id: string, input: BulkInput) => Promise<ModerationResult>
 >;
 
 const isBulkOp = (op: string | null): op is keyof typeof BULK_OPS =>
@@ -178,7 +197,10 @@ function bulk(event: ActionEvent) {
 			let applied = 0;
 			try {
 				for (const id of ids) {
-					const result = await BULK_OPS[op](staff, id, reason);
+					const result = await BULK_OPS[op](staff, id, {
+						reason,
+						editedAt: viewedEditedAt(data, `editedAt.${id}`)
+					});
 					if (!result.ok) continue;
 					applied += 1;
 					if (result.title) touched.set(result.title.id, result.title);
@@ -246,7 +268,12 @@ export const actions: Actions = {
 			event,
 			'approve',
 			commentKey,
-			(staff, data) => approveComment(staff, text(data, 'id') ?? ''),
+			(staff, data) => {
+				const editedAt = viewedEditedAt(data);
+				return editedAt === undefined
+					? { ok: false, reason: 'invalid' as const }
+					: approveComment(staff, text(data, 'id') ?? '', editedAt);
+			},
 			purgeComments
 		),
 	hide: (event) =>
@@ -270,7 +297,12 @@ export const actions: Actions = {
 			event,
 			'restore',
 			commentKey,
-			(staff, data) => restoreComment(staff, text(data, 'id') ?? ''),
+			(staff, data) => {
+				const editedAt = viewedEditedAt(data);
+				return editedAt === undefined
+					? { ok: false, reason: 'invalid' as const }
+					: restoreComment(staff, text(data, 'id') ?? '', editedAt);
+			},
 			purgeComments
 		),
 	dismiss: (event) =>
@@ -278,7 +310,12 @@ export const actions: Actions = {
 			event,
 			'dismiss',
 			commentKey,
-			(staff, data) => dismissReports(staff, text(data, 'id') ?? ''),
+			(staff, data) => {
+				const editedAt = viewedEditedAt(data);
+				return editedAt === undefined
+					? { ok: false, reason: 'invalid' as const }
+					: dismissReports(staff, text(data, 'id') ?? '', editedAt);
+			},
 			purgeComments
 		),
 	mute: (event) =>

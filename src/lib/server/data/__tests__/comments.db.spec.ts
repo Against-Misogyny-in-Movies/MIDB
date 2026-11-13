@@ -50,7 +50,7 @@ async function published(userId: string, body: string, parentId?: string): Promi
 	const result = await createComment({ title, userId, body, parentId });
 	if (!result.ok) throw new Error(result.reason);
 	const id = result.comment.id;
-	await approveComment(mod, id);
+	await approveComment(mod, id, null);
 	return id;
 }
 
@@ -118,7 +118,7 @@ describe('threading and reply counts', () => {
 
 		await hideComment(mod, reply, 'off topic');
 		expect((await row(root)).replyCount).toBe(1);
-		await restoreComment(mod, reply);
+		await restoreComment(mod, reply, null);
 		expect((await row(root)).replyCount).toBe(2);
 	});
 
@@ -242,9 +242,11 @@ describe('soft delete', () => {
 		expect((await listTitleComments(title.id, { sort: 'new' })).comments).toEqual([]);
 	});
 
-	it('is the author only', async () => {
+	it('is the author only, and answers not-found to anyone else whatever the status', async () => {
 		const root = await published('author', 'Root');
-		expect(await softDeleteComment(root, 'u1')).toEqual({ ok: false, reason: 'forbidden' });
+		expect(await softDeleteComment(root, 'u1')).toEqual({ ok: false, reason: 'not-found' });
+		await hideComment(mod, root, null);
+		expect(await softDeleteComment(root, 'u1')).toEqual({ ok: false, reason: 'not-found' });
 		expect(await softDeleteComment('missing', 'u1')).toEqual({ ok: false, reason: 'not-found' });
 	});
 });
@@ -267,8 +269,9 @@ describe('editComment', () => {
 
 	it('is the author only, and refuses a hidden or deleted comment', async () => {
 		const id = await published('author', 'Root');
-		expect(await editComment(id, 'u1', 'Mine now')).toEqual({ ok: false, reason: 'forbidden' });
+		expect(await editComment(id, 'u1', 'Mine now')).toEqual({ ok: false, reason: 'not-found' });
 		await hideComment(mod, id, null);
+		expect(await editComment(id, 'u1', 'Mine now')).toEqual({ ok: false, reason: 'not-found' });
 		expect(await editComment(id, 'author', 'Back')).toEqual({ ok: false, reason: 'not-editable' });
 	});
 
@@ -403,9 +406,9 @@ describe('reports', () => {
 		const [queued] = await listReportedQueue();
 		expect(queued.reports).toHaveLength(3);
 
-		expect(await dismissReports(mod, id)).toMatchObject({ ok: true });
+		expect(await dismissReports(mod, id, null)).toMatchObject({ ok: true });
 		expect(await row(id)).toMatchObject({ status: 'published', moderationSource: null });
-		expect(await dismissReports(mod, id)).toEqual({ ok: false, reason: 'invalid-state' });
+		expect(await dismissReports(mod, id, null)).toEqual({ ok: false, reason: 'invalid-state' });
 		const statuses = await db.select({ s: commentReports.status }).from(commentReports);
 		expect(statuses.every((r) => r.s === 'dismissed')).toBe(true);
 	});

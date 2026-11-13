@@ -76,7 +76,13 @@ const allFns = () => [
 
 function run(
 	name: Name,
-	fields: Record<string, string> = { id: 'c1', userId: 'u1', titleId: 't1', hours: '24' }
+	fields: Record<string, string> = {
+		id: 'c1',
+		userId: 'u1',
+		titleId: 't1',
+		hours: '24',
+		editedAt: ''
+	}
 ) {
 	const form = new FormData();
 	for (const [key, value] of Object.entries(fields)) form.set(key, value);
@@ -225,7 +231,7 @@ describe('community-report actions', () => {
 		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
 		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({
 			status: 403,
-			data: { error: 'A moderator cannot close their own flag.' }
+			data: { error: "A moderator cannot close their own flag or an administrator's." }
 		});
 	});
 });
@@ -328,6 +334,32 @@ describe('inputs', () => {
 		expect(await run('approve', {})).toMatchObject({ status: 400 });
 		expect(queries.approveComment).not.toHaveBeenCalled();
 	});
+
+	it.each([
+		['approve', 'approveComment'],
+		['restore', 'restoreComment'],
+		['dismiss', 'dismissReports']
+	] as const)(
+		'%s passes the editedAt the view carried: milliseconds, or null',
+		async (name, fn) => {
+			await run(name, { id: 'c1', editedAt: '1762077600000' });
+			expect(queries[fn]).toHaveBeenLastCalledWith(MOD, 'c1', 1762077600000);
+			await run(name, { id: 'c1', editedAt: '' });
+			expect(queries[fn]).toHaveBeenLastCalledWith(MOD, 'c1', null);
+		}
+	);
+
+	it.each(['approve', 'restore', 'dismiss'] as const)(
+		'%s without a valid editedAt is refused as invalid, changing nothing',
+		async (name) => {
+			expect(await run(name, { id: 'c1' })).toMatchObject({ status: 400 });
+			expect(await run(name, { id: 'c1', editedAt: 'yesterday' })).toMatchObject({ status: 400 });
+			expect(await run(name, { id: 'c1', editedAt: '-5' })).toMatchObject({ status: 400 });
+			for (const fn of ['approveComment', 'restoreComment', 'dismissReports'] as const) {
+				expect(queries[fn]).not.toHaveBeenCalled();
+			}
+		}
+	);
 
 	it('a ban passes the acting user and the account', async () => {
 		await run('ban', { id: 'c1', userId: 'u1', reason: 'Slurs' });

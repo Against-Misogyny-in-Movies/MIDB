@@ -317,12 +317,14 @@
 
 				<SubBlock label="Outcomes">
 					<p>
-						<strong>Published:</strong> the model allows the comment. It appears at once.
+						<strong>Published:</strong> the model allows the comment with severity 0 and no category.
+						It appears at once.
 					</p>
 					<p>
-						<strong>Awaiting review:</strong> the model asks for a person to look, or finds a clear break
-						below severity 2. The same applies when the check gives no verdict, or when the site has no
-						key for it. Only the author and moderators see the comment until a moderator decides.
+						<strong>Awaiting review:</strong> the model asks for a person to look, allows the comment
+						but notes a category or a severity above 0, or finds a clear break below severity 2. The same
+						applies when the check gives no verdict, or when the site has no key for it. Only the author
+						and moderators see the comment until a moderator decides.
 					</p>
 					<p>
 						<strong>Rejected:</strong> the blocklist matches, or the model finds a clear break of severity
