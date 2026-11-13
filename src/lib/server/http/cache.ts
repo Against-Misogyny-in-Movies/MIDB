@@ -64,7 +64,7 @@ export const PUBLIC_IMAGE = { 'cache-control': 'public, max-age=2592000' };
  * revalidates; the edge keeps the list for ten minutes and serves it stale for a minute while it
  * refreshes. The response also carries `Cache-Tag: comments:<kind>:<tmdbId>` (`commentsHeaders`),
  * and every comment write, vote or moderation action purges that tag (`purgeTitleComments`), so the
- * list trails a write by at most the purge. A vote purges too, so a reload shows the current score.
+ * list trails a write by at most the purge.
  */
 export const PUBLIC_COMMENTS = {
 	'cache-control': 'public, max-age=0',

@@ -33,6 +33,9 @@
 	const vote = $derived(comments.voteOf(comment.id));
 	/** A muted account cannot write, edit, delete, vote or report until the mute ends. */
 	const muted = $derived(comments.mutedUntil !== null);
+	/** Writes wait for the reader's state: until it loads a mute and the existing votes are unknown. */
+	const locked = $derived(muted || comments.viewerPhase !== 'ready');
+	const scoreId = $derived(`score-${comment.id}`);
 	const canVote = $derived(signedIn && !own && !comment.removed);
 	const role = $derived(
 		comment.author?.role === 'moderator'
@@ -145,18 +148,22 @@
 						<CommentAction
 							icon
 							label="Upvote"
+							describedby={scoreId}
 							pressed={vote === 1}
-							disabled={muted}
+							disabled={locked}
 							onclick={() => comments.vote(comment.id, 1)}
 						>
 							<i class="ri-arrow-up-line" aria-hidden="true"></i>
 						</CommentAction>
-						<span class="score"><span class="sr-only">Score</span> {comment.score}</span>
+						<span class="score" id={scoreId}
+							><span class="sr-only">Score</span> {comment.score}</span
+						>
 						<CommentAction
 							icon
 							label="Downvote"
+							describedby={scoreId}
 							pressed={vote === -1}
-							disabled={muted}
+							disabled={locked}
 							onclick={() => comments.vote(comment.id, -1)}
 						>
 							<i class="ri-arrow-down-line" aria-hidden="true"></i>
@@ -168,16 +175,16 @@
 			{/if}
 
 			{#if signedIn && !comment.review}
-				<CommentAction disabled={muted} expanded={mode === 'reply'} onclick={() => toggle('reply')}
+				<CommentAction disabled={locked} expanded={mode === 'reply'} onclick={() => toggle('reply')}
 					>Reply</CommentAction
 				>
 			{/if}
 			{#if own}
-				<CommentAction disabled={muted} expanded={mode === 'edit'} onclick={() => toggle('edit')}
+				<CommentAction disabled={locked} expanded={mode === 'edit'} onclick={() => toggle('edit')}
 					>Edit</CommentAction
 				>
 				<CommentAction
-					disabled={muted}
+					disabled={locked}
 					expanded={mode === 'delete'}
 					onclick={() => toggle('delete')}
 				>
@@ -185,7 +192,7 @@
 				</CommentAction>
 			{:else if signedIn}
 				<CommentAction
-					disabled={muted}
+					disabled={locked}
 					expanded={mode === 'report'}
 					onclick={() => toggle('report')}
 				>
@@ -273,7 +280,7 @@
 
 	.score {
 		@apply text-sm font-medium text-center;
-		min-width: 1.5rem;
+		min-width: 4ch;
 		font-variant-numeric: tabular-nums;
 	}
 

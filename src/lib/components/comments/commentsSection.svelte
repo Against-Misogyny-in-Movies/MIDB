@@ -80,6 +80,9 @@
 
 <CollapsibleSection title="Comments">
 	<div class="comments">
+		<p class="sr-only" aria-live="polite" aria-atomic="true" data-vote-status>
+			{comments.announcement}
+		</p>
 		{#if session.status === 'user'}
 			{#if viewerPending}
 				<div class="composer-slot" aria-hidden="true"></div>

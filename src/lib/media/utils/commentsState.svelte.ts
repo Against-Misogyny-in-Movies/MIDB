@@ -16,6 +16,8 @@ import {
 } from '#lib/media/utils/commentApi.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
+type VoteReply = { score: number; vote: 1 | -1 | null };
+
 /**
  * One title's comment section: the public list (edge-cached, the same for every reader), the
  * signed-in reader's votes and unpublished comments (`private, no-store`), and the writes. A
@@ -25,8 +27,6 @@ import { toasts } from '#lib/media/utils/toasts.svelte.js';
  * list that did not load (`load`, `viewer`), and text the server refused (a 400 on `compose`,
  * `reply:<id>` or `edit:<id>`), which the composer shows under its field.
  */
-type VoteReply = { score: number; vote: 1 | -1 | null };
-
 const SHOWN_STATUSES = new Set<OwnComment['status']>(['pending', 'rejected', 'published']);
 
 export class CommentsState {
@@ -43,12 +43,16 @@ export class CommentsState {
 	viewerPhase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	errors = $state<Record<string, string>>({});
 	busy = $state<Record<string, boolean>>({});
+	/** The score after the reader's own last vote press, for a screen reader's status line. Server answers never set it. */
+	announcement = $state('');
 
 	#fetch: Fetcher;
 	/** Per comment, while a vote is unsettled: what the server confirmed, the vote the reader wants, and whether a request is out. */
 	#votes: Record<string, { confirmed: VoteReply; intended: 1 | -1 | null; sending?: boolean }> = {};
 	/** Bumped by each list load, so a slow answer for an older sort cannot overwrite a newer one. */
 	#generation = 0;
+	/** Bumped when the viewer is cleared, so a vote reply that lands after signing out is dropped. */
+	#viewerGeneration = 0;
 
 	constructor(kind: 'movie' | 'tv', tmdbId: string, fetcher?: Fetcher) {
 		this.kind = kind;
@@ -64,14 +68,21 @@ export class CommentsState {
 		return requestJson<T>(this.#fetch, method, url, body);
 	}
 
-	#fail(key: string, action: CommentAction, reply: { status: number; message: string }): void {
-		const message = describeFailure(action, reply.status, reply.message);
+	#fail(
+		key: string,
+		action: CommentAction,
+		reply: { status: number; message: string },
+		author?: string
+	): void {
+		const message = describeFailure(action, reply.status, reply.message, author);
 		const inPlace =
 			action === 'load' ||
 			action === 'viewer' ||
 			((action === 'create' || action === 'edit') && reply.status === 400);
 		if (!inPlace) {
 			toasts.error(message);
+			// A mute or ban the page did not know of: the viewer state carries it, so reload it and the controls lock.
+			if (reply.status === 403 && /muted|banned/i.test(reply.message)) void this.loadViewer();
 			return;
 		}
 		this.errors[key] = message;
@@ -139,6 +150,7 @@ export class CommentsState {
 	}
 
 	clearViewer(): void {
+		this.#viewerGeneration++;
 		this.viewer = null;
 		this.viewerPhase = 'idle';
 		delete this.errors.viewer;
@@ -266,6 +278,9 @@ export class CommentsState {
 	 * request returns, one more goes only if the intended vote differs from what the server holds.
 	 */
 	async vote(id: string, value: 1 | -1): Promise<void> {
+		// Before the reader's own votes are known, a press would read "no vote" and get the toggle and the score wrong.
+		if (this.viewerPhase === 'loading' || this.viewerPhase === 'error') return;
+		const viewerGeneration = this.#viewerGeneration;
 		const viewer = this.#ensureViewer();
 		const current = viewer.votes[id] ?? null;
 		const sync = this.#votes[id] ?? {
@@ -275,6 +290,7 @@ export class CommentsState {
 		this.#votes[id] = sync;
 		sync.intended = current === value ? null : value;
 		this.#showVote(id, sync.intended, sync.confirmed);
+		this.announcement = `Score ${this.#find(id)?.score ?? sync.confirmed.score}`;
 		if (sync.sending) return;
 		sync.sending = true;
 		while (sync.intended !== sync.confirmed.vote) {
@@ -283,16 +299,17 @@ export class CommentsState {
 				sent === null
 					? await this.#request<VoteReply>('DELETE', `/api/comments/${id}/vote`)
 					: await this.#request<VoteReply>('PUT', `/api/comments/${id}/vote`, { value: sent });
+			if (viewerGeneration !== this.#viewerGeneration) break;
 			if (!reply.ok) {
 				sync.intended = sync.confirmed.vote;
 				this.#showVote(id, sync.intended, sync.confirmed);
-				this.#fail(`vote:${id}`, 'vote', reply);
+				this.#fail(`vote:${id}`, 'vote', reply, this.#find(id)?.author?.displayName);
 				break;
 			}
 			sync.confirmed = reply.data;
 			this.#showVote(id, sync.intended, sync.confirmed);
 		}
-		delete this.#votes[id];
+		if (this.#votes[id] === sync) delete this.#votes[id];
 	}
 
 	/** Shows `vote` as the reader's, with the score the server last confirmed moved by the difference. */

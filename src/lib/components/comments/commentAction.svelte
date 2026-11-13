@@ -9,6 +9,8 @@
 		disabled?: boolean;
 		/** The accessible name of an icon-only action. */
 		label?: string;
+		/** The id of the element that describes the action (a vote's score). */
+		describedby?: string;
 		/** An icon-only action is square. */
 		icon?: boolean;
 		onclick: () => void;
@@ -20,6 +22,7 @@
 		pressed,
 		disabled = false,
 		label,
+		describedby,
 		icon = false,
 		onclick,
 		children
@@ -31,6 +34,7 @@
 	class:action--icon={icon}
 	type="button"
 	aria-label={label}
+	aria-describedby={describedby}
 	aria-expanded={expanded}
 	aria-pressed={pressed}
 	{disabled}
@@ -58,6 +62,10 @@
 
 	.action:hover:not(:disabled) {
 		@apply text-ink;
+		background-color: var(--surface-sunken);
+	}
+
+	.action:active:not(:disabled) {
 		background-color: var(--surface-sunken);
 	}
 
