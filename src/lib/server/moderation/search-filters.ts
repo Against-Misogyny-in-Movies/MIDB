@@ -2,6 +2,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 import {
 	AI_QUERY_MAX,
+	CATEGORY_MEANINGS,
 	VERDICT_CATEGORIES,
 	commentStatus,
 	moderationSource
@@ -43,23 +44,6 @@ export const FilterSpec = z.object({
 type FilterSpec = z.infer<typeof FilterSpec>;
 
 const outputFormat = zodOutputFormat(FilterSpec);
-
-const CATEGORY_MEANINGS: Record<(typeof VERDICT_CATEGORIES)[number], string> = {
-	hate: 'hate speech against a group',
-	misogyny: 'endorsing or celebrating misogyny or sexual violence',
-	harassment: 'attacking, insulting or harassing a person',
-	slur: 'a slur',
-	threat: 'a threat of harm',
-	'sexual-minors': 'sexual content involving minors',
-	'sexual-explicit': 'explicit sexual content',
-	doxxing: 'sharing personal information',
-	spam: 'spam, advertising or unrelated links',
-	'survivor-mockery': 'mocking or doubting survivors',
-	'off-topic': 'unrelated to the title',
-	violence: 'glorifying or calling for violence',
-	disparagement: 'demeaning a person or a group without a slur',
-	trolling: 'bad-faith bait meant to provoke'
-};
 
 /**
  * The instructions as the model reads them. They are frozen text: the query and the date only

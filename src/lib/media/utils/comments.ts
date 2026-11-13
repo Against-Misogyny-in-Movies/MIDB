@@ -1,6 +1,7 @@
 /**
  * Plain data for the comment endpoints and UI. The enum tuples and length limits that the
- * schema's CHECKs also use live in `db/lib/comments.ts` and are re-exported here.
+ * schema's CHECKs also use live in `db/lib/comments.ts` and are re-exported here. The moderation
+ * categories are app data, so they live here.
  */
 
 import type { reportReason, commentStatus } from '#db/lib/comments.ts';
@@ -11,13 +12,48 @@ export {
 	MODERATION_REASON_MAX,
 	REPORT_NOTE_MAX,
 	SCAN_CONCERN_MAX,
-	VERDICT_CATEGORIES,
 	commentStatus,
 	moderationAction,
 	moderationSource,
 	reportReason,
 	reportStatus
 } from '#db/lib/comments.ts';
+
+/** What the classifier may flag a comment for. */
+export const VERDICT_CATEGORIES = [
+	'hate',
+	'misogyny',
+	'harassment',
+	'slur',
+	'threat',
+	'sexual-minors',
+	'sexual-explicit',
+	'doxxing',
+	'spam',
+	'survivor-mockery',
+	'off-topic',
+	'violence',
+	'disparagement',
+	'trolling'
+] as const;
+
+/** What each category means, for the prompts that name them. */
+export const CATEGORY_MEANINGS: Record<(typeof VERDICT_CATEGORIES)[number], string> = {
+	hate: 'hate speech against a group',
+	misogyny: 'endorsing or celebrating misogyny or sexual violence',
+	harassment: 'attacking, insulting or harassing a person',
+	slur: 'a slur',
+	threat: 'a threat of harm',
+	'sexual-minors': 'sexual content involving minors',
+	'sexual-explicit': 'explicit sexual content',
+	doxxing: 'sharing personal information',
+	spam: 'spam, advertising or unrelated links',
+	'survivor-mockery': 'mocking or doubting survivors',
+	'off-topic': 'unrelated to the title',
+	violence: 'glorifying or calling for violence',
+	disparagement: 'demeaning a person or a group without a slur',
+	trolling: 'bad-faith bait meant to provoke'
+};
 
 /** A plain-language table query is at most this many characters. */
 export const AI_QUERY_MAX = 300;

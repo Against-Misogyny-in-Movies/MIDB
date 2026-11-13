@@ -95,6 +95,12 @@ describe('classifyComment', () => {
 		timeout.mockRestore();
 	});
 
+	it('sends only the deadline signal, so the client keeps its own timeout and retry', async () => {
+		create.mockResolvedValueOnce(reply());
+		await classifyComment(input);
+		expect(Object.keys(create.mock.calls[0][1])).toEqual(['signal']);
+	});
+
 	it('ends a call that hangs at the deadline as ai-timeout', async () => {
 		const controller = new AbortController();
 		vi.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(controller.signal);

@@ -8,7 +8,7 @@ vi.mock('#lib/server/integrations/anthropic.ts', () => ({
 
 const { SCAN_BATCH, SCAN_DEADLINE_MS, SYSTEM_PROMPT, buildUserMessage, scanComments } =
 	await import('../scan.ts');
-const { MODERATION_REASON_MAX } = await import('#lib/media/utils/comments.ts');
+const { MODERATION_REASON_MAX, SCAN_CONCERN_MAX } = await import('#lib/media/utils/comments.ts');
 
 const items = (count: number) =>
 	Array.from({ length: count }, (_, i) => ({
@@ -169,8 +169,47 @@ describe('scanComments', () => {
 			output_config: { effort: 'low' },
 			system: SYSTEM_PROMPT
 		});
+		expect(create).toHaveBeenCalledTimes(2);
+		expect(timeout).toHaveBeenCalledTimes(2);
 		for (const [ms] of timeout.mock.calls) expect(ms).toBeLessThanOrEqual(SCAN_DEADLINE_MS);
 		timeout.mockRestore();
+	});
+
+	it('sends each batch as one attempt of the scan deadline, not the client default', async () => {
+		create.mockResolvedValue(reply([]));
+		await scanComments('c', items(30));
+		expect(create).toHaveBeenCalledTimes(2);
+		for (const [, options] of create.mock.calls) {
+			expect(options).toMatchObject({ timeout: SCAN_DEADLINE_MS, maxRetries: 0 });
+			expect(options.signal).toBeInstanceOf(AbortSignal);
+		}
+	});
+
+	it('returns an empty scan without calling the model', async () => {
+		await expect(scanComments('trolling', [])).resolves.toEqual({
+			ok: true,
+			results: [],
+			skipped: 0,
+			model: 'claude-haiku-5-5'
+		});
+		expect(create).not.toHaveBeenCalled();
+	});
+
+	it.each(['', '   ', 'x'.repeat(SCAN_CONCERN_MAX + 1)])(
+		'refuses the concern %j before any call',
+		async (concern) => {
+			await expect(scanComments(concern, items(2))).resolves.toEqual({
+				ok: false,
+				code: 'invalid-concern'
+			});
+			expect(create).not.toHaveBeenCalled();
+		}
+	);
+
+	it('sends the trimmed concern', async () => {
+		create.mockResolvedValueOnce(reply([]));
+		await scanComments('  trolling ', items(1));
+		expect(create.mock.calls[0][0].messages[0].content).toMatch(/^<concern>trolling<\/concern>/);
 	});
 
 	it('puts the concern and bodies in tagged data and sends no author data', () => {

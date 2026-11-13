@@ -47,23 +47,5 @@ export const moderationAction = [
 /** A moderator's reason on a hide or a reject is at most this long (the classifier's reason limit). */
 export const MODERATION_REASON_MAX = 140;
 
-/** What the classifier may flag a comment for. */
-export const VERDICT_CATEGORIES = [
-	'hate',
-	'misogyny',
-	'harassment',
-	'slur',
-	'threat',
-	'sexual-minors',
-	'sexual-explicit',
-	'doxxing',
-	'spam',
-	'survivor-mockery',
-	'off-topic',
-	'violence',
-	'disparagement',
-	'trolling'
-] as const;
-
 /** The concern a moderator types for an AI scan is at most this many characters. */
 export const SCAN_CONCERN_MAX = 200;

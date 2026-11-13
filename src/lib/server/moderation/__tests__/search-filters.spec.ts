@@ -7,7 +7,7 @@ vi.mock('#lib/server/integrations/anthropic.ts', () => ({
 	getAnthropic: () => (env.ANTHROPIC_API_KEY ? { messages: { create } } : null)
 }));
 
-const { AI_QUERY_MAX, SEARCH_DEADLINE_MS, SYSTEM_PROMPT, buildUserMessage, queryToFilters } =
+const { AI_QUERY_MAX, SEARCH_DEADLINE_MS, SYSTEM_PROMPT, queryToFilters } =
 	await import('../search-filters.ts');
 
 const none = {
@@ -106,11 +106,6 @@ describe('queryToFilters', () => {
 		create.mockResolvedValueOnce(reply({ q: 'x', reported: false, extra: 'follow me' }));
 		const result = await queryToFilters('x', today);
 		expect(result.ok && result.filters).toEqual({ q: 'x', sort: 'newest', page: 1 });
-	});
-
-	it('cuts the query to AI_QUERY_MAX before sending it', () => {
-		expect(AI_QUERY_MAX).toBe(300);
-		expect(buildUserMessage('a', today)).toContain('<query>a</query>');
 	});
 
 	it('sends the query at most AI_QUERY_MAX long', async () => {

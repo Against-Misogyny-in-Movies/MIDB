@@ -40,11 +40,7 @@ beforeEach(async () => {
 		.values({ kind: 'movie', title: 'Alien', cleanTitle: 'alien', tmdbId: 348 })
 		.returning();
 	titleId = t.id;
-	const [t2] = await db
-		.insert(titles)
-		.values({ kind: 'movie', title: 'Heat', cleanTitle: 'heat', tmdbId: 949 })
-		.returning();
-	void t2;
+	await db.insert(titles).values({ kind: 'movie', title: 'Heat', cleanTitle: 'heat', tmdbId: 949 });
 });
 
 describe('listModerationTable', () => {
@@ -127,48 +123,43 @@ describe('listModerationTable', () => {
 		});
 	});
 
-	it('matches a category on the latest matched scan label, and reports the newest label', async () => {
+	it('matches a category only through the newest scan label, as the scan cell shows it', async () => {
 		await add('a', { aiVerdict: verdict([], 0) });
 		await add('b');
 		await add('c');
-		await db.insert(commentAiLabels).values([
-			{
-				commentId: 'a',
-				concern: 'old',
-				matched: true,
-				categories: '["trolling"]',
-				severity: 2,
-				reason: 'x',
-				model: 'm',
-				createdAt: at('2026-11-05T00:00:00Z')
-			},
-			{
-				commentId: 'a',
-				concern: 'new',
-				matched: false,
-				categories: '[]',
-				severity: 0,
-				reason: 'y',
-				model: 'm',
-				createdAt: at('2026-11-06T00:00:00Z')
-			},
-			{
-				commentId: 'b',
-				concern: 'no match',
-				matched: false,
-				categories: '["trolling"]',
-				severity: 1,
-				reason: 'z',
-				model: 'm',
-				createdAt: at('2026-11-05T00:00:00Z')
-			}
-		]);
-		expect(await ids({ categories: ['trolling'] })).toEqual(['a']);
-		const a = (await listModerationTable(filters())).rows.find((r) => r.comment.id === 'a');
-		expect(a?.latestLabel).toMatchObject({ concern: 'new', matched: false, categories: [] });
-		expect(
-			(await listModerationTable(filters())).rows.find((r) => r.comment.id === 'c')?.latestLabel
-		).toBeNull();
+		await add('x', { aiVerdict: verdict(['trolling'], 1) });
+		const label = (commentId: string, day: string, matched: boolean, categories: string[]) => ({
+			commentId,
+			concern: `${commentId}-${day}`,
+			matched,
+			categories: JSON.stringify(categories),
+			severity: matched ? 2 : 0,
+			reason: 'r',
+			model: 'm',
+			createdAt: at(`2026-11-${day}T00:00:00Z`)
+		});
+		await db
+			.insert(commentAiLabels)
+			.values([
+				label('a', '05', true, ['violence']),
+				label('b', '05', false, ['violence']),
+				label('c', '05', true, ['violence'])
+			]);
+		// Scanned for "violence" once: a and c match through the scan; b did not match.
+		expect((await ids({ categories: ['violence'] })).sort()).toEqual(['a', 'c']);
+		// A second scan that does not match hides the first scan's categories.
+		await db.insert(commentAiLabels).values(label('a', '06', false, []));
+		expect(await ids({ categories: ['violence'] })).toEqual(['c']);
+		// The verdict's own categories still match.
+		expect(await ids({ categories: ['trolling'] })).toEqual(['x']);
+		const rows = (await listModerationTable(filters())).rows;
+		expect(rows.find((r) => r.comment.id === 'a')?.latestLabel).toMatchObject({
+			concern: 'a-06',
+			matched: false,
+			categories: []
+		});
+		expect(rows.find((r) => r.comment.id === 'c')?.latestLabel).toMatchObject({ matched: true });
+		expect(rows.find((r) => r.comment.id === 'x')?.latestLabel).toBeNull();
 	});
 
 	it('sorts oldest first and pages by offset', async () => {

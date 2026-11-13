@@ -1,12 +1,18 @@
-import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
-import { and, asc, desc, eq, gte, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { alias, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { and, asc, desc, eq, getTableName, gte, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
-import { commentAiLabels, commentReports, comments } from '#db/schema/community.ts';
+import { commentAiLabels, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { TABLE_PAGE_SIZE, type TableFilters } from '#lib/media/utils/moderationFilters.ts';
-import { toModerationItems, type ModerationItem } from './moderation-queue.ts';
+import {
+	openReportCount,
+	readAiVerdict,
+	toModerationItems,
+	withContext,
+	type ModerationItem
+} from './moderation-queue.ts';
 
 /** What the newest AI scan of a comment found. */
 export type AiLabel = {
@@ -40,22 +46,35 @@ const likePattern = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
 const contains = (column: AnySQLiteColumn, value: string) =>
 	sql`${column} LIKE ${likePattern(value)} ESCAPE '\\'`;
 
-const openReports = sql`(SELECT count(*) FROM ${commentReports} WHERE ${commentReports.commentId} = ${comments.id} AND ${commentReports.status} = 'open')`;
+/** `comment_ai_labels AS <alias>`: an aliased table renders as its alias alone in a `sql` template. */
+const labelsAs = (aliased: object) =>
+	sql`${sql.identifier(getTableName(commentAiLabels))} AS ${aliased}`;
 
-/** Comments with a category in the verdict, or in the newest matched scan label. */
+/** True for the newest scan label of its comment, whatever its kind. */
+function isNewestLabel(label: { id: AnySQLiteColumn; commentId: AnySQLiteColumn }): SQL {
+	const newer = alias(commentAiLabels, 'newer_label');
+	return sql`${label.id} = (
+		SELECT ${newer.id} FROM ${labelsAs(newer)} WHERE ${newer.commentId} = ${label.commentId}
+		ORDER BY ${newer.createdAt} DESC, ${newer.id} DESC LIMIT 1
+	)`;
+}
+
+/**
+ * Comments with a category in the verdict, or in the newest scan label when that label matched.
+ * A newer scan that did not match hides an older one's categories, as the row's scan cell does.
+ */
 function hasCategory(categories: string[]): SQL {
 	const list = sql.join(
 		categories.map((c) => sql`${c}`),
 		sql`, `
 	);
+	const label = alias(commentAiLabels, 'scan_label');
 	return sql`(
 		EXISTS (SELECT 1 FROM json_each(${comments.aiVerdict}, '$.categories') AS v WHERE v.value IN (${list}))
 		OR EXISTS (
-			SELECT 1 FROM json_each((
-				SELECT l.categories FROM ${commentAiLabels} AS l
-				WHERE l.comment_id = ${comments.id} AND l.matched = 1
-				ORDER BY l.created_at DESC, l.id DESC LIMIT 1
-			)) AS s WHERE s.value IN (${list})
+			SELECT 1 FROM ${labelsAs(label)}
+			WHERE ${label.commentId} = ${comments.id} AND ${isNewestLabel(label)} AND ${label.matched} = 1
+				AND EXISTS (SELECT 1 FROM json_each(${label.categories}) AS s WHERE s.value IN (${list}))
 		)
 	)`;
 }
@@ -71,7 +90,7 @@ function whereClause(f: TableFilters): SQL | undefined {
 		f.categories ? hasCategory(f.categories) : undefined,
 		f.minSeverity ? sql`${verdictSeverity} >= ${f.minSeverity}` : undefined,
 		f.source ? eq(comments.moderationSource, f.source) : undefined,
-		f.reported ? sql`${openReports} > 0` : undefined,
+		f.reported ? sql`${openReportCount} > 0` : undefined,
 		f.title ? contains(titles.title, f.title) : undefined,
 		f.author ? contains(users.username, f.author) : undefined,
 		f.from ? gte(comments.createdAt, new Date(`${f.from}T00:00:00Z`)) : undefined,
@@ -87,26 +106,12 @@ function orderBy(sort: TableFilters['sort']): SQL[] {
 		case 'oldest':
 			return [asc(comments.createdAt), asc(comments.id)];
 		case 'reports':
-			return [sql`${openReports} DESC`, desc(comments.createdAt), desc(comments.id)];
+			return [sql`${openReportCount} DESC`, desc(comments.createdAt), desc(comments.id)];
 		case 'severity':
 			// A comment with no verdict has a null severity, which sorts last descending.
 			return [sql`${verdictSeverity} DESC`, desc(comments.createdAt), desc(comments.id)];
 		default:
 			return [desc(comments.createdAt), desc(comments.id)];
-	}
-}
-
-/** Severity and failure code in a stored verdict; an unreadable one reads as none. */
-function readVerdict(json: string | null): { severity: number | null; failure: string | null } {
-	if (!json) return { severity: null, failure: null };
-	try {
-		const parsed = JSON.parse(json) as { severity?: unknown; failure?: unknown } | null;
-		return {
-			severity: typeof parsed?.severity === 'number' ? parsed.severity : null,
-			failure: typeof parsed?.failure === 'string' ? parsed.failure : null
-		};
-	} catch {
-		return { severity: null, failure: null };
 	}
 }
 
@@ -126,10 +131,8 @@ async function latestLabels(ids: string[]): Promise<Map<string, AiLabel>> {
 		const rows = await db
 			.select()
 			.from(commentAiLabels)
-			.where(inArray(commentAiLabels.commentId, chunk))
-			.orderBy(desc(commentAiLabels.createdAt), desc(commentAiLabels.id));
+			.where(and(inArray(commentAiLabels.commentId, chunk), isNewestLabel(commentAiLabels)));
 		for (const row of rows) {
-			if (labels.has(row.commentId)) continue;
 			labels.set(row.commentId, {
 				concern: row.concern,
 				matched: row.matched,
@@ -149,30 +152,26 @@ async function latestLabels(ids: string[]): Promise<Map<string, AiLabel>> {
  */
 export async function listModerationTable(filters: TableFilters): Promise<ModerationTable> {
 	const where = whereClause(filters);
-	const joined = () =>
-		db
-			.select({ comment: comments, author: users, title: titles })
-			.from(comments)
-			.innerJoin(users, eq(comments.userId, users.id))
-			.innerJoin(titles, eq(comments.titleId, titles.id));
 	const [rows, [counted]] = await Promise.all([
-		joined()
+		withContext(
+			db.select({ comment: comments, author: users, title: titles }).from(comments).$dynamic()
+		)
 			.where(where)
 			.orderBy(...orderBy(filters.sort))
 			.limit(TABLE_PAGE_SIZE)
 			.offset((filters.page - 1) * TABLE_PAGE_SIZE),
-		db
-			.select({ n: sql<number>`count(*)` })
-			.from(comments)
-			.innerJoin(users, eq(comments.userId, users.id))
-			.innerJoin(titles, eq(comments.titleId, titles.id))
-			.where(where)
+		withContext(
+			db
+				.select({ n: sql<number>`count(*)` })
+				.from(comments)
+				.$dynamic()
+		).where(where)
 	]);
 	const items = await toModerationItems(rows);
 	const labels = await latestLabels(items.map((i) => i.comment.id));
 	return {
 		rows: items.map((item, i) => {
-			const verdict = readVerdict(rows[i].comment.aiVerdict);
+			const verdict = readAiVerdict(rows[i].comment.aiVerdict);
 			return {
 				...item,
 				severity: verdict.severity,

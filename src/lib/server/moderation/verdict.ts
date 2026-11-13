@@ -1,7 +1,5 @@
 import { z } from 'zod';
-import { VERDICT_CATEGORIES } from '#db/lib/comments.ts';
-
-export { VERDICT_CATEGORIES };
+import { VERDICT_CATEGORIES } from '#lib/media/utils/comments.ts';
 
 /**
  * What the model is asked for, and what the SDK's own parse checks. `zodOutputFormat` turns a

@@ -22,6 +22,9 @@ export type ModelFailure =
 /** The model when `MODERATION_MODEL` (`wrangler.jsonc`) is unset. */
 const DEFAULT_MODEL = 'claude-haiku-5-5';
 
+/** The model a call uses. */
+export const moderationModel = () => env.MODERATION_MODEL || DEFAULT_MODEL;
+
 /** Keeps data from closing its own tag: a `<` in data never starts a tag. */
 export const asData = (text: string) => text.replaceAll('<', '&lt;');
 
@@ -62,6 +65,10 @@ export interface StructuredCall<Schema extends z.ZodType> {
 	maxTokens: number;
 	/** The whole call, retries and their waits included, ends within this many milliseconds. */
 	deadlineMs: number;
+	/** One attempt may take this long. Unset, the client's own timeout applies. */
+	timeoutMs?: number;
+	/** Retries after a failed attempt. Unset, the client's own count applies. */
+	maxRetries?: number;
 }
 
 /**
@@ -74,7 +81,7 @@ export async function callStructured<Schema extends z.ZodType>(
 ): Promise<{ ok: true; text: string; model: string } | { ok: false; code: ModelFailure }> {
 	const client = getAnthropic();
 	if (!client) return { ok: false, code: 'ai-unavailable' };
-	const model = env.MODERATION_MODEL || DEFAULT_MODEL;
+	const model = moderationModel();
 
 	try {
 		const response = await client.messages.create(
@@ -86,7 +93,11 @@ export async function callStructured<Schema extends z.ZodType>(
 				system: call.system,
 				messages: [{ role: 'user', content: call.user }]
 			},
-			{ signal: AbortSignal.timeout(call.deadlineMs) }
+			{
+				signal: AbortSignal.timeout(call.deadlineMs),
+				...(call.timeoutMs !== undefined && { timeout: call.timeoutMs }),
+				...(call.maxRetries !== undefined && { maxRetries: call.maxRetries })
+			}
 		);
 		if (response.stop_reason === 'refusal') return { ok: false, code: 'ai-refusal' };
 		if (response.stop_reason === 'max_tokens') return { ok: false, code: 'ai-truncated' };

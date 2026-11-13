@@ -70,6 +70,19 @@ describe('saveScanLabels', () => {
 		expect(rows.map((r) => r.concern).sort()).toEqual(['first', 'second']);
 	});
 
+	it.each(['', '   ', 'x'.repeat(201)])(
+		'refuses the concern %j before writing',
+		async (concern) => {
+			await expect(saveScanLabels('staff', concern, [result('c0')])).rejects.toThrow();
+			expect(await db.select().from(commentAiLabels)).toHaveLength(0);
+		}
+	);
+
+	it('stores the concern trimmed', async () => {
+		await saveScanLabels('staff', '  trolling ', [result('c0')]);
+		expect((await db.select().from(commentAiLabels))[0].concern).toBe('trolling');
+	});
+
 	it('writes nothing for no results', async () => {
 		await saveScanLabels('staff', 'c', []);
 		expect(await db.select().from(commentAiLabels)).toHaveLength(0);
@@ -77,7 +90,11 @@ describe('saveScanLabels', () => {
 
 	it('saves nothing when one row breaks a constraint', async () => {
 		await expect(
-			saveScanLabels('staff', 'c', [result('c0'), result('c1', { severity: 9 })])
+			saveScanLabels(
+				'staff',
+				'c',
+				Array.from({ length: 12 }, (_, i) => result(`c${i}`, i === 11 ? { severity: 9 } : {}))
+			)
 		).rejects.toThrow();
 		expect(await db.select().from(commentAiLabels)).toHaveLength(0);
 	});
