@@ -46,12 +46,12 @@
 				<tr>
 					<th scope="col" class="select"><span class="sr-only">Select</span></th>
 					<th scope="col" class="comment">Comment</th>
-					<th scope="col">Author</th>
-					<th scope="col">Title</th>
+					<th scope="col" class="author">Author</th>
+					<th scope="col" class="title">Title</th>
 					<th scope="col">Status</th>
 					<th scope="col">Automatic check</th>
 					<th scope="col">Reports</th>
-					<th scope="col">Scan</th>
+					<th scope="col" class="scan">Scan</th>
 					<th scope="col">Posted</th>
 					<th scope="col"><span class="sr-only">Actions</span></th>
 				</tr>
@@ -73,7 +73,7 @@
 						<td class="comment" data-label="Comment">
 							<p class="clamp body">{row.comment.body}</p>
 						</td>
-						<td data-label="Author">
+						<td class="author" data-label="Author">
 							<span class="name">{row.author.displayName}</span>
 							{#if row.author.role !== 'user'}
 								<Badge tone="brand">
@@ -81,7 +81,7 @@
 								</Badge>
 							{/if}
 						</td>
-						<td data-label="Title">
+						<td class="title" data-label="Title">
 							<span class="clamp">
 								{#if href}<a class="link" {href}>{row.title.name}</a>{:else}{row.title.name}{/if}
 							</span>
@@ -119,7 +119,7 @@
 								<span class="label">None</span>
 							{/if}
 						</td>
-						<td data-label="Scan">
+						<td class="scan" data-label="Scan">
 							{#if row.latestLabel}
 								<div class="stack">
 									<Badge tone={row.latestLabel.matched ? 'neg' : 'neutral'}>
@@ -222,8 +222,20 @@
 		accent-color: var(--brand);
 	}
 
+	.author {
+		min-width: 6rem;
+	}
+
+	.title {
+		min-width: 7rem;
+	}
+
+	.scan {
+		min-width: 6.5rem;
+	}
+
 	.comment {
-		min-width: 12rem;
+		min-width: 10rem;
 		width: 100%;
 	}
 
@@ -328,7 +340,10 @@
 			content: attr(data-label);
 		}
 
-		.comment {
+		.comment,
+		.author,
+		.title,
+		.scan {
 			min-width: 0;
 		}
 

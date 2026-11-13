@@ -115,12 +115,14 @@
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
 		{#if tab === 'table'}
 			{#if data.table && data.filters}
-				<TablePanel
-					table={data.table}
-					filters={data.filters}
-					aiAvailable={data.aiAvailable}
-					me={data.me}
-				/>
+				<div class="bleed">
+					<TablePanel
+						table={data.table}
+						filters={data.filters}
+						aiAvailable={data.aiAvailable}
+						me={data.me}
+					/>
+				</div>
 			{:else}
 				<p class="empty" aria-busy="true">Loading comments…</p>
 			{/if}
@@ -177,9 +179,13 @@
 		@apply text-ink;
 	}
 
-	/* The table needs the whole column the layout allows. */
+	/* The table needs the whole column the layout allows, and up to 4rem more on each side of it. */
 	.page.wide {
 		max-width: none;
+	}
+
+	.bleed {
+		margin-inline: calc(-1 * max(0px, min(4rem, (100vw - 66rem) / 2)));
 	}
 
 	h1 {
