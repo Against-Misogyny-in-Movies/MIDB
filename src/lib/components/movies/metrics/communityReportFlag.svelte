@@ -39,22 +39,26 @@
 
 <div class="flag">
 	{#if open}
-		<form class="plate form" onsubmit={submit}>
+		<form class="plate form" aria-labelledby="report-flag-title" onsubmit={submit}>
+			<p id="report-flag-title" class="intro">
+				Sends this title’s community-report counts to the moderators for review.
+			</p>
 			<label class="note">
-				<span class="label">Note (optional)</span>
+				<span class="label">What looks wrong (optional)</span>
 				<textarea
 					class="input field"
 					rows="2"
+					aria-describedby="report-flag-count"
 					maxlength={REPORT_NOTE_MAX}
 					bind:value={note}
 					bind:this={field}></textarea>
 			</label>
 			<div class="row">
 				<button class="btn btn--ink" type="submit" disabled={reports.busy.flag}>
-					{reports.busy.flag ? 'Sending…' : 'Send'}
+					{reports.busy.flag ? 'Sending…' : 'Send flag'}
 				</button>
 				<button class="btn btn--ghost" type="button" onclick={close}>Cancel</button>
-				<span class="label count">{note.length} / {REPORT_NOTE_MAX}</span>
+				<span id="report-flag-count" class="label count">{note.length} / {REPORT_NOTE_MAX}</span>
 			</div>
 			{#if reports.errors.flag}
 				<Notice tone="error">{reports.errors.flag}</Notice>
@@ -77,6 +81,11 @@
 	.form {
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
+	}
+
+	.intro {
+		@apply text-sm;
+		margin: 0;
 	}
 
 	.note {

@@ -48,6 +48,8 @@ export class CommunityReportsState {
 	busy = $state<Partial<Record<Action, boolean>>>({});
 	/** The status a save answered, shown once beside the reader's report. */
 	saved = $state<{ status: ContentReportStatus } | null>(null);
+	/** Set by a delete that went through, so "Add a report" can say so; cleared by a save, by `clearViewer()` and when the form opens. */
+	deleted = $state(false);
 	flagged = $state(false);
 
 	constructor(kind: 'movie' | 'tv', tmdbId: string, fetcher?: Fetcher) {
@@ -93,6 +95,7 @@ export class CommunityReportsState {
 		this.viewer = null;
 		this.viewerPhase = 'idle';
 		this.saved = null;
+		this.deleted = false;
 		delete this.errors.viewer;
 	}
 
@@ -116,6 +119,7 @@ export class CommunityReportsState {
 			return false;
 		}
 		this.saved = { status: reply.data.status };
+		this.deleted = false;
 		await this.loadViewer();
 		this.busy.save = false;
 		return true;
@@ -130,6 +134,7 @@ export class CommunityReportsState {
 			return false;
 		}
 		this.saved = null;
+		this.deleted = true;
 		if (this.viewer) this.viewer = { ...this.viewer, report: null };
 		return true;
 	}

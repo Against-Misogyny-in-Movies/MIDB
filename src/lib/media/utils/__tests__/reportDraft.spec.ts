@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ViewerReportView } from '#lib/media/types/community-reports.ts';
 import {
+	allUnsure,
 	asksFlags,
 	asksFraming,
 	canSave,
@@ -8,6 +9,17 @@ import {
 	emptyDraft,
 	reportBody
 } from '../reportDraft.ts';
+
+describe('allUnsure', () => {
+	it('is true for a fresh draft and false once any level is answered', () => {
+		const draft = emptyDraft();
+		expect(allUnsure(draft)).toBe(true);
+		for (const key of ['sexual', 'partner', 'physical', 'stalking', 'objectification'] as const) {
+			const answered = { ...emptyDraft(), [key]: 'none' };
+			expect(allUnsure(answered)).toBe(false);
+		}
+	});
+});
 
 describe('the report form gates', () => {
 	it('waits for "I watched this" before Save', () => {

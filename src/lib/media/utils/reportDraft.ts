@@ -75,6 +75,15 @@ export function asksFraming(draft: ReportDraft): boolean {
 	);
 }
 
+/**
+ * Whether every level question is "not sure". The flags and the framing are asked only after a
+ * non-"not sure" answer, so they cannot hold one.
+ */
+export const allUnsure = (draft: ReportDraft): boolean =>
+	[draft.sexual, draft.partner, draft.physical, draft.stalking, draft.objectification].every(
+		(answer) => answer === UNSURE
+	);
+
 /** Save waits for "I watched this". */
 export const canSave = (draft: ReportDraft): boolean => draft.watched;
 

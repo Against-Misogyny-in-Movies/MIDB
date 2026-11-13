@@ -58,6 +58,8 @@
 
 	const total = $derived(reports.counts?.total ?? 0);
 	const counts = $derived(reports.counts && 'categories' in reports.counts ? reports.counts : null);
+	/** Whether the report form is open: "Counts look wrong" waits, so only one plate shows. */
+	let editing = $state(false);
 	const status = $derived(
 		reports.phase === 'loading'
 			? 'Loading'
@@ -108,9 +110,9 @@
 			{/if}
 		</div>
 
-		<CommunityReportOwn state={reports} {signInHref} />
+		<CommunityReportOwn state={reports} {signInHref} bind:editing />
 
-		{#if canFlag}
+		{#if canFlag && !editing}
 			<CommunityReportFlag state={reports} />
 		{/if}
 	</div>

@@ -63,6 +63,28 @@
 		@apply font-normal;
 	}
 
+	/*
+	 * From 40rem a compact group is a row: the legend in the counts' 13rem name column, the options
+	 * beside it, a hairline between rows. A fieldset keeps its rendered legend out of grid and flex
+	 * layout, so the legend floats instead; the options are a flex box, which sits beside the float.
+	 * Both take the option's height and centre their text, so the baselines meet.
+	 */
+	@media (min-width: 40rem) {
+		.choice--compact {
+			display: block;
+			padding-block: var(--spacing-xs);
+			border-top: 1px solid var(--border);
+		}
+
+		.choice--compact legend {
+			@apply flex items-center;
+			float: left;
+			width: 13rem;
+			min-height: 1.75rem;
+			margin-right: var(--spacing-md);
+		}
+	}
+
 	.description {
 		margin: 0;
 	}
@@ -83,6 +105,12 @@
 
 	@media (pointer: coarse) {
 		.option {
+			min-height: 2.75rem;
+		}
+	}
+
+	@media (min-width: 40rem) and (pointer: coarse) {
+		.choice--compact legend {
 			min-height: 2.75rem;
 		}
 	}

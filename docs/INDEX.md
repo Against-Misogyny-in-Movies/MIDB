@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~3.8K tok)
+- `DESIGN.md` — Design (~3.9K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–62 Components (~1.8K)
+  - 37–62 Components (~2.0K)
   - 63–69 Pages (~470)
   - 70–73 Motion (~90)
   - 74–77 Browser surfaces (~50)
   - 78–81 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~50.6K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~50.9K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -69,7 +69,7 @@ Read the sections your task touches.
   - 489–508 UM Disambiguation (~630)
   - 509–517 UM flag rendering (~250)
   - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~740) ← 1
+  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.0K) ← 1
   - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
   - 550–590 Component library (`src/lib/components/`) (~5.9K)
   - 591–601 Live search (`src/lib/components/search/`) (~710)

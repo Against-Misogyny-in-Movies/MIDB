@@ -13,11 +13,12 @@
 		state: CommunityReportsState;
 		/** Where `/auth` sends the reader back to after signing in. */
 		signInHref: string;
+		/** Whether the form is open, so the section can hide the plates that would sit beside it. */
+		editing?: boolean;
 	}
 
-	let { state: reports, signInHref }: Props = $props();
+	let { state: reports, signInHref, editing = $bindable(false) }: Props = $props();
 
-	let open = $state(false);
 	let draft = $state<ReportDraft>(emptyDraft());
 	let trigger: HTMLButtonElement | undefined = $state();
 
@@ -40,17 +41,23 @@
 	const pending = $derived(
 		reports.viewerPhase === 'idle' || (reports.viewerPhase === 'loading' && reports.viewer === null)
 	);
+	/**
+	 * The line stays while the form is open, so the form sits under the row it acts on: a new report
+	 * swaps "Add a report" for it, and an existing one drops only Edit.
+	 */
+	const showLine = $derived(report !== null || (editing && !mutedUntil));
 
 	function show() {
+		reports.deleted = false;
 		draft = report ? draftFromReport(report) : emptyDraft();
-		open = true;
+		editing = true;
 		void focusAfterUpdate(() =>
 			document.querySelector<HTMLInputElement>('[data-report-form] input')
 		);
 	}
 
 	function close() {
-		open = false;
+		editing = false;
 		void focusAfterUpdate(() => trigger);
 	}
 </script>
@@ -64,7 +71,7 @@
 			enough.
 		</Notice>
 	{:else if reports.saved}
-		<Notice tone="success">Report saved.</Notice>
+		<Notice tone="success">Report saved. The counts above include it once the page reloads.</Notice>
 	{/if}
 {/snippet}
 
@@ -81,13 +88,17 @@
 				Try again
 			</button>
 		{:else}
-			{#if report && label && !open}
+			{#if showLine}
 				<div class="line">
-					<span class="mine">This account’s report</span>
-					<Badge tone={label.tone}>{label.label}</Badge>
-					{#if !mutedUntil}
-						<span class="sep" aria-hidden="true">·</span>
-						<button class="link edit" type="button" bind:this={trigger} onclick={show}>Edit</button>
+					<span class="mine" id="report-own-title">This account’s report</span>
+					{#if report && label}
+						<Badge tone={label.tone}>{label.label}</Badge>
+						{#if !mutedUntil && !editing}
+							<span class="sep" aria-hidden="true">·</span>
+							<button class="link edit" type="button" bind:this={trigger} onclick={show}>
+								Edit
+							</button>
+						{/if}
 					{/if}
 				</div>
 			{/if}
@@ -97,10 +108,11 @@
 						mutedUntil
 					)}.
 				</Notice>
-			{:else if open}
+			{:else if editing}
 				<CommunityReportForm
 					state={reports}
 					bind:draft
+					labelledby="report-own-title"
 					saved={report !== null}
 					ondone={close}
 					oncancel={close}
@@ -113,6 +125,11 @@
 						Add a report
 					</button>
 				</div>
+				{#if reports.deleted}
+					<Notice tone="success">
+						Report deleted. The counts above drop it once the page reloads.
+					</Notice>
+				{/if}
 			{/if}
 		{/if}
 	{/if}
