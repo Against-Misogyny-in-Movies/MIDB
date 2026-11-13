@@ -19,7 +19,7 @@ Read whole.
   - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
   - 108–120 Making a change (~440) ← 3
-  - 121–137 Checking a change (~230) ← 6
+  - 121–137 Checking a change (~230) ← 7
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~480 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
@@ -44,7 +44,7 @@ Read the sections your task touches.
 - `PRODUCT.md` — Product (~620 tok)
 - `DESIGN.md` — Design (~4.6K tok)
   - 5–8 Idea (~70)
-  - 9–24 Colour (~880)
+  - 9–24 Colour (~880) ← 1
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–64 Components (~2.7K) ← 1
@@ -76,7 +76,7 @@ Read the sections your task touches.
   - 617–630 Server cache (`src/lib/server/cache/`) (~690)
   - 631–646 TMDB integration (~810)
   - 647–665 Auth flow (Better Auth) (~1.9K)
-  - 666–685 Caching policy (~1.4K) ← 6
+  - 666–685 Caching policy (~1.4K) ← 7
   - 686–742 Configuration & environment (~3.8K)
     - 702–714 Local run sequence (~130)
     - 715–718 npm scripts (~200)
@@ -91,11 +91,17 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~3.2K tok)
-  - 5–16 Rules (~260)
-  - 17–46 Phases (~1.2K)
-  - 47–81 Open items (~850)
-  - 82–120 Standing decisions (~880)
+- `docs/phases/STATUS.md` — Phase status (~3.6K tok)
+  - 5–16 Rules (~270)
+  - 17–52 Phases (~1.4K)
+  - 53–87 Open items (~850)
+  - 88–131 Standing decisions (~1.0K) ← 1
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-community-polish.md` — Plan: community polish (~2.6K tok)
 
 ## Policies
 
