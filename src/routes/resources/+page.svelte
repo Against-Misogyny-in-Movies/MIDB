@@ -147,7 +147,7 @@
 			<MetricArticle
 				id="reader-reports"
 				title="Reader reports"
-				icon="ri-team-fill"
+				icon="ri-survey-fill"
 				hue="var(--brand)"
 			>
 				<p>
@@ -180,8 +180,8 @@
 					</p>
 					<p>
 						An optional question on how the title treats the violence is asked when sexual violence
-						is Present or another violence category is mentioned or on screen. Its counts cover the
-						reports that answered it.
+						is Present, or when another violence category is answered {REPORT_LEVEL_LABELS.mentioned}
+						or {REPORT_LEVEL_LABELS.on_screen}. Its counts cover the reports that answered it.
 					</p>
 				</SubBlock>
 
@@ -189,14 +189,15 @@
 					<p>
 						A signed-in account that is not muted or banned can report a film or series once, after
 						confirming it watched the title, and can edit or delete the report. Not sure answers are
-						counted and shown as such. The flag counts cover the reports that answered Present.
+						counted and shown as such. The concern flag counts cover the reports that answered
+						Present.
 					</p>
 					<p>
 						A report counts once its account is {REPORT_ACCOUNT_MIN_AGE_DAYS} days old. A title shows
 						counts once {READER_REPORT_MIN} reports count; below that the page shows the number of reports
 						only. Counts are cached briefly, so a new report or a lapsed wait can take a short time to
 						show. A muted or banned account's reports are not counted while the mute or ban lasts, and
-						a report a moderator rejected is never counted.
+						a report a moderator rejected is not counted unless a moderator counts it later.
 					</p>
 				</SubBlock>
 
@@ -221,18 +222,19 @@
 						more than {NEW_ACCOUNT_REPORT_MAX} reports, this one included.
 					</p>
 					<p>
-						A moderator counts or rejects a held report, and can reject every report from an
-						account. An edit does not reinstate a rejected report.
+						A moderator counts a held or rejected report, or rejects a held or counted one, and can
+						reject every report from an account. An edit does not reinstate a rejected report.
 					</p>
 				</SubBlock>
 
 				<SubBlock label="Counts look wrong">
 					<p>
-						A signed-in account that is not muted can flag a title's counts as wrong, with an
-						optional note, once per title. Moderators see flagged titles with every report behind
-						the counts. They can reject a report, reject all reports from an account, or mute or ban
-						the account, then resolve or dismiss the flags. Flags do not change counts by
-						themselves.
+						A signed-in account that is not muted can mark a title's counts with Counts look wrong,
+						with an optional note. An account has one per title; sending it again replaces the note
+						and reopens it. Moderators see these titles with every report on the title. They can
+						reject or count a report, reject all reports from an account, or mute or ban the
+						account, then resolve or dismiss each Counts look wrong. Resolving one does not change
+						the counts.
 					</p>
 				</SubBlock>
 			</MetricArticle>
