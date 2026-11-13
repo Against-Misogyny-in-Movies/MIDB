@@ -30,7 +30,7 @@ export type ModerationItem = {
 };
 
 /** The categories in a stored verdict; an unreadable one reads as none. */
-function verdictCategories(json: string | null): string[] {
+export function verdictCategories(json: string | null): string[] {
 	if (!json) return [];
 	try {
 		const parsed: unknown = JSON.parse(json);
@@ -41,7 +41,8 @@ function verdictCategories(json: string | null): string[] {
 	}
 }
 
-async function toItems(
+/** The rows of a moderation list with their open reports and author context. */
+export async function toModerationItems(
 	rows: {
 		comment: typeof comments.$inferSelect;
 		author: UserRow;
@@ -102,7 +103,7 @@ const withContext = () =>
 
 /** Comments waiting for a moderator, oldest first. */
 export async function listPendingQueue(): Promise<ModerationItem[]> {
-	return toItems(
+	return toModerationItems(
 		await withContext()
 			.where(eq(comments.status, 'pending'))
 			.orderBy(comments.createdAt)
@@ -113,7 +114,7 @@ export async function listPendingQueue(): Promise<ModerationItem[]> {
 /** Pending and published comments with open reports, most reported first. */
 export async function listReportedQueue(): Promise<ModerationItem[]> {
 	const open = sql`(SELECT count(*) FROM ${commentReports} WHERE ${commentReports.commentId} = ${comments.id} AND ${commentReports.status} = 'open')`;
-	return toItems(
+	return toModerationItems(
 		await withContext()
 			.where(and(inArray(comments.status, ['pending', 'published']), sql`${open} > 0`))
 			.orderBy(sql`${open} DESC`, comments.createdAt)
