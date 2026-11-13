@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { titles } from '#db/schema/titles.ts';
 import { titleBechdel, titleUm, umSource } from '#db/schema/sources.ts';
 import { db } from '#lib/server/db.ts';
@@ -151,6 +151,22 @@ describe('landing queries are cached', () => {
 		expect((await getCatalogueCounts()).bechdelRatings).toBe(1);
 		await clearCache();
 		expect((await getCatalogueCounts()).bechdelRatings).toBe(3);
+	});
+
+	it('keeps an empty hero pool for a minute only, so films that gain a TMDB id show soon', async () => {
+		expect(await getRandomRatedFilms(6)).toEqual([]);
+		const row = await film('Linked later', 10, 3, 7);
+		await db.insert(umSource).values({ umId: 7, cleanName: 'l', cleanTitleKey: 'l', ...FLAGS });
+		await db.insert(titleUm).values({ titleId: row.id, umId: 7 });
+		expect(await getRandomRatedFilms(6)).toEqual([]);
+
+		const later = Date.now() + 61_000;
+		const now = vi.spyOn(Date, 'now').mockReturnValue(later);
+		try {
+			expect((await getRandomRatedFilms(6)).map((f) => f.title)).toEqual(['Linked later']);
+		} finally {
+			now.mockRestore();
+		}
 	});
 
 	it('shuffles per call from one cached pool', async () => {
