@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 
 const props = {
@@ -42,5 +42,55 @@ describe('CollapsibleSection freshness', () => {
 			children: (() => {}) as never
 		});
 		expect(screen.queryByText(/Updated/)).toBeNull();
+	});
+});
+
+describe('CollapsibleSection open on hash', () => {
+	const section = { title: 'Linked', id: 'linked', children: (() => {}) as never };
+
+	afterEach(() => {
+		window.location.hash = '';
+	});
+
+	it('stays closed without a matching hash', () => {
+		const { container } = render(CollapsibleSection, { ...section, open: false, openOnHash: true });
+		expect(container.querySelector('details')!.open).toBe(false);
+	});
+
+	it('opens on mount when the hash matches', () => {
+		window.location.hash = '#linked';
+		const { container } = render(CollapsibleSection, { ...section, open: false, openOnHash: true });
+		expect(container.querySelector('details')!.open).toBe(true);
+	});
+
+	it('ignores the hash without openOnHash', () => {
+		window.location.hash = '#linked';
+		const { container } = render(CollapsibleSection, { ...section, open: false });
+		expect(container.querySelector('details')!.open).toBe(false);
+	});
+
+	it('opens when the hash changes to it', async () => {
+		const { container } = render(CollapsibleSection, { ...section, open: false, openOnHash: true });
+		window.location.hash = '#linked';
+		window.dispatchEvent(new HashChangeEvent('hashchange'));
+		expect(container.querySelector('details')!.open).toBe(true);
+	});
+
+	it('opens again on a click of a link to the hash the page is already on', async () => {
+		window.location.hash = '#linked';
+		const { container } = render(CollapsibleSection, { ...section, open: false, openOnHash: true });
+		const el = container.querySelector('details')!;
+		el.open = false;
+		const link = document.createElement('a');
+		link.href = '#linked';
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		expect(el.open).toBe(true);
+	});
+
+	it('marks the details busy', () => {
+		const { container } = render(CollapsibleSection, { ...section, status: 'Loading', busy: true });
+		expect(container.querySelector('details')!.getAttribute('aria-busy')).toBe('true');
 	});
 });

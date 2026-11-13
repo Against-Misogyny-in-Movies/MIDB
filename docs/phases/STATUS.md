@@ -44,7 +44,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | M3    | Moderation table: UI            | completed   | 2026-11-13. Rendered against seeded local data only; the AI controls seen only in their disabled state.           |
 | M4    | Moderation table: docs          | completed   | 2026-11-13.                                                                                                       |
 | S1    | Staff powers and rate limits    | completed   | 2026-11-13. Moderation rows reviewed from code only, not rendered.                                                |
-| S2    | DDD section starts closed       | not started |                                                                                                                   |
+| S2    | DDD section starts closed       | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
 | S3    | Snappy comment votes            | not started |                                                                                                                   |
 | S4    | Links to a comment              | not started |                                                                                                                   |
 | S5    | Public user profiles            | not started |                                                                                                                   |

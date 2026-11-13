@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~4.7K tok)
+- `DESIGN.md` — Design (~4.8K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880) ← 1
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–64 Components (~2.8K) ← 1
-  - 65–71 Pages (~480)
+  - 65–71 Pages (~530)
   - 72–75 Motion (~110)
   - 76–79 Browser surfaces (~50)
   - 80–83 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~54.8K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~54.9K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)

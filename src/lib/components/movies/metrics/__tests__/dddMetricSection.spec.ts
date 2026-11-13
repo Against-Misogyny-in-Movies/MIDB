@@ -40,14 +40,60 @@ describe('DddMetricSection', () => {
 	it('starts closed with no warnings', () => {
 		const el = details({ ...result, tags: [] }, []);
 		expect(el.open).toBe(false);
-		expect(el.textContent).toContain('No data');
+		expect(el.textContent).toContain('No warnings');
 	});
 
-	it('keeps the reader’s toggle when the data arrives', async () => {
+	it('says "No data" when DDD has no entry', () => {
+		expect(details({ ...result, itemId: null, tags: [] }, []).textContent).toContain('No data');
+	});
+
+	it('says "Warnings by episode" when only other episodes have warnings', () => {
+		const el = details(
+			{ ...result, isSeries: true, tags: [{ ...tag, season: 2, episode: 1 }] },
+			[]
+		);
+		expect(el.textContent).toContain('Warnings by episode');
+	});
+
+	it('says "No warnings" for a picked season with none', () => {
+		const { container } = render(DddMetricSection, {
+			ddd: { ...result, isSeries: true, tags: [{ ...tag, season: 2, episode: 1 }] },
+			visibleTags: [],
+			seasonPicked: true
+		});
+		expect(container.querySelector('details')!.textContent).toContain('No warnings');
+	});
+
+	it('stays open when the reader opened it while loading and the data arrives empty', async () => {
 		const { container, rerender } = render(DddMetricSection, { ddd: null, visibleTags: [] });
 		const el = container.querySelector('details')!;
 		el.open = true;
-		await rerender({ ddd: result, visibleTags: [tag] });
+		await rerender({ ddd: { ...result, tags: [] }, visibleTags: [] });
 		expect(el.open).toBe(true);
+	});
+
+	it('stays open when an episode switch empties the visible warnings', async () => {
+		const { container, rerender } = render(DddMetricSection, { ddd: result, visibleTags: [tag] });
+		const el = container.querySelector('details')!;
+		el.open = true;
+		await rerender({ ddd: result, visibleTags: [] });
+		expect(el.open).toBe(true);
+	});
+
+	it('carries the #ddd id on the details and marks it busy while loading', async () => {
+		const { container, rerender } = render(DddMetricSection, { ddd: null, visibleTags: [] });
+		const el = container.querySelector('details')!;
+		expect(el.id).toBe('ddd');
+		expect(el.getAttribute('aria-busy')).toBe('true');
+		await rerender({ ddd: result, visibleTags: [tag] });
+		expect(el.hasAttribute('aria-busy')).toBe(false);
+	});
+
+	it('opens for the #ddd hash', async () => {
+		window.location.hash = '#ddd';
+		const el = details(result, [tag]);
+		await Promise.resolve();
+		expect(el.open).toBe(true);
+		window.location.hash = '';
 	});
 });

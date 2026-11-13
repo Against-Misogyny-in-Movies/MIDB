@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, untrack, type Snippet } from 'svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { BadgeTone } from '#lib/media/utils/tones.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -25,8 +25,13 @@
 		/** Internal link to the matching /resources section. */
 		learnHref?: string;
 		learnLabel?: string;
-		/** Start expanded. */
+		/** Start expanded. Read once: the reader's own toggle is never overwritten by a re-render. */
 		open?: boolean;
+		/**
+		 * Open for a link to the section: the hash on mount, `hashchange`, and a click on a link to
+		 * the hash the page is already on. Needs `id`.
+		 */
+		openOnHash?: boolean;
 		children: Snippet;
 	}
 
@@ -44,11 +49,47 @@
 		learnHref,
 		learnLabel = 'Methodology',
 		open = true,
+		openOnHash = false,
 		children
 	}: Props = $props();
+
+	const startOpen = untrack(() => open);
+	let el = $state<HTMLDetailsElement>();
+
+	// Set outside the template: Svelte writes every dynamic attribute of an element together, and a
+	// busy change would then rewrite `open` and close a section the reader just opened.
+	$effect(() => {
+		if (busy) el?.setAttribute('aria-busy', 'true');
+		else el?.removeAttribute('aria-busy');
+	});
+
+	// The server render never knows the hash, so the section opens on the client. It is set on the
+	// element, because a reader may have closed the section since `open` was last set.
+	onMount(() => {
+		if (!openOnHash || !id) return;
+		const hash = `#${id}`;
+		const openSection = () => {
+			if (el) el.open = true;
+		};
+		const openForHash = () => {
+			if (location.hash === hash) openSection();
+		};
+		// A link to the hash the page is already on fires no `hashchange`.
+		const openForLink = (event: MouseEvent) => {
+			if (event.target instanceof Element && event.target.closest(`a[href="${hash}"]`))
+				openSection();
+		};
+		openForHash();
+		window.addEventListener('hashchange', openForHash);
+		document.addEventListener('click', openForLink);
+		return () => {
+			window.removeEventListener('hashchange', openForHash);
+			document.removeEventListener('click', openForLink);
+		};
+	});
 </script>
 
-<details {id} class="card section" {open}>
+<details bind:this={el} {id} class="card section" open={startOpen}>
 	<summary>
 		{#if icon}
 			<span class="disk" style="--disk: 2rem; --hue: {hue ?? 'var(--brand)'}" aria-hidden="true">

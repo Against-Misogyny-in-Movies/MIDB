@@ -19,42 +19,12 @@
 
 	let { kind, tmdbId, reports }: Props = $props();
 
-	// The section opens for a link to it (`#community-reports`, which the sign-in return path carries
-	// and the header badge points at). The hash is read on mount, because the server render never
-	// knows it, and again on `hashchange`. A click on a link to the section opens it too, because a
-	// link to the hash the page is already on fires no `hashchange`. The section is below the fold,
-	// so opening it moves nothing the reader sees.
-	let open = $state(false);
-
-	function openSection() {
-		open = true;
-		// A reader may have closed the section since the prop was set, so the element is opened directly.
-		const el = document.getElementById('community-reports');
-		if (el instanceof HTMLDetailsElement) el.open = true;
-	}
-
-	function openForHash() {
-		if (location.hash === '#community-reports') openSection();
-	}
-
-	function openForLink(event: MouseEvent) {
-		if (event.target instanceof Element && event.target.closest('a[href="#community-reports"]'))
-			openSection();
-	}
-
 	onMount(() => {
-		open = location.hash === '#community-reports';
-		window.addEventListener('hashchange', openForHash);
-		document.addEventListener('click', openForLink);
 		// The page is cached for everyone, so the reader's own report comes from the private
 		// endpoint once the session says who is reading.
 		void session.load();
 		void reports.load();
 		if (session.likelyUser) void reports.loadViewer();
-		return () => {
-			window.removeEventListener('hashchange', openForHash);
-			document.removeEventListener('click', openForLink);
-		};
 	});
 
 	$effect(() => {
@@ -99,7 +69,8 @@
 	{status}
 	tone="neutral"
 	busy={reports.phase === 'loading'}
-	{open}
+	open={false}
+	openOnHash
 	learnHref="/resources#community-reports"
 >
 	<div class="reports">

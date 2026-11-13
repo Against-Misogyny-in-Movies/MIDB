@@ -3,6 +3,7 @@
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import DddTags from './dddTags.svelte';
 	import DddCategoryFilter from './dddCategoryFilter.svelte';
+	import { dddStatus } from '#lib/media/utils/dddStatus.ts';
 	import { dddUrl } from '#lib/media/utils/metrics.ts';
 	import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
 
@@ -10,9 +11,11 @@
 		ddd: DddResult | null;
 		visibleTags: TriggerTag[];
 		selector?: Snippet;
+		/** A season (or episode) is picked, so no warnings reads "No warnings". */
+		seasonPicked?: boolean;
 	}
 
-	let { ddd, visibleTags, selector }: Props = $props();
+	let { ddd, visibleTags, selector, seasonPicked = false }: Props = $props();
 
 	let selectedCategory = $state<string | null>(null);
 
@@ -22,6 +25,8 @@
 		selectedCategory = null;
 	});
 
+	const status = $derived(dddStatus(ddd, visibleTags.length, seasonPicked));
+
 	const filteredTags = $derived(
 		selectedCategory === null
 			? visibleTags
@@ -29,49 +34,45 @@
 	);
 </script>
 
-<div id="ddd">
-	<CollapsibleSection
-		title="Does the Dog Die"
-		icon="ri-alarm-warning-fill"
-		hue="var(--src-ddd)"
-		status={ddd === null
-			? 'Loading…'
-			: visibleTags.length > 0
-				? `${visibleTags.length} warning${visibleTags.length === 1 ? '' : 's'}`
-				: 'No data'}
-		busy={ddd === null}
-		open={false}
-		sourceLabel="DoesTheDogDie.com"
-		sourceHref={dddUrl(ddd?.itemId ?? null)}
-		learnHref="/resources#ddd"
-	>
-		{#if ddd === null}
-			<div class="skeleton" aria-busy="true" aria-label="Loading warnings">
-				<div class="skeleton-row"></div>
-				<div class="skeleton-row"></div>
-				<div class="skeleton-row"></div>
+<CollapsibleSection
+	title="Does the Dog Die"
+	icon="ri-alarm-warning-fill"
+	hue="var(--src-ddd)"
+	id="ddd"
+	openOnHash
+	status={status.label}
+	busy={status.busy}
+	open={false}
+	sourceLabel="DoesTheDogDie.com"
+	sourceHref={dddUrl(ddd?.itemId ?? null)}
+	learnHref="/resources#ddd"
+>
+	{#if ddd === null}
+		<div class="skeleton" aria-busy="true" aria-label="Loading warnings">
+			<div class="skeleton-row"></div>
+			<div class="skeleton-row"></div>
+			<div class="skeleton-row"></div>
+		</div>
+	{:else}
+		{#if selector || visibleTags.length > 0}
+			<div class="controls">
+				{@render selector?.()}
+				{#if visibleTags.length > 0}
+					<DddCategoryFilter
+						tags={visibleTags}
+						{selectedCategory}
+						onchange={(cat) => (selectedCategory = cat)}
+					/>
+				{/if}
 			</div>
-		{:else}
-			{#if selector || visibleTags.length > 0}
-				<div class="controls">
-					{@render selector?.()}
-					{#if visibleTags.length > 0}
-						<DddCategoryFilter
-							tags={visibleTags}
-							{selectedCategory}
-							onchange={(cat) => (selectedCategory = cat)}
-						/>
-					{/if}
-				</div>
-			{/if}
-			{#if visibleTags.length > 0}
-				<DddTags tags={filteredTags} />
-			{:else}
-				<p class="no-data">No warnings on Does the Dog Die.</p>
-			{/if}
 		{/if}
-	</CollapsibleSection>
-</div>
+		{#if visibleTags.length > 0}
+			<DddTags tags={filteredTags} />
+		{:else}
+			<p class="no-data">No warnings on Does the Dog Die.</p>
+		{/if}
+	{/if}
+</CollapsibleSection>
 
 <style lang="postcss">
 	@reference "../../../../app.css";

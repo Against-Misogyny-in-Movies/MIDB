@@ -1,3 +1,6 @@
+import type { DddResult } from '#lib/media/types/ddd.ts';
+import { dddStatus } from '#lib/media/utils/dddStatus.ts';
+
 /** One entry in a title page's source index: a metric, its headline value, and its section. */
 export interface SourceIndexItem {
 	source: 'bechdel' | 'um' | 'ddd';
@@ -18,15 +21,27 @@ export interface SourceIndexInput {
 	umConcerns: number | null;
 	/** UM candidates waiting for the visitor to pick one (0 when an entry is shown). */
 	umCandidateCount: number;
-	/** Visible DDD tag count, or null while the lookup streams. */
-	dddTagCount: number | null;
+	/** The DDD result, or null while the lookup streams. */
+	ddd: DddResult | null;
+	/** Warnings the current episode selection shows. */
+	dddVisibleCount: number;
+	/** A season (or episode) is picked on the series page. */
+	dddSeasonPicked?: boolean;
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** The three-item index under a title's verdict: Bechdel, Unconsenting Media, Does the Dog Die. */
 export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
-	const { kind, bechdelRating, umConcerns, umCandidateCount, dddTagCount } = input;
+	const {
+		kind,
+		bechdelRating,
+		umConcerns,
+		umCandidateCount,
+		ddd,
+		dddVisibleCount,
+		dddSeasonPicked
+	} = input;
 
 	const bechdel: SourceIndexItem =
 		kind === 'tv'
@@ -61,19 +76,15 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 		busy: false
 	};
 
-	const ddd: SourceIndexItem = {
+	const dddState = dddStatus(ddd, dddVisibleCount, dddSeasonPicked);
+	const dddItem: SourceIndexItem = {
 		source: 'ddd',
 		label: 'Does the Dog Die',
-		value:
-			dddTagCount === null
-				? 'Loading…'
-				: dddTagCount > 0
-					? plural(dddTagCount, 'warning')
-					: 'No data',
+		value: dddState.label,
 		href: '#ddd',
-		hasData: dddTagCount !== null && dddTagCount > 0,
-		busy: dddTagCount === null
+		hasData: dddState.hasData,
+		busy: dddState.busy
 	};
 
-	return [bechdel, um, ddd];
+	return [bechdel, um, dddItem];
 }

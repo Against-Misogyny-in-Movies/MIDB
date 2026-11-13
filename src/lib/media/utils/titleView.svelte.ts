@@ -102,7 +102,9 @@ export class TitleView<K extends 'movie' | 'tv'> {
 				bechdelRating: isSeries ? null : (data().bechdel?.rating ?? null),
 				umConcerns: this.umData ? this.flagCount : null,
 				umCandidateCount: this.hasUmCandidates ? this.umCandidates.length : 0,
-				dddTagCount: this.ddd === null ? null : this.visibleTags.length
+				ddd: this.ddd,
+				dddVisibleCount: this.visibleTags.length,
+				dddSeasonPicked: episodes ? episodes.season !== null : false
 			})
 		);
 	}
