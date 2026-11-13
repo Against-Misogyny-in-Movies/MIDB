@@ -287,9 +287,10 @@
 						harsh criticism of a film and strong language. Endorsing or celebrating misogyny or
 						sexual violence, mocking or doubting survivors, attacking, insulting or harassing a
 						person or a group, slurs, threats, sexual content involving minors, explicit sexual
-						content, sharing personal information, and spam, advertising or links with no relation
-						to the title are not. The model answers with a decision, the categories that apply, a
-						severity from 0 to 3 and a reason.
+						content, glorifying or calling for violence, demeaning a person or a group without a
+						slur, bad-faith bait meant to provoke, sharing personal information, and spam,
+						advertising or links with no relation to the title are not. The model answers with a
+						decision, the categories that apply, a severity from 0 to 3 and a reason.
 					</p>
 					<p>
 						Anthropic receives the comment text, the title's name and, for a reply, the comment it
