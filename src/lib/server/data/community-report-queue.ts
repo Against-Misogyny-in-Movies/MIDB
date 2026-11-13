@@ -138,7 +138,7 @@ async function accountsOf(rows: AccountRow[]): Promise<Map<string, ReportAccount
 				reportCount: reportCounts.get(r.userId) ?? 0,
 				commentCount: commentCounts.get(r.userId) ?? 0,
 				role: r.role,
-				countsFrom: countsFromDate(r.accountCreatedAt).toISOString(),
+				countsFrom: countsFromDate(r.accountCreatedAt, r.role).toISOString(),
 				restricted: r.bannedAt ? 'banned' : activeMute(r.mutedUntil) ? 'muted' : null
 			}
 		])

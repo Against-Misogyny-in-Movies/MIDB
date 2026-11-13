@@ -191,6 +191,86 @@ describe('upsertReport', () => {
 	});
 });
 
+describe('staff reports', () => {
+	const addStaff = (id: string, role: 'moderator' | 'administrator' = 'moderator') =>
+		addUser(id, 1, { role });
+
+	it('counts a young moderator’s report at once, with no hold', async () => {
+		await addStaff('mod');
+		const result = await upsertReport('mod', 'movie', REF, answers());
+		expect(result).toMatchObject({ status: 'counted', holdReason: null });
+		expect((await getReportCounts(titleId)).total).toBe(1);
+		const viewer = await getViewerReport('mod', titleId);
+		expect(viewer?.countsFrom.getTime()).toBeLessThanOrEqual(Date.now());
+		expect((await getUserRatings('mod'))[0].countsFrom.getTime()).toBeLessThanOrEqual(Date.now());
+	});
+
+	it('never holds a staff report under a burst', async () => {
+		for (let i = 0; i < BURST_COUNT - 1; i++) {
+			await addUser(`b${i}`);
+			await upsertReport(`b${i}`, 'movie', REF, answers());
+		}
+		await addStaff('admin', 'administrator');
+		expect(await upsertReport('admin', 'movie', REF, answers())).toMatchObject({
+			status: 'counted',
+			holdReason: null
+		});
+	});
+
+	it('never holds a staff report that contradicts the title’s UM entry', async () => {
+		const [um] = await db
+			.insert(umSource)
+			.values({
+				umId: 1,
+				cleanName: 'alien',
+				cleanTitleKey: 'alien',
+				noRape: false,
+				rapeMenDisImp: false,
+				sexHarOnScrn: false,
+				sexAdultTeen: false,
+				childSexAbuse: false,
+				incest: false,
+				attemptedRape: false,
+				rapeOffScrn: false,
+				rapeOnScreen: true
+			})
+			.returning();
+		await db.insert(titleUm).values({ titleId, umId: um.umId });
+		await addStaff('mod');
+		expect(
+			await upsertReport('mod', 'movie', REF, answers({ sexualPresent: 'none' }))
+		).toMatchObject({ status: 'counted', holdReason: null });
+	});
+
+	it('still holds a young user’s report from the wait, and leaves it out of the counts', async () => {
+		await addUser('young', 1);
+		await upsertReport('young', 'movie', REF, answers());
+		expect((await getReportCounts(titleId)).total).toBe(0);
+		expect((await getViewerReport('young', titleId))?.countsFrom.getTime()).toBeGreaterThan(
+			Date.now()
+		);
+	});
+
+	it('keeps a rejected staff report rejected on edit, and out of the counts', async () => {
+		await addStaff('mod');
+		await upsertReport('mod', 'movie', REF, answers());
+		await db.update(communityContentReports).set({ status: 'rejected' });
+		const result = await upsertReport('mod', 'movie', REF, answers({ partnerLevel: 'none' }));
+		expect(result).toMatchObject({ status: 'rejected', holdReason: null });
+		expect((await getReportCounts(titleId)).total).toBe(0);
+	});
+
+	it('leaves a muted or banned staff account out of the counts', async () => {
+		await addUser('mmod', 1, { role: 'moderator', mutedUntil: new Date(Date.now() + DAY) });
+		await addUser('bmod', 1, { role: 'moderator', bannedAt: new Date() });
+		await db.insert(communityContentReports).values([
+			{ userId: 'mmod', titleId },
+			{ userId: 'bmod', titleId }
+		]);
+		expect((await getReportCounts(titleId)).total).toBe(0);
+	});
+});
+
 describe('deleteReport and getViewerReport', () => {
 	it('deletes the community report, and reports whether there was one', async () => {
 		await upsertReport('reader', 'movie', REF, answers());

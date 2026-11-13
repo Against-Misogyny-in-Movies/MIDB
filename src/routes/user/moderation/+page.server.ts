@@ -1,3 +1,4 @@
+import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
@@ -35,15 +36,13 @@ import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
 import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
 
-const STAFF = ['moderator', 'administrator'] as const;
-
 /**
  * The page and both of its views. `?tab=reports` opens the community-reports tab, and
  * `?title=<id>` opens one title's community reports in it; without a title the tab lists the held
  * reports and the flagged titles.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
-	await requireRole(locals, STAFF, { page: true });
+	await requireRole(locals, STAFF_ROLES, { page: true });
 	const titleId = url.searchParams.get('title')?.trim() || null;
 	const [pending, reported, recent, held, flagged, openTitle, syncDates] = await Promise.all([
 		listPendingQueue(),
@@ -105,7 +104,7 @@ async function act(
 	run: (staff: UserRow, data: FormData) => Promise<Outcome> | Outcome,
 	after?: (result: Extract<Outcome, { ok: true }>) => void
 ) {
-	const staff = await requireRole(event.locals, STAFF);
+	const staff = await requireRole(event.locals, STAFF_ROLES);
 	await rateLimit(event, 'RL_MODERATE', { userId: staff.id });
 	const data = await event.request.formData();
 	const target = key(data);

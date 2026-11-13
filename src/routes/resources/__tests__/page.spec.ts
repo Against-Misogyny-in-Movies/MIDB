@@ -32,6 +32,13 @@ describe('Methodology, community reports', () => {
 		expect(text).toContain(`more than ${NEW_ACCOUNT_REPORT_MAX} reports`);
 	});
 
+	it('states that staff reports count at once, naming the shared staff roles', () => {
+		const text = (section()?.textContent ?? '').replace(/\s+/g, ' ');
+		expect(text).toContain(
+			'reports from moderators and administrators count at once and are never held'
+		);
+	});
+
 	it('has a nav entry for the section', () => {
 		const { container } = render(Page);
 		expect(container.querySelector('a[href="#community-reports"]')).toBeTruthy();

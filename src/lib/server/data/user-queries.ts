@@ -150,6 +150,7 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 			titleId: communityContentReports.titleId,
 			updatedAt: communityContentReports.updatedAt,
 			accountCreatedAt: users.createdAt,
+			role: users.role,
 			bannedAt: users.bannedAt,
 			mutedUntil: users.mutedUntil,
 			...titleRef
@@ -159,9 +160,9 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 		.innerJoin(users, eq(communityContentReports.userId, users.id))
 		.where(eq(communityContentReports.userId, userId))
 		.orderBy(desc(communityContentReports.updatedAt), desc(communityContentReports.titleId));
-	return rows.map(({ accountCreatedAt, bannedAt, mutedUntil, ...row }) => ({
+	return rows.map(({ accountCreatedAt, role, bannedAt, mutedUntil, ...row }) => ({
 		...row,
-		countsFrom: countsFromDate(accountCreatedAt),
+		countsFrom: countsFromDate(accountCreatedAt, role),
 		restricted: bannedAt !== null ? 'banned' : activeMute(mutedUntil) ? 'muted' : null
 	}));
 }

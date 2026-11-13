@@ -4,6 +4,7 @@ import { requireUser } from '#lib/server/auth/guards.ts';
 import { rateLimit, type RateLimitBucket } from '#lib/server/http/rate-limit.ts';
 import { PRIVATE_NO_STORE } from '#lib/server/http/cache.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
+import { isStaff } from '#lib/media/utils/staff.ts';
 import { COMMENT_BODY_MAX, REPORT_NOTE_MAX, reportReason } from '#lib/media/utils/comments.ts';
 
 type WriteEvent = Pick<RequestEvent, 'locals' | 'request' | 'getClientAddress'>;
@@ -11,14 +12,20 @@ type WriteEvent = Pick<RequestEvent, 'locals' | 'request' | 'getClientAddress'>;
 /**
  * The first three steps of every comment write, in order: the guard (401; a banned account is
  * signed out, because `locals.getUser` reads the row on each request and resolves a banned user
- * to none), the mute check on that fresh row (403), then the rate limit (429). It returns the
+ * to none), the mute check on that fresh row (403), then the rate limit (429), which
+ * `staffExempt` skips for a moderator or administrator (the community-report writes only). It returns the
  * user; the caller then reads and validates the body, so a refused or throttled request never costs a parse. Call it
  * outside any `try`.
  */
-export async function authorizeWrite(event: WriteEvent, bucket: RateLimitBucket): Promise<UserRow> {
+export async function authorizeWrite(
+	event: WriteEvent,
+	bucket: RateLimitBucket,
+	options: { staffExempt?: boolean } = {}
+): Promise<UserRow> {
 	const user = await requireUser(event.locals);
 	if (user.mutedUntil && user.mutedUntil.getTime() > Date.now()) error(403, 'Account muted');
-	await rateLimit(event, bucket, { userId: user.id });
+	if (!(options.staffExempt && isStaff(user.role)))
+		await rateLimit(event, bucket, { userId: user.id });
 	return user;
 }
 

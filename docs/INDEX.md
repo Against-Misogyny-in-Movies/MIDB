@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 70–73 Motion (~90)
   - 74–77 Browser surfaces (~50)
   - 78–81 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~50.1K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~50.3K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -68,24 +68,24 @@ Read the sections your task touches.
   - 463–488 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.2K) ← 2
   - 489–508 UM Disambiguation (~630)
   - 509–517 UM flag rendering (~250)
-  - 518–525 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~410)
-  - 526–534 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~560) ← 1
-  - 535–546 Shared marker pattern (metric row markers) (~410) ← 5
-  - 547–587 Component library (`src/lib/components/`) (~5.8K)
-  - 588–598 Live search (`src/lib/components/search/`) (~710)
-  - 599–612 Server cache (`src/lib/server/cache/`) (~690)
-  - 613–628 TMDB integration (~810)
-  - 629–647 Auth flow (Better Auth) (~1.9K)
-  - 648–667 Caching policy (~1.4K) ← 6
-  - 668–724 Configuration & environment (~3.2K)
-    - 684–696 Local run sequence (~130)
-    - 697–700 npm scripts (~200)
-    - 701–711 CI (`.github/workflows/tests.yml`) (~490)
-    - 712–724 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 725–740 Testing (~1.2K)
-    - 735–740 Verification baseline (~80)
-  - 741–749 Known gaps / TODO (~180) ← 1
-  - 750–758 Related docs (~140)
+  - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 527–535 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~560) ← 1
+  - 536–547 Shared marker pattern (metric row markers) (~410) ← 5
+  - 548–588 Component library (`src/lib/components/`) (~5.8K)
+  - 589–599 Live search (`src/lib/components/search/`) (~710)
+  - 600–613 Server cache (`src/lib/server/cache/`) (~690)
+  - 614–629 TMDB integration (~810)
+  - 630–648 Auth flow (Better Auth) (~1.9K)
+  - 649–668 Caching policy (~1.4K) ← 6
+  - 669–725 Configuration & environment (~3.2K)
+    - 685–697 Local run sequence (~130)
+    - 698–701 npm scripts (~200)
+    - 702–712 CI (`.github/workflows/tests.yml`) (~490)
+    - 713–725 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 726–741 Testing (~1.2K)
+    - 736–741 Verification baseline (~80)
+  - 742–750 Known gaps / TODO (~180) ← 1
+  - 751–759 Related docs (~140)
 
 ## Phases
 
@@ -104,7 +104,7 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~2.8K tok)
+- `SECURITY.md` — Security (~2.9K tok)
 - `PRIVACY.md` — Privacy (~2.5K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)

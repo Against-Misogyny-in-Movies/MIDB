@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ params }) => {
  */
 export const PUT: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
-	const user = await authorizeWrite(event, 'RL_CONTENT_REPORT');
+	const user = await authorizeWrite(event, 'RL_CONTENT_REPORT', { staffExempt: true });
 	const answers = answersOf(await readBody(event.request, reportSchema));
 
 	const ref = await resolveWriteRef(kind, tmdbId);
@@ -58,7 +58,7 @@ export const PUT: RequestHandler = async (event) => {
 /** Withdraws the reader's report (204, also when there was none). Purges the title's counts. */
 export const DELETE: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
-	const user = await authorizeWrite(event, 'RL_CONTENT_REPORT');
+	const user = await authorizeWrite(event, 'RL_CONTENT_REPORT', { staffExempt: true });
 
 	const title = await findCommentTitle(kind, tmdbId);
 	if (title && (await deleteReport(user.id, title.id))) purgeTitleReports({ kind, tmdbId });

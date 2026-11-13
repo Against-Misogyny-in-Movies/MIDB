@@ -10,7 +10,7 @@ import { parseTitleParams, resolveCommentTitle } from '#lib/server/data/comment-
  */
 export const POST: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
-	const user = await authorizeWrite(event, 'RL_REPORT');
+	const user = await authorizeWrite(event, 'RL_REPORT', { staffExempt: true });
 	const { note } = await readBody(event.request, countFlagSchema);
 
 	const title = await resolveCommentTitle(kind, tmdbId);

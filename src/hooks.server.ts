@@ -1,3 +1,4 @@
+import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 import { isHttpError, isRedirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { getSessionCookie } from 'better-auth/cookies';
@@ -55,7 +56,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (pathname.startsWith('/user/moderation')) {
 		// The guard throws; a thrown redirect or error would skip `withSafeCacheHeaders`.
 		try {
-			await requireRole(event.locals, ['moderator', 'administrator'], { page: true });
+			await requireRole(event.locals, STAFF_ROLES, { page: true });
 		} catch (err) {
 			if (isRedirect(err)) {
 				return withSafeCacheHeaders(

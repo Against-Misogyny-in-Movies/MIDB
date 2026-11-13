@@ -18,9 +18,12 @@
 		REPORT_LEVEL_LABELS,
 		SEXUAL_LEVEL_LABELS
 	} from '#lib/media/utils/communityReports.ts';
+	import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 	const category = (key: (typeof REPORT_CATEGORIES)[number]['key']) =>
 		REPORT_CATEGORIES.find((c) => c.key === key)?.label ?? key;
+
+	const staffNames = STAFF_ROLES.map((role) => `${role}s`).join(' and ');
 
 	const navItems = [
 		{ id: 'verdict', label: 'Verdicts' },
@@ -193,11 +196,12 @@
 						Present.
 					</p>
 					<p>
-						A report counts once its account is {REPORT_ACCOUNT_MIN_AGE_DAYS} days old. A title shows
-						counts once {COMMUNITY_REPORT_MIN} reports count; below that the page shows the number of
-						reports only. Counts are cached briefly, so a new report or a lapsed wait can take a short
-						time to show. A muted or banned account's reports are not counted while the mute or ban lasts,
-						and a report a moderator rejected is not counted unless a moderator counts it later.
+						A report counts once its account is {REPORT_ACCOUNT_MIN_AGE_DAYS} days old; reports from {staffNames}
+						count at once and are never held. A title shows counts once {COMMUNITY_REPORT_MIN} reports
+						count; below that the page shows the number of reports only. Counts are cached briefly, so
+						a new report or a lapsed wait can take a short time to show. A muted or banned account's reports
+						are not counted while the mute or ban lasts, and a report a moderator rejected is not counted
+						unless a moderator counts it later.
 					</p>
 				</SubBlock>
 

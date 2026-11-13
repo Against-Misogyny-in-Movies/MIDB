@@ -159,6 +159,20 @@ describe('guards', () => {
 	});
 });
 
+describe('staff and the write limits', () => {
+	it('does not rate-limit a moderator on the report writes, and still refuses a mute', async () => {
+		await db
+			.insert(users)
+			.values(userValues('mod', { role: 'moderator', createdAt: new Date(Date.now() - DAY) }));
+		const mod = await asUser('mod');
+		for (let i = 0; i < 12; i++) expect((await put({}, { user: mod })).status).toBe(200);
+		for (let i = 0; i < 12; i++)
+			expect((await call(flag.POST, { method: 'POST', body: {}, user: mod })).status).toBe(200);
+		const muted = { ...mod, mutedUntil: new Date(Date.now() + 60_000) } as UserRow;
+		expect((await put({}, { user: muted })).status).toBe(403);
+	});
+});
+
 describe('PUT a report', () => {
 	it('stores the answers, answers the status and purges the counts tag', async () => {
 		const res = await put();
