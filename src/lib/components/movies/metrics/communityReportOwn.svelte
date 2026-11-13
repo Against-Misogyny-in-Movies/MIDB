@@ -77,7 +77,7 @@
 		} else if (standing?.kind === 'restricted') {
 			toasts.warn(`Report saved. It does not count while the account is ${standing.by}.`);
 		} else {
-			toasts.success('Report saved. The counts above include it once the page reloads.');
+			toasts.success('Report saved. The counts include it once the page reloads.');
 		}
 	}
 </script>

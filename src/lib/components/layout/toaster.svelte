@@ -47,17 +47,18 @@
 		bottom: var(--spacing-md);
 		z-index: 50;
 		width: min(24rem, calc(100vw - 2 * var(--spacing-md)));
-		gap: var(--spacing-sm);
 		pointer-events: none;
 	}
 
+	/* An empty region stays rendered (an empty list has no height), so a screen reader is
+	   already watching it when the first toast arrives. */
 	.stack {
 		@apply flex flex-col list-none m-0 p-0;
 		gap: var(--spacing-sm);
 	}
 
-	.stack:empty {
-		display: none;
+	.stack:not(:empty) + .stack:not(:empty) {
+		margin-top: var(--spacing-sm);
 	}
 
 	.toast {
