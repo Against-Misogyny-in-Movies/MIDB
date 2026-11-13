@@ -32,8 +32,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 7     | Avatars and usernames         | completed   | 2026-11-12.                                                                                                 |
 | R1    | Reader reports: data          | completed   | 2026-11-12.                                                                                                 |
 | R2    | Reader reports: API           | completed   | 2026-11-13.                                                                                                 |
-| R3    | Reader reports: moderation    | active      | 2026-11-13. Started.                                                                                        |
-| R4    | Reader reports: UI            | not started |                                                                                                             |
+| R3    | Reader reports: moderation    | completed   | 2026-11-13. The tab has been reviewed from code only, not in a browser.                                     |
+| R4    | Reader reports: UI            | active      | 2026-11-13. Started.                                                                                        |
 | R5    | Reader reports: copy and docs | not started |                                                                                                             |
 
 ## Open items
