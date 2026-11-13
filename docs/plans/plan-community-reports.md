@@ -6,7 +6,7 @@ Reader reports become MIDB community reports, moderators and administrators repo
 
 - **The name** (user instruction, 2026-11-13). The feature is "MIDB community reports" everywhere: copy, docs, code identifiers, file names and anchors.
   - Headings, the section title, the moderation tab, page titles and link labels read "MIDB community reports".
-  - Running text says "community report" or "community reports", the short form of the same term. The term goes into `.claude/rules/copy-standards.md`, One term per concept.
+  - Running text says "community report" or "community reports", the short form of the same term. The term joins the one-term-per-concept list in `.claude/rules/copy-standards.md`.
   - The anchors become `#community-reports` on the title pages and on `/resources`.
 - **Staff reports** (user instruction, 2026-11-13). A report by an account whose role is `moderator` or `administrator`:
   - counts at once, with no account-age wait;
