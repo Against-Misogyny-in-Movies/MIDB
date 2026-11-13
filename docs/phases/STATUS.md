@@ -49,7 +49,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | S4    | Links to a comment              | completed   | 2026-11-13. Not rendered in a browser; `e2e-tests/commentLinks.spec.ts` not run (no TMDB token here).             |
 | S5    | Public user profiles            | completed   | 2026-11-13. `/u` rendered on seeded local data; moderation name links reviewed from code only.                    |
 | S6    | Letterboxd score                | completed   | 2026-11-13. Never run against the real API: no key exists (Open items).                                           |
-| SH1   | Security: moderation sticks     | active      | 2026-11-13.                                                                                                       |
+| SH1   | Security: moderation sticks     | completed   | 2026-11-13. The review round runs after SH4.                                                                      |
 | SH2   | Security: sock puppets          | active      | 2026-11-13.                                                                                                       |
 | SH3   | Security: accounts              | not started |                                                                                                                   |
 | SH4   | Security: platform              | not started |                                                                                                                   |
