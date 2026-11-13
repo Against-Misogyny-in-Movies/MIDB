@@ -4,7 +4,13 @@
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
-	import { USERNAME_CHANGE_WAIT_DAYS } from '#lib/media/utils/username.ts';
+	import {
+		NEW_USERNAME_MIN,
+		NEW_USERNAME_PATTERN,
+		NEW_USERNAME_RE,
+		USERNAME_CHANGE_WAIT_DAYS,
+		USERNAME_MAX
+	} from '#lib/media/utils/username.ts';
 	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
@@ -41,7 +47,7 @@
 	);
 
 	function checkAvailability(value: string) {
-		if (!value || value === user?.username) {
+		if (!value || value === user?.username || !NEW_USERNAME_RE.test(value.toLowerCase())) {
 			availabilityCheck.cancel();
 			availability = 'idle';
 			return;
@@ -50,10 +56,15 @@
 		availabilityCheck.push(value);
 	}
 
+	const USERNAME_RULE = `A username is ${NEW_USERNAME_MIN}–${USERNAME_MAX} characters: lowercase letters, numbers and single underscores. It starts with a letter and does not end with an underscore.`;
+
+	/** The new-name rule binds a changed name only: a stored name that predates it saves as it is. */
+	const changingUsername = $derived(usernameInput !== (user?.username ?? ''));
+
 	/** A refusal of the username, shown under its field. */
 	const USERNAME_ERRORS: Record<string, string> = {
 		'username-taken': 'That username is already taken.',
-		'username-format': 'A username is 3–32 characters: lowercase letters, numbers and underscores.',
+		'username-format': USERNAME_RULE,
 		'username-reserved': 'That username is reserved.',
 		'username-blocked': 'That username is not allowed.',
 		'username-too-soon': `A username can change once every ${USERNAME_CHANGE_WAIT_DAYS} days.`
@@ -153,7 +164,10 @@
 					usernameInput = (e.target as HTMLInputElement).value;
 					checkAvailability(usernameInput);
 				}}
-				maxlength="32"
+				minlength={changingUsername ? NEW_USERNAME_MIN : undefined}
+				maxlength={USERNAME_MAX}
+				pattern={changingUsername ? NEW_USERNAME_PATTERN : undefined}
+				title={USERNAME_RULE}
 				autocomplete="off"
 				spellcheck="false"
 				aria-describedby="username-hint"
@@ -168,7 +182,7 @@
 				{:else if availability === 'checking'}Checking…
 				{:else if availability === 'available'}Available
 				{:else if availability === 'taken'}Already taken
-				{:else}Shown on comments. Change it here: lowercase letters, numbers and underscores.
+				{:else}Shown on comments. {USERNAME_RULE}
 				{/if}
 			</p>
 		</div>

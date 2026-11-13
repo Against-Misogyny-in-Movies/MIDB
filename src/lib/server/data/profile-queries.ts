@@ -10,7 +10,7 @@ import type {
 	ProfileReport,
 	PublicProfile
 } from '#lib/media/types/profile.ts';
-import { USERNAME_RE } from '#lib/media/utils/username.ts';
+import { USERNAME_LOOKUP_RE } from '#lib/media/utils/username.ts';
 import { COMMENT_PAGE_SIZE, afterCursor, decodeCursor, encodeCursor } from './comment-queries.ts';
 import { displayNameOf } from './user-queries.ts';
 import { publicTime } from './public-time.ts';
@@ -28,7 +28,7 @@ type ProfileOwner = Pick<typeof users.$inferSelect, 'id' | 'avatarKey' | 'role' 
  */
 export async function findProfileOwner(username: string): Promise<ProfileOwner | null> {
 	const lower = username.toLowerCase();
-	if (!USERNAME_RE.test(lower)) return null;
+	if (!USERNAME_LOOKUP_RE.test(lower)) return null;
 	const [row] = await db
 		.select({
 			id: users.id,

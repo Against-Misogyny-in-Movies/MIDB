@@ -16,7 +16,7 @@ const RESERVED_PARTS = new Set([
 ]);
 
 /**
- * Why a well-formed username (lowercase, `USERNAME_RE`) is refused, else null: `reserved` when
+ * Why a well-formed username (lowercase, `NEW_USERNAME_RE`) is refused, else null: `reserved` when
  * it imitates staff or the site, `blocked` when the comment blocklist matches it with `_` read
  * as a word break. The reserved check also reads the name through the blocklist's folding, so
  * `m1db` and `admіn` (Cyrillic i) do not slip past.

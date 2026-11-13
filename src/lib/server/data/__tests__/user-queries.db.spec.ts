@@ -4,6 +4,7 @@ import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { db } from '#lib/server/db.ts';
 import { trackWrites, writes } from '#db/test/writes.ts';
 import { userValues } from '#db/test/users.ts';
+import { foldUsername } from '#lib/media/utils/username.ts';
 import {
 	banUser,
 	getUserById,
@@ -67,6 +68,13 @@ describe('updateProfile', () => {
 
 	it.each([
 		[{ username: 'ab' }, 'username-format'],
+		[{ username: 'abc' }, 'username-format'],
+		[{ username: 'a'.repeat(33) }, 'username-format'],
+		[{ username: '1234' }, 'username-format'],
+		[{ username: '9lives' }, 'username-format'],
+		[{ username: '_ada' }, 'username-format'],
+		[{ username: 'ada_' }, 'username-format'],
+		[{ username: 'ada__bea' }, 'username-format'],
 		[{ username: 'has space' }, 'username-format'],
 		[{ username: 'Admin' }, 'username-reserved'],
 		[{ avatarKey: 'not-an-avatar' }, 'avatar-invalid']
@@ -92,7 +100,7 @@ describe('isUsernameAvailable', () => {
 		await insertUser(userValues('sub-a', { username: 'Mary' }));
 		expect(await isUsernameAvailable('MARY', 'sub-b')).toBe(false);
 		expect(await isUsernameAvailable('mary', 'sub-b')).toBe(false);
-		expect(await isUsernameAvailable('ada', 'sub-b')).toBe(true);
+		expect(await isUsernameAvailable('adah', 'sub-b')).toBe(true);
 	});
 
 	it('excludes the requesting user', async () => {
@@ -113,7 +121,7 @@ describe('updateProfile rules', () => {
 	it('refuses any change while muted, and allows one after the mute ends', async () => {
 		await insertUser(userValues('sub-a', { mutedUntil: new Date(Date.now() + DAY) }));
 		const before = await writes();
-		expect(await updateProfile('sub-a', { username: 'ada' })).toEqual({
+		expect(await updateProfile('sub-a', { username: 'adah' })).toEqual({
 			ok: false,
 			reason: 'muted'
 		});
@@ -124,7 +132,7 @@ describe('updateProfile rules', () => {
 		expect(await writes()).toBe(before);
 
 		await db.update(users).set({ mutedUntil: daysAgo(1) });
-		expect(await updateProfile('sub-a', { username: 'ada' })).toMatchObject({ ok: true });
+		expect(await updateProfile('sub-a', { username: 'adah' })).toMatchObject({ ok: true });
 	});
 
 	it('makes the first change free, stamps it, and retires the old name', async () => {
@@ -135,32 +143,37 @@ describe('updateProfile rules', () => {
 		expect(row?.usernameChangedAt).toBeInstanceOf(Date);
 		const retired = await db.select().from(retiredUsernames);
 		expect(retired).toEqual([
-			{ username: 'old_name', userId: 'sub-a', retiredAt: expect.any(Date) }
+			{
+				username: 'old_name',
+				userId: 'sub-a',
+				retiredAt: expect.any(Date),
+				usernameFolded: 'old_name'
+			}
 		]);
 	});
 
 	it('refuses a second change inside 30 days, and allows it after', async () => {
-		await insertUser(userValues('sub-a', { username: 'one', usernameChangedAt: daysAgo(29) }));
-		expect(await updateProfile('sub-a', { username: 'two' })).toEqual({
+		await insertUser(userValues('sub-a', { username: 'ones', usernameChangedAt: daysAgo(29) }));
+		expect(await updateProfile('sub-a', { username: 'twos' })).toEqual({
 			ok: false,
 			reason: 'username-too-soon'
 		});
-		expect((await getUserById('sub-a'))?.username).toBe('one');
+		expect((await getUserById('sub-a'))?.username).toBe('ones');
 
 		await db.update(users).set({ usernameChangedAt: daysAgo(31) });
-		expect(await updateProfile('sub-a', { username: 'two' })).toMatchObject({ ok: true });
+		expect(await updateProfile('sub-a', { username: 'twos' })).toMatchObject({ ok: true });
 	});
 
 	it('exempts staff from the wait', async () => {
 		await insertUser(
-			userValues('sub-a', { username: 'one', role: 'moderator', usernameChangedAt: daysAgo(1) })
+			userValues('sub-a', { username: 'ones', role: 'moderator', usernameChangedAt: daysAgo(1) })
 		);
-		expect(await updateProfile('sub-a', { username: 'two' })).toMatchObject({ ok: true });
+		expect(await updateProfile('sub-a', { username: 'twos' })).toMatchObject({ ok: true });
 	});
 
 	it('does not count the username already held, or an avatar-only save, as a rename', async () => {
-		await insertUser(userValues('sub-a', { username: 'one', usernameChangedAt: daysAgo(1) }));
-		expect(await updateProfile('sub-a', { username: 'One', avatarKey: 'kahlo' })).toMatchObject({
+		await insertUser(userValues('sub-a', { username: 'ones', usernameChangedAt: daysAgo(1) }));
+		expect(await updateProfile('sub-a', { username: 'Ones', avatarKey: 'kahlo' })).toMatchObject({
 			ok: true
 		});
 		expect(await updateProfile('sub-a', { avatarKey: 'davis' })).toMatchObject({ ok: true });
@@ -170,29 +183,94 @@ describe('updateProfile rules', () => {
 	});
 
 	it('holds a retired name for others for 90 days, but not for its owner or after', async () => {
-		await insertUser(userValues('sub-a', { username: 'ada' }));
-		await insertUser(userValues('sub-b', { username: 'bea' }));
-		await updateProfile('sub-a', { username: 'ada2' });
+		await insertUser(userValues('sub-a', { username: 'adah' }));
+		await insertUser(userValues('sub-b', { username: 'bear' }));
+		await updateProfile('sub-a', { username: 'adah2' });
 
-		expect(await updateProfile('sub-b', { username: 'ada' })).toEqual({
+		expect(await updateProfile('sub-b', { username: 'adah' })).toEqual({
 			ok: false,
 			reason: 'username-taken'
 		});
-		expect(await isUsernameAvailable('ADA', 'sub-b')).toBe(false);
-		expect(await isUsernameAvailable('ada', 'sub-a')).toBe(true);
+		expect(await isUsernameAvailable('ADAH', 'sub-b')).toBe(false);
+		expect(await isUsernameAvailable('adah', 'sub-a')).toBe(true);
 
 		await db.update(users).set({ usernameChangedAt: daysAgo(31) });
-		expect(await updateProfile('sub-a', { username: 'ada' })).toMatchObject({ ok: true });
+		expect(await updateProfile('sub-a', { username: 'adah' })).toMatchObject({ ok: true });
 
 		await db.update(retiredUsernames).set({ retiredAt: daysAgo(91) });
-		expect(await isUsernameAvailable('ada2', 'sub-b')).toBe(true);
-		expect(await updateProfile('sub-b', { username: 'ada2' })).toMatchObject({ ok: true });
+		expect(await isUsernameAvailable('adah2', 'sub-b')).toBe(true);
+		expect(await updateProfile('sub-b', { username: 'adah2' })).toMatchObject({ ok: true });
 	});
 
 	it('frees a retired name for others once its former account is gone', async () => {
-		await insertUser(userValues('sub-a', { username: 'ada' }));
-		await updateProfile('sub-a', { username: 'ada2' });
+		await insertUser(userValues('sub-a', { username: 'adah' }));
+		await updateProfile('sub-a', { username: 'adah2' });
 		await db.delete(users).where(eq(users.id, 'sub-a'));
-		expect(await isUsernameAvailable('ada', 'sub-b')).toBe(true);
+		expect(await isUsernameAvailable('adah', 'sub-b')).toBe(true);
+	});
+});
+
+describe('look-alike names', () => {
+	it('refuses a look-alike of another account, in either direction', async () => {
+		await insertUser(userValues('sub-a', { username: 'hello' }));
+		await insertUser(userValues('sub-b', { username: 'so0n' }));
+		await insertUser(userValues('sub-c'));
+		for (const name of ['he1lo', 'HE11O', 'hell0']) {
+			expect(await updateProfile('sub-c', { username: name })).toEqual({
+				ok: false,
+				reason: 'username-taken'
+			});
+			expect(await isUsernameAvailable(name, 'sub-c')).toBe(false);
+		}
+		expect(await updateProfile('sub-c', { username: 'soon' })).toEqual({
+			ok: false,
+			reason: 'username-taken'
+		});
+		expect(await updateProfile('sub-c', { username: 'helio' })).toMatchObject({ ok: true });
+	});
+
+	it('computes the folded column in SQL as foldUsername does', async () => {
+		await insertUser(userValues('sub-a', { username: 'He110_W0rld' }));
+		const row = await getUserById('sub-a');
+		expect(row?.usernameFolded).toBe(foldUsername('He110_W0rld'));
+		await updateProfile('sub-a', { username: 'n0w_here' });
+		const [retired] = await db.select().from(retiredUsernames);
+		expect(retired.usernameFolded).toBe(foldUsername('he110_w0rld'));
+	});
+
+	it('does not fold other characters', async () => {
+		await insertUser(userValues('sub-a', { username: 'hello' }));
+		expect(await isUsernameAvailable('he1io', 'sub-b')).toBe(true);
+		expect(await isUsernameAvailable('hell_o', 'sub-b')).toBe(true);
+	});
+
+	it('lets an account take a look-alike of its own current name', async () => {
+		await insertUser(userValues('sub-a', { username: 'hello' }));
+		expect(await isUsernameAvailable('he11o', 'sub-a')).toBe(true);
+		expect(await updateProfile('sub-a', { username: 'he11o' })).toMatchObject({ ok: true });
+	});
+
+	it('refuses a look-alike of a retired name for 90 days, except to its former owner', async () => {
+		await insertUser(userValues('sub-a', { username: 'hello' }));
+		await insertUser(userValues('sub-b'));
+		await updateProfile('sub-a', { username: 'goodbye' });
+
+		expect(await updateProfile('sub-b', { username: 'he11o' })).toEqual({
+			ok: false,
+			reason: 'username-taken'
+		});
+		expect(await isUsernameAvailable('he11o', 'sub-b')).toBe(false);
+		expect(await isUsernameAvailable('he11o', 'sub-a')).toBe(true);
+
+		await db.update(retiredUsernames).set({ retiredAt: daysAgo(91) });
+		expect(await isUsernameAvailable('he11o', 'sub-b')).toBe(true);
+	});
+
+	it('answers availability as updateProfile does for shape and reserved names', async () => {
+		await insertUser(userValues('sub-a'));
+		for (const name of ['ab', '9lives', 'ada__bea', 'ada_', 'admin', 'x'.repeat(33)]) {
+			expect(await isUsernameAvailable(name, 'sub-a')).toBe(false);
+		}
+		expect(await isUsernameAvailable('ada_bea', 'sub-a')).toBe(true);
 	});
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FEMINIST_ICONS, ICON_NAME_MAX } from '#lib/media/utils/feminist-icons.ts';
-import { USERNAME_RE } from '#lib/media/utils/username.ts';
+import { NEW_USERNAME_RE } from '#lib/media/utils/username.ts';
 import { USERNAME_ATTEMPTS, generateUsername, randomUsername } from '../generate-username.ts';
 
 describe('the icon list', () => {
@@ -14,7 +14,7 @@ describe('the icon list', () => {
 	});
 
 	it('makes every name plus four digits a valid username', () => {
-		for (const icon of FEMINIST_ICONS) expect(`${icon}_9999`).toMatch(USERNAME_RE);
+		for (const icon of FEMINIST_ICONS) expect(`${icon}_9999`).toMatch(NEW_USERNAME_RE);
 	});
 });
 
@@ -22,7 +22,7 @@ describe('randomUsername', () => {
 	it('is an icon, an underscore and four digits, and a valid username', () => {
 		for (let i = 0; i < 200; i++) {
 			const name = randomUsername();
-			expect(name).toMatch(USERNAME_RE);
+			expect(name).toMatch(NEW_USERNAME_RE);
 			const match = /^(.+)_(\d{4})$/.exec(name);
 			expect(match).not.toBeNull();
 			expect(FEMINIST_ICONS).toContain(match![1]);
@@ -37,7 +37,7 @@ describe('randomUsername', () => {
 describe('generateUsername', () => {
 	it('returns the first free candidate', async () => {
 		const isTaken = vi.fn().mockResolvedValue(false);
-		expect(await generateUsername(isTaken)).toMatch(USERNAME_RE);
+		expect(await generateUsername(isTaken)).toMatch(NEW_USERNAME_RE);
 		expect(isTaken).toHaveBeenCalledTimes(1);
 	});
 

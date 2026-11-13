@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import { createdAt, enumCheck, timestamps } from './columns.ts';
+import { foldedUsernameSql } from '../lib/usernameFoldedSql.ts';
 
 export const userRole = ['user', 'moderator', 'administrator'] as const;
 
@@ -33,10 +34,16 @@ export const users = sqliteTable(
 		mutedUntil: integer('muted_until', { mode: 'timestamp_ms' }),
 		/** When the username last changed by a rename; null until the first one. */
 		usernameChangedAt: integer('username_changed_at', { mode: 'timestamp_ms' }),
+		/** The username with look-alikes folded (`foldUsername`); computed by SQLite, so it cannot go stale. */
+		usernameFolded: text('username_folded').generatedAlwaysAs(
+			(): SQL => foldedUsernameSql(users.username),
+			{ mode: 'virtual' }
+		),
 		...timestamps()
 	},
 	(t) => [
 		uniqueIndex('user_username_lower_idx').on(sql`lower(${t.username})`),
+		index('user_username_folded_idx').on(t.usernameFolded),
 		index('user_role_idx').on(t.role),
 		enumCheck('user_role_check', t.role, userRole),
 		check('user_username_length', sql`length(${t.username}) <= 32`),
@@ -57,9 +64,17 @@ export const retiredUsernames = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		retiredAt: integer('retired_at', { mode: 'timestamp_ms' }).notNull()
+		retiredAt: integer('retired_at', { mode: 'timestamp_ms' }).notNull(),
+		/** The name with look-alikes folded (`foldUsername`); computed by SQLite. */
+		usernameFolded: text('username_folded').generatedAlwaysAs(
+			(): SQL => foldedUsernameSql(retiredUsernames.username),
+			{ mode: 'virtual' }
+		)
 	},
-	(t) => [index('retired_username_user_id_idx').on(t.userId)]
+	(t) => [
+		index('retired_username_user_id_idx').on(t.userId),
+		index('retired_username_folded_idx').on(t.usernameFolded)
+	]
 );
 
 export const sessions = sqliteTable(

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, ne } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
@@ -7,7 +7,8 @@ import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
 import {
 	RETIRED_USERNAME_DAYS,
 	USERNAME_CHANGE_WAIT_DAYS,
-	USERNAME_RE
+	NEW_USERNAME_RE,
+	foldUsername
 } from '#lib/media/utils/username.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
 import { usernameRefusal } from '#lib/server/moderation/username-check.ts';
@@ -66,23 +67,37 @@ type ProfileResult = { ok: true; user: UserRow } | { ok: false; reason: string }
 
 const DAY_MS = 86_400_000;
 
-/** Whether another account's retired name still holds `username` (lowercase). */
-async function isRetiredForOthers(username: string, id: string): Promise<boolean> {
-	const row = await db.query.retiredUsernames.findFirst({
-		where: and(
-			eq(retiredUsernames.username, username),
-			ne(retiredUsernames.userId, id),
-			gt(retiredUsernames.retiredAt, new Date(Date.now() - RETIRED_USERNAME_DAYS * DAY_MS))
-		)
-	});
-	return row !== undefined;
+/**
+ * Whether `username` (lowercase) is held by another account: as its current name or a look-alike
+ * of it (`foldUsername`), or as a name it retired within `RETIRED_USERNAME_DAYS`. Both reads use
+ * the `username_folded` indexes. The account's own retired names do not count.
+ */
+async function isTakenByOthers(username: string, id: string): Promise<boolean> {
+	const folded = foldUsername(username);
+	const cutoff = new Date(Date.now() - RETIRED_USERNAME_DAYS * DAY_MS);
+	const [current, retired] = await Promise.all([
+		db.query.users.findFirst({
+			columns: { id: true },
+			where: and(eq(users.usernameFolded, folded), ne(users.id, id))
+		}),
+		db.query.retiredUsernames.findFirst({
+			columns: { username: true },
+			where: and(
+				eq(retiredUsernames.usernameFolded, folded),
+				ne(retiredUsernames.userId, id),
+				gt(retiredUsernames.retiredAt, cutoff)
+			)
+		})
+	]);
+	return current !== undefined || retired !== undefined;
 }
 
 /**
  * Update display profile. Refuses a muted account, then validates format, the reserved names,
  * the comment blocklist and the avatar registry. A rename waits `USERNAME_CHANGE_WAIT_DAYS`
- * after the last one (staff and the first rename are exempt) and cannot take a name another
- * account retired in the last `RETIRED_USERNAME_DAYS`; the old name is retired in the same batch.
+ * after the last one (staff and the first rename are exempt) and cannot take a name, or a
+ * look-alike of one, that another account holds or retired in the last `RETIRED_USERNAME_DAYS`;
+ * the old name is retired in the same batch.
  * Catches unique-index violation on lower(username) as the race-condition backstop.
  */
 export async function updateProfile(id: string, data: ProfileUpdate): Promise<ProfileResult> {
@@ -95,7 +110,7 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 
 	if (data.username !== undefined) {
 		const normalized = data.username.toLowerCase();
-		if (!USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
+		if (!NEW_USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
 		const refusal = usernameRefusal(normalized);
 		if (refusal) return { ok: false, reason: `username-${refusal}` };
 		renamed = normalized !== current.username?.toLowerCase();
@@ -106,7 +121,7 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 			if (!isStaff(current.role) && waitEnds > Date.now()) {
 				return { ok: false, reason: 'username-too-soon' };
 			}
-			if (await isRetiredForOthers(normalized, id)) return { ok: false, reason: 'username-taken' };
+			if (await isTakenByOthers(normalized, id)) return { ok: false, reason: 'username-taken' };
 		}
 		patch.username = normalized;
 	}
@@ -143,16 +158,15 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 }
 
 /**
- * Check username availability (case-insensitive), excluding the requesting user. A name another
- * account retired in the last `RETIRED_USERNAME_DAYS` is taken, as `updateProfile` reads it.
- * Used for debounced inline availability check on the profile edit form.
+ * Whether `username` could be chosen by the account `excludingId`: `updateProfile`'s own checks
+ * of shape, reserved names, the blocklist and names held by other accounts (including
+ * look-alikes and names they retired). The wait after a rename and a mute are not part of it.
+ * Used for the debounced inline check on the profile edit form.
  */
 export async function isUsernameAvailable(username: string, excludingId: string): Promise<boolean> {
-	const row = await db.query.users.findFirst({
-		where: sql`lower(${users.username}) = lower(${username}) AND ${users.id} != ${excludingId}`
-	});
-	if (row) return false;
-	return !(await isRetiredForOthers(username.toLowerCase(), excludingId));
+	const normalized = username.toLowerCase();
+	if (!NEW_USERNAME_RE.test(normalized) || usernameRefusal(normalized)) return false;
+	return !(await isTakenByOthers(normalized, excludingId));
 }
 
 /** The title fields a history row needs to link back to its detail page. */

@@ -66,6 +66,21 @@ describe('the public profile link', () => {
 	});
 });
 
+describe('the username field', () => {
+	it('states the new rule and enforces it on a changed name only', async () => {
+		mount();
+		const field = screen.getByRole('textbox', { name: 'Username' }) as HTMLInputElement;
+		expect(field.getAttribute('maxlength')).toBe('32');
+		expect(field.hasAttribute('pattern')).toBe(false);
+		expect(field.hasAttribute('minlength')).toBe(false);
+		expect(document.getElementById('username-hint')?.textContent).toMatch(/4–32 characters/);
+
+		await fireEvent.input(field, { target: { value: 'ab' } });
+		expect(field.getAttribute('minlength')).toBe('4');
+		expect(field.getAttribute('pattern')).toBe('[a-z][a-z0-9]*(_[a-z0-9]+)*');
+	});
+});
+
 describe('saving the profile', () => {
 	it('toasts a save that went through, and shows the button busy while it runs', async () => {
 		let release!: () => void;
