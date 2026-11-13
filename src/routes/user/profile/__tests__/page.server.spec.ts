@@ -3,9 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const updateProfile = vi.fn();
 const purgeProfile = vi.fn();
 
-vi.mock('#lib/server/auth/guards.ts', () => ({
-	requireUser: vi.fn(async () => ({ id: 'user-1' }))
-}));
+const requireUser = vi.hoisted(() => vi.fn<() => Promise<{ id: string; role?: string }>>());
+vi.mock('#lib/server/auth/guards.ts', () => ({ requireUser }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
 	purgeProfile: (...args: unknown[]) => purgeProfile(...args)
 }));
@@ -15,6 +14,7 @@ vi.mock('#lib/server/data/user-queries.ts', () => ({
 }));
 
 import { actions } from '../+page.server';
+import { clearCache } from '#lib/server/cache/index.ts';
 
 function run(form: FormData) {
 	const request = new Request('http://localhost/user/profile', { method: 'POST', body: form });
@@ -25,7 +25,10 @@ function run(form: FormData) {
 }
 
 describe('updateProfile action', () => {
-	beforeEach(() => {
+	beforeEach(async () => {
+		await clearCache();
+		requireUser.mockReset();
+		requireUser.mockResolvedValue({ id: 'user-1' });
 		updateProfile.mockReset();
 		purgeProfile.mockReset();
 	});
@@ -59,5 +62,19 @@ describe('updateProfile action', () => {
 		taken.set('username', 'bea');
 		await run(taken);
 		expect(purgeProfile).not.toHaveBeenCalled();
+	});
+
+	it('rate-limits a member at 10 saves a minute, and not staff', async () => {
+		updateProfile.mockResolvedValue({ ok: true, user: { id: 'user-1' } });
+		const form = () => {
+			const f = new FormData();
+			f.set('avatarKey', 'anna');
+			return f;
+		};
+		for (let i = 0; i < 10; i++) await run(form());
+		await expect(run(form())).rejects.toMatchObject({ status: 429 });
+
+		requireUser.mockResolvedValue({ id: 'user-1', role: 'moderator' });
+		await expect(run(form())).resolves.toMatchObject({ success: true });
 	});
 });

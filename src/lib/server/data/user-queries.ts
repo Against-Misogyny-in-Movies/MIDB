@@ -1,10 +1,16 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, ne, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
-import { sessions, users } from '#db/schema/auth.ts';
+import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
-import { USERNAME_RE } from '#lib/media/utils/username.ts';
+import {
+	RETIRED_USERNAME_DAYS,
+	USERNAME_CHANGE_WAIT_DAYS,
+	USERNAME_RE
+} from '#lib/media/utils/username.ts';
+import { isStaff } from '#lib/media/utils/staff.ts';
+import { usernameRefusal } from '#lib/server/moderation/username-check.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
@@ -12,17 +18,6 @@ import { countsFromDate } from './community-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
-
-const RESERVED = new Set([
-	'admin',
-	'administrator',
-	'moderator',
-	'mod',
-	'midb',
-	'support',
-	'staff',
-	'root'
-]);
 
 /** The name shown for an account: its username, or "Account" for a row with none. */
 export function displayNameOf(username: string | null | undefined): string {
@@ -69,17 +64,50 @@ export async function banUser(id: string, reason: string | null): Promise<void> 
 type ProfileUpdate = { username?: string; avatarKey?: string };
 type ProfileResult = { ok: true; user: UserRow } | { ok: false; reason: string };
 
+const DAY_MS = 86_400_000;
+
+/** Whether another account's retired name still holds `username` (lowercase). */
+async function isRetiredForOthers(username: string, id: string): Promise<boolean> {
+	const row = await db.query.retiredUsernames.findFirst({
+		where: and(
+			eq(retiredUsernames.username, username),
+			ne(retiredUsernames.userId, id),
+			gt(retiredUsernames.retiredAt, new Date(Date.now() - RETIRED_USERNAME_DAYS * DAY_MS))
+		)
+	});
+	return row !== undefined;
+}
+
 /**
- * Update display profile. Validates format, blocklist, and avatar registry.
+ * Update display profile. Refuses a muted account, then validates format, the reserved names,
+ * the comment blocklist and the avatar registry. A rename waits `USERNAME_CHANGE_WAIT_DAYS`
+ * after the last one (staff and the first rename are exempt) and cannot take a name another
+ * account retired in the last `RETIRED_USERNAME_DAYS`; the old name is retired in the same batch.
  * Catches unique-index violation on lower(username) as the race-condition backstop.
  */
 export async function updateProfile(id: string, data: ProfileUpdate): Promise<ProfileResult> {
+	const current = await getUserById(id);
+	if (!current) return { ok: false, reason: 'no-account' };
+	if (activeMute(current.mutedUntil)) return { ok: false, reason: 'muted' };
+
 	const patch: ProfileUpdate = {};
+	let renamed = false;
 
 	if (data.username !== undefined) {
 		const normalized = data.username.toLowerCase();
 		if (!USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
-		if (RESERVED.has(normalized)) return { ok: false, reason: 'username-reserved' };
+		const refusal = usernameRefusal(normalized);
+		if (refusal) return { ok: false, reason: `username-${refusal}` };
+		renamed = normalized !== current.username?.toLowerCase();
+		if (renamed) {
+			const waitEnds = current.usernameChangedAt
+				? current.usernameChangedAt.getTime() + USERNAME_CHANGE_WAIT_DAYS * DAY_MS
+				: 0;
+			if (!isStaff(current.role) && waitEnds > Date.now()) {
+				return { ok: false, reason: 'username-too-soon' };
+			}
+			if (await isRetiredForOthers(normalized, id)) return { ok: false, reason: 'username-taken' };
+		}
 		patch.username = normalized;
 	}
 
@@ -89,7 +117,24 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 	}
 
 	try {
-		const [row] = await db.update(users).set(patch).where(eq(users.id, id)).returning();
+		const now = new Date();
+		const update = db
+			.update(users)
+			.set(renamed ? { ...patch, usernameChangedAt: now } : patch)
+			.where(eq(users.id, id))
+			.returning();
+		if (!renamed || !current.username) {
+			const [row] = await update;
+			return { ok: true, user: row };
+		}
+		const retire = db
+			.insert(retiredUsernames)
+			.values({ username: current.username.toLowerCase(), userId: id, retiredAt: now })
+			.onConflictDoUpdate({
+				target: retiredUsernames.username,
+				set: { userId: id, retiredAt: now }
+			});
+		const [[row]] = await db.batch([update, retire]);
 		return { ok: true, user: row };
 	} catch (e: unknown) {
 		if (isUniqueViolation(e)) return { ok: false, reason: 'username-taken' };
@@ -98,14 +143,16 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 }
 
 /**
- * Check username availability (case-insensitive), excluding the requesting user.
+ * Check username availability (case-insensitive), excluding the requesting user. A name another
+ * account retired in the last `RETIRED_USERNAME_DAYS` is taken, as `updateProfile` reads it.
  * Used for debounced inline availability check on the profile edit form.
  */
 export async function isUsernameAvailable(username: string, excludingId: string): Promise<boolean> {
 	const row = await db.query.users.findFirst({
 		where: sql`lower(${users.username}) = lower(${username}) AND ${users.id} != ${excludingId}`
 	});
-	return !row;
+	if (row) return false;
+	return !(await isRetiredForOthers(username.toLowerCase(), excludingId));
 }
 
 /** The title fields a history row needs to link back to its detail page. */

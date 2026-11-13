@@ -43,7 +43,8 @@
 			"simple": { "limit": 10, "period": 60 }
 		},
 		{ "name": "RL_MODERATE_AI", "namespace_id": "1009", "simple": { "limit": 10, "period": 60 } },
-		{ "name": "RL_COMMENT_READ", "namespace_id": "1010", "simple": { "limit": 60, "period": 60 } }
+		{ "name": "RL_COMMENT_READ", "namespace_id": "1010", "simple": { "limit": 60, "period": 60 } },
+		{ "name": "RL_PROFILE", "namespace_id": "1011", "simple": { "limit": 10, "period": 60 } }
 	],
 
 	"vars": {
@@ -52,7 +53,7 @@
 		"PUBLIC_TMDB_API_URL": "https://api.themoviedb.org",
 		"PUBLIC_TMDB_IMAGE_URL": "/img/tmdb",
 		"MODERATION_MODEL": "claude-haiku-5-5",
-		// Cloudflare's always-passes test key. Replace it with the site key of a Turnstile widget.
+		// The public site key of the Turnstile widget (not a secret). This value is Cloudflare's always-passes test key; replace it with a real widget's key.
 		"PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAF-lHA8u8aUccdsQ"
 	},
 
@@ -94,7 +95,8 @@
 					"name": "RL_COMMENT_READ",
 					"namespace_id": "2010",
 					"simple": { "limit": 60, "period": 60 }
-				}
+				},
+				{ "name": "RL_PROFILE", "namespace_id": "2011", "simple": { "limit": 10, "period": 60 } }
 			],
 			"vars": {
 				"PUBLIC_ORIGIN": "https://preview.againstmisogyny.org",

@@ -116,7 +116,7 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 		rateLimit: { enabled: false },
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
-				await guardPasskeySignUp(ctx, turnstileSecret);
+				await guardPasskeySignUp(ctx, turnstileSecret, origin);
 				await guardLastMethod(ctx);
 			})
 		},

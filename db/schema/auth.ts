@@ -31,6 +31,8 @@ export const users = sqliteTable(
 		banReason: text('ban_reason', { length: 500 }),
 		/** While in the future the user cannot write comments. */
 		mutedUntil: integer('muted_until', { mode: 'timestamp_ms' }),
+		/** When the username last changed by a rename; null until the first one. */
+		usernameChangedAt: integer('username_changed_at', { mode: 'timestamp_ms' }),
 		...timestamps()
 	},
 	(t) => [
@@ -41,6 +43,23 @@ export const users = sqliteTable(
 		check('user_avatar_key_length', sql`length(${t.avatarKey}) <= 48`),
 		check('user_ban_reason_length', sql`length(${t.banReason}) <= 500`)
 	]
+);
+
+/**
+ * A username its owner gave up, held back from everyone else for a while
+ * (`RETIRED_USERNAME_DAYS` in `#lib/media/utils/username.ts`). `username` is the lowercased
+ * name; `user_id` is the former owner, who may take it back.
+ */
+export const retiredUsernames = sqliteTable(
+	'retired_username',
+	{
+		username: text('username', { length: 32 }).primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		retiredAt: integer('retired_at', { mode: 'timestamp_ms' }).notNull()
+	},
+	(t) => [index('retired_username_user_id_idx').on(t.userId)]
 );
 
 export const sessions = sqliteTable(

@@ -52,41 +52,41 @@ Read the sections your task touches.
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~59.9K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~60.1K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
-  - 68–283 Directory layout (~9.6K)
-    - 274–283 File-organisation conventions (~450)
-  - 284–297 Styling & theming (~950)
-  - 298–310 Copy & voice (~540) ← 1
-  - 311–343 Routes (~10.9K)
-  - 344–384 User & roles (~2.6K)
-    - 377–384 Migrations (~330)
-  - 385–414 Source sync (~1.8K) ← 3
-  - 415–483 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.0K)
-  - 484–519 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.1K) ← 2
-  - 520–539 UM Disambiguation (~630)
-  - 540–548 UM flag rendering (~250)
-  - 549–557 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 558–568 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 569–579 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~740)
-  - 580–591 Shared marker pattern (metric row markers) (~410) ← 5
-  - 592–634 Component library (`src/lib/components/`) (~7.8K)
-  - 635–645 Live search (`src/lib/components/search/`) (~710)
-  - 646–659 Server cache (`src/lib/server/cache/`) (~700)
-  - 660–675 TMDB integration (~810)
-  - 676–694 Auth flow (Better Auth) (~1.9K)
-  - 695–715 Caching policy (~1.7K) ← 6
-  - 716–773 Configuration & environment (~4.0K)
-    - 733–745 Local run sequence (~130)
-    - 746–749 npm scripts (~200)
-    - 750–760 CI (`.github/workflows/tests.yml`) (~490)
-    - 761–773 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 774–790 Testing (~1.2K)
-    - 785–790 Verification baseline (~80)
-  - 791–799 Known gaps / TODO (~180) ← 1
-  - 800–808 Related docs (~140)
+  - 68–284 Directory layout (~9.7K)
+    - 275–284 File-organisation conventions (~450)
+  - 285–298 Styling & theming (~950)
+  - 299–311 Copy & voice (~540) ← 1
+  - 312–344 Routes (~10.9K)
+  - 345–387 User & roles (~2.8K)
+    - 380–387 Migrations (~330)
+  - 388–417 Source sync (~1.8K) ← 3
+  - 418–486 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.0K)
+  - 487–522 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.1K) ← 2
+  - 523–542 UM Disambiguation (~630)
+  - 543–551 UM flag rendering (~250)
+  - 552–560 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 561–571 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 572–582 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~740)
+  - 583–594 Shared marker pattern (metric row markers) (~410) ← 5
+  - 595–637 Component library (`src/lib/components/`) (~7.8K)
+  - 638–648 Live search (`src/lib/components/search/`) (~710)
+  - 649–662 Server cache (`src/lib/server/cache/`) (~700)
+  - 663–678 TMDB integration (~810)
+  - 679–697 Auth flow (Better Auth) (~2.0K)
+  - 698–718 Caching policy (~1.8K) ← 6
+  - 719–776 Configuration & environment (~4.0K)
+    - 736–748 Local run sequence (~130)
+    - 749–752 npm scripts (~200)
+    - 753–763 CI (`.github/workflows/tests.yml`) (~490)
+    - 764–776 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 777–793 Testing (~1.2K)
+    - 788–793 Verification baseline (~80)
+  - 794–802 Known gaps / TODO (~180) ← 1
+  - 803–811 Related docs (~140)
 
 ## Phases
 
@@ -109,13 +109,13 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~4.3K tok)
-  - 5–19 Network (~3.7K) ← 1
-  - 20–30 Supply chain (~500)
-  - 31–36 Reporting a vulnerability (~90)
+- `SECURITY.md` — Security (~4.6K tok)
+  - 5–20 Network (~3.9K) ← 1
+  - 21–31 Supply chain (~500)
+  - 32–37 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~3.4K tok)
-  - 5–15 Reading the site (~620)
-  - 16–32 Signing in (~730)
+  - 5–15 Reading the site (~630)
+  - 16–32 Signing in (~770)
   - 33–46 Ratings and comments (~1.9K)
   - 47–50 Contact (~40)
 - `ACCESSIBILITY.md` — Accessibility (~660 tok)

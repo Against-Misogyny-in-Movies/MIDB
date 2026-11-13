@@ -4,6 +4,7 @@
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
+	import { USERNAME_CHANGE_WAIT_DAYS } from '#lib/media/utils/username.ts';
 	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
@@ -53,7 +54,9 @@
 	const USERNAME_ERRORS: Record<string, string> = {
 		'username-taken': 'That username is already taken.',
 		'username-format': 'A username is 3–32 characters: lowercase letters, numbers and underscores.',
-		'username-reserved': 'That username is reserved.'
+		'username-reserved': 'That username is reserved.',
+		'username-blocked': 'That username is not allowed.',
+		'username-too-soon': `A username can change once every ${USERNAME_CHANGE_WAIT_DAYS} days.`
 	};
 	let saving = $state(false);
 	/** The username the last save sent: its refusal shows only while the field still holds it. */
@@ -100,7 +103,9 @@
 						? 'That avatar is not available. Choose another.'
 						: error === 'no-changes'
 							? 'Nothing to save: enter a username or choose an avatar.'
-							: 'The profile could not be saved. Try again.'
+							: error === 'muted'
+								? 'The profile cannot change while the account is muted.'
+								: 'The profile could not be saved. Try again.'
 				);
 			}
 		};

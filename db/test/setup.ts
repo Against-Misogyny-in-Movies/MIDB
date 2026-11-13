@@ -27,6 +27,7 @@ const DELETE_ORDER = [
 	'source_sync',
 	'titles',
 	'passkey',
+	'retired_username',
 	'account',
 	'session',
 	'verification',
