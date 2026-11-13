@@ -10,6 +10,8 @@ export {
 	COMMENT_BODY_MAX,
 	MODERATION_REASON_MAX,
 	REPORT_NOTE_MAX,
+	SCAN_CONCERN_MAX,
+	VERDICT_CATEGORIES,
 	commentStatus,
 	moderationAction,
 	moderationSource,

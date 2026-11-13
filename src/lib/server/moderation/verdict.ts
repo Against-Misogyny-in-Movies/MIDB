@@ -1,19 +1,7 @@
 import { z } from 'zod';
+import { VERDICT_CATEGORIES } from '#db/lib/comments.ts';
 
-/** What the classifier may flag a comment for. */
-export const VERDICT_CATEGORIES = [
-	'hate',
-	'misogyny',
-	'harassment',
-	'slur',
-	'threat',
-	'sexual-minors',
-	'sexual-explicit',
-	'doxxing',
-	'spam',
-	'survivor-mockery',
-	'off-topic'
-] as const;
+export { VERDICT_CATEGORIES };
 
 /**
  * What the model is asked for, and what the SDK's own parse checks. `zodOutputFormat` turns a
