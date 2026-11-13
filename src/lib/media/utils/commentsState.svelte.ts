@@ -6,7 +6,7 @@ import type {
 	ReportReason,
 	ViewerCommentState
 } from '#lib/media/types/comments.ts';
-import { unpublishedNote } from '#lib/media/utils/comments.ts';
+import { commentResult } from '#lib/media/utils/comments.ts';
 import {
 	type CommentAction,
 	describeFailure,
@@ -205,19 +205,12 @@ export class CommentsState {
 			this.#fail(key, 'create', reply);
 			return false;
 		}
+		// A published comment is not in the cached list yet (the purge that follows this write
+		// refreshes it), so the viewer state carries it until the list does.
 		const { comment } = reply.data;
 		this.#setOwn(comment);
-		if (comment.status === 'published') {
-			// Not in the cached list yet (the purge that follows this write refreshes it), so the
-			// viewer state carries it until the list does.
-			toasts.success('Comment posted.');
-		} else {
-			const note = unpublishedNote(
-				comment.status === 'rejected' ? 'rejected' : 'pending',
-				comment.moderationReason
-			);
-			toasts.warn(comment.status === 'rejected' ? note : `Comment sent. ${note}`);
-		}
+		const result = commentResult('post', comment);
+		toasts.show(result.tone, result.text);
 		return true;
 	}
 
@@ -242,6 +235,8 @@ export class CommentsState {
 			this.#withdraw(id);
 		}
 		this.#setOwn(comment);
+		const result = commentResult('edit', comment);
+		toasts.show(result.tone, result.text);
 		return true;
 	}
 
@@ -257,6 +252,7 @@ export class CommentsState {
 		this.#withdraw(id);
 		const viewer = this.viewer;
 		if (viewer) viewer.comments = viewer.comments.filter((c) => c.id !== id);
+		toasts.success('Comment deleted.');
 		return true;
 	}
 

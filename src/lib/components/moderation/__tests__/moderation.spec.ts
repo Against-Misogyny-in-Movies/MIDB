@@ -191,6 +191,15 @@ describe('ModerationItem', () => {
 		expect(document.getElementById('comment-c1')).toBeTruthy();
 	});
 
+	it('toasts what an action that went through did', async () => {
+		form.result = { type: 'success', data: { id: 'c1', done: 'approve' } };
+		mount();
+		await fireEvent.submit(
+			screen.getByRole('button', { name: 'Approve' }).closest('form') as HTMLFormElement
+		);
+		await waitFor(() => expect(shown()).toEqual(['success: Comment approved.']));
+	});
+
 	it('marks the pressed button busy and holds the others until the action ends', async () => {
 		let release!: () => void;
 		form.update = () => new Promise<void>((r) => (release = r));

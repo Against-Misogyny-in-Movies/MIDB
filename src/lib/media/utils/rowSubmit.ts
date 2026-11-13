@@ -1,8 +1,15 @@
 import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
-/** What an action that went through says, by the action's name (`done`); the others show their result in the queue itself. */
+/** What an action that went through says, by the action's name (`done`). */
 const DONE: Record<string, string> = {
+	approve: 'Comment approved.',
+	hide: 'Comment hidden.',
+	reject: 'Comment rejected.',
+	restore: 'Comment restored.',
+	dismiss: 'Reports dismissed.',
+	countReport: 'Community report counted.',
+	rejectReport: 'Community report rejected.',
 	rejectAccountReports: 'Every community report of the account is rejected.',
 	mute: 'Account muted.',
 	ban: 'Account banned.',
@@ -15,7 +22,7 @@ type FormResult = { type: string; data?: Record<string, unknown> };
 
 /**
  * Toasts a moderation form's result: the failure the action returned (`{ error }`), or what an
- * action that went through (`{ done }`) did, when the queue does not show it.
+ * action that went through (`{ done }`) did.
  */
 export function toastActionResult(result: FormResult): void {
 	if (result.type === 'failure') {

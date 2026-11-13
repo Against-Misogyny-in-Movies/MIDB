@@ -6,7 +6,7 @@ import {
 	providerErrorMessage,
 	type AuthClientError
 } from '#lib/auth-errors.ts';
-import { providerLabel, type Provider } from '#lib/media/utils/auth-providers.ts';
+import { AUTH_PROVIDERS, providerLabel, type Provider } from '#lib/media/utils/auth-providers.ts';
 import { currentDeviceName, DEFAULT_PASSKEY_NAME } from '#lib/media/utils/deviceName.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
@@ -81,9 +81,15 @@ export class SignInMethods {
 		else this.passkeys = rows ?? [];
 	}
 
-	/** Loads both lists; `providerError` is the `?error=` code a failed link redirected back with. */
-	async load(providerError: string | null) {
+	/**
+	 * Loads both lists. `providerError` is the `?error=` code a failed link redirected back with,
+	 * and `linked` the `?linked=` provider a link that went through did.
+	 */
+	async load(providerError: string | null, linked: string | null = null) {
 		if (providerError) toasts.error(providerErrorMessage(providerError));
+		else if (linked && AUTH_PROVIDERS.some((p) => p.id === linked)) {
+			toasts.success(`${providerLabel(linked)} linked.`);
+		}
 		await Promise.all([this.#loadAccounts(), this.#loadPasskeys()]);
 		this.loading = false;
 	}
@@ -188,7 +194,7 @@ export class SignInMethods {
 		this.running = `link:${provider.id}`;
 		const { error } = await authClient.linkSocial({
 			provider: provider.id,
-			callbackURL: '/user/security',
+			callbackURL: `/user/security?linked=${provider.id}`,
 			errorCallbackURL: '/user/security'
 		});
 		if (error) {

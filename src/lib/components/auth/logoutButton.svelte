@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { authClient } from '#lib/auth-client.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
+	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 	interface Props {
 		/** `button` is a ghost button (the profile page); `menu` fills a row of the mobile menu. */
@@ -19,6 +20,7 @@
 		}
 		session.clear();
 		await goto('/auth', { refreshAll: true });
+		toasts.success('Signed out.');
 	};
 </script>
 

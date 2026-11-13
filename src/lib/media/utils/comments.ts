@@ -4,6 +4,7 @@
  */
 
 import type { reportReason, commentStatus } from '#db/lib/comments.ts';
+import type { CommentStatus } from '#lib/media/types/comments.ts';
 
 export {
 	COMMENT_BODY_MAX,
@@ -56,4 +57,22 @@ export function unpublishedNote(status: 'pending' | 'rejected', reason: string |
 	const text = reason?.trim();
 	const lead = text ? `${/[.!?]$/.test(text) ? text : `${text}.`} ` : '';
 	return `Rejected: ${lead}Only the author and moderators see the comment.`;
+}
+
+/**
+ * The toast for a comment the reader posted or edited, from the status the server answered: a
+ * success when it is public, a warning that says who sees it while it waits or was rejected.
+ */
+export function commentResult(
+	action: 'post' | 'edit',
+	comment: { status: CommentStatus; moderationReason: string | null }
+): { tone: 'success' | 'warn'; text: string } {
+	if (comment.status === 'rejected') {
+		return { tone: 'warn', text: unpublishedNote('rejected', comment.moderationReason) };
+	}
+	if (comment.status === 'pending') {
+		const lead = action === 'post' ? 'Comment sent.' : 'Comment saved.';
+		return { tone: 'warn', text: `${lead} ${unpublishedNote('pending', null)}` };
+	}
+	return { tone: 'success', text: action === 'post' ? 'Comment posted.' : 'Comment saved.' };
 }
