@@ -150,22 +150,131 @@ describe('CommentsState', () => {
 		expect(toasts.items).toEqual([]);
 	});
 
-	it('sets a vote from the response, and a second press of the same vote removes it', async () => {
-		const fetcher = vi
-			.fn()
-			.mockResolvedValueOnce(json({ comments: [view('a', { score: 1 })], nextCursor: null }))
-			.mockResolvedValueOnce(json({ score: 2, vote: 1 }))
-			.mockResolvedValueOnce(json({ score: 1, vote: null }));
-		const state = new CommentsState('movie', '1', fetcher);
-		await state.load();
-		await state.vote('a', 1);
-		expect(fetcher.mock.calls[1][1]).toMatchObject({ method: 'PUT', body: '{"value":1}' });
-		expect(state.voteOf('a')).toBe(1);
-		expect(state.list[0].score).toBe(2);
-		await state.vote('a', 1);
-		expect(fetcher.mock.calls[2][1]).toMatchObject({ method: 'DELETE' });
-		expect(state.voteOf('a')).toBeNull();
-		expect(state.list[0].score).toBe(1);
+	describe('votes', () => {
+		/** A state with comment `a` (score 1) loaded, and a fetcher that answers each vote request through its own gate. */
+		async function setup() {
+			const gates: Array<(reply: Response) => void> = [];
+			const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
+				if (!init?.method || init.method === 'GET')
+					return json({ comments: [view('a', { score: 1 })], nextCursor: null });
+				return new Promise<Response>((resolve) => gates.push(resolve));
+			});
+			const state = new CommentsState('movie', '1', fetcher);
+			await state.load();
+			const requests = () => fetcher.mock.calls.slice(1).map((c) => c[1]?.method);
+			return { state, gates, requests };
+		}
+
+		it('shows the vote and the score at once, then keeps the server numbers', async () => {
+			const { state, gates, requests } = await setup();
+			const pending = state.vote('a', 1);
+			expect(state.voteOf('a')).toBe(1);
+			expect(state.list[0].score).toBe(2);
+			expect(requests()).toEqual(['PUT']);
+			gates[0](json({ score: 5, vote: 1 }));
+			await pending;
+			expect(state.voteOf('a')).toBe(1);
+			expect(state.list[0].score).toBe(5);
+		});
+
+		it.each([
+			['none to up', null, 1, 1, 2],
+			['none to down', null, -1, -1, 0],
+			['up to none', 1, 1, null, 0],
+			['down to none', -1, -1, null, 2],
+			['up to down', 1, -1, -1, -1],
+			['down to up', -1, 1, 1, 3]
+		] as const)('moves the score by the delta for %s', async (_name, from, press, to, score) => {
+			const { state, gates } = await setup();
+			state.viewer = { votes: from === null ? {} : { a: from }, comments: [], mutedUntil: null };
+			state.list[0].score = 1;
+			const pending = state.vote('a', press);
+			expect(state.voteOf('a')).toBe(to);
+			expect(state.list[0].score).toBe(score);
+			gates[0](json({ score, vote: to }));
+			await pending;
+		});
+
+		it('sends DELETE for a repeated press', async () => {
+			const { state, gates, requests } = await setup();
+			state.viewer = { votes: { a: 1 }, comments: [], mutedUntil: null };
+			const pending = state.vote('a', 1);
+			expect(requests()).toEqual(['DELETE']);
+			gates[0](json({ score: 0, vote: null }));
+			await pending;
+			expect(state.voteOf('a')).toBeNull();
+		});
+
+		it('coalesces rapid clicks into at most one follow-up request, for the last intent', async () => {
+			const { state, gates, requests } = await setup();
+			const first = state.vote('a', 1);
+			void state.vote('a', -1);
+			void state.vote('a', 1);
+			void state.vote('a', -1);
+			expect(requests()).toEqual(['PUT']);
+			expect(state.voteOf('a')).toBe(-1);
+			expect(state.list[0].score).toBe(0);
+			gates[0](json({ score: 2, vote: 1 }));
+			await vi.waitFor(() => expect(gates).toHaveLength(2));
+			expect(requests()).toEqual(['PUT', 'PUT']);
+			expect(state.voteOf('a')).toBe(-1);
+			expect(state.list[0].score).toBe(0);
+			gates[1](json({ score: 0, vote: -1 }));
+			await first;
+			expect(requests()).toHaveLength(2);
+			expect(state.voteOf('a')).toBe(-1);
+			expect(state.list[0].score).toBe(0);
+		});
+
+		it('sends nothing more when the clicks end where the server already is', async () => {
+			const { state, gates, requests } = await setup();
+			const first = state.vote('a', 1);
+			void state.vote('a', 1);
+			void state.vote('a', 1);
+			gates[0](json({ score: 2, vote: 1 }));
+			await first;
+			expect(requests()).toEqual(['PUT']);
+			expect(state.voteOf('a')).toBe(1);
+		});
+
+		it('does not let a stale response overwrite a newer intent', async () => {
+			const { state, gates } = await setup();
+			const first = state.vote('a', 1);
+			void state.vote('a', 1);
+			expect(state.voteOf('a')).toBeNull();
+			gates[0](json({ score: 2, vote: 1 }));
+			await vi.waitFor(() => expect(gates).toHaveLength(2));
+			expect(state.voteOf('a')).toBeNull();
+			expect(state.list[0].score).toBe(1);
+			gates[1](json({ score: 1, vote: null }));
+			await first;
+			expect(state.voteOf('a')).toBeNull();
+		});
+
+		it('rolls back to the last confirmed vote and score on failure, with a toast', async () => {
+			const { state, gates } = await setup();
+			const pending = state.vote('a', 1);
+			void state.vote('a', -1);
+			expect(state.list[0].score).toBe(0);
+			gates[0](json({ message: 'Account muted' }, 403));
+			await pending;
+			expect(state.voteOf('a')).toBeNull();
+			expect(state.list[0].score).toBe(1);
+			expect(shown()).toEqual([expect.stringMatching(/^error: .*muted/)]);
+		});
+
+		it('rolls back to the earlier confirmed vote when the follow-up fails', async () => {
+			const { state, gates } = await setup();
+			const first = state.vote('a', 1);
+			void state.vote('a', -1);
+			gates[0](json({ score: 2, vote: 1 }));
+			await vi.waitFor(() => expect(gates).toHaveLength(2));
+			gates[1](json({ message: 'Too many' }, 429));
+			await first;
+			expect(state.voteOf('a')).toBe(1);
+			expect(state.list[0].score).toBe(2);
+			expect(shown()).toHaveLength(1);
+		});
 	});
 
 	it('deletes a comment with replies into a placeholder and drops one without', async () => {

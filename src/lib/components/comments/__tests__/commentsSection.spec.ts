@@ -289,9 +289,10 @@ describe('CommentsSection signed in', () => {
 		await waitFor(() => expect(up.getAttribute('aria-pressed')).toBe('true'));
 		const down = screen.getByRole('button', { name: 'Downvote' });
 		await fireEvent.click(down);
-		await waitFor(() => expect(down.getAttribute('aria-pressed')).toBe('true'));
+		expect(down.getAttribute('aria-pressed')).toBe('true');
 		expect(up.getAttribute('aria-pressed')).toBe('false');
-		expect(document.querySelector('#comment-a .score')?.textContent).toBe('Score 4');
+		const score = () => document.querySelector('#comment-a .score')?.textContent;
+		await waitFor(() => expect(score()).toBe('Score 4'));
 	});
 
 	it('names what is lost before a delete, then keeps a comment with replies as a placeholder', async () => {

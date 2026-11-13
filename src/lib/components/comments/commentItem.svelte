@@ -41,7 +41,6 @@
 				? 'Administrator'
 				: null
 	);
-	const voteKey = $derived(`vote:${comment.id}`);
 	const replyKey = $derived(`reply:${comment.id}`);
 	const editKey = $derived(`edit:${comment.id}`);
 	const deleteKey = $derived(`delete:${comment.id}`);
@@ -147,7 +146,7 @@
 							icon
 							label="Upvote"
 							pressed={vote === 1}
-							disabled={muted || comments.busy[voteKey]}
+							disabled={muted}
 							onclick={() => comments.vote(comment.id, 1)}
 						>
 							<i class="ri-arrow-up-line" aria-hidden="true"></i>
@@ -157,7 +156,7 @@
 							icon
 							label="Downvote"
 							pressed={vote === -1}
-							disabled={muted || comments.busy[voteKey]}
+							disabled={muted}
 							onclick={() => comments.vote(comment.id, -1)}
 						>
 							<i class="ri-arrow-down-line" aria-hidden="true"></i>

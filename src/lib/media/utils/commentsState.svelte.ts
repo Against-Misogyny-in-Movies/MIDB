@@ -25,6 +25,8 @@ import { toasts } from '#lib/media/utils/toasts.svelte.js';
  * list that did not load (`load`, `viewer`), and text the server refused (a 400 on `compose`,
  * `reply:<id>` or `edit:<id>`), which the composer shows under its field.
  */
+type VoteReply = { score: number; vote: 1 | -1 | null };
+
 const SHOWN_STATUSES = new Set<OwnComment['status']>(['pending', 'rejected', 'published']);
 
 export class CommentsState {
@@ -43,6 +45,8 @@ export class CommentsState {
 	busy = $state<Record<string, boolean>>({});
 
 	#fetch: Fetcher;
+	/** Per comment, while a vote is unsettled: what the server confirmed, the vote the reader wants, and whether a request is out. */
+	#votes: Record<string, { confirmed: VoteReply; intended: 1 | -1 | null; sending?: boolean }> = {};
 	/** Bumped by each list load, so a slow answer for an older sort cannot overwrite a newer one. */
 	#generation = 0;
 
@@ -256,30 +260,48 @@ export class CommentsState {
 		return true;
 	}
 
-	/** Sets the reader's vote, or removes it when `value` is the vote they already have. */
+	/**
+	 * Sets the reader's vote, or removes it when `value` is the vote they already have. The vote and
+	 * the score show at once. Clicks while a request is out only change the intended vote; when the
+	 * request returns, one more goes only if the intended vote differs from what the server holds.
+	 */
 	async vote(id: string, value: 1 | -1): Promise<void> {
-		const key = `vote:${id}`;
-		if (this.busy[key]) return;
-		this.#start(key);
-		const current = this.viewer?.votes[id];
-		const reply =
-			current === value
-				? await this.#request<{ score: number; vote: 1 | -1 | null }>(
-						'DELETE',
-						`/api/comments/${id}/vote`
-					)
-				: await this.#request<{ score: number; vote: 1 | -1 | null }>(
-						'PUT',
-						`/api/comments/${id}/vote`,
-						{ value }
-					);
-		this.busy[key] = false;
-		if (!reply.ok) return this.#fail(key, 'vote', reply);
 		const viewer = this.#ensureViewer();
-		if (reply.data.vote === null) delete viewer.votes[id];
-		else viewer.votes[id] = reply.data.vote;
+		const current = viewer.votes[id] ?? null;
+		const sync = this.#votes[id] ?? {
+			confirmed: { vote: current, score: this.#find(id)?.score ?? 0 },
+			intended: current
+		};
+		this.#votes[id] = sync;
+		sync.intended = current === value ? null : value;
+		this.#showVote(id, sync.intended, sync.confirmed);
+		if (sync.sending) return;
+		sync.sending = true;
+		while (sync.intended !== sync.confirmed.vote) {
+			const sent = sync.intended;
+			const reply =
+				sent === null
+					? await this.#request<VoteReply>('DELETE', `/api/comments/${id}/vote`)
+					: await this.#request<VoteReply>('PUT', `/api/comments/${id}/vote`, { value: sent });
+			if (!reply.ok) {
+				sync.intended = sync.confirmed.vote;
+				this.#showVote(id, sync.intended, sync.confirmed);
+				this.#fail(`vote:${id}`, 'vote', reply);
+				break;
+			}
+			sync.confirmed = reply.data;
+			this.#showVote(id, sync.intended, sync.confirmed);
+		}
+		delete this.#votes[id];
+	}
+
+	/** Shows `vote` as the reader's, with the score the server last confirmed moved by the difference. */
+	#showVote(id: string, vote: 1 | -1 | null, confirmed: VoteReply): void {
+		const viewer = this.#ensureViewer();
+		if (vote === null) delete viewer.votes[id];
+		else viewer.votes[id] = vote;
 		const shown = this.#find(id);
-		if (shown) shown.score = reply.data.score;
+		if (shown) shown.score = confirmed.score + (vote ?? 0) - (confirmed.vote ?? 0);
 	}
 
 	/** Reports a comment. True when the server took the report, or this account had reported it before. */

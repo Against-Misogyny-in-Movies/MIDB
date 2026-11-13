@@ -290,6 +290,13 @@ describe('votes', () => {
 		expect((await row(id)).score).toBe(0);
 	});
 
+	it('returns the title kind and TMDB id of the comment voted on', async () => {
+		const id = await published('author', 'Great');
+		const title = { kind: 'movie', tmdbId: 348 };
+		expect(await setVote(id, 'u1', 1)).toMatchObject({ ok: true, title });
+		expect(await removeVote(id, 'u1')).toMatchObject({ ok: true, title });
+	});
+
 	it('refuses a vote on your own comment, on a pending one, and on a missing one', async () => {
 		const id = await published('author', 'Root');
 		expect(await setVote(id, 'author', 1)).toEqual({ ok: false, reason: 'own-comment' });
