@@ -59,4 +59,17 @@ Reader reports become MIDB community reports, moderators and administrators repo
 
 ## C4: Reporting flow
 
-Not briefed until the `ux` review of the flow returns; its accepted items are written here before C4 starts.
+The `ux` review of the flow, accepted in full. File names are the C1 names; the copy below is a draft that `copy-judge` checks.
+
+- **The form stays under its row.** While the form is open, the own-report line keeps "This account’s report" and its badge and drops only Edit. For a new report, the "Add a report" row gives way to a line reading "This account’s report". The form is `aria-labelledby` that line (DESIGN.md, Plate: a plate sits under the row it acts on).
+- **Delete reports its result.** `CommunityReportsState` holds a client-side `deleted` flag, set on a successful delete and cleared on a save, on `clearViewer()` and when the form opens. Under "Add a report" a success `Notice` reads "Report deleted. The counts above drop it once the page reloads."
+- **Saved copy matches the counts.** The counts are not refetched after a write, so the counted notice reads "Report saved. The counts above include it once the page reloads." The held and young notices keep their text.
+- **"I watched this" sits above Save.** The checkbox and its error move to just above the actions row, after framing, keeping `aria-describedby`, the alert and the focus on the checkbox.
+- **Compact choices are rows.** From 40rem, `.choice--compact` in `reportChoice.svelte` is a grid with the counts' 13rem name column, baseline-aligned, and the flag rows are separated by `--border` hairlines. Phones keep the stacked layout.
+- **The flag plate says what it sends.** A first line reads "Sends this title’s community-report counts to the moderators for review.", the form is `aria-labelledby` it, the field is "What looks wrong (optional)", the button "Send flag", and the character counter is tied to the textarea with `aria-describedby`.
+- **One plate at a time.** "Counts look wrong" is hidden while the report form is open (the own-report component exposes `editing` to the section). The link stays last.
+- **Saving locks the form.** While a save runs, Cancel is disabled and the questions sit in a `disabled` fieldset styled `display: contents`, so nothing moves.
+- **Answers read in the counts' order.** The form lists levels most serious first, from the same order `reportFigures.ts` uses (exported once), with "Not sure" last. The values sent are unchanged.
+- **An all-Not-sure report says so.** `allUnsure(draft)` in `reportDraft.ts`; when true, a muted `.label` line above the actions reads "Every answer is Not sure." Its height is reserved, so the actions never move, and Save stays enabled.
+- **Docs.** `DESIGN.md` and `docs/architecture.md`, Community reports section.
+- **Tests.** Component and unit specs for each item: the line kept while editing, the delete notice, the watched error's placement and focus, the flag link hidden while editing, the locked form while saving, the answer order, `allUnsure`.
