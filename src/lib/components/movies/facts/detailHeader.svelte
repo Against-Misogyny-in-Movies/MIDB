@@ -7,11 +7,13 @@
 		media: MediaDetail;
 		/** The two-axis verdict, rendered under the overview. */
 		verdict?: Snippet;
+		/** Rendered in the heading under the meta line (the community report count). */
+		aside?: Snippet;
 		/** Rendered last in the info column (the source index). */
 		children?: Snippet;
 	}
 
-	let { media, children, verdict }: Props = $props();
+	let { media, children, verdict, aside }: Props = $props();
 
 	const meta = $derived(
 		[media.releaseDate.slice(0, 4), media.genres.map((g) => g.name).join(', ')]
@@ -36,6 +38,7 @@
 		{#if meta}
 			<p class="meta">{meta}</p>
 		{/if}
+		{@render aside?.()}
 	</div>
 
 	<div class="body">

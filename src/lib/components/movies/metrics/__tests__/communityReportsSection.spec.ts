@@ -6,6 +6,8 @@ import type { PublicUser } from '#lib/media/types/user.ts';
 vi.mock('$app/env', () => ({ browser: true }));
 
 const { default: CommunityReportsSection } = await import('../communityReportsSection.svelte');
+const { CommunityReportsState } = await import('#lib/media/utils/communityReportsState.svelte.js');
+const { default: CommunityReportsBadge } = await import('../communityReportsBadge.svelte');
 const { session } = await import('#lib/media/utils/session.svelte.js');
 
 const ME: PublicUser = {
@@ -81,7 +83,11 @@ const viewer = (report: ViewerReportView | null, mutedUntil: string | null = nul
 };
 
 function mount(fetcher: ReturnType<typeof api>) {
-	return render(CommunityReportsSection, { kind: 'movie', tmdbId: '603', fetcher });
+	return render(CommunityReportsSection, {
+		kind: 'movie',
+		tmdbId: '603',
+		reports: new CommunityReportsState('movie', '603', fetcher)
+	});
 }
 
 afterEach(cleanup);
@@ -395,8 +401,66 @@ describe('CommunityReportsSection layout', () => {
 		window.location.hash = '';
 	});
 
+	it('opens when the hash changes to #community-reports', async () => {
+		window.location.hash = '';
+		const { container } = mount(api({ [`GET ${BASE}`]: counts() }));
+		const details = container.querySelector('details')!;
+		expect(details.open).toBe(false);
+		window.location.hash = '#community-reports';
+		await waitFor(() => expect(details.open).toBe(true));
+		details.open = false;
+		window.location.hash = '';
+		window.location.hash = '#community-reports';
+		await waitFor(() => expect(details.open).toBe(true));
+		window.location.hash = '';
+	});
+
 	it('gives the framing row its own total', async () => {
 		mount(api({ [`GET ${BASE}`]: counts() }));
 		expect(await screen.findByText(', of 3 who answered')).toBeTruthy();
+	});
+});
+
+describe('CommunityReportsBadge', () => {
+	beforeEach(() => session.clear());
+
+	function badge(fetcher: ReturnType<typeof api>) {
+		const reports = new CommunityReportsState('movie', '603', fetcher);
+		const view = render(CommunityReportsBadge, { reports });
+		return { reports, ...view };
+	}
+
+	it('keeps its slot busy while loading, then reads the number and links to the section', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts() }));
+		const busy = container.querySelector('.badge')!;
+		expect(busy.getAttribute('aria-busy')).toBe('true');
+		expect(container.querySelector('a')!.getAttribute('href')).toBe('#community-reports');
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('7 community reports'));
+		expect(busy.getAttribute('aria-busy')).toBeNull();
+	});
+
+	it('reads the singular for one report', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts({ total: 1 }) }));
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('1 community report'));
+		expect(container.textContent).not.toContain('1 community reports');
+	});
+
+	it('reads "MIDB community reports" with no number on an error', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: () => json({}, 500) }));
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('MIDB community reports'));
+		expect(container.textContent).not.toMatch(/\d/);
+	});
+
+	it('shares one counts request with the section', async () => {
+		const fetcher = api({ [`GET ${BASE}`]: counts() });
+		const reports = new CommunityReportsState('movie', '603', fetcher);
+		render(CommunityReportsBadge, { reports });
+		render(CommunityReportsSection, { kind: 'movie', tmdbId: '603', reports });
+		await screen.findByText('Physical violence or murder');
+		const calls = fetcher.mock.calls.filter(([url]) => url.split('?')[0] === BASE);
+		expect(calls).toHaveLength(1);
 	});
 });

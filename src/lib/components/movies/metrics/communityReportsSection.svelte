@@ -6,35 +6,42 @@
 	import CommunityReportFlag from './communityReportFlag.svelte';
 	import CommunityReportOwn from './communityReportOwn.svelte';
 	import { COMMUNITY_REPORT_MIN } from '#lib/media/utils/communityReports.ts';
-	import { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
+	import type { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		kind: 'movie' | 'tv';
 		tmdbId: string;
-		/** Tests give the section a fetcher; the pages use the browser's. */
-		fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
+		/** The title's reports, owned by the page so the header badge reads the same counts. */
+		reports: CommunityReportsState;
 	}
 
-	let { kind, tmdbId, fetcher }: Props = $props();
+	let { kind, tmdbId, reports }: Props = $props();
 
-	// One section per title: the pages key it on the TMDB id, so these never change.
-	// svelte-ignore state_referenced_locally
-	const reports = new CommunityReportsState(kind, tmdbId, fetcher);
-
-	// The section opens for a link to it (`#community-reports`, which the sign-in return path carries).
-	// It is read on mount only: the server render never knows the hash, and the section is below the
-	// fold, so opening it moves nothing the reader sees.
+	// The section opens for a link to it (`#community-reports`, which the sign-in return path carries
+	// and the header badge points at). The hash is read on mount, because the server render never
+	// knows it, and again on `hashchange`; the section is below the fold, so opening it moves nothing
+	// the reader sees.
 	let open = $state(false);
+
+	function openForHash() {
+		if (location.hash !== '#community-reports') return;
+		open = true;
+		// A reader may have closed the section since the prop was set, so the element is opened directly.
+		const el = document.getElementById('community-reports');
+		if (el instanceof HTMLDetailsElement) el.open = true;
+	}
 
 	onMount(() => {
 		open = location.hash === '#community-reports';
+		window.addEventListener('hashchange', openForHash);
 		// The page is cached for everyone, so the reader's own report comes from the private
 		// endpoint once the session says who is reading.
 		void session.load();
 		void reports.load();
 		if (session.likelyUser) void reports.loadViewer();
+		return () => window.removeEventListener('hashchange', openForHash);
 	});
 
 	$effect(() => {

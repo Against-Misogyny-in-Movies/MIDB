@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~3.7K tok)
+- `DESIGN.md` — Design (~3.8K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–62 Components (~1.8K)
-  - 63–69 Pages (~420)
+  - 63–69 Pages (~470)
   - 70–73 Motion (~90)
   - 74–77 Browser surfaces (~50)
   - 78–81 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~50.3K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~50.6K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -64,28 +64,28 @@ Read the sections your task touches.
   - 327–366 User & roles (~2.5K)
     - 359–366 Migrations (~350)
   - 367–396 Source sync (~1.8K) ← 3
-  - 397–462 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 397–462 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
   - 463–488 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.2K) ← 2
   - 489–508 UM Disambiguation (~630)
   - 509–517 UM flag rendering (~250)
   - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 527–535 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~560) ← 1
-  - 536–547 Shared marker pattern (metric row markers) (~410) ← 5
-  - 548–588 Component library (`src/lib/components/`) (~5.8K)
-  - 589–599 Live search (`src/lib/components/search/`) (~710)
-  - 600–613 Server cache (`src/lib/server/cache/`) (~690)
-  - 614–629 TMDB integration (~810)
-  - 630–648 Auth flow (Better Auth) (~1.9K)
-  - 649–668 Caching policy (~1.4K) ← 6
-  - 669–725 Configuration & environment (~3.2K)
-    - 685–697 Local run sequence (~130)
-    - 698–701 npm scripts (~200)
-    - 702–712 CI (`.github/workflows/tests.yml`) (~490)
-    - 713–725 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 726–741 Testing (~1.2K)
-    - 736–741 Verification baseline (~80)
-  - 742–750 Known gaps / TODO (~180) ← 1
-  - 751–759 Related docs (~140)
+  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~740) ← 1
+  - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
+  - 550–590 Component library (`src/lib/components/`) (~5.9K)
+  - 591–601 Live search (`src/lib/components/search/`) (~710)
+  - 602–615 Server cache (`src/lib/server/cache/`) (~690)
+  - 616–631 TMDB integration (~810)
+  - 632–650 Auth flow (Better Auth) (~1.9K)
+  - 651–670 Caching policy (~1.4K) ← 6
+  - 671–727 Configuration & environment (~3.2K)
+    - 687–699 Local run sequence (~130)
+    - 700–703 npm scripts (~200)
+    - 704–714 CI (`.github/workflows/tests.yml`) (~490)
+    - 715–727 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 728–743 Testing (~1.2K)
+    - 738–743 Verification baseline (~80)
+  - 744–752 Known gaps / TODO (~180) ← 1
+  - 753–761 Related docs (~140)
 
 ## Phases
 
