@@ -7,6 +7,7 @@ export type CommentAction =
 	| 'load'
 	| 'more'
 	| 'viewer'
+	| 'link'
 	| 'create'
 	| 'edit'
 	| 'delete'
@@ -16,6 +17,7 @@ export type CommentAction =
 const FAILED: Record<CommentAction, string> = {
 	load: 'The comments could not be loaded',
 	more: 'More comments could not be loaded',
+	link: 'The linked comment could not be loaded',
 	viewer: 'This account’s votes and unpublished comments could not be loaded',
 	create: 'The comment was not posted',
 	edit: 'The edit was not saved',

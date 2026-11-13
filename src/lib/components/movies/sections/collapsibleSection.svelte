@@ -32,6 +32,8 @@
 		 * the hash the page is already on. Needs `id`.
 		 */
 		openOnHash?: boolean;
+		/** With `openOnHash`: the section also opens for any hash that starts with this (`comment-`). */
+		hashPrefix?: string;
 		children: Snippet;
 	}
 
@@ -50,6 +52,7 @@
 		learnLabel = 'Methodology',
 		open = true,
 		openOnHash = false,
+		hashPrefix,
 		children
 	}: Props = $props();
 
@@ -67,17 +70,18 @@
 	// element, because a reader may have closed the section since `open` was last set.
 	onMount(() => {
 		if (!openOnHash || !id) return;
-		const hash = `#${id}`;
+		const matches = (value: string) =>
+			value === `#${id}` || (hashPrefix !== undefined && value.startsWith(`#${hashPrefix}`));
 		const openSection = () => {
 			if (el) el.open = true;
 		};
 		const openForHash = () => {
-			if (location.hash === hash) openSection();
+			if (matches(location.hash)) openSection();
 		};
 		// A link to the hash the page is already on fires no `hashchange`.
 		const openForLink = (event: MouseEvent) => {
-			if (event.target instanceof Element && event.target.closest(`a[href="${hash}"]`))
-				openSection();
+			const link = event.target instanceof Element ? event.target.closest('a') : null;
+			if (link && link.pathname === location.pathname && matches(link.hash)) openSection();
 		};
 		openForHash();
 		window.addEventListener('hashchange', openForHash);

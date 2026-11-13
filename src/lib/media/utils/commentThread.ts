@@ -1,8 +1,8 @@
-import type { CommentView, OwnComment } from '#lib/media/types/comments.ts';
+import type { CommentStatus, CommentView, OwnComment } from '#lib/media/types/comments.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 
-/** What an author's own unpublished comment shows: its state and, once rejected, the reason. */
-export type ReviewState = { status: 'pending' | 'rejected'; reason: string | null };
+/** What an unpublished comment shows its author and staff: its status and the moderation reason. */
+export type ReviewState = { status: Exclude<CommentStatus, 'published'>; reason: string | null };
 
 /** A comment as the section draws it: the public view, plus the review state on the reader's own. */
 export type ShownComment = Omit<CommentView, 'replies'> & { review: ReviewState | null };
@@ -93,4 +93,11 @@ export function buildThreads(
 		else strays.push({ root: reply, replies: [] });
 	}
 	return [...ownRoots.map((root) => byRoot.get(root.id) as Thread), ...strays, ...threads];
+}
+
+/** Marks the comment `id` in `threads` as unpublished, for a linked comment only its author or staff can read. */
+export function withReview(threads: Thread[], id: string, review: ReviewState | null): Thread[] {
+	if (!review) return threads;
+	const mark = (c: ShownComment): ShownComment => (c.id === id && !c.review ? { ...c, review } : c);
+	return threads.map((t) => ({ root: mark(t.root), replies: t.replies.map(mark) }));
 }

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import CommentList from './commentList.svelte';
-	import type { CommentSort } from '#lib/media/types/comments.ts';
-	import { buildThreads } from '#lib/media/utils/commentThread.ts';
+	import type { CommentSort, OwnComment } from '#lib/media/types/comments.ts';
+	import { buildThreads, withReview } from '#lib/media/utils/commentThread.ts';
 	import { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
@@ -30,12 +30,54 @@
 		{ value: 'new', label: 'Newest' }
 	];
 
+	/** A `#comment-<id>` hash names the comment a link points at. */
+	const LINK_HASH = /^#comment-([\w-]{1,64})$/;
+	const HIGHLIGHT_MS = 2500;
+	/** The linked comment waiting for the list to draw before the page scrolls to it. */
+	let pendingReveal = $state<string | null>(null);
+	let highlightTimer: ReturnType<typeof setTimeout> | undefined;
+
+	/** Makes the linked comment available (the section opens itself for the hash), then asks for the scroll. */
+	async function followLink(): Promise<void> {
+		const id = LINK_HASH.exec(location.hash)?.[1];
+		if (!id) return;
+		if (await comments.showLink(id)) pendingReveal = id;
+	}
+
+	/** Scrolls to the comment, focuses it and highlights it for a moment. */
+	async function reveal(id: string): Promise<void> {
+		await tick();
+		const article = document.getElementById(`comment-${id}`);
+		if (!article) return;
+		article.scrollIntoView({ block: 'start' });
+		article.focus({ preventScroll: true });
+		comments.highlightId = id;
+		clearTimeout(highlightTimer);
+		highlightTimer = setTimeout(() => (comments.highlightId = null), HIGHLIGHT_MS);
+	}
+
+	$effect(() => {
+		const id = pendingReveal;
+		if (id === null || showSkeleton) return;
+		untrack(() => {
+			pendingReveal = null;
+			void reveal(id);
+		});
+	});
+
 	onMount(() => {
 		// `load` sets the first-paint hint, so a reader who is probably signed in gets the
 		// viewer state in parallel with the list instead of after `/api/me`.
 		void session.load();
 		void comments.load();
 		if (session.likelyUser) void comments.loadViewer();
+		// After `load`, so the link waits for the first page before it fetches a thread.
+		void followLink();
+		window.addEventListener('hashchange', followLink);
+		return () => {
+			window.removeEventListener('hashchange', followLink);
+			clearTimeout(highlightTimer);
+		};
 	});
 
 	$effect(() => {
@@ -46,8 +88,27 @@
 		}
 	});
 
+	const linkedRoot = $derived(comments.linked?.root ?? null);
+	/** The reader's own comments that belong to the pinned thread are drawn there, not in the list. */
+	const inLinked = (c: OwnComment) =>
+		linkedRoot !== null && (c.id === linkedRoot.id || c.rootId === linkedRoot.id);
+	const ownComments = $derived(comments.viewer?.comments ?? []);
+	const pinned = $derived(
+		linkedRoot && comments.linked
+			? withReview(
+					buildThreads([linkedRoot], ownComments.filter(inLinked), session.user),
+					comments.linked.id,
+					comments.linked.review
+				)
+			: []
+	);
+	/** The list without the pinned thread, which a later page may carry again. */
 	const threads = $derived(
-		buildThreads(comments.list, comments.viewer?.comments ?? [], session.user)
+		buildThreads(
+			comments.list.filter((root) => root.id !== linkedRoot?.id),
+			ownComments.filter((c) => !inLinked(c)),
+			session.user
+		)
 	);
 	/** A reader who is probably signed in sees the list once their own comments are merged in, so none appears above it later. */
 	const waitingForViewer = $derived(
@@ -75,10 +136,16 @@
 	);
 
 	const loading = $derived(comments.phase === 'loading' && comments.list.length === 0);
-	const showSkeleton = $derived(loading || (comments.phase === 'ready' && waitingForViewer));
+	/** The list waits for a link's thread too, so the pinned thread does not push a drawn list down. */
+	const showSkeleton = $derived(
+		loading ||
+			(comments.phase === 'ready' && waitingForViewer) ||
+			(comments.phase === 'ready' && (comments.busy.link ?? false))
+	);
+	const nothingShown = $derived(threads.length === 0 && pinned.length === 0);
 </script>
 
-<CollapsibleSection title="Comments">
+<CollapsibleSection id="comments" title="Comments" openOnHash hashPrefix="comment-">
 	<div class="comments">
 		<p class="sr-only" aria-live="polite" aria-atomic="true" data-vote-status>
 			{comments.announcement}
@@ -109,7 +176,7 @@
 
 		<div
 			class="toolbar"
-			class:toolbar--hidden={comments.phase === 'ready' && threads.length === 0}
+			class:toolbar--hidden={comments.phase === 'ready' && nothingShown}
 			role="group"
 			aria-label="Sort comments"
 		>
@@ -151,9 +218,18 @@
 						Try again
 					</button>
 				{/if}
-				{#if threads.length === 0}
+				{#if comments.errors.link}
+					<Notice tone="warn">{comments.errors.link}</Notice>
+				{/if}
+				{#if pinned.length > 0}
+					<section class="linked" aria-label="Linked comment">
+						<p class="label">Linked comment</p>
+						<CommentList threads={pinned} state={comments} />
+					</section>
+				{/if}
+				{#if nothingShown}
 					<p class="empty">No comments yet.</p>
-				{:else}
+				{:else if threads.length > 0}
 					<CommentList {threads} state={comments} />
 				{/if}
 				{#if comments.nextCursor}
@@ -253,6 +329,12 @@
 
 	.empty {
 		@apply text-ink-muted;
+	}
+
+	/* The pinned thread sits above the list, set off by one hairline. */
+	.linked {
+		@apply flex flex-col border-b border-border;
+		padding-bottom: var(--spacing-xs);
 	}
 
 	.retry,

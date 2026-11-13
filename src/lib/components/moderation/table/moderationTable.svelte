@@ -9,7 +9,7 @@
 	} from '#lib/media/utils/comments.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
 
@@ -73,6 +73,7 @@
 				{#each rows as row (row.comment.id)}
 					{@const id = row.comment.id}
 					{@const href = titleHref(row.title.kind, row.title.tmdbId)}
+					{@const permalink = commentHref(row.title.kind, row.title.tmdbId, id)}
 					{@const open = openId === id}
 					<!-- svelte-ignore a11y_no_redundant_roles -->
 					<tr class="row" role="row" data-open={open || undefined}>
@@ -154,9 +155,15 @@
 							{/if}
 						</td>
 						<td role="cell" data-label="Posted">
-							<time class="num" datetime={row.comment.createdAt}>
-								{formatDate(row.comment.createdAt)}
-							</time>
+							{#if permalink}
+								<a class="link num" href={permalink}>
+									<time datetime={row.comment.createdAt}>{formatDate(row.comment.createdAt)}</time>
+								</a>
+							{:else}
+								<time class="num" datetime={row.comment.createdAt}>
+									{formatDate(row.comment.createdAt)}
+								</time>
+							{/if}
 						</td>
 						<td class="actions" role="cell">
 							<button

@@ -5,7 +5,7 @@
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { toastActionResult } from '#lib/media/utils/rowSubmit.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		entry: RecentAction;
@@ -60,6 +60,12 @@
 				? `?title=${entry.title.id}`
 				: titleHref(entry.title.kind, entry.title.tmdbId)
 	);
+	/** A comment action also links to the comment itself on its title's page. */
+	const commentLink = $derived(
+		entry.commentId !== null && entry.title
+			? commentHref(entry.title.kind, entry.title.tmdbId, entry.commentId)
+			: undefined
+	);
 	const inline = $derived(FLAG_ACTIONS.has(entry.action));
 	const muteLength = $derived(
 		entry.muteHours === null ? '' : ` for ${formatMuteHours(entry.muteHours)}`
@@ -83,6 +89,9 @@
 	{/if}
 	{#if entry.commentBody}
 		<p class="body">{entry.commentBody}</p>
+	{/if}
+	{#if commentLink}
+		<a class="chip" href={commentLink}>View comment</a>
 	{/if}
 	{#if editedSince}
 		<p class="label">Edited since</p>

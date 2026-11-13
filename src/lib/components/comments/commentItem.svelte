@@ -12,6 +12,7 @@
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
+	import { commentHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
@@ -27,14 +28,19 @@
 
 	const signedIn = $derived(session.status === 'user');
 	const own = $derived(
-		comment.review !== null ||
-			(session.user !== null && comment.author !== null && comment.author.id === session.user.id)
+		session.user !== null && comment.author !== null && comment.author.id === session.user.id
+	);
+	/** A hidden or deleted comment cannot be edited, and a deleted one cannot be deleted again. */
+	const closed = $derived(
+		comment.review?.status === 'hidden' || comment.review?.status === 'deleted'
 	);
 	const vote = $derived(comments.voteOf(comment.id));
 	/** A muted account cannot write, edit, delete, vote or report until the mute ends. */
 	const muted = $derived(comments.mutedUntil !== null);
 	/** Writes wait for the reader's state: until it loads a mute and the existing votes are unknown. */
 	const locked = $derived(muted || comments.viewerPhase !== 'ready');
+	/** Each comment's date is a link to it, so a reader can copy the address. */
+	const href = $derived(commentHref(comments.kind, Number(comments.tmdbId), comment.id));
 	const scoreId = $derived(`score-${comment.id}`);
 	const canVote = $derived(signedIn && !own && !comment.removed);
 	const role = $derived(
@@ -94,7 +100,13 @@
 	}
 </script>
 
-<article class="comment" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
+<article
+	class="comment"
+	class:comment--linked={comments.highlightId === comment.id}
+	id="comment-{comment.id}"
+	tabindex="-1"
+	bind:this={root}
+>
 	{#if comment.removed}
 		<p class="removed">This comment was removed.</p>
 	{:else}
@@ -103,7 +115,13 @@
 			<span class="name">{comment.author?.displayName ?? 'Account'}</span>
 			{#if own && !comment.review}<Badge tone="brand">Author</Badge>{/if}
 			{#if role}<Badge tone="brand">{role}</Badge>{/if}
-			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+			{#if href}
+				<a class="label permalink" {href}>
+					<time datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+				</a>
+			{:else}
+				<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+			{/if}
 			{#if comment.editedAt}<span class="label">Edited</span>{/if}
 			{#if comment.review}
 				<Badge tone={commentStatusTone(comment.review.status)}>
@@ -133,10 +151,8 @@
 			<p class="body">{comment.body}</p>
 		{/if}
 
-		{#if comment.review?.status === 'pending'}
-			<p class="label">{unpublishedNote('pending', null)}</p>
-		{:else if comment.review?.status === 'rejected'}
-			<p class="label">{unpublishedNote('rejected', comment.review.reason)}</p>
+		{#if comment.review}
+			<p class="label">{unpublishedNote(comment.review.status, comment.review.reason)}</p>
 		{/if}
 	{/if}
 
@@ -180,17 +196,21 @@
 				>
 			{/if}
 			{#if own}
-				<CommentAction disabled={locked} expanded={mode === 'edit'} onclick={() => toggle('edit')}
-					>Edit</CommentAction
-				>
-				<CommentAction
-					disabled={locked}
-					expanded={mode === 'delete'}
-					onclick={() => toggle('delete')}
-				>
-					Delete
-				</CommentAction>
-			{:else if signedIn}
+				{#if !closed}
+					<CommentAction disabled={locked} expanded={mode === 'edit'} onclick={() => toggle('edit')}
+						>Edit</CommentAction
+					>
+				{/if}
+				{#if comment.review?.status !== 'deleted'}
+					<CommentAction
+						disabled={locked}
+						expanded={mode === 'delete'}
+						onclick={() => toggle('delete')}
+					>
+						Delete
+					</CommentAction>
+				{/if}
+			{:else if signedIn && !comment.review}
 				<CommentAction
 					disabled={locked}
 					expanded={mode === 'report'}
@@ -247,6 +267,30 @@
 		gap: var(--spacing-xs);
 		padding-block: var(--spacing-sm);
 		scroll-margin-top: 5rem;
+		border-radius: 8px;
+		transition:
+			background-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	/* The comment a link points at: a wash that fades once the highlight is cleared. */
+	.comment--linked {
+		background-color: var(--brand-wash);
+		box-shadow: 0 0 0 var(--spacing-xs) var(--brand-wash);
+	}
+
+	.permalink {
+		@apply no-underline;
+	}
+
+	.permalink:hover {
+		@apply underline;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.comment {
+			transition: none;
+		}
 	}
 
 	.meta {

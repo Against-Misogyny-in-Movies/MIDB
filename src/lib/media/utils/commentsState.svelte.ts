@@ -1,6 +1,7 @@
 import type {
 	CommentList,
 	CommentSort,
+	CommentThread,
 	CommentView,
 	OwnComment,
 	ReportReason,
@@ -43,6 +44,10 @@ export class CommentsState {
 	viewerPhase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	errors = $state<Record<string, string>>({});
 	busy = $state<Record<string, boolean>>({});
+	/** The thread a link points at, pinned above the list when its comment is not on the loaded pages. */
+	linked = $state<({ id: string } & CommentThread) | null>(null);
+	/** The comment the section just scrolled to, drawn highlighted for a moment. */
+	highlightId = $state<string | null>(null);
 	/** The score after the reader's own last vote press, for a screen reader's status line. Server answers never set it. */
 	announcement = $state('');
 
@@ -51,6 +56,10 @@ export class CommentsState {
 	#votes: Record<string, { confirmed: VoteReply; intended: 1 | -1 | null; sending?: boolean }> = {};
 	/** Bumped by each list load, so a slow answer for an older sort cannot overwrite a newer one. */
 	#generation = 0;
+	/** The first-page load in flight or last settled, so a link waits to see whether the list has its comment. */
+	#loading: Promise<void> = Promise.resolve();
+	/** Bumped by each link request, so a slow answer for an older link cannot replace a newer one. */
+	#linkGeneration = 0;
 	/** Bumped when the viewer is cleared, so a vote reply that lands after signing out is dropped. */
 	#viewerGeneration = 0;
 
@@ -94,7 +103,11 @@ export class CommentsState {
 	}
 
 	/** The first page of the current sort. */
-	async load(): Promise<void> {
+	load(): Promise<void> {
+		return (this.#loading = this.#loadFirstPage());
+	}
+
+	async #loadFirstPage(): Promise<void> {
 		const generation = ++this.#generation;
 		this.phase = 'loading';
 		delete this.errors.load;
@@ -107,6 +120,7 @@ export class CommentsState {
 		}
 		this.list = reply.data.comments;
 		this.#applyScores(this.list);
+		if (this.linked) this.#applyScores([this.linked.root]);
 		this.nextCursor = reply.data.nextCursor;
 		this.phase = 'ready';
 	}
@@ -141,7 +155,7 @@ export class CommentsState {
 		const reply = await this.#request<ViewerCommentState>('GET', `${this.#base}/viewer`);
 		if (reply.ok) {
 			this.viewer = reply.data;
-			this.#applyScores(this.list);
+			this.#applyScores(this.#roots());
 			this.viewerPhase = 'ready';
 		} else if (reply.status === 401) {
 			// Signed out after all (the first paint only guessed): there is nothing to merge.
@@ -180,14 +194,54 @@ export class CommentsState {
 		}
 	}
 
-	/** A comment, or a reply, in the public list. */
-	#find(id: string): CommentView | null {
-		for (const root of this.list) {
+	/** The roots on screen: the pinned thread's, then the list's. */
+	#roots(): CommentView[] {
+		return this.linked ? [this.linked.root, ...this.list] : this.list;
+	}
+
+	/** A comment, or a reply, in the pinned thread or the public list. */
+	#find(id: string, roots: readonly CommentView[] = this.#roots()): CommentView | null {
+		for (const root of roots) {
 			if (root.id === id) return root;
 			const reply = root.replies.find((r) => r.id === id);
 			if (reply) return reply;
 		}
 		return null;
+	}
+
+	/**
+	 * Makes the comment a link points at ready to show. A comment on the loaded pages needs
+	 * nothing; otherwise its thread is fetched and pinned above the list, which then leaves that
+	 * thread out wherever a later page carries it. False when the comment is not available to
+	 * this reader (`errors.link` says why).
+	 */
+	async showLink(id: string): Promise<boolean> {
+		const generation = ++this.#linkGeneration;
+		this.#start('link');
+		await this.#loading;
+		if (generation !== this.#linkGeneration) return false;
+		if (this.#find(id, this.list)) {
+			this.linked = null;
+			this.busy.link = false;
+			return true;
+		}
+		if (this.linked && this.#find(id, [this.linked.root])) {
+			this.busy.link = false;
+			return true;
+		}
+		const reply = await this.#request<CommentThread>('GET', `/api/comments/${id}`);
+		if (generation !== this.#linkGeneration) return false;
+		this.busy.link = false;
+		if (!reply.ok) {
+			this.errors.link =
+				reply.status === 404
+					? 'This comment is not available.'
+					: describeFailure('link', reply.status, reply.message);
+			return false;
+		}
+		this.linked = { id, ...reply.data };
+		this.#applyScores([reply.data.root]);
+		return true;
 	}
 
 	/**
@@ -217,9 +271,10 @@ export class CommentsState {
 		}
 		if (target.parentId === null) {
 			this.list = this.list.filter((c) => c.id !== id);
+			if (this.linked?.root.id === id) this.linked = null;
 			return;
 		}
-		for (const root of this.list) {
+		for (const root of this.#roots()) {
 			if (root.replies.some((r) => r.id === id)) {
 				root.replies = root.replies.filter((r) => r.id !== id);
 				root.replyCount = Math.max(root.replyCount - 1, 0);

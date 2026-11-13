@@ -7,10 +7,12 @@ import { titles } from '#db/schema/titles.ts';
 import type {
 	CommentList,
 	CommentSort,
+	CommentThread,
 	CommentView,
 	OwnComment,
 	ViewerCommentState
 } from '#lib/media/types/comments.ts';
+import { isStaff } from '#lib/media/utils/staff.ts';
 import { decideStatus } from '#lib/server/moderation/decide.ts';
 import { activeMute } from './mute.ts';
 import { toPublicUser } from './user-queries.ts';
@@ -62,12 +64,14 @@ function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undefined {
 
 type ListedRow = { comment: CommentRow; author: typeof users.$inferSelect };
 
+/** `open` shows a comment that is not published as it is, for the reader allowed to see it. */
 function toView(
 	{ comment, author }: ListedRow,
 	authors: Map<string, ListedRow>,
-	replies: CommentView[] = []
+	replies: CommentView[] = [],
+	open = false
 ): CommentView {
-	const removed = comment.status !== 'published';
+	const removed = !open && comment.status !== 'published';
 	const parent =
 		comment.parentId && comment.parentId !== comment.rootId ? authors.get(comment.parentId) : null;
 	return {
@@ -153,6 +157,47 @@ export async function listTitleComments(
 	return {
 		comments: roots.map((row) => toView(row, byId, repliesOf.get(row.comment.id) ?? [])),
 		nextCursor: hasMore ? encodeCursor(roots[roots.length - 1].comment, sort) : null
+	};
+}
+
+/**
+ * The thread of one comment, for a link to it: its root and the root's published replies,
+ * oldest first. The linked comment itself is returned whatever its status when the reader is
+ * its author or staff, with its status in `review`; otherwise, or when it does not exist,
+ * the answer is null, so a hidden or pending comment's existence is not revealed. An
+ * unpublished root around a published reply is a placeholder, as in the list. Read-only.
+ */
+export async function getCommentThread(
+	id: string,
+	viewer: { id: string; role: string } | null
+): Promise<CommentThread | null> {
+	const [target] = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+	if (!target) return null;
+	const allowed = viewer !== null && (isStaff(viewer.role) || viewer.id === target.userId);
+	if (target.status !== 'published' && !allowed) return null;
+
+	const rootId = target.rootId ?? target.id;
+	const rows = await db
+		.select({ comment: comments, author: users })
+		.from(comments)
+		.innerJoin(users, eq(comments.userId, users.id))
+		.where(or(eq(comments.id, rootId), eq(comments.rootId, rootId)))
+		.orderBy(asc(comments.createdAt), asc(comments.id));
+	const rootRow = rows.find((r) => r.comment.id === rootId);
+	if (!rootRow) return null;
+
+	const byId = new Map(rows.map((r) => [r.comment.id, r]));
+	const replies = rows
+		.filter(
+			(r) => r.comment.id !== rootId && (r.comment.status === 'published' || r.comment.id === id)
+		)
+		.map((r) => toView(r, byId, [], r.comment.id === id));
+	return {
+		root: toView(rootRow, byId, replies, rootRow.comment.id === id),
+		review:
+			target.status === 'published'
+				? null
+				: { status: target.status, reason: target.moderationReason }
 	};
 }
 

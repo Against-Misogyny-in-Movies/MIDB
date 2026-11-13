@@ -12,7 +12,7 @@
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
@@ -35,6 +35,7 @@
 	const canModerate = $derived(canActOn(me, author));
 	const canRestrict = $derived(canActOn(me, author, 'restrict'));
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
+	const permalink = $derived(commentHref(item.title.kind, item.title.tmdbId, comment.id));
 	const SOURCES: Record<string, string> = {
 		ai: 'Held by the automatic check',
 		blocklist: 'Matched the blocklist',
@@ -70,7 +71,13 @@
 		{#if item.authorMutedUntil}
 			<span class="label">Muted until {formatDate(item.authorMutedUntil)}</span>
 		{/if}
-		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{#if permalink}
+			<a class="label link" href={permalink}>
+				<time datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+			</a>
+		{:else}
+			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		{#if heldBy}<span class="label">{heldBy}</span>{/if}

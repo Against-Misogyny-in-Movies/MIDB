@@ -127,9 +127,17 @@ export const formatMuteHours = (hours: number): string =>
  * What the author reads under a comment that is not public: for a rejected one the reason
  * first, then who can see it.
  */
-export function unpublishedNote(status: 'pending' | 'rejected', reason: string | null): string {
+export function unpublishedNote(
+	status: Exclude<(typeof commentStatus)[number], 'published'>,
+	reason: string | null
+): string {
 	if (status === 'pending') {
 		return 'Only the author and moderators see the comment until a moderator decides.';
+	}
+	if (status === 'hidden')
+		return 'A moderator hid this comment. Only the author and moderators see it.';
+	if (status === 'deleted') {
+		return 'The author deleted this comment. Only the author and moderators see it.';
 	}
 	const text = reason?.trim();
 	const lead = text ? `${/[.!?]$/.test(text) ? text : `${text}.`} ` : '';

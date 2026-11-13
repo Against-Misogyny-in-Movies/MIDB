@@ -89,6 +89,44 @@ describe('CollapsibleSection open on hash', () => {
 		expect(el.open).toBe(true);
 	});
 
+	it('opens for any hash with the given prefix, on mount, on a change and on a click', () => {
+		const prefixed = {
+			...section,
+			id: 'comments',
+			open: false,
+			openOnHash: true,
+			hashPrefix: 'comment-'
+		};
+		window.location.hash = '#comment-abc';
+		const { container } = render(CollapsibleSection, prefixed);
+		const el = container.querySelector('details')!;
+		expect(el.open).toBe(true);
+		el.open = false;
+		window.location.hash = '#comment-def';
+		window.dispatchEvent(new HashChangeEvent('hashchange'));
+		expect(el.open).toBe(true);
+		el.open = false;
+		const link = document.createElement('a');
+		link.href = `${window.location.pathname}#comment-def`;
+		link.addEventListener('click', (event) => event.preventDefault());
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		expect(el.open).toBe(true);
+	});
+
+	it('ignores a hash with another prefix', () => {
+		window.location.hash = '#cast-1';
+		const { container } = render(CollapsibleSection, {
+			...section,
+			id: 'comments',
+			open: false,
+			openOnHash: true,
+			hashPrefix: 'comment-'
+		});
+		expect(container.querySelector('details')!.open).toBe(false);
+	});
+
 	it('marks the details busy', () => {
 		const { container } = render(CollapsibleSection, { ...section, status: 'Loading', busy: true });
 		expect(container.querySelector('details')!.getAttribute('aria-busy')).toBe('true');

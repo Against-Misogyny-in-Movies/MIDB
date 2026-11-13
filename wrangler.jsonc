@@ -42,7 +42,8 @@
 			"namespace_id": "1008",
 			"simple": { "limit": 10, "period": 60 }
 		},
-		{ "name": "RL_MODERATE_AI", "namespace_id": "1009", "simple": { "limit": 10, "period": 60 } }
+		{ "name": "RL_MODERATE_AI", "namespace_id": "1009", "simple": { "limit": 10, "period": 60 } },
+		{ "name": "RL_COMMENT_READ", "namespace_id": "1010", "simple": { "limit": 60, "period": 60 } }
 	],
 
 	"vars": {
@@ -88,6 +89,11 @@
 					"name": "RL_MODERATE_AI",
 					"namespace_id": "2009",
 					"simple": { "limit": 10, "period": 60 }
+				},
+				{
+					"name": "RL_COMMENT_READ",
+					"namespace_id": "2010",
+					"simple": { "limit": 60, "period": 60 }
 				}
 			],
 			"vars": {

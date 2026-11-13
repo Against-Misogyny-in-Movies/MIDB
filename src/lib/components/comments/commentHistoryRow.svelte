@@ -9,7 +9,7 @@
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
@@ -32,6 +32,7 @@
 	const editable = $derived(comment.status !== 'hidden' && comment.status !== 'deleted');
 	const deletable = $derived(comment.status !== 'deleted');
 	const href = $derived(titleHref(comment.kind, comment.tmdbId));
+	const permalink = $derived(commentHref(comment.kind, comment.tmdbId, comment.id));
 
 	function toggle(next: 'edit' | 'delete') {
 		mode = mode === next ? null : next;
@@ -87,7 +88,13 @@
 <li class="row" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<div class="meta">
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
-		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{#if permalink}
+			<a class="label link" href={permalink}>
+				<time datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+			</a>
+		{:else}
+			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<span class="label">
 			{comment.parentId ? 'Reply on' : 'On'}
