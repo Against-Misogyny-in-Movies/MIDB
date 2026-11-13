@@ -1,6 +1,7 @@
 import type { Movie } from '#lib/media/types/movie.ts';
 import type { Series } from '#lib/media/types/series.ts';
 import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
+import type { LetterboxdResult } from '#lib/media/types/letterboxd.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import { umFlagCount } from './metrics';
 import {
@@ -12,6 +13,7 @@ import {
 } from './verdict';
 import { sourceIndex, type SourceIndexItem } from './sourceIndex';
 import { createDddState } from './dddStream.svelte.js';
+import { createLetterboxdState } from './letterboxdStream.svelte.js';
 import { EpisodeFilter } from './episodeFilter.svelte.js';
 
 /** What a detail page's load returns (see `loadTitle`), as the client sees it. */
@@ -21,6 +23,9 @@ export interface TitleViewData<M extends Movie | Series> {
 	umEntry: UmEntry | null;
 	umCandidates?: UmEntry[];
 	triggerTags: Promise<DddResult>;
+	/** Film pages only (see `loadTitle`). */
+	letterboxd?: Promise<LetterboxdResult | null>;
+	letterboxdEnabled?: boolean;
 }
 
 type Media<K extends 'movie' | 'tv'> = K extends 'movie' ? Movie : Series;
@@ -71,6 +76,7 @@ export class TitleView<K extends 'movie' | 'tv'> {
 
 		const stream = createDddState(() => data().triggerTags, isSeries);
 		this.ddd = $derived(stream.current);
+		const letterboxd = createLetterboxdState(() => data().letterboxd);
 		const episodes = isSeries
 			? new EpisodeFilter(
 					() => this.ddd,
@@ -104,7 +110,8 @@ export class TitleView<K extends 'movie' | 'tv'> {
 				umCandidateCount: this.hasUmCandidates ? this.umCandidates.length : 0,
 				ddd: this.ddd,
 				dddVisibleCount: this.visibleTags.length,
-				dddSeasonPicked: episodes ? episodes.season !== null : false
+				dddSeasonPicked: episodes ? episodes.season !== null : false,
+				letterboxd: data().letterboxdEnabled ? { result: letterboxd.current } : undefined
 			})
 		);
 	}

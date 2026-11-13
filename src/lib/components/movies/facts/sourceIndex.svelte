@@ -10,17 +10,24 @@
 	const ICON = {
 		bechdel: { icon: 'ri-chat-3-fill', hue: 'var(--src-bechdel)' },
 		um: { icon: 'ri-flag-2-fill', hue: 'var(--src-um)' },
-		ddd: { icon: 'ri-alarm-warning-fill', hue: 'var(--src-ddd)' }
+		ddd: { icon: 'ri-alarm-warning-fill', hue: 'var(--src-ddd)' },
+		letterboxd: { icon: 'ri-star-fill', hue: 'var(--src-letterboxd)' }
 	} as const;
 </script>
 
-<!-- Fixed three columns (one row each on phones), so the DDD value streaming in replaces
-     "Loading…" in place without moving anything. -->
-<ul class="source-index" aria-label="Sources">
+<!-- Fixed columns (one row each on phones), so a streamed value replaces "Loading…" in place
+     without moving anything. A film with the Letterboxd keys set has a fourth column. -->
+<ul class="source-index" class:source-index--four={items.length > 3} aria-label="Sources">
 	{#each items as item (item.label)}
 		{@const meta = ICON[item.source]}
 		<li>
-			<svelte:element this={item.href ? 'a' : 'span'} class="item" href={item.href ?? undefined}>
+			<svelte:element
+				this={item.href ? 'a' : 'span'}
+				class="item"
+				href={item.href ?? undefined}
+				rel={item.external ? 'noopener' : undefined}
+				title={item.hint}
+			>
 				<i class={meta.icon} style="--hue: {meta.hue}" aria-hidden="true"></i>
 				<span class="text">
 					<span class="name">{item.label}</span>
@@ -45,6 +52,16 @@
 	@media (min-width: 560px) {
 		.source-index {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		.source-index--four {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 800px) {
+		.source-index--four {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
 	}
 

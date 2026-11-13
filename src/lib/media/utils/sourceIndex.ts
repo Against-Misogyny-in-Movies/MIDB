@@ -1,9 +1,10 @@
+import type { LetterboxdResult } from '#lib/media/types/letterboxd.ts';
 import type { DddResult } from '#lib/media/types/ddd.ts';
 import { dddStatus } from '#lib/media/utils/dddStatus.ts';
 
 /** One entry in a title page's source index: a metric, its headline value, and its section. */
 export interface SourceIndexItem {
-	source: 'bechdel' | 'um' | 'ddd';
+	source: 'bechdel' | 'um' | 'ddd' | 'letterboxd';
 	label: string;
 	value: string;
 	/** In-page anchor of the metric's section; null when the metric does not apply. */
@@ -12,6 +13,10 @@ export interface SourceIndexItem {
 	hasData: boolean;
 	/** The value is still streaming in. */
 	busy: boolean;
+	/** The link leaves the site. */
+	external?: boolean;
+	/** Longer reading for the link's title. */
+	hint?: string;
 }
 
 export interface SourceIndexInput {
@@ -27,11 +32,13 @@ export interface SourceIndexInput {
 	dddVisibleCount: number;
 	/** A season (or episode) is picked on the series page. */
 	dddSeasonPicked?: boolean;
+	/** A film page with the Letterboxd keys set; `result` is undefined while it streams. */
+	letterboxd?: { result: LetterboxdResult | null | undefined };
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** The three-item index under a title's verdict: Bechdel, Unconsenting Media, Does the Dog Die. */
+/** The index under a title's verdict: Bechdel, Unconsenting Media, Does the Dog Die, and on a film with the keys set, Letterboxd. */
 export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 	const {
 		kind,
@@ -40,7 +47,8 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 		umCandidateCount,
 		ddd,
 		dddVisibleCount,
-		dddSeasonPicked
+		dddSeasonPicked,
+		letterboxd
 	} = input;
 
 	const bechdel: SourceIndexItem =
@@ -86,5 +94,29 @@ export function sourceIndex(input: SourceIndexInput): SourceIndexItem[] {
 		busy: dddState.busy
 	};
 
-	return [bechdel, um, dddItem];
+	if (kind === 'tv' || !letterboxd) return [bechdel, um, dddItem];
+	return [bechdel, um, dddItem, letterboxdItem(letterboxd.result)];
+}
+
+const ratingCount = new Intl.NumberFormat('en-US');
+
+function letterboxdItem(result: LetterboxdResult | null | undefined): SourceIndexItem {
+	const base = { source: 'letterboxd', label: 'Letterboxd' } as const;
+	if (result === undefined) {
+		return { ...base, value: 'Loading…', href: null, hasData: false, busy: true };
+	}
+	if (result === null)
+		return { ...base, value: 'No data', href: null, hasData: false, busy: false };
+	return {
+		...base,
+		value: `${result.rating.toFixed(1)}/5`,
+		href: result.url,
+		hasData: true,
+		busy: false,
+		external: true,
+		hint:
+			result.ratingCount === null
+				? 'Average rating on Letterboxd'
+				: `Average of ${ratingCount.format(result.ratingCount)} ratings on Letterboxd`
+	};
 }

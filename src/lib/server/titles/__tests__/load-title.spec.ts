@@ -11,7 +11,9 @@ const mocks = vi.hoisted(() => ({
 	getUnconsentingCandidates: vi.fn(),
 	getSourceSyncDates: vi.fn(),
 	getTriggerTagsLive: vi.fn(),
-	getTriggerTagsForSeries: vi.fn()
+	getTriggerTagsForSeries: vi.fn(),
+	getLetterboxdRating: vi.fn(),
+	letterboxdConfigured: vi.fn()
 }));
 
 vi.mock('#lib/server/integrations/tmdb/index.ts', () => ({
@@ -21,6 +23,10 @@ vi.mock('#lib/server/integrations/tmdb/index.ts', () => ({
 vi.mock('#lib/server/integrations/ddd.ts', () => ({
 	getTriggerTagsLive: mocks.getTriggerTagsLive,
 	getTriggerTagsForSeries: mocks.getTriggerTagsForSeries
+}));
+vi.mock('#lib/server/integrations/letterboxd.ts', () => ({
+	getLetterboxdRating: mocks.getLetterboxdRating,
+	letterboxdConfigured: mocks.letterboxdConfigured
 }));
 vi.mock('#lib/server/data/title-queries.ts', () => ({
 	getTitleRow: mocks.getTitleRow,
@@ -57,6 +63,8 @@ beforeEach(() => {
 	// Never settles: proves the load returns without awaiting DDD.
 	mocks.getTriggerTagsLive.mockReturnValue(new Promise(() => {}));
 	mocks.getTriggerTagsForSeries.mockReturnValue(new Promise(() => {}));
+	mocks.getLetterboxdRating.mockReturnValue(new Promise(() => {}));
+	mocks.letterboxdConfigured.mockReturnValue(true);
 });
 
 describe('loadTitle', () => {
@@ -107,6 +115,28 @@ describe('loadTitle', () => {
 		expect(data.bechdel).toBeNull();
 		expect(mocks.getTriggerTagsForSeries).toHaveBeenCalledWith(series);
 		expect(mocks.getTriggerTagsLive).not.toHaveBeenCalled();
+	});
+
+	test('film: streams the Letterboxd rating by TMDB id, enabled with keys', async () => {
+		mocks.getTitleRow.mockResolvedValue(row);
+		const data = await loadTitle('movie', '603');
+		expect(mocks.getLetterboxdRating).toHaveBeenCalledWith('603');
+		expect(data.letterboxdEnabled).toBe(true);
+		expect(data.letterboxd).toBeInstanceOf(Promise);
+	});
+
+	test('film without keys: the slot is disabled', async () => {
+		mocks.getTitleRow.mockResolvedValue(row);
+		mocks.letterboxdConfigured.mockReturnValue(false);
+		expect((await loadTitle('movie', '603')).letterboxdEnabled).toBe(false);
+	});
+
+	test('series: no Letterboxd lookup and no slot', async () => {
+		mocks.getTitleRow.mockResolvedValue(row);
+		const data = await loadTitle('tv', '1399');
+		expect(mocks.getLetterboxdRating).not.toHaveBeenCalled();
+		expect(data.letterboxdEnabled).toBe(false);
+		await expect(data.letterboxd).resolves.toBeNull();
 	});
 
 	test('carries the sync dates, with or without a title row', async () => {
