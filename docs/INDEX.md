@@ -92,17 +92,17 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~3.9K tok)
+- `docs/phases/STATUS.md` — Phase status (~4.0K tok)
   - 5–16 Rules (~270)
-  - 17–56 Phases (~1.6K)
-  - 57–96 Open items (~950) ← 1
-  - 97–141 Standing decisions (~1.1K)
+  - 17–57 Phases (~1.6K)
+  - 58–97 Open items (~950) ← 1
+  - 98–142 Standing decisions (~1.1K)
 
 ## Live plans
 
 Read when a task names the plan.
 
-- `docs/plans/plan-security-hardening.md` — Plan: security hardening (~2.4K tok)
+- `docs/plans/plan-security-hardening.md` — Plan: security hardening (~2.8K tok)
 
 ## Policies
 

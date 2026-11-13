@@ -4,7 +4,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 ## Rules
 
-- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Rows SH1–SH4 come from `docs/plans/plan-security-hardening.md`; every other row is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
+- **The live plans.** Each phase row comes from a live plan in `docs/plans/`. Rows SH1–SH5 come from `docs/plans/plan-security-hardening.md`; every other row is completed and its plan deleted; the behaviour it built is owned by `docs/architecture.md`, `DESIGN.md` and the rules. Settled decisions are listed under Standing decisions; only the user reopens them.
 - **Starting a phase.**
   - If nothing is active, the only legal start is the lowest phase in the table whose earlier phases are completed.
   - When you start a phase, set it to `active` with a one-line note. Do not mark the next phase active.
@@ -49,10 +49,11 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | S4    | Links to a comment              | completed | 2026-11-13. Not rendered in a browser; `e2e-tests/commentLinks.spec.ts` not run (no TMDB token here).             |
 | S5    | Public user profiles            | completed | 2026-11-13. `/u` rendered on seeded local data; moderation name links reviewed from code only.                    |
 | S6    | Letterboxd score                | completed | 2026-11-13. Never run against the real API: no key exists (Open items).                                           |
-| SH1   | Security: moderation sticks     | completed | 2026-11-13. The review round runs after SH4.                                                                      |
-| SH2   | Security: sock puppets          | completed | 2026-11-13. The review round runs after SH4.                                                                      |
-| SH3   | Security: accounts              | completed | 2026-11-13. The review round runs after SH4.                                                                      |
-| SH4   | Security: platform              | active    | 2026-11-13.                                                                                                       |
+| SH1   | Security: moderation sticks     | completed | 2026-11-13. The review round runs after SH5.                                                                      |
+| SH2   | Security: sock puppets          | completed | 2026-11-13. The review round runs after SH5.                                                                      |
+| SH3   | Security: accounts              | completed | 2026-11-13. The review round runs after SH5.                                                                      |
+| SH4   | Security: platform              | completed | 2026-11-13. The review round runs after SH5.                                                                      |
+| SH5   | Security: username shape        | active    | 2026-11-13.                                                                                                       |
 
 ## Open items
 

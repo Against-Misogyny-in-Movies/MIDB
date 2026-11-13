@@ -68,3 +68,19 @@ Tests: each rule. Docs: `SECURITY.md`, Network (its Sign-in methods item), `PRIV
 5. **Dependencies.** Move postcss, vite, vitest and esbuild in the lockfile to patched versions (`pnpm update` within the ranges, or `pnpm.overrides` for a transitive copy) so `pnpm audit --prod` reports nothing but the unpatched `deepmerge`.
 
 Docs: `SECURITY.md`, Network and Supply chain and `docs/architecture.md` (request hook).
+
+## Phase SH5: username shape
+
+A new or changed username follows these rules (user instruction, 2026-11-13). Names already stored are checked only when they change.
+
+1. **Shape.**
+   - 4 to 32 characters, lowercase letters, digits and `_` only.
+   - It starts with a letter, so it is never digits only.
+   - It has no `_` at either end and never two in a row.
+
+   The rule is one place (`src/lib/media/utils/username.ts`), used by `updateProfile`, `isUsernameAvailable` and the profile form's own check. A lookup of an existing name (`/u/[username]`, the profile comment endpoint, the 308 redirect) still accepts every stored name, including 3-character ones, so no current address breaks.
+
+2. **No look-alikes.** A name is taken when, after folding `1` to `l` and `0` to `o`, it equals another account's current username or a name retired for another account within `RETIRED_USERNAME_DAYS`. The fold is one function beside the rule. The comparison is indexed (an expression index, or a derived column filled by the migration), so it does not scan the users table, and any schema change is an additive generated migration. The answer is `username-taken`, as for an exact match.
+3. **The form says the rule.** The profile form's hint and its format refusal state the new shape (`.claude/rules/copy-standards.md`), and the input's `minlength` and `pattern` match it.
+
+Tests: each rule, including a stored 3-character name still resolving at `/u/<name>`, and a look-alike of a current and of a retired name. Docs: `docs/architecture.md` (usernames) and `SECURITY.md`, Network.
