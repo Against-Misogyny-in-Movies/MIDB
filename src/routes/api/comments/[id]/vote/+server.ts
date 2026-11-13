@@ -7,6 +7,7 @@ import {
 	readBody,
 	voteSchema
 } from '#lib/server/http/comment-request.ts';
+import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.ts';
 import { removeVote, setVote, type VoteResult } from '#lib/server/data/comment-votes.ts';
 
 function answer(result: VoteResult): Response {
@@ -14,6 +15,9 @@ function answer(result: VoteResult): Response {
 		return privateJson({ score: result.score, vote: result.vote });
 	}
 	if (result.reason === 'own-comment') error(403, 'A comment cannot be voted on by its author');
+	if (result.reason === 'account-too-new') {
+		error(403, `Votes open once an account is ${REPORT_ACCOUNT_MIN_AGE_DAYS} days old.`);
+	}
 	error(404, 'Comment not found');
 }
 
@@ -22,7 +26,7 @@ export const PUT: RequestHandler = async (event) => {
 	const id = commentIdParam(event.params.id);
 	const user = await authorizeWrite(event, 'RL_VOTE');
 	const { value } = await readBody(event.request, voteSchema);
-	return answer(await setVote(id, user.id, value));
+	return answer(await setVote(id, user, value));
 };
 
 /** Removes the reader's vote. */

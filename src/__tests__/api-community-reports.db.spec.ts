@@ -196,7 +196,9 @@ describe('PUT a report', () => {
 
 	it('answers the hold status when the report is held', async () => {
 		for (let i = 0; i < 4; i++) {
-			await db.insert(users).values(userValues(`o${i}`));
+			await db
+				.insert(users)
+				.values(userValues(`o${i}`, { createdAt: new Date(Date.now() - 30 * 86_400_000) }));
 			await db
 				.insert(communityContentReports)
 				.values({ userId: `o${i}`, titleId: title.id, status: 'counted' });

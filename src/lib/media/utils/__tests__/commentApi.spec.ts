@@ -46,6 +46,9 @@ describe('describeFailure', () => {
 		expect(describeFailure('create', 403, 'Account muted')).toMatch(/is muted/);
 		expect(describeFailure('vote', 403, 'banned')).toMatch(/is banned/);
 		expect(describeFailure('vote', 403)).toBe('A comment cannot be voted on by its author.');
+		expect(describeFailure('vote', 403, 'Votes open once an account is 7 days old.')).toBe(
+			'Votes open once an account is 7 days old.'
+		);
 		expect(describeFailure('edit', 403)).toBe('Only the author can change a comment.');
 	});
 

@@ -42,6 +42,16 @@ export function purgeTitleReports(title: PurgeTitle): void {
 	purgeTags('community-reports', [communityReportsTag(title.kind, title.tmdbId)]);
 }
 
+/** Purges the edge-cached comment lists of several titles, `PURGE_TAGS_PER_REQUEST` tags to a request. */
+export function purgeTitlesComments(titles: PurgeTitle[]): void {
+	const tags = [
+		...new Set(titles.flatMap((t) => (t.tmdbId === null ? [] : [commentsTag(t.kind, t.tmdbId)])))
+	];
+	for (let i = 0; i < tags.length; i += PURGE_TAGS_PER_REQUEST) {
+		purgeTags('comments', tags.slice(i, i + PURGE_TAGS_PER_REQUEST));
+	}
+}
+
 /**
  * Purges the community-report counts of several titles, `PURGE_TAGS_PER_REQUEST` tags to a
  * request. Titles with no TMDB id have none to purge.

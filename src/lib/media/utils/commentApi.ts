@@ -73,8 +73,11 @@ export function describeFailure(
 	} else if (/muted/i.test(message)) {
 		forbidden =
 			'This account is muted and cannot write, edit, delete, vote on or report comments until the mute ends.';
-	} else if (action === 'vote') forbidden = 'A comment cannot be voted on by its author.';
-	else if (action === 'report') forbidden = 'A comment cannot be reported by its author.';
+	} else if (action === 'vote') {
+		forbidden = /^votes open once/i.test(message)
+			? message
+			: 'A comment cannot be voted on by its author.';
+	} else if (action === 'report') forbidden = 'A comment cannot be reported by its author.';
 	return describeStatus(failed, status, {
 		forbidden,
 		badRequest:

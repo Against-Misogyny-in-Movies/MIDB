@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gt, ne, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { communityContentReports as reports } from '#db/schema/community.ts';
@@ -20,7 +20,8 @@ import {
 	type ReportLevel,
 	type SexualLevel
 } from '#lib/media/utils/communityReports.ts';
-import { isStaff, STAFF_ROLES } from '#lib/media/utils/staff.ts';
+import { isStaff } from '#lib/media/utils/staff.ts';
+import { countingAccountWhere } from './counting-account.ts';
 import { holdReasonFor, type HoldFacts, type HoldReason } from './community-report-holds.ts';
 import {
 	getOrCreateTitleRow,
@@ -95,12 +96,14 @@ async function loadHoldFacts(
 		db
 			.select({ n: sql<number>`count(*)` })
 			.from(reports)
+			.innerJoin(users, eq(reports.userId, users.id))
 			.where(
 				and(
 					eq(reports.titleId, titleId),
 					ne(reports.userId, userId),
 					ne(reports.status, 'rejected'),
-					gt(reports.createdAt, new Date(now - BURST_WINDOW_HOURS * HOUR_MS))
+					gt(reports.createdAt, new Date(now - BURST_WINDOW_HOURS * HOUR_MS)),
+					countingAccountWhere(now)
 				)
 			),
 		db
@@ -236,15 +239,7 @@ const count = (cond: SQL) => sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 E
  * can lag by its TTL. A title's counts and an account's public profile both read it.
  */
 export function countedReportsWhere(now: number = Date.now()): SQL {
-	return and(
-		eq(reports.status, 'counted'),
-		or(
-			inArray(users.role, [...STAFF_ROLES]),
-			sql`${users.createdAt} <= ${now - REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS}`
-		),
-		sql`${users.bannedAt} IS NULL`,
-		sql`(${users.mutedUntil} IS NULL OR ${users.mutedUntil} <= ${now})`
-	) as SQL;
+	return and(eq(reports.status, 'counted'), countingAccountWhere(now)) as SQL;
 }
 
 /**

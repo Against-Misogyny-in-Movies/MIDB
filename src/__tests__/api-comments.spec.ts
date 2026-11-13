@@ -361,7 +361,7 @@ describe('votes', () => {
 	it('sets and removes a vote, and schedules no purge', async () => {
 		const res = await put();
 		await expect(res.json()).resolves.toEqual({ score: 1, vote: 1 });
-		expect(setVote).toHaveBeenCalledWith('c1', 'u1', 1);
+		expect(setVote).toHaveBeenCalledWith('c1', expect.objectContaining({ id: 'u1' }), 1);
 		const removed = await call(vote.DELETE, { params, method: 'DELETE', body: {} });
 		await expect(removed.json()).resolves.toEqual({ score: 0, vote: null });
 		await Promise.all(waitUntilPromises);
@@ -374,6 +374,8 @@ describe('votes', () => {
 		expect(await status(put())).toBe(403);
 		setVote.mockResolvedValue({ ok: false, reason: 'not-found' });
 		expect(await status(put())).toBe(404);
+		setVote.mockResolvedValue({ ok: false, reason: 'account-too-new' });
+		expect(await status(put())).toBe(403);
 		expect(await status(put({ body: { value: 2 } }))).toBe(400);
 		expect(await status(put({ body: { value: 0 } }))).toBe(400);
 		await Promise.all(waitUntilPromises);

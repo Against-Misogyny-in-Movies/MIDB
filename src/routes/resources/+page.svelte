@@ -334,9 +334,12 @@
 
 				<SubBlock label="Reviewed by people">
 					<p>
-						Moderators approve, hide or reject comments from a queue. Three different readers
-						reporting a published comment send it back to review. A moderator can also mute or ban
-						an account.
+						Moderators approve, hide or reject comments from a queue. Reports from three different
+						accounts send a published comment back to review, counting only accounts that are
+						{REPORT_ACCOUNT_MIN_AGE_DAYS} days old and neither muted nor banned; other reports are kept
+						for moderators. Voting on comments opens at the same account age. A moderator can also mute
+						or ban an account, and a ban hides the account's published and pending comments and removes
+						its votes.
 					</p>
 				</SubBlock>
 			</MetricArticle>

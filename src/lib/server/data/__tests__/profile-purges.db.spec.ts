@@ -44,7 +44,9 @@ beforeEach(async () => {
 		.insert(users)
 		.values([
 			userValues('author', { username: 'author', createdAt: old, updatedAt: old }),
-			...Array.from({ length: REPORT_THRESHOLD }, (_, i) => userValues(`rep${i}`)),
+			...Array.from({ length: REPORT_THRESHOLD }, (_, i) =>
+				userValues(`rep${i}`, { createdAt: new Date(Date.now() - 30 * 86_400_000) })
+			),
 			userValues('mod', { role: 'moderator' })
 		]);
 	[mod] = await db.select().from(users).where(eq(users.id, 'mod'));

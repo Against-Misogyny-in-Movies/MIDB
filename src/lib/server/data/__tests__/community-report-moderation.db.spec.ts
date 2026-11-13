@@ -33,7 +33,9 @@ const purgedMany = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/http/purge-title.ts', () => ({
 	purgeTitleReports: purged,
 	purgeTitlesReports: purgedMany,
-	purgeProfile: vi.fn()
+	purgeProfile: vi.fn(),
+	purgeProfiles: vi.fn(),
+	purgeTitlesComments: vi.fn()
 }));
 
 const DAY = 86_400_000;

@@ -1,10 +1,11 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { commentVotes, comments } from '#db/schema/community.ts';
+import { accountOldEnough } from './counting-account.ts';
 
 export type VoteResult =
 	| { ok: true; score: number; vote: 1 | -1 | null }
-	| { ok: false; reason: 'not-found' | 'own-comment' };
+	| { ok: false; reason: 'not-found' | 'own-comment' | 'account-too-new' };
 
 /** The comment's `score` is set to the sum of its votes, in the same batch as the vote itself. */
 const scoreFromVotes = (commentId: string) =>
@@ -32,6 +33,8 @@ async function votable(
 
 /**
  * Sets the reader's vote on a comment (+1 or -1; a repeated or changed vote rewrites the row).
+ * An account younger than `REPORT_ACCOUNT_MIN_AGE_DAYS` is refused (`account-too-new`) unless
+ * it is staff; removing a vote has no such limit.
  * The vote row and the score are one `db.batch`, and the score is recomputed from the votes
  * rather than nudged by a delta, so a repeat, a flip or a concurrent vote cannot leave it wrong.
  * Votes do not bump `updated_at` and purge nothing: the cached list trails the score, and the
@@ -39,9 +42,11 @@ async function votable(
  */
 export async function setVote(
 	commentId: string,
-	userId: string,
+	user: { id: string; role: string; createdAt: Date },
 	value: 1 | -1
 ): Promise<VoteResult> {
+	if (!accountOldEnough(user)) return { ok: false, reason: 'account-too-new' };
+	const userId = user.id;
 	const found = await votable(commentId, userId);
 	if (found) return found;
 	const [, , [row]] = await db.batch([

@@ -1,11 +1,13 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
+import { users } from '#db/schema/auth.ts';
 import { commentReports, comments } from '#db/schema/community.ts';
 import type { CommentStatus, ReportReason } from '#lib/media/types/comments.ts';
 import { REPORT_THRESHOLD } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { runBatch, statusMove } from './comment-status.ts';
+import { countingAccountWhere } from './counting-account.ts';
 
 export type ReportResult =
 	| {
@@ -24,7 +26,8 @@ export type ReportResult =
 
 /**
  * Stores a reader's report of a published comment. When this makes `REPORT_THRESHOLD` distinct
- * open reports, the comment moves to `pending` (source `reports`) in the same batch, with its
+ * open reports from counting accounts (`countingAccountWhere`; other reports are stored and
+ * shown to staff but do not count toward it), the comment moves to `pending` (source `reports`) in the same batch, with its
  * thread's reply counts adjusted. One report per reader per comment, whatever its status: a
  * reader whose earlier report was resolved or dismissed cannot report the comment again, and
  * the second request is ignored.
@@ -56,7 +59,7 @@ export async function reportComment(input: {
 				'published',
 				'pending',
 				{ moderationSource: 'reports', moderationReason: 'Reported by readers' },
-				sql`(SELECT count(*) FROM ${commentReports} WHERE ${commentReports.commentId} = ${commentId} AND ${commentReports.status} = 'open') >= ${REPORT_THRESHOLD}`
+				sql`(SELECT count(*) FROM ${commentReports} INNER JOIN ${users} ON ${users.id} = ${commentReports.reporterId} WHERE ${commentReports.commentId} = ${commentId} AND ${commentReports.status} = 'open' AND ${countingAccountWhere()}) >= ${REPORT_THRESHOLD}`
 			)
 		]);
 	}
