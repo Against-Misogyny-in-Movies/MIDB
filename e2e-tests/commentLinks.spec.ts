@@ -53,12 +53,18 @@ test.describe('GET /api/comments/[id], with no TMDB', () => {
 		const response = await request.get(`/api/comments/${SECOND_PAGE}`);
 		expect(response.status()).toBe(200);
 		expect(response.headers()['cache-control']).toBe('private, no-store');
-		const thread = (await response.json()) as { root: { id: string; body: string }; review: null };
+		const thread = (await response.json()) as {
+			kind: string;
+			tmdbId: number;
+			root: { id: string; body: string };
+			review: null;
+		};
 		expect(thread.root).toMatchObject({
 			id: SECOND_PAGE,
 			body: `Linked comment number ${COUNT - 1}`
 		});
 		expect(thread.review).toBeNull();
+		expect([thread.kind, thread.tmdbId]).toEqual(['movie', TMDB_ID]);
 	});
 
 	test('gives a pending comment to its author only', async ({ request }) => {

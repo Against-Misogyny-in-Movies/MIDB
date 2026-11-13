@@ -64,6 +64,23 @@ describe('getCommentThread', () => {
 		}
 	});
 
+	it('names the title the thread is on, from any comment in it', async () => {
+		const [other] = await db
+			.insert(titles)
+			.values({ kind: 'tv', title: 'Dark', cleanTitle: 'dark', tmdbId: 70523 })
+			.returning();
+		const result = await createComment({ title: other, userId: 'author', body: 'On a series' });
+		if (!result.ok) throw new Error(result.reason);
+		await approveComment(mod, result.comment.id);
+		const root = await store('author', 'Root');
+		const reply = await store('replier', 'Reply', root);
+		expect(await getCommentThread(reply, null)).toMatchObject({ kind: 'movie', tmdbId: 348 });
+		expect(await getCommentThread(result.comment.id, null)).toMatchObject({
+			kind: 'tv',
+			tmdbId: 70523
+		});
+	});
+
 	it('returns the same thread for the root and for any reply in it', async () => {
 		const root = await store('author', 'Root');
 		const reply = await store('replier', 'Reply', root);

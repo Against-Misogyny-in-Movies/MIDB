@@ -507,6 +507,13 @@
 		color: var(--ink);
 	}
 
+	/* The same 44px touch target as the buttons. */
+	@media (pointer: coarse) {
+		.chip {
+			height: 2.75rem;
+		}
+	}
+
 	/* A round icon disk in a source's violet shade: set --hue (and --disk for the size). */
 	.disk {
 		display: inline-flex;

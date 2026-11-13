@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
@@ -71,13 +72,7 @@
 		{#if item.authorMutedUntil}
 			<span class="label">Muted until {formatDate(item.authorMutedUntil)}</span>
 		{/if}
-		{#if permalink}
-			<a class="label link" href={permalink}>
-				<time datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-			</a>
-		{:else}
-			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-		{/if}
+		<CommentDate class="label" href={permalink} createdAt={comment.createdAt} />
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		{#if heldBy}<span class="label">{heldBy}</span>{/if}

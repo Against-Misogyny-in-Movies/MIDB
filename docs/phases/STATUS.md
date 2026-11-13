@@ -46,7 +46,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | S1    | Staff powers and rate limits    | completed   | 2026-11-13. Moderation rows reviewed from code only, not rendered.                                                |
 | S2    | DDD section starts closed       | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
 | S3    | Snappy comment votes            | completed   | 2026-11-13. Not rendered in a browser; voter-fresh scores came after the review round.                            |
-| S4    | Links to a comment              | not started |                                                                                                                   |
+| S4    | Links to a comment              | completed   | 2026-11-13. Not rendered in a browser; `e2e-tests/commentLinks.spec.ts` not run (no TMDB token here).             |
 | S5    | Public user profiles            | not started |                                                                                                                   |
 | S6    | Letterboxd score                | not started |                                                                                                                   |
 

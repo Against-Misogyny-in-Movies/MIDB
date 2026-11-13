@@ -111,6 +111,15 @@ describe('links to a comment from the moderation views', () => {
 			expect(screen.getByRole('link', { name: 'View comment' }).getAttribute('href')).toBe(HREF);
 		});
 
+		it('puts the link after the "Edited since" note', () => {
+			inList(RecentActionRow, {
+				entry: entry({ commentEditedAt: '2026-11-04T10:00:00.000Z' })
+			});
+			const note = screen.getByText('Edited since');
+			const link = screen.getByRole('link', { name: 'View comment' });
+			expect(note.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		});
+
 		it('adds none when the action names no comment, such as a mute', () => {
 			inList(RecentActionRow, {
 				entry: entry({ action: 'mute', commentId: null, commentBody: null, commentStatus: null })

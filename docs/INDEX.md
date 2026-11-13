@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~5.0K tok)
+- `DESIGN.md` — Design (~5.1K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880) ← 1
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~3.0K) ← 1
+  - 37–65 Components (~3.1K) ← 1
   - 66–72 Pages (~530)
   - 73–76 Motion (~110)
   - 77–80 Browser surfaces (~50)
   - 81–84 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~55.5K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~55.8K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -65,7 +65,7 @@ Read the sections your task touches.
     - 366–373 Migrations (~330)
   - 374–403 Source sync (~1.8K) ← 3
   - 404–469 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
-  - 470–503 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~3.4K) ← 2
+  - 470–503 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~3.6K) ← 2
   - 504–523 UM Disambiguation (~630)
   - 524–532 UM flag rendering (~250)
   - 533–541 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
@@ -108,8 +108,8 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~3.5K tok)
-  - 5–18 Network (~2.9K)
+- `SECURITY.md` — Security (~3.6K tok)
+  - 5–18 Network (~3.0K)
   - 19–29 Supply chain (~490)
   - 30–35 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~2.9K tok)

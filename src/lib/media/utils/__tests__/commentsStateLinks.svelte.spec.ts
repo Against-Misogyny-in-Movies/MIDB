@@ -22,6 +22,8 @@ const json = (body: unknown, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 const thread = (root: CommentView, review: CommentThread['review'] = null): CommentThread => ({
+	kind: 'movie',
+	tmdbId: 1,
 	root,
 	review
 });
@@ -66,7 +68,7 @@ describe('CommentsState.showLink', () => {
 		const shown = state.showLink('a');
 		await Promise.resolve();
 		expect(threadCalls()).toEqual([]);
-		expect(state.busy.link).toBe(true);
+		expect(state.busy.link).toBeFalsy();
 		releaseList();
 		expect(await shown).toBe(true);
 		expect(threadCalls()).toEqual([]);

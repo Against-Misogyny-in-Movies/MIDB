@@ -2,13 +2,13 @@
 	import Badge from '#lib/components/ui/badge.svelte';
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
+	import CommentDate from './commentDate.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import { commentResult, unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
-	import { formatDate } from '#lib/media/utils/format.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
@@ -88,13 +88,7 @@
 <li class="row" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<div class="meta">
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
-		{#if permalink}
-			<a class="label link" href={permalink}>
-				<time datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-			</a>
-		{:else}
-			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-		{/if}
+		<CommentDate class="label" href={permalink} createdAt={comment.createdAt} />
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<span class="label">
 			{comment.parentId ? 'Reply on' : 'On'}

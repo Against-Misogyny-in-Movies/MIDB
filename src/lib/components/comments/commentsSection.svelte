@@ -32,28 +32,57 @@
 
 	/** A `#comment-<id>` hash names the comment a link points at. */
 	const LINK_HASH = /^#comment-([\w-]{1,64})$/;
-	const HIGHLIGHT_MS = 2500;
 	/** The linked comment waiting for the list to draw before the page scrolls to it. */
 	let pendingReveal = $state<string | null>(null);
-	let highlightTimer: ReturnType<typeof setTimeout> | undefined;
+	/** A failed link waiting for the notice to draw before the page scrolls to it. */
+	let pendingNotice = $state(false);
+	/** The list has drawn once: a later link keeps it on screen and loads into the pin's slot. */
+	let drawn = $state(false);
+
+	/** The highlight stays until the reader acts on the page. */
+	function clearHighlight(): void {
+		comments.highlightId = null;
+		document.removeEventListener('pointerdown', clearHighlight);
+		document.removeEventListener('keydown', clearHighlight);
+	}
 
 	/** Makes the linked comment available (the section opens itself for the hash), then asks for the scroll. */
 	async function followLink(): Promise<void> {
+		clearHighlight();
 		const id = LINK_HASH.exec(location.hash)?.[1];
 		if (!id) return;
+		pendingReveal = null;
+		pendingNotice = false;
 		if (await comments.showLink(id)) pendingReveal = id;
+		else if (comments.errors.link) pendingNotice = true;
 	}
 
-	/** Scrolls to the comment, focuses it and highlights it for a moment. */
+	/**
+	 * Scrolls to the comment, so the pinned block's label clears the sticky header, focuses it
+	 * and highlights it until the reader presses a key or the pointer or the link changes.
+	 */
 	async function reveal(id: string): Promise<void> {
 		await tick();
 		const article = document.getElementById(`comment-${id}`);
 		if (!article) return;
-		article.scrollIntoView({ block: 'start' });
+		(article.closest('[data-linked]') ?? article).scrollIntoView({ block: 'start' });
 		article.focus({ preventScroll: true });
 		comments.highlightId = id;
-		clearTimeout(highlightTimer);
-		highlightTimer = setTimeout(() => (comments.highlightId = null), HIGHLIGHT_MS);
+		// Next turn, so the keypress or click that led here does not clear it at once.
+		setTimeout(() => {
+			if (comments.highlightId !== id) return;
+			document.addEventListener('pointerdown', clearHighlight);
+			document.addEventListener('keydown', clearHighlight);
+		});
+	}
+
+	/** Scrolls to the failed link's notice and moves the focus there. */
+	async function showNotice(): Promise<void> {
+		await tick();
+		const notice = document.querySelector<HTMLElement>('[data-link-notice]');
+		if (!notice) return;
+		notice.scrollIntoView({ block: 'start' });
+		notice.focus({ preventScroll: true });
 	}
 
 	$effect(() => {
@@ -63,6 +92,18 @@
 			pendingReveal = null;
 			void reveal(id);
 		});
+	});
+
+	$effect(() => {
+		if (!pendingNotice || showSkeleton) return;
+		untrack(() => {
+			pendingNotice = false;
+			void showNotice();
+		});
+	});
+
+	$effect(() => {
+		if (comments.phase === 'ready' && !showSkeleton) drawn = true;
 	});
 
 	onMount(() => {
@@ -76,7 +117,7 @@
 		window.addEventListener('hashchange', followLink);
 		return () => {
 			window.removeEventListener('hashchange', followLink);
-			clearTimeout(highlightTimer);
+			clearHighlight();
 		};
 	});
 
@@ -136,13 +177,16 @@
 	);
 
 	const loading = $derived(comments.phase === 'loading' && comments.list.length === 0);
-	/** The list waits for a link's thread too, so the pinned thread does not push a drawn list down. */
+	const linkLoading = $derived(comments.busy.link ?? false);
+	/** The first draw waits for a link's thread, so it does not push the list down; a drawn list stays. */
 	const showSkeleton = $derived(
 		loading ||
 			(comments.phase === 'ready' && waitingForViewer) ||
-			(comments.phase === 'ready' && (comments.busy.link ?? false))
+			(comments.phase === 'ready' && linkLoading && !drawn)
 	);
 	const nothingShown = $derived(threads.length === 0 && pinned.length === 0);
+	/** The pin's slot: the pinned thread, or its place while the thread loads over a drawn list. */
+	const pinSlot = $derived(pinned.length > 0 || linkLoading);
 </script>
 
 <CollapsibleSection id="comments" title="Comments" openOnHash hashPrefix="comment-">
@@ -176,7 +220,7 @@
 
 		<div
 			class="toolbar"
-			class:toolbar--hidden={comments.phase === 'ready' && nothingShown}
+			class:toolbar--hidden={comments.phase === 'ready' && threads.length === 0}
 			role="group"
 			aria-label="Sort comments"
 		>
@@ -198,7 +242,7 @@
 			data-comment-list
 			tabindex="-1"
 			class:slot--stale={comments.phase === 'loading' && comments.list.length > 0}
-			aria-busy={comments.phase === 'loading' || waitingForViewer}
+			aria-busy={comments.phase === 'loading' || waitingForViewer || (!drawn && linkLoading)}
 		>
 			{#if comments.phase === 'error'}
 				<Notice tone="error">{comments.errors.load}</Notice>
@@ -219,12 +263,28 @@
 					</button>
 				{/if}
 				{#if comments.errors.link}
-					<Notice tone="warn">{comments.errors.link}</Notice>
+					<div class="link-notice" data-link-notice tabindex="-1">
+						<Notice tone="warn">{comments.errors.link}</Notice>
+						{#if comments.linkRetryable}
+							<button class="btn btn--ink retry" type="button" onclick={followLink}>
+								Try again
+							</button>
+						{/if}
+					</div>
 				{/if}
-				{#if pinned.length > 0}
-					<section class="linked" aria-label="Linked comment">
-						<p class="label">Linked comment</p>
-						<CommentList threads={pinned} state={comments} />
+				{#if pinSlot}
+					<section
+						class="linked"
+						data-linked
+						aria-labelledby="linked-comment-label"
+						aria-busy={linkLoading}
+					>
+						<p class="label" id="linked-comment-label">Linked comment</p>
+						{#if pinned.length > 0}
+							<CommentList threads={pinned} state={comments} />
+						{:else}
+							<div class="skeleton-row"></div>
+						{/if}
 					</section>
 				{/if}
 				{#if nothingShown}
@@ -291,10 +351,6 @@
 
 	/* A touch target is 44px on a coarse pointer, like the buttons. */
 	@media (pointer: coarse) {
-		.chip {
-			height: 2.75rem;
-		}
-
 		.composer-slot,
 		.sign-in,
 		.sign-in .link {
@@ -331,10 +387,19 @@
 		@apply text-ink-muted;
 	}
 
-	/* The pinned thread sits above the list, set off by one hairline. */
+	/* The pinned thread sits above the list, set off by one hairline and a medium gap, and scrolls clear of the sticky header. */
 	.linked {
 		@apply flex flex-col border-b border-border;
 		padding-bottom: var(--spacing-xs);
+		/* The slot's gap makes the space below the hairline a full medium gap. */
+		margin-bottom: calc(var(--spacing-md) - var(--spacing-sm));
+		scroll-margin-top: 5rem;
+	}
+
+	.link-notice {
+		@apply flex flex-col;
+		gap: var(--spacing-sm);
+		scroll-margin-top: 5rem;
 	}
 
 	.retry,

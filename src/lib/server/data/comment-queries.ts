@@ -163,7 +163,7 @@ export async function listTitleComments(
 /**
  * The thread of one comment, for a link to it: its root and the root's published replies,
  * oldest first. The linked comment itself is returned whatever its status when the reader is
- * its author or staff, with its status in `review`; otherwise, or when it does not exist,
+ * its author or staff, with its status in `review`, and the thread names its title (`kind`, `tmdbId`); otherwise, or when it does not exist,
  * the answer is null, so a hidden or pending comment's existence is not revealed. An
  * unpublished root around a published reply is a placeholder, as in the list. Read-only.
  */
@@ -185,6 +185,12 @@ export async function getCommentThread(
 		.orderBy(asc(comments.createdAt), asc(comments.id));
 	const rootRow = rows.find((r) => r.comment.id === rootId);
 	if (!rootRow) return null;
+	const [title] = await db
+		.select({ kind: titles.kind, tmdbId: titles.tmdbId })
+		.from(titles)
+		.where(eq(titles.id, target.titleId))
+		.limit(1);
+	if (!title || title.tmdbId === null) return null;
 
 	const byId = new Map(rows.map((r) => [r.comment.id, r]));
 	const replies = rows
@@ -193,6 +199,8 @@ export async function getCommentThread(
 		)
 		.map((r) => toView(r, byId, [], r.comment.id === id));
 	return {
+		kind: title.kind,
+		tmdbId: title.tmdbId,
 		root: toView(rootRow, byId, replies, rootRow.comment.id === id),
 		review:
 			target.status === 'published'

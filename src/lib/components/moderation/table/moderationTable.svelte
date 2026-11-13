@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
@@ -8,7 +9,6 @@
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
-	import { formatDate } from '#lib/media/utils/format.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
@@ -155,15 +155,7 @@
 							{/if}
 						</td>
 						<td role="cell" data-label="Posted">
-							{#if permalink}
-								<a class="link num" href={permalink}>
-									<time datetime={row.comment.createdAt}>{formatDate(row.comment.createdAt)}</time>
-								</a>
-							{:else}
-								<time class="num" datetime={row.comment.createdAt}>
-									{formatDate(row.comment.createdAt)}
-								</time>
-							{/if}
+							<CommentDate class="num" href={permalink} createdAt={row.comment.createdAt} />
 						</td>
 						<td class="actions" role="cell">
 							<button

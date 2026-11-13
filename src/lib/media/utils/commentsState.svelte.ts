@@ -46,7 +46,9 @@ export class CommentsState {
 	busy = $state<Record<string, boolean>>({});
 	/** The thread a link points at, pinned above the list when its comment is not on the loaded pages. */
 	linked = $state<({ id: string } & CommentThread) | null>(null);
-	/** The comment the section just scrolled to, drawn highlighted for a moment. */
+	/** Whether the failed link can be tried again: false for a comment that is not available. */
+	linkRetryable = $state(false);
+	/** The comment the section just scrolled to, drawn highlighted until the reader acts or the link changes. */
 	highlightId = $state<string | null>(null);
 	/** The score after the reader's own last vote press, for a screen reader's status line. Server answers never set it. */
 	announcement = $state('');
@@ -201,26 +203,38 @@ export class CommentsState {
 
 	/** A comment, or a reply, in the pinned thread or the public list. */
 	#find(id: string, roots: readonly CommentView[] = this.#roots()): CommentView | null {
+		return this.#findAll(id, roots)[0] ?? null;
+	}
+
+	/**
+	 * Every copy of a comment: a page that brings the pinned thread's root again holds a second
+	 * object for it, and a write patches them all so whichever is drawn next shows the change.
+	 */
+	#findAll(id: string, roots: readonly CommentView[] = this.#roots()): CommentView[] {
+		const found: CommentView[] = [];
 		for (const root of roots) {
-			if (root.id === id) return root;
+			if (root.id === id) found.push(root);
 			const reply = root.replies.find((r) => r.id === id);
-			if (reply) return reply;
+			if (reply) found.push(reply);
 		}
-		return null;
+		return found;
 	}
 
 	/**
 	 * Makes the comment a link points at ready to show. A comment on the loaded pages needs
-	 * nothing; otherwise its thread is fetched and pinned above the list, which then leaves that
-	 * thread out wherever a later page carries it. False when the comment is not available to
-	 * this reader (`errors.link` says why).
+	 * nothing, unless the list holds it as a placeholder: then its thread is fetched, because its
+	 * author and staff may read it. Any other comment's thread is fetched and pinned above the
+	 * list, which then leaves that thread out wherever a later page carries it. A thread on
+	 * another title counts as not available. False when the comment is not available to this
+	 * reader (`errors.link` says why) and any earlier pin is dropped.
 	 */
 	async showLink(id: string): Promise<boolean> {
 		const generation = ++this.#linkGeneration;
-		this.#start('link');
+		delete this.errors.link;
 		await this.#loading;
 		if (generation !== this.#linkGeneration) return false;
-		if (this.#find(id, this.list)) {
+		const listed = this.#find(id, this.list);
+		if (listed && !listed.removed) {
 			this.linked = null;
 			this.busy.link = false;
 			return true;
@@ -229,19 +243,27 @@ export class CommentsState {
 			this.busy.link = false;
 			return true;
 		}
+		this.busy.link = true;
 		const reply = await this.#request<CommentThread>('GET', `/api/comments/${id}`);
 		if (generation !== this.#linkGeneration) return false;
 		this.busy.link = false;
-		if (!reply.ok) {
-			this.errors.link =
-				reply.status === 404
-					? 'This comment is not available.'
-					: describeFailure('link', reply.status, reply.message);
-			return false;
+		if (reply.ok && reply.data.kind === this.kind && String(reply.data.tmdbId) === this.tmdbId) {
+			this.linked = { id, ...reply.data };
+			this.#applyScores([reply.data.root]);
+			return true;
 		}
-		this.linked = { id, ...reply.data };
-		this.#applyScores([reply.data.root]);
-		return true;
+		this.linked = null;
+		// A thread on another title is as unavailable here as a 404.
+		if (reply.ok || reply.status === 404) {
+			// Only the author and staff may read it: the placeholder the list shows is all there is.
+			if (listed) return true;
+			this.linkRetryable = false;
+			this.errors.link = 'This comment is not available.';
+		} else {
+			this.linkRetryable = true;
+			this.errors.link = describeFailure('link', reply.status, reply.message);
+		}
+		return false;
 	}
 
 	/**
@@ -259,14 +281,17 @@ export class CommentsState {
 
 	/** Takes a comment out of the public list: a placeholder while it has replies, else gone. */
 	#withdraw(id: string): void {
-		const target = this.#find(id);
+		const targets = this.#findAll(id);
+		const [target] = targets;
 		if (!target) return;
 		if (target.replyCount > 0) {
-			target.removed = true;
-			target.body = null;
-			target.author = null;
-			target.score = 0;
-			target.editedAt = null;
+			for (const copy of targets) {
+				copy.removed = true;
+				copy.body = null;
+				copy.author = null;
+				copy.score = 0;
+				copy.editedAt = null;
+			}
 			return;
 		}
 		if (target.parentId === null) {
@@ -317,10 +342,12 @@ export class CommentsState {
 			return false;
 		}
 		const { comment } = reply.data;
-		const shown = this.#find(id);
-		if (comment.status === 'published' && shown) {
-			shown.body = comment.body;
-			shown.editedAt = comment.editedAt;
+		const shown = this.#findAll(id);
+		if (comment.status === 'published' && shown.length > 0) {
+			for (const copy of shown) {
+				copy.body = comment.body;
+				copy.editedAt = comment.editedAt;
+			}
 		} else if (comment.status !== 'published') {
 			this.#withdraw(id);
 		}
@@ -392,8 +419,9 @@ export class CommentsState {
 		if (vote === null) delete viewer.votes[id];
 		else viewer.votes[id] = vote;
 		viewer.scores[id] = confirmed.score;
-		const shown = this.#find(id);
-		if (shown) shown.score = confirmed.score + (vote ?? 0) - (confirmed.vote ?? 0);
+		for (const copy of this.#findAll(id)) {
+			copy.score = confirmed.score + (vote ?? 0) - (confirmed.vote ?? 0);
+		}
 	}
 
 	/** Reports a comment. True when the server took the report, or this account had reported it before. */

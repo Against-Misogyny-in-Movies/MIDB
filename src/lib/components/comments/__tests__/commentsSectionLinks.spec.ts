@@ -32,6 +32,13 @@ const view = (id: string, over: Partial<CommentView> = {}): CommentView => ({
 	...over
 });
 
+const thread = (root: CommentView, review: CommentThread['review'] = null): CommentThread => ({
+	kind: 'movie',
+	tmdbId: 603,
+	root,
+	review
+});
+
 const json = (body: unknown, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -53,6 +60,14 @@ function api(threads: Record<string, CommentThread> = {}) {
 		return thread ? json(thread) : json({ message: 'Not found' }, 404);
 	});
 }
+
+/** The pinned block once its thread has loaded: its slot is in the page, busy, while it loads. */
+const pinnedBlock = () =>
+	waitFor(() => {
+		const region = screen.getByRole('region', { name: 'Linked comment' });
+		expect(region.getAttribute('aria-busy')).toBe('false');
+		return region;
+	});
 
 const mount = (fetcher: ReturnType<typeof api>) =>
 	render(CommentsSection, { kind: 'movie', tmdbId: '603', fetcher });
@@ -101,9 +116,9 @@ describe('CommentsSection links to a comment', () => {
 
 	it('fetches the thread of a comment on a later page and pins it above the list', async () => {
 		history.replaceState(null, '', '/movie/603#comment-second');
-		const fetcher = api({ second: { root: view('second'), review: null } });
+		const fetcher = api({ second: thread(view('second')) });
 		mount(fetcher);
-		const pinned = await screen.findByRole('region', { name: 'Linked comment' });
+		const pinned = await pinnedBlock();
 		expect(pinned.querySelector('#comment-second')).toBeTruthy();
 		expect(threadCalls(fetcher)).toEqual(['/api/comments/second']);
 		const first = document.getElementById('comment-first') as HTMLElement;
@@ -113,9 +128,9 @@ describe('CommentsSection links to a comment', () => {
 
 	it('never draws the pinned thread twice once the page that carries it loads', async () => {
 		history.replaceState(null, '', '/movie/603#comment-second');
-		const fetcher = api({ second: { root: view('second'), review: null } });
+		const fetcher = api({ second: thread(view('second')) });
 		mount(fetcher);
-		await screen.findByRole('region', { name: 'Linked comment' });
+		await pinnedBlock();
 		await fireEvent.click(screen.getByRole('button', { name: 'Show more comments' }));
 		await waitFor(() =>
 			expect(fetcher.mock.calls.some(([url]) => url.includes('cursor=two'))).toBe(true)
@@ -129,7 +144,7 @@ describe('CommentsSection links to a comment', () => {
 
 	it('does not draw the pinned thread twice when the list reloads under another sort', async () => {
 		history.replaceState(null, '', '/movie/603#comment-first');
-		const fetcher = api({ first: { root: view('first'), review: null } });
+		const fetcher = api({ first: thread(view('first')) });
 		mount(fetcher);
 		await screen.findByText('Text of first');
 		await fireEvent.click(screen.getByRole('button', { name: 'Newest' }));
@@ -139,10 +154,10 @@ describe('CommentsSection links to a comment', () => {
 	it('shows the status of a pending comment its reader may see', async () => {
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: { root: view('second'), review: { status: 'pending', reason: null } }
+			second: thread(view('second'), { status: 'pending', reason: null })
 		});
 		mount(fetcher);
-		const pinned = await screen.findByRole('region', { name: 'Linked comment' });
+		const pinned = await pinnedBlock();
 		expect(pinned.textContent).toMatch(/Awaiting review/);
 		expect(pinned.textContent).toMatch(/Only the author and moderators see the comment/);
 		expect(pinned.querySelector('button')).toBeNull();
@@ -152,10 +167,10 @@ describe('CommentsSection links to a comment', () => {
 		session.set({ ...ANNA, id: 'mod', username: 'mod', displayName: 'mod', role: 'moderator' });
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: { root: view('second'), review: { status: 'hidden', reason: 'off topic' } }
+			second: thread(view('second'), { status: 'hidden', reason: 'off topic' })
 		});
 		mount(fetcher);
-		const pinned = await screen.findByRole('region', { name: 'Linked comment' });
+		const pinned = await pinnedBlock();
 		expect(pinned.textContent).toMatch(/A moderator hid this comment/);
 		for (const name of ['Edit', 'Delete', 'Report', 'Reply', 'Upvote']) {
 			expect(within(pinned).queryByRole('button', { name })).toBeNull();
@@ -166,10 +181,10 @@ describe('CommentsSection links to a comment', () => {
 		session.set(ANNA);
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: { root: view('second'), review: { status: 'deleted', reason: null } }
+			second: thread(view('second'), { status: 'deleted', reason: null })
 		});
 		mount(fetcher);
-		const pinned = await screen.findByRole('region', { name: 'Linked comment' });
+		const pinned = await pinnedBlock();
 		expect(within(pinned).queryByRole('button', { name: 'Edit' })).toBeNull();
 		expect(within(pinned).queryByRole('button', { name: 'Delete' })).toBeNull();
 	});
@@ -182,8 +197,8 @@ describe('CommentsSection links to a comment', () => {
 		expect(screen.queryByRole('region', { name: 'Linked comment' })).toBeNull();
 	});
 
-	it('follows a hash change to another comment and highlights it, then clears the highlight', async () => {
-		const fetcher = api({ second: { root: view('second'), review: null } });
+	it('follows a hash change to another comment and highlights it until the reader acts', async () => {
+		const fetcher = api({ second: thread(view('second')) });
 		mount(fetcher);
 		await screen.findByText('Text of first');
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -192,10 +207,23 @@ describe('CommentsSection links to a comment', () => {
 		await vi.waitFor(() =>
 			expect(document.getElementById('comment-second')?.className).toMatch(/comment--linked/)
 		);
-		vi.advanceTimersByTime(2600);
+		vi.advanceTimersByTime(60_000);
+		expect(document.getElementById('comment-second')?.className).toMatch(/comment--linked/);
+		document.dispatchEvent(new Event('pointerdown'));
 		await vi.waitFor(() =>
 			expect(document.getElementById('comment-second')?.className).not.toMatch(/comment--linked/)
 		);
+	});
+
+	it('clears the highlight when the hash changes to something else', async () => {
+		history.replaceState(null, '', '/movie/603#comment-first');
+		mount(api());
+		await waitFor(() =>
+			expect(document.getElementById('comment-first')?.className).toMatch(/comment--linked/)
+		);
+		history.replaceState(null, '', '/movie/603#cast');
+		window.dispatchEvent(new HashChangeEvent('hashchange'));
+		await waitFor(() => expect(document.querySelector('.comment--linked')).toBeNull());
 	});
 
 	it('ignores a hash that does not name a comment', async () => {
@@ -210,7 +238,7 @@ describe('CommentsSection links to a comment', () => {
 	it('links each comment date to the comment', async () => {
 		mount(api());
 		await screen.findByText('Text of first');
-		const link = document.querySelector('#comment-first a.permalink');
+		const link = document.querySelector('#comment-first a.link');
 		expect(link?.getAttribute('href')).toBe('/movie/603#comment-first');
 	});
 });

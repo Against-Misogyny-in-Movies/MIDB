@@ -3,6 +3,7 @@
 	import Badge from '#lib/components/ui/badge.svelte';
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
+	import CommentDate from './commentDate.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import { unpublishedNote } from '#lib/media/utils/comments.ts';
 	import CommentReportForm from './commentReportForm.svelte';
@@ -10,7 +11,6 @@
 	import type { ShownComment } from '#lib/media/utils/commentThread.ts';
 	import type { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
-	import { formatDate } from '#lib/media/utils/format.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { commentHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
@@ -115,13 +115,7 @@
 			<span class="name">{comment.author?.displayName ?? 'Account'}</span>
 			{#if own && !comment.review}<Badge tone="brand">Author</Badge>{/if}
 			{#if role}<Badge tone="brand">{role}</Badge>{/if}
-			{#if href}
-				<a class="label permalink" {href}>
-					<time datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-				</a>
-			{:else}
-				<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-			{/if}
+			<CommentDate class="label" {href} createdAt={comment.createdAt} />
 			{#if comment.editedAt}<span class="label">Edited</span>{/if}
 			{#if comment.review}
 				<Badge tone={commentStatusTone(comment.review.status)}>
@@ -268,23 +262,19 @@
 		padding-block: var(--spacing-sm);
 		scroll-margin-top: 5rem;
 		border-radius: 8px;
+		outline: 1px solid transparent;
+		outline-offset: var(--spacing-xs);
 		transition:
 			background-color 0.15s ease,
-			box-shadow 0.15s ease;
+			box-shadow 0.15s ease,
+			outline-color 0.15s ease;
 	}
 
-	/* The comment a link points at: a wash that fades once the highlight is cleared. */
+	/* The comment a link points at: the wash, and a 1px brand outline for readers who miss the tint. */
 	.comment--linked {
 		background-color: var(--brand-wash);
 		box-shadow: 0 0 0 var(--spacing-xs) var(--brand-wash);
-	}
-
-	.permalink {
-		@apply no-underline;
-	}
-
-	.permalink:hover {
-		@apply underline;
+		outline-color: var(--brand);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

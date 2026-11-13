@@ -90,11 +90,11 @@
 	{#if entry.commentBody}
 		<p class="body">{entry.commentBody}</p>
 	{/if}
-	{#if commentLink}
-		<a class="chip" href={commentLink}>View comment</a>
-	{/if}
 	{#if editedSince}
 		<p class="label">Edited since</p>
+	{/if}
+	{#if commentLink}
+		<a class="chip" href={commentLink}>View comment</a>
 	{/if}
 	{#if entry.reason}
 		<p class="label">Reason: {entry.reason}</p>

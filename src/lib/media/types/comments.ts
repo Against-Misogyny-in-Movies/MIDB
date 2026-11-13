@@ -41,9 +41,12 @@ export type CommentList = {
 /**
  * What `GET /api/comments/[id]` answers: the linked comment's thread, a root with its replies.
  * Only the linked comment can be unpublished (it is shown to its author and to staff); every
- * other comment follows the public rules, so an unpublished root is a placeholder.
+ * other comment follows the public rules, so an unpublished root is a placeholder. `kind` and
+ * `tmdbId` name the title the thread is on, so a page can refuse a link to another title's comment.
  */
 export type CommentThread = {
+	kind: 'movie' | 'tv';
+	tmdbId: number;
 	root: CommentView;
 	/** Set when the linked comment is not published: its status and the moderation reason. */
 	review: { status: Exclude<CommentStatus, 'published'>; reason: string | null } | null;
