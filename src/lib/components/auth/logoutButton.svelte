@@ -12,11 +12,17 @@
 	let { variant = 'button' }: Props = $props();
 
 	// Order matters: the cookie must be gone before /auth and any re-run load sees the request.
+	// A failed request leaves the session cookie, so the reader stays signed in and is told so.
 	const logout = async () => {
+		let failed = false;
 		try {
-			await authClient.signOut();
+			failed = (await authClient.signOut()).error !== null;
 		} catch {
-			// Already signed out or unreachable: still drop the local session below.
+			failed = true;
+		}
+		if (failed) {
+			toasts.error('Sign-out did not go through. Try again in a moment.');
+			return;
 		}
 		session.clear();
 		await goto('/auth', { refreshAll: true });

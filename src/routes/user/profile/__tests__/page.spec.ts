@@ -90,10 +90,11 @@ describe('saving the profile', () => {
 		expect(field.getAttribute('aria-invalid')).toBeNull();
 	});
 
-	it('says what a save changed', async () => {
+	it('says what a save changed, as the server stored it', async () => {
+		form.result = { type: 'success', data: { success: true, me: { ...ME, username: 'maria' } } };
 		mount();
 		const field = screen.getByRole('textbox', { name: 'Username' });
-		await fireEvent.input(field, { target: { value: 'maria' } });
+		await fireEvent.input(field, { target: { value: 'Maria' } });
 		await fireEvent.submit(field.closest('form')!);
 		await waitFor(() => expect(shown()).toEqual(['success: Username changed to maria.']));
 	});

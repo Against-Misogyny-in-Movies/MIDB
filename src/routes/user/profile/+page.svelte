@@ -80,15 +80,16 @@
 		saving = true;
 		submittedUsername = String(formData.get('username') ?? '');
 		const before: Profile = { username: user?.username ?? '', avatarKey: user?.avatarKey ?? null };
-		const after: Profile = {
-			username: submittedUsername.trim() || before.username,
-			avatarKey: String(formData.get('avatarKey') ?? '') || before.avatarKey
-		};
 		return async ({ result, update }) => {
 			await update();
 			saving = false;
 			if (result.type === 'success') {
-				announceSave(before, after);
+				// The account as the server stored it (a username is lowercased), not as typed.
+				const me = result.data?.me as Partial<Profile> | undefined;
+				announceSave(before, {
+					username: me?.username ?? before.username,
+					avatarKey: me?.avatarKey ?? before.avatarKey
+				});
 			} else if (result.type === 'failure') {
 				const error = result.data?.error;
 				if (typeof error === 'string' && USERNAME_ERRORS[error]) return;
