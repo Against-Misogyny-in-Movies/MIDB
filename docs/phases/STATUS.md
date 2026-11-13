@@ -50,7 +50,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | S5    | Public user profiles            | completed   | 2026-11-13. `/u` rendered on seeded local data; moderation name links reviewed from code only.                    |
 | S6    | Letterboxd score                | completed   | 2026-11-13. Never run against the real API: no key exists (Open items).                                           |
 | SH1   | Security: moderation sticks     | active      | 2026-11-13.                                                                                                       |
-| SH2   | Security: sock puppets          | not started |                                                                                                                   |
+| SH2   | Security: sock puppets          | active      | 2026-11-13.                                                                                                       |
 | SH3   | Security: accounts              | not started |                                                                                                                   |
 | SH4   | Security: platform              | not started |                                                                                                                   |
 
