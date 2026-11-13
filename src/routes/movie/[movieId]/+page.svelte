@@ -22,7 +22,9 @@
 	const view = new TitleView(() => data, 'movie');
 	const movie = $derived(view.media);
 	// One state per title, recreated when the TMDB id changes; the header badge and the section share it.
-	const reports = $derived(new CommunityReportsState('movie', movie.tmdbId));
+	// Derived from the id, so a new media object for the same title keeps the loaded counts.
+	const tmdbId = $derived(movie.tmdbId);
+	const reports = $derived(new CommunityReportsState('movie', tmdbId));
 	const bechdel = $derived(data.bechdel);
 </script>
 

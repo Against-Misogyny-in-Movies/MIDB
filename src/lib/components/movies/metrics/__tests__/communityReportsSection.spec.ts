@@ -178,8 +178,8 @@ describe('CommunityReportsSection signed in', () => {
 		);
 		await fireEvent.click(await screen.findByRole('button', { name: 'Counts look wrong' }));
 		await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'One report is off' } });
-		await fireEvent.click(screen.getByRole('button', { name: 'Send flag' }));
-		await waitFor(() => expect(screen.getByText(/Counts flagged/)).toBeTruthy());
+		await fireEvent.click(screen.getByRole('button', { name: 'Send to moderators' }));
+		await waitFor(() => expect(screen.getByText('Sent to the moderators.')).toBeTruthy());
 		expect(sent).toEqual({ note: 'One report is off' });
 	});
 });
@@ -243,6 +243,27 @@ describe('CommunityReportsSection reader states', () => {
 		expect(
 			await screen.findByText(/It counts from .*, once the account is old enough\./)
 		).toBeTruthy();
+	});
+
+	it('says a saved report that a moderator rejected does not count', async () => {
+		let saved: ViewerReportView | null = null;
+		mount(
+			api({
+				[`GET ${BASE}`]: counts(),
+				[`GET ${BASE}/viewer`]: () => json({ report: saved, mutedUntil: null }),
+				[`PUT ${BASE}`]: () => {
+					saved = stored({ status: 'rejected' });
+					return json({ status: 'rejected', holdReason: null });
+				}
+			})
+		);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Add a report' }));
+		await fireEvent.click(screen.getByLabelText('I watched this'));
+		await fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
+		expect(
+			await screen.findByText('Report saved. A moderator rejected it, so it does not count.')
+		).toBeTruthy();
+		expect(screen.queryByText(/The counts above include it/)).toBeNull();
 	});
 
 	it('offers Try again when the reader’s report cannot be loaded', async () => {
@@ -338,11 +359,24 @@ describe('CommunityReportsSection layout', () => {
 		expect(details.open).toBe(false);
 		window.location.hash = '#community-reports';
 		await waitFor(() => expect(details.open).toBe(true));
-		details.open = false;
 		window.location.hash = '';
-		window.location.hash = '#community-reports';
+	});
+
+	it('opens again when the badge is clicked on the hash the page is already on', async () => {
+		window.location.hash = '';
+		const reports = new CommunityReportsState('movie', '603', api({ [`GET ${BASE}`]: counts() }));
+		const { container } = render(CommunityReportsBadge, { reports });
+		const section = render(CommunityReportsSection, { kind: 'movie', tmdbId: '603', reports });
+		const details = section.container.querySelector('details')!;
+		const link = container.querySelector('a')!;
+		// A same-hash click fires no `hashchange`, and SvelteKit cancels the browser's own jump.
+		link.addEventListener('click', (event) => event.preventDefault());
+		expect(details.open).toBe(false);
+		await fireEvent.click(link);
 		await waitFor(() => expect(details.open).toBe(true));
-		window.location.hash = '';
+		details.open = false;
+		await fireEvent.click(link);
+		await waitFor(() => expect(details.open).toBe(true));
 	});
 
 	it('gives the framing row its own total', async () => {
@@ -366,15 +400,15 @@ describe('CommunityReportsBadge', () => {
 		expect(busy.getAttribute('aria-busy')).toBe('true');
 		expect(container.querySelector('a')!.getAttribute('href')).toBe('#community-reports');
 		await reports.load();
-		await waitFor(() => expect(container.textContent).toContain('7 community reports'));
+		await waitFor(() => expect(container.textContent).toContain('7 counted community reports'));
 		expect(busy.getAttribute('aria-busy')).toBeNull();
 	});
 
 	it('reads the singular for one report', async () => {
 		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts({ total: 1 }) }));
 		await reports.load();
-		await waitFor(() => expect(container.textContent).toContain('1 community report'));
-		expect(container.textContent).not.toContain('1 community reports');
+		await waitFor(() => expect(container.textContent).toContain('1 counted community report'));
+		expect(container.textContent).not.toContain('1 counted community reports');
 	});
 
 	it('reads "MIDB community reports" with no number on an error', async () => {

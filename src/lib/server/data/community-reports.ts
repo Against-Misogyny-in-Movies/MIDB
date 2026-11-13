@@ -133,23 +133,22 @@ async function loadHoldFacts(
 /**
  * Stores a reader's report of a title (one per account per title; a second call overwrites the
  * first) and decides whether it counts: the three hold rules run on every write, an edit
- * included. A `rejected` report stays rejected and holds no reason; the write statement itself
+ * included, except for a staff account (`user.role`, from the request's guard), which is never held. A `rejected` report stays rejected and holds no reason; the write statement itself
  * keeps it so, so a moderator's rejection cannot be undone by a concurrent edit.
  */
 export async function upsertReport(
-	userId: string,
+	user: { id: string; role: string },
 	kind: TitleKind,
 	ref: TitleRef,
 	answers: ReportAnswers
 ): Promise<ReportWriteResult> {
+	const userId = user.id;
 	const flags = flagValues(answers);
 	const title = await getOrCreateTitleRow(kind, ref);
 
-	const [account] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
-	const reason =
-		account && isStaff(account.role)
-			? null
-			: holdReasonFor(await loadHoldFacts(userId, title.id, answers, flags, Date.now()));
+	const reason = isStaff(user.role)
+		? null
+		: holdReasonFor(await loadHoldFacts(userId, title.id, answers, flags, Date.now()));
 	const status: ContentReportStatus = reason ? 'held' : 'counted';
 
 	const values = {

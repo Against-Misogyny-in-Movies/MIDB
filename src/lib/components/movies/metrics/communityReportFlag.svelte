@@ -6,9 +6,11 @@
 
 	interface Props {
 		state: CommunityReportsState;
+		/** Hides the "Counts look wrong" link while the report form is open; an open plate stays. */
+		hideTrigger?: boolean;
 	}
 
-	let { state: reports }: Props = $props();
+	let { state: reports, hideTrigger = false }: Props = $props();
 
 	let open = $state(false);
 	let note = $state('');
@@ -41,7 +43,7 @@
 	{#if open}
 		<form class="plate form" aria-labelledby="report-flag-title" onsubmit={submit}>
 			<p id="report-flag-title" class="intro">
-				Sends this title’s community-report counts to the moderators for review.
+				Asks the moderators to review this title’s community reports.
 			</p>
 			<label class="note">
 				<span class="label">What looks wrong (optional)</span>
@@ -55,7 +57,7 @@
 			</label>
 			<div class="row">
 				<button class="btn btn--ink" type="submit" disabled={reports.busy.flag}>
-					{reports.busy.flag ? 'Sending…' : 'Send flag'}
+					{reports.busy.flag ? 'Sending…' : 'Send to moderators'}
 				</button>
 				<button class="btn btn--ghost" type="button" onclick={close}>Cancel</button>
 				<span id="report-flag-count" class="label count">{note.length} / {REPORT_NOTE_MAX}</span>
@@ -66,9 +68,9 @@
 		</form>
 	{:else if reports.flagged}
 		<div class="sent" tabindex="-1" bind:this={sent}>
-			<Notice tone="success">Counts flagged. Moderators review them.</Notice>
+			<Notice tone="success">Sent to the moderators.</Notice>
 		</div>
-	{:else}
+	{:else if !hideTrigger}
 		<button class="link wrong" type="button" bind:this={trigger} onclick={show}>
 			Counts look wrong
 		</button>

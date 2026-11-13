@@ -45,7 +45,7 @@ export const PUT: RequestHandler = async (event) => {
 	const ref = await resolveWriteRef(kind, tmdbId);
 	let result: Awaited<ReturnType<typeof upsertReport>>;
 	try {
-		result = await upsertReport(user.id, kind, ref, answers);
+		result = await upsertReport(user, kind, ref, answers);
 	} catch (err) {
 		if (err instanceof ReportAnswersError) error(400, 'Invalid request');
 		throw err;

@@ -20,7 +20,9 @@
 	const episodes = view.episodes!;
 	const series = $derived(view.media);
 	// One state per title, recreated when the TMDB id changes; the header badge and the section share it.
-	const reports = $derived(new CommunityReportsState('tv', series.tmdbId));
+	// Derived from the id, so a new media object for the same title keeps the loaded counts.
+	const tmdbId = $derived(series.tmdbId);
+	const reports = $derived(new CommunityReportsState('tv', tmdbId));
 	const ddd = $derived(view.ddd);
 </script>
 

@@ -168,6 +168,8 @@ describe('staff and the write limits', () => {
 		for (let i = 0; i < 12; i++) expect((await put({}, { user: mod })).status).toBe(200);
 		for (let i = 0; i < 12; i++)
 			expect((await call(flag.POST, { method: 'POST', body: {}, user: mod })).status).toBe(200);
+		for (let i = 0; i < 12; i++)
+			expect((await call(reports.DELETE, { method: 'DELETE', user: mod })).status).toBe(204);
 		const muted = { ...mod, mutedUntil: new Date(Date.now() + 60_000) } as UserRow;
 		expect((await put({}, { user: muted })).status).toBe(403);
 	});

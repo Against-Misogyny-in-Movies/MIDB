@@ -66,10 +66,31 @@ describe('CommunityReportsSection reporting flow', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
 		expect(
-			await screen.findByText('Report deleted. The counts above drop it once the page reloads.')
+			await screen.findByText('Report deleted. A reload shows the counts without it.')
 		).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: 'Add a report' }));
 		expect(screen.queryByText(/Report deleted/)).toBeNull();
+	});
+
+	it('moves focus to the delete notice so the result is announced', async () => {
+		mount(api(routes({ [`DELETE ${BASE}`]: () => new Response(null, { status: 204 }) }, stored())));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Delete report' }));
+		const notice = (await screen.findByText(/Report deleted/)).closest('.deleted')!;
+		expect(notice.getAttribute('tabindex')).toBe('-1');
+		await waitFor(() => expect(document.activeElement).toBe(notice));
+	});
+
+	it('keeps a note typed in the flag plate when the report form opens and closes', async () => {
+		mount(api(routes()));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Counts look wrong' }));
+		await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'One report is off' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Add a report' }));
+		expect(screen.getByRole('textbox', { name: /What looks wrong/ })).toHaveProperty(
+			'value',
+			'One report is off'
+		);
 	});
 
 	it('hides the delete notice once a report is saved', async () => {
@@ -186,9 +207,7 @@ describe('CommunityReportsSection reporting flow', () => {
 	it('names what the flag sends and ties the counter to the field', async () => {
 		mount(api(routes()));
 		await fireEvent.click(await screen.findByRole('button', { name: 'Counts look wrong' }));
-		const intro = screen.getByText(
-			'Sends this title’s community-report counts to the moderators for review.'
-		);
+		const intro = screen.getByText('Asks the moderators to review this title’s community reports.');
 		expect(
 			document.querySelector('form[aria-labelledby="report-flag-title"]')!.contains(intro)
 		).toBe(true);

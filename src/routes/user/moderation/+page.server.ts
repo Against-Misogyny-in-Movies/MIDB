@@ -1,4 +1,3 @@
-import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
@@ -35,6 +34,7 @@ import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
 import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
+import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 /**
  * The page and both of its views. `?tab=reports` opens the community-reports tab, and

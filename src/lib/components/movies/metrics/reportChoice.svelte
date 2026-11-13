@@ -67,20 +67,25 @@
 	 * From 40rem a compact group is a row: the legend in the counts' 13rem name column, the options
 	 * beside it, a hairline between rows. A fieldset keeps its rendered legend out of grid and flex
 	 * layout, so the legend floats instead; the options are a flex box, which sits beside the float.
-	 * Both take the option's height and centre their text, so the baselines meet.
+	 * The legend's first line takes the option's height and size, so the baselines meet even when a
+	 * long legend wraps below it.
 	 */
 	@media (min-width: 40rem) {
 		.choice--compact {
 			display: block;
 			padding-block: var(--spacing-xs);
+		}
+
+		/* The sibling is another instance of this component, so Svelte cannot see it in this file. */
+		:global(.choice--compact + .choice--compact) {
 			border-top: 1px solid var(--border);
 		}
 
 		.choice--compact legend {
-			@apply flex items-center;
+			@apply text-sm;
 			float: left;
 			width: 13rem;
-			min-height: 1.75rem;
+			line-height: 1.75rem;
 			margin-right: var(--spacing-md);
 		}
 	}
@@ -111,7 +116,7 @@
 
 	@media (min-width: 40rem) and (pointer: coarse) {
 		.choice--compact legend {
-			min-height: 2.75rem;
+			line-height: 2.75rem;
 		}
 	}
 </style>

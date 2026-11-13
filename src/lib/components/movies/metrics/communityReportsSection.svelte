@@ -21,27 +21,40 @@
 
 	// The section opens for a link to it (`#community-reports`, which the sign-in return path carries
 	// and the header badge points at). The hash is read on mount, because the server render never
-	// knows it, and again on `hashchange`; the section is below the fold, so opening it moves nothing
-	// the reader sees.
+	// knows it, and again on `hashchange`. A click on a link to the section opens it too, because a
+	// link to the hash the page is already on fires no `hashchange`. The section is below the fold,
+	// so opening it moves nothing the reader sees.
 	let open = $state(false);
 
-	function openForHash() {
-		if (location.hash !== '#community-reports') return;
+	function openSection() {
 		open = true;
 		// A reader may have closed the section since the prop was set, so the element is opened directly.
 		const el = document.getElementById('community-reports');
 		if (el instanceof HTMLDetailsElement) el.open = true;
 	}
 
+	function openForHash() {
+		if (location.hash === '#community-reports') openSection();
+	}
+
+	function openForLink(event: MouseEvent) {
+		if (event.target instanceof Element && event.target.closest('a[href="#community-reports"]'))
+			openSection();
+	}
+
 	onMount(() => {
 		open = location.hash === '#community-reports';
 		window.addEventListener('hashchange', openForHash);
+		document.addEventListener('click', openForLink);
 		// The page is cached for everyone, so the reader's own report comes from the private
 		// endpoint once the session says who is reading.
 		void session.load();
 		void reports.load();
 		if (session.likelyUser) void reports.loadViewer();
-		return () => window.removeEventListener('hashchange', openForHash);
+		return () => {
+			window.removeEventListener('hashchange', openForHash);
+			document.removeEventListener('click', openForLink);
+		};
 	});
 
 	$effect(() => {
@@ -58,7 +71,10 @@
 
 	const total = $derived(reports.counts?.total ?? 0);
 	const counts = $derived(reports.counts && 'categories' in reports.counts ? reports.counts : null);
-	/** Whether the report form is open: "Counts look wrong" waits, so only one plate shows. */
+	/**
+	 * Whether the report form is open: the "Counts look wrong" link waits, but the flag component
+	 * stays mounted so a note already typed in its plate survives.
+	 */
 	let editing = $state(false);
 	const status = $derived(
 		reports.phase === 'loading'
@@ -112,8 +128,8 @@
 
 		<CommunityReportOwn state={reports} {signInHref} bind:editing />
 
-		{#if canFlag && !editing}
-			<CommunityReportFlag state={reports} />
+		{#if canFlag}
+			<CommunityReportFlag state={reports} hideTrigger={editing} />
 		{/if}
 	</div>
 </CollapsibleSection>

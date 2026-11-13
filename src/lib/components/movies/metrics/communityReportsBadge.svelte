@@ -11,7 +11,9 @@
 
 	const loading = $derived(reports.phase === 'loading');
 	const total = $derived(reports.counts?.total ?? 0);
-	const label = $derived(total === 1 && !loading ? 'community report' : 'community reports');
+	const label = $derived(
+		total === 1 && !loading ? 'counted community report' : 'counted community reports'
+	);
 </script>
 
 <a class="link-badge" href="#community-reports">

@@ -21,6 +21,7 @@
 
 	let draft = $state<ReportDraft>(emptyDraft());
 	let trigger: HTMLButtonElement | undefined = $state();
+	let deletedNote: HTMLDivElement | undefined = $state();
 
 	const report = $derived(reports.viewer?.report ?? null);
 	const mutedUntil = $derived(reports.viewer?.mutedUntil ?? null);
@@ -58,7 +59,8 @@
 
 	function close() {
 		editing = false;
-		void focusAfterUpdate(() => trigger);
+		// A delete leaves its result in the notice, so that is where focus goes to announce it.
+		void focusAfterUpdate(() => (reports.deleted ? deletedNote : trigger));
 	}
 </script>
 
@@ -70,6 +72,10 @@
 			Report saved. It counts from {formatDate(standing.countsFrom)}, once the account is old
 			enough.
 		</Notice>
+	{:else if reports.saved && standing?.kind === 'rejected'}
+		<Notice tone="warn">Report saved. A moderator rejected it, so it does not count.</Notice>
+	{:else if reports.saved && standing?.kind === 'restricted'}
+		<Notice tone="warn">Report saved. It does not count while the account is {standing.by}.</Notice>
 	{:else if reports.saved}
 		<Notice tone="success">Report saved. The counts above include it once the page reloads.</Notice>
 	{/if}
@@ -126,9 +132,9 @@
 					</button>
 				</div>
 				{#if reports.deleted}
-					<Notice tone="success">
-						Report deleted. The counts above drop it once the page reloads.
-					</Notice>
+					<div class="deleted" tabindex="-1" bind:this={deletedNote}>
+						<Notice tone="success">Report deleted. A reload shows the counts without it.</Notice>
+					</div>
 				{/if}
 			{/if}
 		{/if}
@@ -166,6 +172,11 @@
 
 	.retry {
 		@apply self-start;
+	}
+
+	/* Focused by the code once a delete went through; there is nothing to operate on it. */
+	.deleted:focus {
+		outline: none;
 	}
 
 	@media (pointer: coarse) {

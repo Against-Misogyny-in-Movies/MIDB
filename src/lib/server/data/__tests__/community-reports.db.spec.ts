@@ -26,6 +26,10 @@ import {
 const DAY = 86_400_000;
 const REF: TitleRef = { title: 'Alien', imdbId: null, tmdbId: '348', releaseDate: '1979-05-25' };
 
+const asUser = (id: string) => ({ id, role: 'user' });
+const MOD = { id: 'mod', role: 'moderator' };
+const ADMIN = { id: 'admin', role: 'administrator' };
+
 const answers = (over: Partial<ReportAnswers> = {}): ReportAnswers => ({
 	sexualPresent: null,
 	partnerLevel: 'on_screen',
@@ -56,10 +60,15 @@ beforeEach(async () => {
 
 describe('upsertReport', () => {
 	it('stores a counted report and overwrites it on a second call', async () => {
-		const first = await upsertReport('reader', 'movie', REF, answers());
+		const first = await upsertReport(asUser('reader'), 'movie', REF, answers());
 		expect(first.status).toBe('counted');
 		expect(first.title.id).toBe(titleId);
-		await upsertReport('reader', 'movie', REF, answers({ partnerLevel: 'none', framing: null }));
+		await upsertReport(
+			asUser('reader'),
+			'movie',
+			REF,
+			answers({ partnerLevel: 'none', framing: null })
+		);
 		const rows = await db.select().from(communityContentReports);
 		expect(rows).toHaveLength(1);
 		expect(rows[0].partnerLevel).toBe('none');
@@ -67,14 +76,19 @@ describe('upsertReport', () => {
 	});
 
 	it('creates the title row when it is new', async () => {
-		const result = await upsertReport('reader', 'movie', { ...REF, tmdbId: '999' }, answers());
+		const result = await upsertReport(
+			asUser('reader'),
+			'movie',
+			{ ...REF, tmdbId: '999' },
+			answers()
+		);
 		expect(result.title.id).not.toBe(titleId);
 		expect(result.title.tmdbId).toBe(999);
 	});
 
 	it('keeps the flags only when sexual violence is present', async () => {
 		await upsertReport(
-			'reader',
+			asUser('reader'),
 			'movie',
 			REF,
 			answers({ sexualPresent: 'present', flags: { rapeOnScreen: true, incest: false } })
@@ -86,7 +100,7 @@ describe('upsertReport', () => {
 		expect(row.rapeOffScrn).toBeNull();
 
 		await upsertReport(
-			'reader',
+			asUser('reader'),
 			'movie',
 			REF,
 			answers({ sexualPresent: null, flags: { incest: false } })
@@ -97,7 +111,7 @@ describe('upsertReport', () => {
 		expect(row.incest).toBeNull();
 
 		await upsertReport(
-			'reader',
+			asUser('reader'),
 			'movie',
 			REF,
 			answers({ sexualPresent: 'none', flags: { incest: false } })
@@ -110,7 +124,7 @@ describe('upsertReport', () => {
 	it('refuses a Yes flag while sexual violence is Not shown, and writes nothing', async () => {
 		await expect(
 			upsertReport(
-				'reader',
+				asUser('reader'),
 				'movie',
 				{ ...REF, tmdbId: '999' },
 				answers({ sexualPresent: 'none', flags: { rapeOnScreen: true } })
@@ -140,33 +154,43 @@ describe('upsertReport', () => {
 			.returning();
 		await db.insert(titleUm).values({ titleId, umId: um.umId });
 
-		const held = await upsertReport('reader', 'movie', REF, answers({ sexualPresent: 'none' }));
+		const held = await upsertReport(
+			asUser('reader'),
+			'movie',
+			REF,
+			answers({ sexualPresent: 'none' })
+		);
 		expect(held).toMatchObject({ status: 'held', holdReason: 'contradicts_source' });
-		const fixed = await upsertReport('reader', 'movie', REF, answers({ sexualPresent: 'present' }));
+		const fixed = await upsertReport(
+			asUser('reader'),
+			'movie',
+			REF,
+			answers({ sexualPresent: 'present' })
+		);
 		expect(fixed).toMatchObject({ status: 'counted', holdReason: null });
 	});
 
 	it('holds the report that makes a burst, and an edit of a report inside the window does not count itself', async () => {
 		for (let i = 0; i < BURST_COUNT - 1; i++) {
 			await addUser(`b${i}`);
-			expect((await upsertReport(`b${i}`, 'movie', REF, answers())).status).toBe('counted');
+			expect((await upsertReport(asUser(`b${i}`), 'movie', REF, answers())).status).toBe('counted');
 		}
-		const burst = await upsertReport('reader', 'movie', REF, answers());
+		const burst = await upsertReport(asUser('reader'), 'movie', REF, answers());
 		expect(burst).toMatchObject({ status: 'held', holdReason: 'burst' });
-		const again = await upsertReport('b0', 'movie', REF, answers({ framing: null }));
+		const again = await upsertReport(asUser('b0'), 'movie', REF, answers({ framing: null }));
 		expect(again.status).toBe('held');
 	});
 
 	it('does not hold an edit of a report created outside the burst window as a burst', async () => {
 		for (let i = 0; i < BURST_COUNT - 1; i++) {
 			await addUser(`b${i}`);
-			await upsertReport(`b${i}`, 'movie', REF, answers());
+			await upsertReport(asUser(`b${i}`), 'movie', REF, answers());
 		}
 		const old = new Date(Date.now() - (BURST_WINDOW_HOURS + 1) * 3_600_000);
 		await db
 			.insert(communityContentReports)
 			.values({ userId: 'reader', titleId, createdAt: old, updatedAt: old });
-		const edited = await upsertReport('reader', 'movie', REF, answers({ framing: null }));
+		const edited = await upsertReport(asUser('reader'), 'movie', REF, answers({ framing: null }));
 		expect(edited).toMatchObject({ status: 'counted', holdReason: null });
 	});
 
@@ -179,14 +203,19 @@ describe('upsertReport', () => {
 				.returning();
 			await db.insert(communityContentReports).values({ userId: 'fresh', titleId: t.id });
 		}
-		const result = await upsertReport('fresh', 'movie', REF, answers());
+		const result = await upsertReport(asUser('fresh'), 'movie', REF, answers());
 		expect(result).toMatchObject({ status: 'held', holdReason: 'busy_new_account' });
 	});
 
 	it('keeps a rejected report rejected', async () => {
-		await upsertReport('reader', 'movie', REF, answers());
+		await upsertReport(asUser('reader'), 'movie', REF, answers());
 		await db.update(communityContentReports).set({ status: 'rejected' });
-		const result = await upsertReport('reader', 'movie', REF, answers({ partnerLevel: 'none' }));
+		const result = await upsertReport(
+			asUser('reader'),
+			'movie',
+			REF,
+			answers({ partnerLevel: 'none' })
+		);
 		expect(result).toMatchObject({ status: 'rejected', holdReason: null });
 	});
 });
@@ -197,7 +226,7 @@ describe('staff reports', () => {
 
 	it('counts a young moderator’s report at once, with no hold', async () => {
 		await addStaff('mod');
-		const result = await upsertReport('mod', 'movie', REF, answers());
+		const result = await upsertReport(MOD, 'movie', REF, answers());
 		expect(result).toMatchObject({ status: 'counted', holdReason: null });
 		expect((await getReportCounts(titleId)).total).toBe(1);
 		const viewer = await getViewerReport('mod', titleId);
@@ -208,10 +237,10 @@ describe('staff reports', () => {
 	it('never holds a staff report under a burst', async () => {
 		for (let i = 0; i < BURST_COUNT - 1; i++) {
 			await addUser(`b${i}`);
-			await upsertReport(`b${i}`, 'movie', REF, answers());
+			await upsertReport(asUser(`b${i}`), 'movie', REF, answers());
 		}
 		await addStaff('admin', 'administrator');
-		expect(await upsertReport('admin', 'movie', REF, answers())).toMatchObject({
+		expect(await upsertReport(ADMIN, 'movie', REF, answers())).toMatchObject({
 			status: 'counted',
 			holdReason: null
 		});
@@ -237,14 +266,14 @@ describe('staff reports', () => {
 			.returning();
 		await db.insert(titleUm).values({ titleId, umId: um.umId });
 		await addStaff('mod');
-		expect(
-			await upsertReport('mod', 'movie', REF, answers({ sexualPresent: 'none' }))
-		).toMatchObject({ status: 'counted', holdReason: null });
+		expect(await upsertReport(MOD, 'movie', REF, answers({ sexualPresent: 'none' }))).toMatchObject(
+			{ status: 'counted', holdReason: null }
+		);
 	});
 
 	it('still holds a young user’s report from the wait, and leaves it out of the counts', async () => {
 		await addUser('young', 1);
-		await upsertReport('young', 'movie', REF, answers());
+		await upsertReport(asUser('young'), 'movie', REF, answers());
 		expect((await getReportCounts(titleId)).total).toBe(0);
 		expect((await getViewerReport('young', titleId))?.countsFrom.getTime()).toBeGreaterThan(
 			Date.now()
@@ -253,9 +282,9 @@ describe('staff reports', () => {
 
 	it('keeps a rejected staff report rejected on edit, and out of the counts', async () => {
 		await addStaff('mod');
-		await upsertReport('mod', 'movie', REF, answers());
+		await upsertReport(MOD, 'movie', REF, answers());
 		await db.update(communityContentReports).set({ status: 'rejected' });
-		const result = await upsertReport('mod', 'movie', REF, answers({ partnerLevel: 'none' }));
+		const result = await upsertReport(MOD, 'movie', REF, answers({ partnerLevel: 'none' }));
 		expect(result).toMatchObject({ status: 'rejected', holdReason: null });
 		expect((await getReportCounts(titleId)).total).toBe(0);
 	});
@@ -273,7 +302,7 @@ describe('staff reports', () => {
 
 describe('deleteReport and getViewerReport', () => {
 	it('deletes the community report, and reports whether there was one', async () => {
-		await upsertReport('reader', 'movie', REF, answers());
+		await upsertReport(asUser('reader'), 'movie', REF, answers());
 		expect(await deleteReport('reader', titleId)).toBe(true);
 		expect(await deleteReport('reader', titleId)).toBe(false);
 		expect(await getViewerReport('reader', titleId)).toBeNull();
@@ -281,7 +310,7 @@ describe('deleteReport and getViewerReport', () => {
 
 	it('returns the status and the date the report starts counting', async () => {
 		await addUser('young', 2);
-		await upsertReport('young', 'movie', REF, answers());
+		await upsertReport(asUser('young'), 'movie', REF, answers());
 		const report = await getViewerReport('young', titleId);
 		expect(report?.status).toBe('counted');
 		const [u] = await db.select().from(users).where(eq(users.id, 'young'));
@@ -293,7 +322,7 @@ describe('deleteReport and getViewerReport', () => {
 
 describe('getReportCounts', () => {
 	async function report(userId: string, over: Partial<ReportAnswers> = {}) {
-		await upsertReport(userId, 'movie', REF, answers(over));
+		await upsertReport(asUser(userId), 'movie', REF, answers(over));
 	}
 
 	it('counts levels, flags and framing of counted reports', async () => {
@@ -368,7 +397,8 @@ describe('getUserRatings', () => {
 		await addUser('young', 2);
 		await addUser('muted', 100, { mutedUntil: new Date(Date.now() + DAY) });
 		await addUser('banned', 100, { bannedAt: new Date() });
-		for (const id of ['young', 'muted', 'banned']) await upsertReport(id, 'movie', REF, answers());
+		for (const id of ['young', 'muted', 'banned'])
+			await upsertReport(asUser(id), 'movie', REF, answers());
 		const [young] = await getUserRatings('young');
 		expect(young.countsFrom.getTime()).toBeGreaterThan(Date.now());
 		expect(young.restricted).toBeNull();
@@ -377,7 +407,7 @@ describe('getUserRatings', () => {
 	});
 
 	it('lists the community reports with their status, newest first', async () => {
-		await upsertReport('reader', 'movie', REF, answers());
+		await upsertReport(asUser('reader'), 'movie', REF, answers());
 		const rows = await getUserRatings('reader');
 		expect(rows).toHaveLength(1);
 		expect(rows[0]).toMatchObject({ status: 'counted', title: 'Alien', kind: 'movie' });
