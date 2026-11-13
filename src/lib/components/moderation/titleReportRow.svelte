@@ -7,7 +7,8 @@
 	import ReportRowShell from '#lib/components/moderation/reportRowShell.svelte';
 	import type { ActionOutcome, TitleReport } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { accountLine, reportStanding } from '#lib/media/utils/reportAccount.ts';
+	import { accountLine } from '#lib/media/utils/reportAccount.ts';
+	import { effectiveStanding, moderatorStandingLabel } from '#lib/media/utils/reportStanding.ts';
 	import { HOLD_REASON_LABELS } from '#lib/media/utils/readerReports.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
@@ -30,7 +31,15 @@
 
 	const key = $derived(`${report.account.userId}:${titleId}`);
 	const mine = $derived(outcome?.id === key ? outcome : null);
-	const standing = $derived(reportStanding(report.status, report.account));
+	const standing = $derived(
+		moderatorStandingLabel(
+			effectiveStanding({
+				status: report.status,
+				countsFrom: report.account.countsFrom,
+				restricted: report.account.restricted
+			})
+		)
+	);
 </script>
 
 <ReportRowShell bind:root>

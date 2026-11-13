@@ -4,7 +4,7 @@
 	import ReaderReportForm from './readerReportForm.svelte';
 	import type { ReaderReportsState } from '#lib/media/utils/readerReportsState.svelte.js';
 	import { draftFromReport, emptyDraft, type ReportDraft } from '#lib/media/utils/reportDraft.ts';
-	import { reportStanding } from '#lib/media/utils/reportStanding.ts';
+	import { effectiveStanding, readerStandingLabel } from '#lib/media/utils/reportStanding.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
@@ -23,9 +23,23 @@
 
 	const report = $derived(reports.viewer?.report ?? null);
 	const mutedUntil = $derived(reports.viewer?.mutedUntil ?? null);
-	const standing = $derived(report ? reportStanding(report) : null);
-	/** A signed-in reader waits for their own report before the line shows, so a mute can replace it. */
-	const pending = $derived(reports.viewerPhase === 'idle' || reports.viewerPhase === 'loading');
+	const standing = $derived(
+		report
+			? effectiveStanding({
+					status: report.status,
+					countsFrom: report.countsFrom,
+					restricted: mutedUntil ? 'muted' : null
+				})
+			: null
+	);
+	const label = $derived(standing ? readerStandingLabel(standing) : null);
+	/**
+	 * A signed-in reader waits for their own report before the line shows, so a mute can replace
+	 * it. A re-read after a save keeps the line: the report it read before is still on screen.
+	 */
+	const pending = $derived(
+		reports.viewerPhase === 'idle' || (reports.viewerPhase === 'loading' && reports.viewer === null)
+	);
 
 	function show() {
 		draft = report ? draftFromReport(report) : emptyDraft();
@@ -41,44 +55,65 @@
 	}
 </script>
 
+{#snippet savedNotice()}
+	{#if reports.saved?.status === 'held'}
+		<Notice tone="warn">Report saved. It waits for a moderator before it counts.</Notice>
+	{:else if reports.saved && standing?.kind === 'young'}
+		<Notice tone="success">
+			Report saved. It counts from {formatDate(standing.countsFrom)}, once the account is old
+			enough.
+		</Notice>
+	{:else if reports.saved}
+		<Notice tone="success">Report saved.</Notice>
+	{/if}
+{/snippet}
+
 <div class="own" aria-busy={session.status === 'pending' || (session.status === 'user' && pending)}>
 	{#if session.status === 'anon'}
-		<p class="line"><a class="link" href={signInHref}>Sign in to add a report</a></p>
+		<p class="line">
+			<a class="link signin" href={signInHref}>Sign in to add a report</a>
+		</p>
 	{:else if session.status === 'user' && !pending}
 		{#if reports.errors.viewer}
+			{@render savedNotice()}
 			<Notice tone="error">{reports.errors.viewer}</Notice>
-		{:else if mutedUntil}
-			<Notice tone="warn">
-				This account is muted and cannot add, edit or delete reader reports until {formatDate(
-					mutedUntil
-				)}.
-			</Notice>
-		{:else if open}
-			<ReaderReportForm
-				state={reports}
-				bind:draft
-				saved={report !== null}
-				ondone={close}
-				oncancel={close}
-			/>
-		{:else if report && standing}
-			<div class="line">
-				<span class="mine">Your report</span>
-				<Badge tone={standing.tone}>{standing.label}</Badge>
-				<span class="sep" aria-hidden="true">·</span>
-				<button class="link edit" type="button" bind:this={trigger} onclick={show}>Edit</button>
-			</div>
-			{#if reports.saved?.status === 'held'}
-				<Notice tone="warn">Report saved. It waits for a moderator before it counts.</Notice>
-			{:else if reports.saved}
-				<Notice tone="success">Report saved.</Notice>
-			{/if}
+			<button class="btn btn--ink retry" type="button" onclick={() => reports.loadViewer()}>
+				Try again
+			</button>
 		{:else}
-			<div class="line">
-				<button class="btn btn--ink" type="button" bind:this={trigger} onclick={show}>
-					Add a report
-				</button>
-			</div>
+			{#if report && label && !open}
+				<div class="line">
+					<span class="mine">This account’s report</span>
+					<Badge tone={label.tone}>{label.label}</Badge>
+					{#if !mutedUntil}
+						<span class="sep" aria-hidden="true">·</span>
+						<button class="link edit" type="button" bind:this={trigger} onclick={show}>Edit</button>
+					{/if}
+				</div>
+			{/if}
+			{#if mutedUntil}
+				<Notice tone="warn">
+					This account is muted and cannot add, edit or delete reader reports until {formatDate(
+						mutedUntil
+					)}.
+				</Notice>
+			{:else if open}
+				<ReaderReportForm
+					state={reports}
+					bind:draft
+					saved={report !== null}
+					ondone={close}
+					oncancel={close}
+				/>
+			{:else if report}
+				{@render savedNotice()}
+			{:else}
+				<div class="line">
+					<button class="btn btn--ink" type="button" bind:this={trigger} onclick={show}>
+						Add a report
+					</button>
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </div>
@@ -106,9 +141,14 @@
 		@apply text-ink-muted;
 	}
 
-	.edit {
+	.edit,
+	.signin {
 		@apply inline-flex items-center cursor-pointer text-sm;
 		min-height: 1.5rem;
+	}
+
+	.retry {
+		@apply self-start;
 	}
 
 	@media (pointer: coarse) {
@@ -117,7 +157,8 @@
 			min-height: 2.75rem;
 		}
 
-		.edit {
+		.edit,
+		.signin {
 			min-height: 2.75rem;
 		}
 	}

@@ -291,9 +291,9 @@ describe('getUserRatings', () => {
 		for (const id of ['young', 'muted', 'banned']) await upsertReport(id, 'movie', REF, answers());
 		const [young] = await getUserRatings('young');
 		expect(young.countsFrom.getTime()).toBeGreaterThan(Date.now());
-		expect(young.restricted).toBe(false);
-		expect((await getUserRatings('muted'))[0].restricted).toBe(true);
-		expect((await getUserRatings('banned'))[0].restricted).toBe(true);
+		expect(young.restricted).toBeNull();
+		expect((await getUserRatings('muted'))[0].restricted).toBe('muted');
+		expect((await getUserRatings('banned'))[0].restricted).toBe('banned');
 	});
 
 	it('lists the reader reports with their status, newest first', async () => {
@@ -302,7 +302,7 @@ describe('getUserRatings', () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0]).toMatchObject({ status: 'counted', title: 'Alien', kind: 'movie' });
 		expect(rows[0].countsFrom.getTime()).toBeLessThan(Date.now());
-		expect(rows[0].restricted).toBe(false);
+		expect(rows[0].restricted).toBeNull();
 		expect(await getUserRatings('nobody')).toEqual([]);
 	});
 });

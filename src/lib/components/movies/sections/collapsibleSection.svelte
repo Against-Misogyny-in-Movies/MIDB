@@ -5,6 +5,8 @@
 	import { formatDate } from '#lib/media/utils/format.ts';
 
 	interface Props {
+		/** The `<details>` id, for a link that opens the section (`#reader-reports`). */
+		id?: string;
 		title: string;
 		/** Remixicon class for the icon disk, e.g. "ri-chat-3-fill". */
 		icon?: string;
@@ -29,6 +31,7 @@
 	}
 
 	let {
+		id,
 		title,
 		icon,
 		hue,
@@ -45,7 +48,7 @@
 	}: Props = $props();
 </script>
 
-<details class="card section" {open}>
+<details {id} class="card section" {open}>
 	<summary>
 		{#if icon}
 			<span class="disk" style="--disk: 2rem; --hue: {hue ?? 'var(--brand)'}" aria-hidden="true">

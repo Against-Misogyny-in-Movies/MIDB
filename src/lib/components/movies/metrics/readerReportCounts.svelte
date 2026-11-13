@@ -19,17 +19,20 @@
 			.map((f) => ({ label: REPORT_FRAMING_LABELS[f], n: counts.framing[f] ?? 0 }))
 			.filter((f) => f.n > 0)
 	);
+	/** The reports that answered the framing question: it is optional and asked only when violence is shown. */
+	const framingTotal = $derived(framings.reduce((sum, f) => sum + f.n, 0));
+	let expanded = $state(false);
 	/** The reports that said sexual violence is Present: the only ones asked the flags. */
 	const presentCount = $derived(counts.categories.sexual.present ?? 0);
 </script>
 
-{#snippet figures(items: Figure[], of: number | null)}
+{#snippet figures(items: Figure[], of: number, answered = false)}
 	<span class="figures">
 		{#each items as item, i (item.label)}
 			{#if i > 0}<span class="sep" aria-hidden="true"> · </span>{/if}
 			<span class="figure">{item.label} <span class="n">{item.n}</span></span>
 		{/each}
-		{#if of !== null}<span class="of">, of {of}</span>{/if}
+		<span class="of">, of {of}{answered ? ' who answered' : ''}</span>
 	</span>
 {/snippet}
 
@@ -38,11 +41,14 @@
 		{@const items = categoryFigures(counts, category.key)}
 		<li class="row">
 			{#if category.key === 'sexual' && presentCount > 0}
-				<details class="expand">
+				<details class="expand" bind:open={expanded}>
 					<summary class="line">
 						<span class="name">{category.label}</span>
 						{@render figures(items, counts.total)}
-						<i class="chevron ri-arrow-down-s-line" aria-hidden="true"></i>
+						<span class="toggle">
+							<span class="label">{expanded ? 'Hide concerns' : 'Show concerns'}</span>
+							<i class="chevron ri-arrow-down-s-line" aria-hidden="true"></i>
+						</span>
 					</summary>
 					<p class="label flags-note">
 						Concerns among the {presentCount}
@@ -78,7 +84,7 @@
 		<li class="row">
 			<div class="line">
 				<span class="name">Framing of the violence</span>
-				{@render figures(framings, null)}
+				{@render figures(framings, framingTotal, true)}
 			</div>
 		</li>
 	{/if}
@@ -109,7 +115,7 @@
 		}
 
 		.expand .line {
-			grid-template-columns: 13rem 1fr 1.25rem;
+			grid-template-columns: 13rem 1fr auto;
 		}
 	}
 
@@ -129,21 +135,40 @@
 		@apply tabular-nums;
 	}
 
+	/* The toggle sits on the name line on a phone, so the summary keeps room for the chevron. */
 	.expand summary {
 		@apply cursor-pointer select-none;
 		list-style: none;
 		position: relative;
+		padding-right: 1.75rem;
 	}
 
 	.expand summary::-webkit-details-marker {
 		display: none;
 	}
 
-	.chevron {
-		@apply text-xl text-ink-muted;
+	.toggle {
+		@apply inline-flex items-center justify-end;
 		position: absolute;
 		top: var(--spacing-sm);
 		right: 0;
+		height: 1.25rem;
+	}
+
+	@media (min-width: 40rem) {
+		.expand summary {
+			padding-right: 0;
+		}
+
+		.toggle {
+			position: static;
+		}
+	}
+
+	.chevron {
+		@apply text-ink-muted;
+		font-size: 1.25rem;
+		line-height: 1;
 		transition: transform 0.15s ease;
 	}
 

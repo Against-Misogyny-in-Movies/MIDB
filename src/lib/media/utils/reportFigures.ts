@@ -3,6 +3,9 @@ import {
 	OBJECTIFICATION_LEVEL_LABELS,
 	REPORT_CATEGORIES,
 	REPORT_LEVEL_LABELS,
+	objectificationLevel,
+	reportLevel,
+	sexualLevel,
 	SEXUAL_LEVEL_LABELS,
 	type ReportCategory
 } from '#lib/media/utils/readerReports.ts';
@@ -10,23 +13,14 @@ import type { ReportCounts } from '#lib/media/types/reader-reports.ts';
 
 export type Figure = { label: string; n: number };
 
-/** Each level set's levels, most serious first, with the labels the form uses. */
+/** Each level set's levels, most serious first (the tuples run from the least serious), with the labels the form uses. */
 const ORDER = {
-	sexual: [
-		['present', SEXUAL_LEVEL_LABELS.present],
-		['none', SEXUAL_LEVEL_LABELS.none]
-	],
-	violence: [
-		['on_screen', REPORT_LEVEL_LABELS.on_screen],
-		['mentioned', REPORT_LEVEL_LABELS.mentioned],
-		['none', REPORT_LEVEL_LABELS.none]
-	],
-	objectification: [
-		['throughout', OBJECTIFICATION_LEVEL_LABELS.throughout],
-		['some_scenes', OBJECTIFICATION_LEVEL_LABELS.some_scenes],
-		['none', OBJECTIFICATION_LEVEL_LABELS.none]
-	]
-} as const;
+	sexual: sexualLevel.toReversed().map((l) => [l, SEXUAL_LEVEL_LABELS[l]] as const),
+	violence: reportLevel.toReversed().map((l) => [l, REPORT_LEVEL_LABELS[l]] as const),
+	objectification: objectificationLevel
+		.toReversed()
+		.map((l) => [l, OBJECTIFICATION_LEVEL_LABELS[l]] as const)
+};
 
 /** One category's answers as figures, most serious level first; a level nobody chose is left out. */
 export function categoryFigures(counts: ReportCounts, key: ReportCategory): Figure[] {

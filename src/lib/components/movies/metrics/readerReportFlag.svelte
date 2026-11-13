@@ -14,6 +14,7 @@
 	let note = $state('');
 	let trigger: HTMLButtonElement | undefined = $state();
 	let field: HTMLTextAreaElement | undefined = $state();
+	let sent: HTMLDivElement | undefined = $state();
 
 	function show() {
 		open = true;
@@ -31,6 +32,7 @@
 		if (await reports.flag(note)) {
 			note = '';
 			open = false;
+			void focusAfterUpdate(() => sent);
 		}
 	}
 </script>
@@ -59,7 +61,9 @@
 			{/if}
 		</form>
 	{:else if reports.flagged}
-		<Notice tone="success">Counts flagged. Moderators review them.</Notice>
+		<div class="sent" tabindex="-1" bind:this={sent}>
+			<Notice tone="success">Counts flagged. Moderators review them.</Notice>
+		</div>
 	{:else}
 		<button class="link wrong" type="button" bind:this={trigger} onclick={show}>
 			Counts look wrong
@@ -97,12 +101,22 @@
 		@apply ml-auto tabular-nums;
 	}
 
+	/* Focused by the code once the flag went out; there is nothing to operate on it. */
+	.sent:focus {
+		outline: none;
+	}
+
 	.wrong {
 		@apply inline-flex items-center cursor-pointer text-sm;
 		min-height: 1.5rem;
 	}
 
 	@media (pointer: coarse) {
+		/* Focused by the code once the flag went out; there is nothing to operate on it. */
+		.sent:focus {
+			outline: none;
+		}
+
 		.wrong {
 			min-height: 2.75rem;
 		}

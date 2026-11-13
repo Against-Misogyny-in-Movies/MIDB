@@ -1,7 +1,4 @@
-import type { BadgeTone } from '#lib/media/utils/tones.ts';
-import { reportStatusTone } from '#lib/media/utils/tones.ts';
-import type { ReportAccount, TitleReport } from '#lib/media/types/moderation.ts';
-import { formatDate } from '#lib/media/utils/format.ts';
+import type { ReportAccount } from '#lib/media/types/moderation.ts';
 
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
@@ -17,24 +14,4 @@ export function accountLine(account: ReportAccount, withName = true, now = Date.
 		plural(account.commentCount, 'comment')
 	].join(', ');
 	return withName ? `${account.username ?? 'An account'}, ${facts}` : facts;
-}
-
-/**
- * A report's status as a moderator reads it, with whether it is in the counts now: a counted
- * report of a banned or muted account, or of one younger than the minimum age, is not.
- */
-export function reportStanding(
-	status: TitleReport['status'],
-	account: ReportAccount,
-	now = Date.now()
-): { label: string; tone: BadgeTone } {
-	if (status === 'held') return { label: 'Held', tone: reportStatusTone(status) };
-	if (status === 'rejected') return { label: 'Rejected', tone: reportStatusTone(status) };
-	if (account.restricted) {
-		return { label: `Not counted: account ${account.restricted}`, tone: 'neutral' };
-	}
-	if (Date.parse(account.countsFrom) > now) {
-		return { label: `Counts from ${formatDate(account.countsFrom)}`, tone: 'neutral' };
-	}
-	return { label: 'Counted', tone: reportStatusTone(status) };
 }

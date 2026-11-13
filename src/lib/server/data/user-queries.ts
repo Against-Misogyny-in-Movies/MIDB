@@ -138,8 +138,8 @@ export type UserRating = {
 	updatedAt: Date;
 	/** When the report starts counting: the account is old enough from this date. */
 	countsFrom: Date;
-	/** The account is banned or muted, so none of its reports count. */
-	restricted: boolean;
+	/** Why none of the account's reports count: it is banned or muted. */
+	restricted: 'banned' | 'muted' | null;
 };
 
 /** A reader's reader reports, newest first, in every status, with the title joined. */
@@ -162,6 +162,6 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 	return rows.map(({ accountCreatedAt, bannedAt, mutedUntil, ...row }) => ({
 		...row,
 		countsFrom: countsFromDate(accountCreatedAt),
-		restricted: bannedAt !== null || activeMute(mutedUntil) !== null
+		restricted: bannedAt !== null ? 'banned' : activeMute(mutedUntil) ? 'muted' : null
 	}));
 }

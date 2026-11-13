@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Notice from '#lib/components/ui/notice.svelte';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import ReportChoice from './reportChoice.svelte';
 	import type { ReaderReportsState } from '#lib/media/utils/readerReportsState.svelte.js';
 	import {
@@ -62,10 +63,36 @@
 
 	const busy = $derived(reports.busy.save === true || reports.busy.delete === true);
 
+	let watched: HTMLInputElement | undefined = $state();
+	let confirmButton: HTMLButtonElement | undefined = $state();
+	let deleteButton: HTMLButtonElement | undefined = $state();
+	/** Set by a save attempt without "I watched this"; cleared once it is ticked. */
+	let needsWatched = $state(false);
+	let confirming = $state(false);
+
+	$effect(() => {
+		if (draft.watched) needsWatched = false;
+	});
+
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (!canSave(draft) || busy) return;
+		if (busy) return;
+		if (!canSave(draft)) {
+			needsWatched = true;
+			void focusAfterUpdate(() => watched);
+			return;
+		}
 		if (await reports.save(draft)) ondone();
+	}
+
+	function askToDelete() {
+		confirming = true;
+		void focusAfterUpdate(() => confirmButton);
+	}
+
+	function keepReport() {
+		confirming = false;
+		void focusAfterUpdate(() => deleteButton);
 	}
 
 	async function remove() {
@@ -74,11 +101,24 @@
 	}
 </script>
 
-<form class="plate form" aria-busy={busy} onsubmit={submit} data-report-form>
-	<label class="watched">
-		<input type="checkbox" bind:checked={draft.watched} required />
-		<span>I watched this</span>
-	</label>
+<form class="plate form" aria-busy={busy} onsubmit={submit} data-report-form novalidate>
+	<div class="watched-field">
+		<label class="watched">
+			<input
+				type="checkbox"
+				bind:checked={draft.watched}
+				bind:this={watched}
+				aria-required="true"
+				aria-describedby={needsWatched ? 'report-watched-error' : undefined}
+			/>
+			<span>I watched this</span>
+		</label>
+		{#if needsWatched}
+			<Notice tone="error" id="report-watched-error">
+				Tick “I watched this” to save the report.
+			</Notice>
+		{/if}
+	</div>
 
 	<ReportChoice
 		legend={sexual.label}
@@ -123,24 +163,54 @@
 
 	{#if asksFraming(draft)}
 		<ReportChoice
-			legend="How the title treats the violence (optional)"
+			legend="Framing of the violence (optional)"
 			name="report-framing"
 			options={FRAMINGS}
 			bind:value={draft.framing}
 		/>
 	{/if}
 
-	<div class="actions">
-		<button class="btn btn--brand" type="submit" disabled={!canSave(draft) || busy}>
-			{reports.busy.save ? 'Saving…' : 'Save report'}
-		</button>
-		<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
-		{#if saved}
-			<button class="btn btn--ghost delete" type="button" disabled={busy} onclick={remove}>
-				{reports.busy.delete ? 'Deleting…' : 'Delete report'}
-			</button>
-		{/if}
-	</div>
+	{#if confirming}
+		<div class="confirm" role="group" aria-labelledby="report-delete-note">
+			<p id="report-delete-note" class="confirm-note">
+				Deleting removes this report from the counts. It cannot be undone.
+			</p>
+			<div class="actions">
+				<button
+					class="btn btn--ink"
+					type="button"
+					bind:this={confirmButton}
+					disabled={busy}
+					onclick={remove}
+				>
+					{reports.busy.delete ? 'Deleting…' : 'Delete report'}
+				</button>
+				<button class="btn btn--ghost" type="button" disabled={busy} onclick={keepReport}>
+					Cancel
+				</button>
+			</div>
+		</div>
+	{:else}
+		<div class="actions">
+			<div class="main">
+				<button class="btn btn--brand" type="submit" disabled={busy}>
+					{reports.busy.save ? 'Saving…' : 'Save report'}
+				</button>
+				<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
+			</div>
+			{#if saved}
+				<button
+					class="btn btn--ghost delete"
+					type="button"
+					bind:this={deleteButton}
+					disabled={busy}
+					onclick={askToDelete}
+				>
+					Delete report
+				</button>
+			{/if}
+		</div>
+	{/if}
 	{#if reports.errors.save}
 		<Notice tone="error">{reports.errors.save}</Notice>
 	{/if}
@@ -157,8 +227,13 @@
 		gap: var(--spacing-md);
 	}
 
+	.watched-field {
+		@apply flex flex-col;
+		gap: var(--spacing-sm);
+	}
+
 	.watched {
-		@apply inline-flex items-center gap-sm text-sm font-semibold cursor-pointer;
+		@apply inline-flex items-center gap-sm text-sm font-semibold cursor-pointer self-start;
 		min-height: 1.75rem;
 	}
 
@@ -186,8 +261,31 @@
 		gap: var(--spacing-sm);
 	}
 
+	/* On a phone Save and Cancel fill their row, so Delete takes its own, away from them. */
+	.main {
+		@apply flex flex-wrap items-center;
+		flex: 1 1 100%;
+		gap: var(--spacing-sm);
+	}
+
 	.delete {
 		@apply sm:ml-auto;
+	}
+
+	@media (min-width: 40rem) {
+		.main {
+			flex: 0 1 auto;
+		}
+	}
+
+	.confirm {
+		@apply flex flex-col;
+		gap: var(--spacing-sm);
+	}
+
+	.confirm-note {
+		@apply text-sm;
+		margin: 0;
 	}
 
 	@media (pointer: coarse) {

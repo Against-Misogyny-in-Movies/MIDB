@@ -3,7 +3,7 @@ import type {
 	ViewerReportResponse
 } from '#lib/media/types/reader-reports.ts';
 import { REPORT_NOTE_MAX } from '#lib/media/utils/comments.ts';
-import { requestJson, type Fetcher } from '#lib/media/utils/commentApi.ts';
+import { describeStatus, requestJson, type Fetcher } from '#lib/media/utils/commentApi.ts';
 import type { ContentReportStatus } from '#lib/media/utils/readerReports.ts';
 import { reportBody, type ReportDraft } from '#lib/media/utils/reportDraft.ts';
 
@@ -18,20 +18,15 @@ const FAILED: Record<Action, string> = {
 };
 
 /** One sentence for a failed request: what failed, and why when the status says. */
-function describe(action: Action, status: number, message: string): string {
+function describe(action: Action, status: number): string {
 	const failed = FAILED[action];
-	if (status === 0) return `${failed}. The server could not be reached.`;
-	if (status === 401) return `${failed}. The session has ended: sign in again.`;
-	if (status === 403) {
-		if (/banned/i.test(message)) return 'This account is banned and cannot add reader reports.';
-		if (/muted/i.test(message)) return 'This account is muted and cannot add reader reports.';
-	}
-	if (status === 429) return `${failed}. Too many requests: wait a moment and try again.`;
-	if (status === 400)
-		return action === 'flag'
-			? `${failed}. A note is at most ${REPORT_NOTE_MAX} characters.`
-			: `${failed}. Some answers contradict each other.`;
-	return `${failed}. Try again in a moment.`;
+	return describeStatus(failed, status, {
+		forbidden: `${failed}. This account is muted.`,
+		badRequest:
+			action === 'flag'
+				? `${failed}. A note is at most ${REPORT_NOTE_MAX} characters.`
+				: `${failed}. The server refused the answers.`
+	});
 }
 
 /**
@@ -65,7 +60,7 @@ export class ReaderReportsState {
 		delete this.errors.load;
 		const reply = await requestJson<ReaderReportsResponse>(this.#fetch, 'GET', this.#base);
 		if (!reply.ok) {
-			this.errors.load = describe('load', reply.status, reply.message);
+			this.errors.load = describe('load', reply.status);
 			this.phase = 'error';
 			return;
 		}
@@ -89,7 +84,7 @@ export class ReaderReportsState {
 			this.viewer = null;
 			this.viewerPhase = 'ready';
 		} else {
-			this.errors.viewer = describe('viewer', reply.status, reply.message);
+			this.errors.viewer = describe('viewer', reply.status);
 			this.viewerPhase = 'error';
 		}
 	}
@@ -117,7 +112,7 @@ export class ReaderReportsState {
 		);
 		if (!reply.ok) {
 			this.busy.save = false;
-			this.errors.save = describe('save', reply.status, reply.message);
+			this.errors.save = describe('save', reply.status);
 			return false;
 		}
 		this.saved = { status: reply.data.status };
@@ -128,22 +123,10 @@ export class ReaderReportsState {
 
 	async remove(): Promise<boolean> {
 		this.#start('delete');
-		// A 204 has no body, which `requestJson` would fail to parse.
-		let status = 0;
-		let message = '';
-		try {
-			const res = await this.#fetch(this.#base, { method: 'DELETE' });
-			status = res.status;
-			if (!res.ok) {
-				const failure = (await res.json().catch(() => null)) as { message?: string } | null;
-				message = failure?.message ?? '';
-			}
-		} catch {
-			status = 0;
-		}
+		const reply = await requestJson<undefined>(this.#fetch, 'DELETE', this.#base);
 		this.busy.delete = false;
-		if (status < 200 || status >= 300) {
-			this.errors.delete = describe('delete', status, message);
+		if (!reply.ok) {
+			this.errors.delete = describe('delete', reply.status);
 			return false;
 		}
 		this.saved = null;
@@ -159,7 +142,7 @@ export class ReaderReportsState {
 		});
 		this.busy.flag = false;
 		if (!reply.ok) {
-			this.errors.flag = describe('flag', reply.status, reply.message);
+			this.errors.flag = describe('flag', reply.status);
 			return false;
 		}
 		this.flagged = true;
