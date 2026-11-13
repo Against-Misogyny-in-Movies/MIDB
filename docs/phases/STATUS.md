@@ -39,8 +39,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | C2    | Community reports: staff        | completed   | 2026-11-13.                                                                                                       |
 | C3    | Community reports: header badge | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
 | C4    | Community reports: flow         | completed   | 2026-11-13. Not rendered in a browser (no TMDB token here).                                                       |
-| M1    | Moderation table: data          | active      | 2026-11-13. In progress.                                                                                          |
-| M2    | Moderation table: AI            | not started |                                                                                                                   |
+| M1    | Moderation table: data          | active      | 2026-11-13. Built; review round running.                                                                          |
+| M2    | Moderation table: AI            | active      | 2026-11-13. In progress.                                                                                          |
 | M3    | Moderation table: UI            | not started |                                                                                                                   |
 | M4    | Moderation table: docs          | not started |                                                                                                                   |
 
