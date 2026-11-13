@@ -28,7 +28,7 @@ const reports = {
 };
 const listModerationTable = vi.fn();
 const saveScanLabels = vi.fn();
-const getCommentWithTitle = vi.fn();
+const listScanItems = vi.fn();
 const queryToFilters = vi.fn();
 const scanComments = vi.fn();
 const serverEnv = vi.hoisted(() => ({ ANTHROPIC_API_KEY: undefined as string | undefined }));
@@ -56,10 +56,8 @@ vi.mock('#lib/server/data/moderation-table.ts', () => ({
 	listModerationTable: (...args: unknown[]) => listModerationTable(...args)
 }));
 vi.mock('#lib/server/data/comment-ai-labels.ts', () => ({
-	saveScanLabels: (...args: unknown[]) => saveScanLabels(...args)
-}));
-vi.mock('#lib/server/data/comment-queries.ts', () => ({
-	getCommentWithTitle: (...args: unknown[]) => getCommentWithTitle(...args)
+	saveScanLabels: (...args: unknown[]) => saveScanLabels(...args),
+	listScanItems: (...args: unknown[]) => listScanItems(...args)
 }));
 vi.mock('#lib/server/moderation/search-filters.ts', () => ({
 	queryToFilters: (...args: unknown[]) => queryToFilters(...args)
@@ -104,7 +102,7 @@ beforeEach(() => {
 	reports.getOpenTitle.mockReset().mockResolvedValue(null);
 	listModerationTable.mockReset().mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 50 });
 	saveScanLabels.mockReset().mockResolvedValue(undefined);
-	getCommentWithTitle.mockReset();
+	listScanItems.mockReset();
 	queryToFilters.mockReset();
 	scanComments.mockReset();
 	serverEnv.ANTHROPIC_API_KEY = undefined;
@@ -232,14 +230,13 @@ describe('?/aiSearch', () => {
 });
 
 describe('?/scan', () => {
-	const COMMENTS: Record<string, unknown> = {
-		c1: { comment: { id: 'c1', body: 'First', status: 'published' }, title: ALIEN },
-		c2: { comment: { id: 'c2', body: 'Second', status: 'deleted' }, title: ALIEN },
-		c3: { comment: { id: 'c3', body: 'Third', status: 'pending' }, title: DARK }
-	};
+	const ITEMS = [
+		{ id: 'c1', body: 'First', titleName: 'Alien', kind: 'movie' },
+		{ id: 'c3', body: 'Third', titleName: 'Dark', kind: 'tv' }
+	];
 
 	beforeEach(() => {
-		getCommentWithTitle.mockImplementation(async (id: string) => COMMENTS[id] ?? null);
+		listScanItems.mockResolvedValue(ITEMS);
 	});
 
 	it('scans the stored bodies of the named comments, saves the labels and counts the matches', async () => {
@@ -259,10 +256,8 @@ describe('?/scan', () => {
 		expect(rateLimit).toHaveBeenCalledWith(expect.anything(), 'RL_MODERATE_AI', {
 			userId: 'mod-1'
 		});
-		expect(scanComments).toHaveBeenCalledExactlyOnceWith('disparaging', [
-			{ id: 'c1', body: 'First', titleName: 'Alien', kind: 'movie' },
-			{ id: 'c3', body: 'Third', titleName: 'Dark', kind: 'tv' }
-		]);
+		expect(listScanItems).toHaveBeenCalledExactlyOnceWith(['c1', 'c2', 'c3', 'gone']);
+		expect(scanComments).toHaveBeenCalledExactlyOnceWith('disparaging', ITEMS);
 		expect(saveScanLabels).toHaveBeenCalledExactlyOnceWith('mod-1', 'disparaging', results);
 		expect(result).toEqual({
 			id: 'scan',
@@ -311,6 +306,16 @@ describe('?/scan', () => {
 		expect(await run('scan', [['concern', 'x']])).toMatchObject({ status: 400 });
 		expect(await run('scan', [['concern', 'x'], ...ids(51)])).toMatchObject({ status: 400 });
 		expect(scanComments).not.toHaveBeenCalled();
+		expect(listScanItems).not.toHaveBeenCalled();
+	});
+
+	it('refuses a concern over the limit before reading any comment', async () => {
+		expect(await run('scan', [['concern', 'x'.repeat(201)], ...ids(1)])).toMatchObject({
+			status: 400,
+			data: { error: 'The scan text must be 1 to 200 characters.' }
+		});
+		expect(listScanItems).not.toHaveBeenCalled();
+		expect(scanComments).not.toHaveBeenCalled();
 	});
 });
 
@@ -356,13 +361,29 @@ describe('?/bulk', () => {
 		expect(purgeTitleComments).toHaveBeenCalledExactlyOnceWith(ALIEN);
 	});
 
-	it('answers with the refusal, and purges nothing, when no comment could change', async () => {
-		actionsFns.approveComment.mockResolvedValue({ ok: false, reason: 'forbidden-target' });
+	it('answers 409 with the bulk refusal, and purges nothing, when no comment could change', async () => {
+		actionsFns.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		expect(await run('bulk', [['op', 'approve'], ...ids(2)])).toMatchObject({
-			status: 403,
-			data: { id: 'bulk' }
+			status: 409,
+			data: {
+				id: 'bulk',
+				error:
+					'None of the selected comments could be changed: none is in a status this action applies to.'
+			}
 		});
 		expect(purgeTitleComments).not.toHaveBeenCalled();
+	});
+
+	it('purges the titles already changed when a later write throws, and the error reaches the caller', async () => {
+		actionsFns.hideComment
+			.mockResolvedValueOnce({ ok: true, title: ALIEN })
+			.mockResolvedValueOnce({ ok: true, title: DARK })
+			.mockRejectedValueOnce(new Error('D1 down'));
+		await expect(run('bulk', [['op', 'hide'], ...ids(4)])).rejects.toThrow('D1 down');
+		expect(actionsFns.hideComment).toHaveBeenCalledTimes(3);
+		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
+		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
+		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
 	});
 
 	it('purges no title for a comment with none', async () => {

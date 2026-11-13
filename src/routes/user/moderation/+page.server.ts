@@ -2,7 +2,7 @@ import type { Actions, PageServerLoad } from './$types';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { purgeTitleComments } from '#lib/server/http/purge-title.ts';
-import { act, text, type Outcome } from '#lib/server/http/moderation-action.ts';
+import { act, text, type ActionEvent, type Outcome } from '#lib/server/http/moderation-action.ts';
 import { env } from '#lib/server/env.ts';
 import {
 	approveComment,
@@ -31,13 +31,17 @@ import {
 	listHeldReports
 } from '#lib/server/data/community-report-queue.ts';
 import { listModerationTable } from '#lib/server/data/moderation-table.ts';
-import { saveScanLabels } from '#lib/server/data/comment-ai-labels.ts';
-import { getCommentWithTitle } from '#lib/server/data/comment-queries.ts';
+import { listScanItems, saveScanLabels } from '#lib/server/data/comment-ai-labels.ts';
 import { queryToFilters } from '#lib/server/moderation/search-filters.ts';
-import { scanComments, type ScanItem } from '#lib/server/moderation/scan.ts';
+import { scanComments } from '#lib/server/moderation/scan.ts';
 import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
-import { AI_QUERY_MAX, MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
+import {
+	AI_QUERY_MAX,
+	MODERATION_REASON_MAX,
+	MUTE_HOURS,
+	SCAN_CONCERN_MAX
+} from '#lib/media/utils/comments.ts';
 import {
 	TABLE_PAGE_SIZE,
 	filtersToParams,
@@ -139,10 +143,10 @@ function pageIds(data: FormData): string[] | null {
 /**
  * Applies one operation to each comment in turn. Each function checks the comment's state and
  * the author's standing itself, so a refusal costs only its own comment. Every title touched is
- * purged once, however many of its comments changed.
+ * purged once, however many of its comments changed, and also when a later write throws: the
+ * changes already made are public by then.
  */
-function bulk(event: Parameters<Actions[string]>[0]) {
-	const touched = new Map<string, NonNullable<Extract<ModerationResult, { ok: true }>['title']>>();
+function bulk(event: ActionEvent) {
 	return act(
 		event,
 		'bulk',
@@ -152,41 +156,24 @@ function bulk(event: Parameters<Actions[string]>[0]) {
 			const ids = pageIds(data);
 			if (!isBulkOp(op) || !ids) return { ok: false, reason: 'invalid' };
 			const reason = reasonOf(data);
+			const touched = new Map<
+				string,
+				NonNullable<Extract<ModerationResult, { ok: true }>['title']>
+			>();
 			let applied = 0;
-			let refused: Extract<ModerationResult, { ok: false }>['reason'] | null = null;
-			for (const id of ids) {
-				const result = await BULK_OPS[op](staff, id, reason);
-				if (!result.ok) {
-					refused ??= result.reason;
-					continue;
+			try {
+				for (const id of ids) {
+					const result = await BULK_OPS[op](staff, id, reason);
+					if (!result.ok) continue;
+					applied += 1;
+					if (result.title) touched.set(result.title.id, result.title);
 				}
-				applied += 1;
-				const title = result.title;
-				if (title) touched.set(title.id, title);
+			} finally {
+				for (const title of touched.values()) purgeTitleComments(title);
 			}
-			if (applied === 0 && refused) return { ok: false, reason: refused };
+			if (applied === 0) return { ok: false, reason: 'bulk-unchanged' };
 			return { ok: true, extra: { op, applied, refused: ids.length - applied } };
-		},
-		() => {
-			for (const title of touched.values()) purgeTitleComments(title);
 		}
-	);
-}
-
-/** The comments a scan sends: found ones that are not deleted, with their title's name and kind. */
-async function scanItems(ids: string[]): Promise<ScanItem[]> {
-	const found = await Promise.all(ids.map((id) => getCommentWithTitle(id)));
-	return found.flatMap((entry) =>
-		entry && entry.comment.status !== 'deleted'
-			? [
-					{
-						id: entry.comment.id,
-						body: entry.comment.body,
-						titleName: entry.title.name,
-						kind: entry.title.kind
-					}
-				]
-			: []
 	);
 }
 
@@ -214,8 +201,11 @@ export const actions: Actions = {
 			async (staff, data): Promise<Outcome> => {
 				const concern = text(data, 'concern');
 				const ids = pageIds(data);
-				if (!concern || !ids) return { ok: false, reason: 'invalid' };
-				const items = await scanItems(ids);
+				if (!ids) return { ok: false, reason: 'invalid' };
+				if (!concern || concern.length > SCAN_CONCERN_MAX) {
+					return { ok: false, reason: 'invalid-concern' };
+				}
+				const items = await listScanItems(ids);
 				const scan = await scanComments(concern, items);
 				if (!scan.ok) return { ok: false, reason: scan.code };
 				await saveScanLabels(staff.id, concern, scan.results);

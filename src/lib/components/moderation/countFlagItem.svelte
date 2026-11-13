@@ -17,7 +17,7 @@
 		() => root,
 		(name) => (busy = name),
 		undefined,
-		'open-title'
+		() => 'open-title'
 	);
 </script>
 

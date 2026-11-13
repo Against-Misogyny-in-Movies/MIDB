@@ -5,11 +5,20 @@ import {
 } from '#lib/media/utils/comments.ts';
 import { filtersToParams, type TableFilters } from '#lib/media/utils/moderationFilters.ts';
 
+/** The ids the table's parts give the focus to, so a part that goes away can hand it to one that stays. */
+export const TABLE_FOCUS = {
+	card: 'moderation-table',
+	chips: 'table-chips',
+	selectAll: 'table-select-all',
+	apply: 'table-apply',
+	filtersToggle: 'table-filters-toggle'
+} as const;
+
 /** How each sort reads in a chip. */
 export const SORT_LABELS: Record<TableFilters['sort'], string> = {
 	newest: 'Newest first',
 	oldest: 'Oldest first',
-	reports: 'Most reports',
+	reports: 'Most open reports',
 	severity: 'Highest severity'
 };
 
@@ -47,7 +56,9 @@ export function filterChips(filters: TableFilters): FilterChip[] {
 		add('severity', `Severity ${filters.minSeverity} or higher`, { minSeverity: undefined });
 	}
 	if (filters.source) {
-		add('source', `Held by: ${MODERATION_SOURCE_LABELS[filters.source]}`, { source: undefined });
+		add('source', `Status set by: ${MODERATION_SOURCE_LABELS[filters.source]}`, {
+			source: undefined
+		});
 	}
 	if (filters.reported) add('reported', 'Has open reports', { reported: undefined });
 	if (filters.title) add('title', `Title: ${filters.title}`, { title: undefined });

@@ -70,11 +70,13 @@
 	{/each}
 	<p class="text-sm">
 		{#if count !== undefined && kind === 'hide'}
-			Hide {count} selected {noun}? Each leaves the public list, replies stay under a placeholder,
-			and its author sees it as hidden.
+			Hide {count} selected {noun}? A pending or published one is taken out of view, its replies
+			stay under a placeholder, and its author sees it as hidden. A comment in any other status
+			stays as it is.
 		{:else if count !== undefined && kind === 'reject'}
-			Reject {count} selected {noun}? Each leaves the public list, and its author sees it as
-			rejected with the reason.
+			Reject {count} selected {noun}? A pending or published one is taken out of view, and its
+			author sees it as rejected, with the reason when one is given. A comment in any other status
+			stays as it is.
 		{:else if kind === 'hide'}
 			Hide this comment? It leaves the public list, and replies stay under a placeholder. The author
 			sees it as hidden.

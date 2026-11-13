@@ -34,10 +34,21 @@
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
 	]);
 
-	/** The table loads from the server with its filters, so choosing it goes to its URL. */
-	function select(next: Tab) {
+	/**
+	 * The table loads from the server with its filters, so choosing it goes to its URL. Leaving it
+	 * drops `tab=table` from the URL: a later action's `update()` reloads the page from the URL, and
+	 * a URL that still named the table would bring it back and run its query again. The navigation
+	 * keeps the focus (`reset: false`), and the chosen tab is set again once it is done, because the
+	 * new data derives Pending or the reports tab from the URL.
+	 */
+	async function select(next: Tab) {
 		tab = next;
-		if (next === 'table' && data.tab !== 'table') void goto('?tab=table', { reset: false });
+		if (next === 'table') {
+			if (data.tab !== 'table') void goto('?tab=table', { reset: false });
+		} else if (data.tab === 'table') {
+			await goto(next === 'reports' ? '?tab=reports' : '?', { reset: false });
+			tab = next;
+		}
 	}
 
 	/**
@@ -62,7 +73,7 @@
 							: null;
 		if (target === null) return;
 		event.preventDefault();
-		select(TABS[target].id);
+		void select(TABS[target].id);
 		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
 	}
 
@@ -103,7 +114,7 @@
 				aria-selected={tab === t.id}
 				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
 				tabindex={tab === t.id ? 0 : -1}
-				onclick={() => select(t.id)}
+				onclick={() => void select(t.id)}
 				onkeydown={(event) => onTabKeydown(event, i)}
 			>
 				{t.label}{#if t.count !== null}
@@ -115,16 +126,18 @@
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
 		{#if tab === 'table'}
 			{#if data.table && data.filters}
-				<div class="bleed">
-					<TablePanel
-						table={data.table}
-						filters={data.filters}
-						aiAvailable={data.aiAvailable}
-						me={data.me}
-					/>
-				</div>
+				<TablePanel
+					table={data.table}
+					filters={data.filters}
+					aiAvailable={data.aiAvailable}
+					me={data.me}
+				/>
 			{:else}
-				<p class="empty" aria-busy="true">Loading comments…</p>
+				<div class="card skeleton" aria-busy="true" aria-label="Loading comments">
+					{#each [0, 1, 2, 3, 4, 5] as row (row)}
+						<div class="skeleton-row"></div>
+					{/each}
+				</div>
 			{/if}
 		{:else if tab === 'recent'}
 			{#if data.recent.length === 0}
@@ -179,13 +192,9 @@
 		@apply text-ink;
 	}
 
-	/* The table needs the whole column the layout allows, and up to 4rem more on each side of it. */
+	/* The table takes the layout's whole column; the header and the tabs keep its left edge. */
 	.page.wide {
 		max-width: none;
-	}
-
-	.bleed {
-		margin-inline: calc(-1 * max(0px, min(4rem, (100vw - 66rem) / 2)));
 	}
 
 	h1 {
@@ -223,5 +232,37 @@
 
 	.list > :global(li + li) {
 		border-top: 1px solid var(--border);
+	}
+
+	/* Room for the filters and the first rows, so the table replaces it without moving what is below. */
+	.skeleton {
+		@apply flex flex-col;
+		min-height: 18rem;
+	}
+
+	.skeleton-row {
+		@apply flex items-center border-b border-border;
+		height: 3rem;
+		animation: pulse 1.6s ease-in-out infinite;
+	}
+
+	.skeleton-row::before {
+		content: '';
+		width: 40%;
+		height: 0.75rem;
+		margin-left: var(--spacing-md);
+		background-color: var(--surface-sunken);
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.5;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.skeleton-row {
+			animation: none;
+		}
 	}
 </style>

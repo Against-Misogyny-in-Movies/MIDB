@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('#lib/media/utils/toasts.svelte.js', () => ({ toasts }));
 
-const { toastActionResult } = await import('../rowSubmit.ts');
+const { rowSubmit, toastActionResult } = await import('../rowSubmit.ts');
 
 afterEach(() => {
 	toasts.success.mockReset();
@@ -30,12 +30,10 @@ describe('toastActionResult', () => {
 
 	it('reports a scan’s matches and the comments it did not check', () => {
 		done({ done: 'scan', matched: 3, checked: 50, notChecked: 0 });
-		expect(toasts.success).toHaveBeenLastCalledWith(
-			'Scan checked 50 comments: 3 matched the concern.'
-		);
+		expect(toasts.success).toHaveBeenLastCalledWith('Scan checked 50 comments: 3 matched.');
 		done({ done: 'scan', matched: 0, checked: 1, notChecked: 4 });
 		expect(toasts.success).toHaveBeenLastCalledWith(
-			'Scan checked 1 comment: 0 matched the concern. 4 comments not checked.'
+			'Scan checked 1 comment: 0 matched. 4 comments not checked.'
 		);
 	});
 
@@ -51,5 +49,46 @@ describe('toastActionResult', () => {
 	it('confirms an AI search', () => {
 		done({ done: 'aiSearch', params: 'q=x' });
 		expect(toasts.success).toHaveBeenCalledWith('Filters set from the search.');
+	});
+});
+
+describe('rowSubmit focus', () => {
+	afterEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** Submits the form of a row whose element then leaves the page, and returns what holds the focus. */
+	async function focusAfterRowLeaves(markup: string, fallbackIds?: string[]) {
+		document.body.innerHTML = markup;
+		const row = document.getElementById('row') as HTMLElement;
+		const submit = rowSubmit(
+			() => row,
+			() => {},
+			undefined,
+			fallbackIds && (() => fallbackIds)
+		);
+		const handle = submit('approve')();
+		await handle({
+			result: { type: 'success', data: {} },
+			update: async () => {
+				row.remove();
+			}
+		});
+		return document.activeElement?.id;
+	}
+
+	it('focuses a neighbour that takes focus', async () => {
+		expect(
+			await focusAfterRowLeaves('<ul><li id="row"></li><li id="next" tabindex="-1"></li></ul>')
+		).toBe('next');
+	});
+
+	it('skips a neighbour that cannot take focus for the first fallback on the page', async () => {
+		expect(
+			await focusAfterRowLeaves(
+				'<div id="row"></div><nav id="pager"></nav><div id="card" tabindex="-1"></div>',
+				['gone', 'card']
+			)
+		).toBe('card');
 	});
 });

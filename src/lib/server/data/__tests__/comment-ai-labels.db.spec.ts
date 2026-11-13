@@ -5,7 +5,7 @@ import { users } from '#db/schema/auth.ts';
 import { titles } from '#db/schema/titles.ts';
 import { commentAiLabels, comments } from '#db/schema/community.ts';
 import { userValues } from '#db/test/users.ts';
-import { saveScanLabels } from '#lib/server/data/comment-ai-labels.ts';
+import { listScanItems, saveScanLabels } from '#lib/server/data/comment-ai-labels.ts';
 import type { ScanResult } from '#lib/server/moderation/scan.ts';
 
 const result = (id: string, over: Partial<ScanResult> = {}): ScanResult => ({
@@ -97,5 +97,21 @@ describe('saveScanLabels', () => {
 			)
 		).rejects.toThrow();
 		expect(await db.select().from(commentAiLabels)).toHaveLength(0);
+	});
+});
+
+describe('listScanItems', () => {
+	it('returns the found comments in the order asked, with their title, and skips deleted and unknown ids', async () => {
+		await db.update(comments).set({ status: 'deleted' }).where(eq(comments.id, 'c2'));
+		expect(await listScanItems(['c3', 'c2', 'gone', 'c1'])).toEqual([
+			{ id: 'c3', body: 'b3', titleName: 'Alien', kind: 'movie' },
+			{ id: 'c1', body: 'b1', titleName: 'Alien', kind: 'movie' }
+		]);
+	});
+
+	it('reads a full page of ids across D1 statements', async () => {
+		const ids = Array.from({ length: 30 }, (_, i) => `c${i}`);
+		expect((await listScanItems(ids)).map((item) => item.id)).toEqual(ids);
+		expect(await listScanItems([])).toEqual([]);
 	});
 });

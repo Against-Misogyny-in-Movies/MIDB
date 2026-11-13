@@ -9,7 +9,7 @@ import type { ScanFailure } from '#lib/server/moderation/scan.ts';
 import { SCAN_CONCERN_MAX } from '#lib/media/utils/comments.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
-type ActionEvent = Parameters<Actions[string]>[0];
+export type ActionEvent = Parameters<Actions[string]>[0];
 
 /** The text field `name` of the form, trimmed; empty or absent is null, and a file part is not text. */
 export function text(data: FormData, name: string): string | null {
@@ -21,22 +21,24 @@ export function text(data: FormData, name: string): string | null {
 type Refusal =
 	| Extract<ModerationResult | ReportModerationResult, { ok: false }>['reason']
 	| ScanFailure
-	| 'invalid';
+	| 'invalid'
+	| 'bulk-unchanged';
 
 /**
  * What an action answers when it is not a data function's result: a refusal, or success with
  * `extra` fields the page reads from `form` (`aiSearch`, `scan` and `bulk` return counts and
  * the filters the model chose).
  */
-export type ExtraOutcome =
-	| { ok: true; extra: Record<string, unknown> }
-	| { ok: false; reason: Refusal };
+type ExtraOutcome = { ok: true; extra: Record<string, unknown> } | { ok: false; reason: Refusal };
 
 export type Outcome = ModerationResult | ReportModerationResult | ExtraOutcome;
 
-const AI_FAILED: [number, string] = [502, 'The AI service gave no usable answer. Try again.'];
+const AI_FAILED: [number, string] = [
+	502,
+	'The AI service gave no usable answer, and nothing was saved.'
+];
 
-export const refusals: Record<Refusal, [number, string]> = {
+const refusals: Record<Refusal, [number, string]> = {
 	invalid: [400, 'The request was not valid.'],
 	'not-found': [404, 'The comment, report or account no longer exists.'],
 	'invalid-state': [409, 'It is no longer in a state this action applies to.'],
@@ -44,9 +46,13 @@ export const refusals: Record<Refusal, [number, string]> = {
 		403,
 		'A moderator can act only on ordinary accounts, an administrator also on moderators; no one acts on an administrator or on their own account.'
 	],
-	'invalid-concern': [400, `The concern must be 1 to ${SCAN_CONCERN_MAX} characters.`],
+	'bulk-unchanged': [
+		409,
+		'None of the selected comments could be changed: none is in a status this action applies to.'
+	],
+	'invalid-concern': [400, `The scan text must be 1 to ${SCAN_CONCERN_MAX} characters.`],
 	'ai-unavailable': [503, 'AI search and scan are not set up on this site.'],
-	'ai-rate-limited': [429, 'The AI service is busy. Try again in a moment.'],
+	'ai-rate-limited': [429, 'The AI service is busy; a search or scan can run again in a moment.'],
 	'ai-refusal': AI_FAILED,
 	'ai-truncated': AI_FAILED,
 	'ai-unparsed': AI_FAILED,

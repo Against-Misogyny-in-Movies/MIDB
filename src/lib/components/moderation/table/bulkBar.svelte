@@ -1,21 +1,26 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	interface Props {
 		/** The ids of the selected comments. */
 		ids: string[];
 		onclear: () => void;
+		/** Where the focus goes once the action clears the selection and the bar leaves: the first of these on the page. */
+		fallbackIds: string[];
 	}
 
-	let { ids, onclear }: Props = $props();
+	let { ids, onclear, fallbackIds }: Props = $props();
 
 	type Confirm = 'hide' | 'reject';
 	let panel = $state<Confirm | null>(null);
 	/** The operation whose form is in flight, so its button reads as busy and the others wait. */
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
+	let hideToggle: HTMLButtonElement | undefined = $state();
+	let rejectToggle: HTMLButtonElement | undefined = $state();
 
 	/** Whatever the outcome, the table reloads, so the selection and the panel close. */
 	const submit = rowSubmit(
@@ -24,8 +29,16 @@
 		() => {
 			panel = null;
 			onclear();
-		}
+		},
+		() => fallbackIds
 	);
+
+	/** Closing the panel without acting puts the focus back on the toggle that opened it. */
+	function cancel() {
+		const opener = panel === 'hide' ? hideToggle : rejectToggle;
+		panel = null;
+		void focusAfterUpdate(() => opener);
+	}
 
 	const DIRECT = [
 		{ op: 'approve', label: 'Approve' },
@@ -66,12 +79,14 @@
 			<button
 				class="btn btn--ghost"
 				type="button"
+				bind:this={hideToggle}
 				aria-expanded={panel === 'hide'}
 				onclick={() => (panel = panel === 'hide' ? null : 'hide')}>Hide</button
 			>
 			<button
 				class="btn btn--ghost"
 				type="button"
+				bind:this={rejectToggle}
 				aria-expanded={panel === 'reject'}
 				onclick={() => (panel = panel === 'reject' ? null : 'reject')}>Reject</button
 			>
@@ -87,7 +102,7 @@
 			count={ids.length}
 			{busy}
 			{submit}
-			oncancel={() => (panel = null)}
+			oncancel={cancel}
 		/>
 	{/if}
 </div>

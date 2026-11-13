@@ -206,8 +206,24 @@ describe('the table tab', () => {
 	it('does not go again when the table is already the URL', async () => {
 		render(Page, { data: TABLE_DATA, form: null } as never);
 		await fireEvent.click(tab(/Pending/));
+		goto.mockClear();
 		await fireEvent.click(tab(/All comments/));
 		expect(goto).not.toHaveBeenCalled();
+	});
+
+	it('drops tab=table from the URL when another tab is chosen, and keeps the choice', async () => {
+		render(Page, { data: TABLE_DATA, form: null } as never);
+		await fireEvent.click(tab(/Recent actions/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?', { reset: false });
+		await waitFor(() => expect(tab(/Recent actions/).getAttribute('aria-selected')).toBe('true'));
+		goto.mockClear();
+		await fireEvent.click(tab(/MIDB community reports/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=reports', { reset: false });
+	});
+
+	it('reserves room for the table while it loads', () => {
+		render(Page, { data: { ...TABLE_DATA, table: null, filters: null }, form: null } as never);
+		expect(screen.getByLabelText('Loading comments').getAttribute('aria-busy')).toBe('true');
 	});
 
 	it('shows each active filter as a chip that removes only it', () => {
@@ -230,11 +246,38 @@ describe('the table tab', () => {
 		expect(chips.getAllByRole('link')).toHaveLength(4);
 	});
 
-	it('disables the AI controls without a key and says why', () => {
+	it('says why the AI controls are off, and shows none, without a key', () => {
 		render(Page, { data: { ...TABLE_DATA, aiAvailable: false }, form: null } as never);
 		expect(screen.getByText(/AI search and scan are off/)).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Search with AI' })).toHaveProperty('disabled', true);
-		expect(screen.getByRole('button', { name: 'Scan this page' })).toHaveProperty('disabled', true);
+		expect(screen.queryByRole('button', { name: 'Search with AI' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Scan this page' })).toBeNull();
+	});
+
+	it('keeps the filters closed until one is set, with the chips outside them', () => {
+		const { unmount } = render(Page, { data: TABLE_DATA, form: null } as never);
+		expect(document.querySelector<HTMLDetailsElement>('details.fields')?.open).toBe(false);
+		unmount();
+		render(Page, {
+			data: { ...TABLE_DATA, filters: { ...FILTERS, q: 'troll' } },
+			form: null
+		} as never);
+		expect(document.querySelector<HTMLDetailsElement>('details.fields')?.open).toBe(true);
+		const chips = screen.getByRole('list', { name: 'Active filters' });
+		expect(chips.closest('details.fields')).toBeNull();
+	});
+
+	it('sets the sort beside select-all, carrying the filters with it', () => {
+		render(Page, {
+			data: { ...TABLE_DATA, filters: { ...FILTERS, q: 'troll', sort: 'reports' } },
+			form: null
+		} as never);
+		const sort = screen.getByLabelText('Sort') as unknown as HTMLSelectElement;
+		expect(sort.value).toBe('reports');
+		expect(screen.getByRole('option', { name: 'Most open reports' })).toBeTruthy();
+		const formEl = sort.closest('form') as HTMLFormElement;
+		expect(formEl.closest('details.fields')).toBeNull();
+		expect(formEl.querySelector<HTMLInputElement>('input[name=q]')?.value).toBe('troll');
+		expect(formEl.querySelector<HTMLInputElement>('input[name=tab]')?.value).toBe('table');
 	});
 
 	it('shows the bulk bar once a row is selected, and not before', async () => {

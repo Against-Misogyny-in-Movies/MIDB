@@ -3,9 +3,11 @@
 	import BulkBar from '#lib/components/moderation/table/bulkBar.svelte';
 	import ModerationTable from '#lib/components/moderation/table/moderationTable.svelte';
 	import TableFilters from '#lib/components/moderation/table/tableFilters.svelte';
+	import TableSort from '#lib/components/moderation/table/tableSort.svelte';
 	import TablePager from '#lib/components/moderation/table/tablePager.svelte';
 	import type { ModerationTable as Table } from '#lib/media/types/moderation.ts';
 	import type { TableFilters as Filters } from '#lib/media/utils/moderationFilters.ts';
+	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 
 	interface Props {
 		table: Table;
@@ -27,22 +29,30 @@
 	<AiSearchBar {aiAvailable} {ids} />
 	<TableFilters {filters} />
 
-	{#if ids.length > 0}
-		<label class="all">
-			<input
-				type="checkbox"
-				checked={allSelected}
-				indeterminate={selected.length > 0 && !allSelected}
-				onchange={() => (ticked = allSelected ? [] : [...ids])}
-			/>
-			Select all {ids.length} on this page
-		</label>
-	{/if}
+	<div class="above">
+		{#if ids.length > 0}
+			<label class="all">
+				<input
+					id={TABLE_FOCUS.selectAll}
+					type="checkbox"
+					checked={allSelected}
+					indeterminate={selected.length > 0 && !allSelected}
+					onchange={() => (ticked = allSelected ? [] : [...ids])}
+				/>
+				Select all {ids.length} on this page
+			</label>
+		{/if}
+		<TableSort {filters} />
+	</div>
 
 	<ModerationTable rows={table.rows} {me} bind:selected={ticked} />
 
 	{#if selected.length > 0}
-		<BulkBar ids={selected} onclear={() => (ticked = [])} />
+		<BulkBar
+			ids={selected}
+			onclear={() => (ticked = [])}
+			fallbackIds={[TABLE_FOCUS.selectAll, TABLE_FOCUS.card]}
+		/>
 	{/if}
 	<TablePager {filters} total={table.total} page={table.page} pageSize={table.pageSize} />
 </div>
@@ -55,8 +65,13 @@
 		gap: var(--spacing-md);
 	}
 
+	.above {
+		@apply flex flex-wrap items-center justify-between;
+		gap: var(--spacing-sm) var(--spacing-md);
+	}
+
 	.all {
-		@apply inline-flex items-center text-sm cursor-pointer self-start;
+		@apply inline-flex items-center text-sm cursor-pointer;
 		gap: var(--spacing-sm);
 		min-height: 1.75rem;
 	}

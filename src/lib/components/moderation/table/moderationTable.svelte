@@ -10,6 +10,7 @@
 	} from '#lib/media/utils/comments.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
+	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
@@ -31,49 +32,58 @@
 	];
 </script>
 
-<!-- The focus lands here when an action takes its row off the page (`rowSubmit`'s default fallback). -->
-<div class="card" id="moderation-empty" tabindex="-1">
+<!-- The focus lands here when an action takes its row off the page and no neighbour can take it. -->
+<div class="card" id={TABLE_FOCUS.card} tabindex="-1">
 	{#if rows.length === 0}
 		<p class="empty">No comments match these filters.</p>
 	{:else}
-		<table>
+		<!-- The stacked layout below `lg` sets `display: block`, which drops the table semantics unless the roles are explicit. -->
+		<!-- svelte-ignore a11y_no_redundant_roles -->
+		<table role="table">
 			<caption class="sr-only">
 				{rows.length}
 				{rows.length === 1 ? 'comment' : 'comments'} on this page, with the automatic check, open reports
 				and latest scan of each
 			</caption>
-			<thead>
-				<tr>
-					<th scope="col" class="select"><span class="sr-only">Select</span></th>
-					<th scope="col" class="comment">Comment</th>
-					<th scope="col" class="author">Author</th>
-					<th scope="col" class="title">Title</th>
-					<th scope="col">Status</th>
-					<th scope="col">Automatic check</th>
-					<th scope="col">Reports</th>
-					<th scope="col" class="scan">Scan</th>
-					<th scope="col">Posted</th>
-					<th scope="col"><span class="sr-only">Actions</span></th>
+			<!-- svelte-ignore a11y_no_redundant_roles -->
+			<thead role="rowgroup">
+				<!-- svelte-ignore a11y_no_redundant_roles -->
+				<tr role="row">
+					<th role="columnheader" scope="col" class="select"><span class="sr-only">Select</span></th
+					>
+					<th role="columnheader" scope="col" class="comment">Comment</th>
+					<th role="columnheader" scope="col" class="author">Author</th>
+					<th role="columnheader" scope="col" class="title">Title</th>
+					<th role="columnheader" scope="col">Status</th>
+					<th role="columnheader" scope="col">Automatic check</th>
+					<th role="columnheader" scope="col">Reports</th>
+					<th role="columnheader" scope="col" class="scan">Scan</th>
+					<th role="columnheader" scope="col">Posted</th>
+					<th role="columnheader" scope="col"><span class="sr-only">Actions</span></th>
 				</tr>
 			</thead>
-			<tbody>
+			<!-- svelte-ignore a11y_no_redundant_roles -->
+			<tbody role="rowgroup">
 				{#each rows as row (row.comment.id)}
 					{@const id = row.comment.id}
 					{@const href = titleHref(row.title.kind, row.title.tmdbId)}
 					{@const open = openId === id}
-					<tr class="row" data-open={open || undefined}>
-						<td class="select">
-							<input
-								type="checkbox"
-								value={id}
-								bind:group={selected}
-								aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
-							/>
+					<!-- svelte-ignore a11y_no_redundant_roles -->
+					<tr class="row" role="row" data-open={open || undefined}>
+						<td class="select" role="cell">
+							<label class="pick">
+								<input
+									type="checkbox"
+									value={id}
+									bind:group={selected}
+									aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
+								/>
+							</label>
 						</td>
-						<td class="comment" data-label="Comment">
+						<td class="comment" role="cell" data-label="Comment">
 							<p class="clamp body">{row.comment.body}</p>
 						</td>
-						<td class="author" data-label="Author">
+						<td class="author" role="cell" data-label="Author">
 							<span class="name">{row.author.displayName}</span>
 							{#if row.author.role !== 'user'}
 								<Badge tone="brand">
@@ -81,35 +91,39 @@
 								</Badge>
 							{/if}
 						</td>
-						<td class="title" data-label="Title">
+						<td class="title" role="cell" data-label="Title">
 							<span class="clamp">
 								{#if href}<a class="link" {href}>{row.title.name}</a>{:else}{row.title.name}{/if}
 							</span>
 						</td>
-						<td data-label="Status">
+						<td role="cell" data-label="Status">
 							<Badge tone={commentStatusTone(row.comment.status)}>
 								{COMMENT_STATUS_LABELS[row.comment.status]}
 							</Badge>
 						</td>
-						<td data-label="Automatic check">
+						<td role="cell" data-label="Automatic check">
 							<div class="stack">
 								{#if row.aiFailure}
 									<span class="label">Check failed</span>
 								{:else if row.severity === null}
-									<span class="label">No verdict</span>
+									<span class="label">Not checked</span>
 								{:else if row.severity === 0 && row.aiCategories.length === 0}
-									<span class="label">No concerns</span>
+									<span class="label">Nothing found</span>
 								{:else}
+									{#if row.severity > 0}
+										{#if row.severity >= 2}
+											<Badge tone={severityTone(row.severity)}>Severity {row.severity}</Badge>
+										{:else}
+											<span class="label">Severity {row.severity}</span>
+										{/if}
+									{/if}
 									{#each row.aiCategories as category (category)}
 										<Badge tone="neutral">{categoryLabel(category)}</Badge>
 									{/each}
-									{#if row.severity > 0}
-										<Badge tone={severityTone(row.severity)}>Severity {row.severity}</Badge>
-									{/if}
 								{/if}
 							</div>
 						</td>
-						<td data-label="Reports">
+						<td role="cell" data-label="Reports">
 							{#if row.reports.length > 0}
 								<div class="stack">
 									<span class="num count">{row.reports.length} open</span>
@@ -119,10 +133,10 @@
 								<span class="label">None</span>
 							{/if}
 						</td>
-						<td class="scan" data-label="Scan">
+						<td class="scan" role="cell" data-label="Scan">
 							{#if row.latestLabel}
 								<div class="stack">
-									<Badge tone={row.latestLabel.matched ? 'neg' : 'neutral'}>
+									<Badge tone={row.latestLabel.matched ? 'mid' : 'neutral'}>
 										{row.latestLabel.matched ? 'Matched' : 'No match'}
 									</Badge>
 									<span class="label clamp">{row.latestLabel.concern}</span>
@@ -131,12 +145,12 @@
 								<span class="label">Not scanned</span>
 							{/if}
 						</td>
-						<td data-label="Posted">
+						<td role="cell" data-label="Posted">
 							<time class="num" datetime={row.comment.createdAt}>
 								{formatDate(row.comment.createdAt)}
 							</time>
 						</td>
-						<td class="actions">
+						<td class="actions" role="cell">
 							<button
 								class="chip"
 								type="button"
@@ -150,8 +164,9 @@
 						</td>
 					</tr>
 					{#if open}
-						<tr class="detail" id="detail-{id}">
-							<td colspan={COLUMNS}>
+						<!-- svelte-ignore a11y_no_redundant_roles -->
+						<tr class="detail" role="row" id="detail-{id}">
+							<td role="cell" colspan={COLUMNS}>
 								{#if row.latestLabel}
 									<p class="scan-note label">
 										Latest scan for “{row.latestLabel.concern}”: {row.latestLabel.matched
@@ -163,7 +178,11 @@
 									</p>
 								{/if}
 								<ul class="item">
-									<ModerationItemRow item={row} canActOnAuthor={canActOn(me, row.author)} />
+									<ModerationItemRow
+										item={row}
+										canActOnAuthor={canActOn(me, row.author)}
+										fallbackId={TABLE_FOCUS.card}
+									/>
 								</ul>
 							</td>
 						</tr>
@@ -212,10 +231,17 @@
 
 	.select {
 		width: 2.5rem;
-		padding-inline: var(--spacing-md) 0;
+		padding: 0;
 	}
 
-	.select input {
+	/* The label fills the cell, so the whole cell is the target. */
+	.pick {
+		@apply flex items-center justify-center cursor-pointer;
+		min-width: 2.5rem;
+		min-height: 2.25rem;
+	}
+
+	.pick input {
 		@apply cursor-pointer;
 		width: 1rem;
 		height: 1rem;
@@ -223,19 +249,19 @@
 	}
 
 	.author {
-		min-width: 6rem;
+		min-width: 5rem;
 	}
 
 	.title {
-		min-width: 7rem;
+		min-width: 6rem;
 	}
 
 	.scan {
-		min-width: 6.5rem;
+		min-width: 6rem;
 	}
 
 	.comment {
-		min-width: 10rem;
+		min-width: 8rem;
 		width: 100%;
 	}
 
@@ -275,7 +301,12 @@
 			height: 2.75rem;
 		}
 
-		.select input {
+		.pick {
+			min-width: 2.75rem;
+			min-height: 2.75rem;
+		}
+
+		.pick input {
 			width: 1.375rem;
 			height: 1.375rem;
 		}
@@ -295,7 +326,7 @@
 	}
 
 	/* Below the width the columns fit, each row is a list of label and value pairs. */
-	@media (max-width: 60.99rem) {
+	@media (max-width: 975px) {
 		table,
 		tbody,
 		tr,
@@ -333,11 +364,13 @@
 			grid-template-columns: 7rem 1fr;
 			gap: var(--spacing-sm);
 			align-items: start;
+			justify-items: start;
 		}
 
 		.row > td[data-label]::before {
 			@apply text-ink-muted;
-			content: attr(data-label);
+			/* The empty alternative keeps the label visual: the column header already names the cell. */
+			content: attr(data-label) / '';
 		}
 
 		.comment,
@@ -351,6 +384,10 @@
 		.actions {
 			width: auto;
 			padding: 0;
+		}
+
+		.select {
+			justify-self: start;
 		}
 
 		.detail {

@@ -32,13 +32,13 @@ describe('filterChips', () => {
 			'Category: Hate',
 			'Category: Trolling',
 			'Severity 2 or higher',
-			'Held by: Automatic check',
+			'Status set by: Automatic check',
 			'Has open reports',
 			'Title: Alien',
 			'Author: anna',
 			'From 2026-11-01',
 			'Until 2026-11-09',
-			'Most reports'
+			'Most open reports'
 		]);
 		const status = chips.find((chip) => chip.key === 'status-pending');
 		expect(status?.href).toBe(

@@ -20,7 +20,7 @@ vi.mock('$app/forms', () => ({
 			submitter: HTMLElement | null;
 		}) => (opts: {
 			result: Result;
-			update: (options?: { reset?: boolean }) => Promise<void>;
+			update: (options?: { reset?: boolean; navigate?: boolean }) => Promise<void>;
 		}) => Promise<void> | void
 	) => {
 		const onSubmit = (event: Event) => {
@@ -54,7 +54,7 @@ const FILTERS = { sort: 'newest' as const, page: 1 };
 describe('bulkBar', () => {
 	it('counts the selection and posts each id with the operation chosen', async () => {
 		const onclear = vi.fn();
-		render(BulkBar, { ids: ['c1', 'c2', 'c3'], onclear });
+		render(BulkBar, { ids: ['c1', 'c2', 'c3'], onclear, fallbackIds: [] });
 		const bar = within(screen.getByRole('region', { name: /selected comments/ }));
 		expect(bar.getByText('3')).toBeTruthy();
 		const approve = bar.getByRole('button', { name: 'Approve' }) as HTMLButtonElement;
@@ -68,7 +68,7 @@ describe('bulkBar', () => {
 	});
 
 	it('asks before hiding the selection, naming how many, with a reason field', async () => {
-		render(BulkBar, { ids: ['c1', 'c2'], onclear: () => {} });
+		render(BulkBar, { ids: ['c1', 'c2'], onclear: () => {}, fallbackIds: [] });
 		await fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
 		expect(screen.getByText(/Hide 2 selected comments\?/)).toBeTruthy();
 		const confirm = screen.getByRole('button', { name: 'Hide 2 comments' });
@@ -79,12 +79,30 @@ describe('bulkBar', () => {
 		expect(formEl.querySelector('input[name=reason]')).not.toBeNull();
 		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 		expect(screen.queryByText(/Hide 2 selected/)).toBeNull();
+		await waitFor(() =>
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Hide' }))
+		);
+	});
+
+	it('words the bulk confirmations for the statuses they change', async () => {
+		render(BulkBar, { ids: ['c1'], onclear: () => {}, fallbackIds: [] });
+		await fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
+		expect(
+			screen.getByText(
+				/Reject 1 selected comment\? A pending or published one is taken out of view/
+			)
+		).toBeTruthy();
+		expect(screen.getByText(/A comment in any other status stays as it is\./)).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+		await waitFor(() =>
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Reject' }))
+		);
 	});
 
 	it('clears the selection once the action ends', async () => {
 		const onclear = vi.fn();
 		form.result = { type: 'success', data: { done: 'bulk', applied: 2, refused: 0 } };
-		render(BulkBar, { ids: ['c1', 'c2'], onclear });
+		render(BulkBar, { ids: ['c1', 'c2'], onclear, fallbackIds: [] });
 		await fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
 		await waitFor(() => expect(onclear).toHaveBeenCalled());
 		expect(toasts.success).toHaveBeenCalledWith('2 comments changed.');
@@ -122,7 +140,7 @@ describe('aiSearchBar', () => {
 			data: { done: 'scan', matched: 2, checked: 3, notChecked: 1 }
 		};
 		render(AiSearchBar, { aiAvailable: true, ids: ['c1', 'c2', 'c3'] });
-		await fireEvent.input(screen.getByLabelText('Concern to scan for'), {
+		await fireEvent.input(screen.getByLabelText('Scan for'), {
 			target: { value: 'disparaging' }
 		});
 		const scan = screen.getByRole('button', { name: 'Scan this page' });
@@ -130,9 +148,11 @@ describe('aiSearchBar', () => {
 		expect(formEl.getAttribute('action')).toBe('?/scan');
 		expect(formEl.querySelectorAll('input[name=ids]')).toHaveLength(3);
 		await fireEvent.click(scan);
-		await waitFor(() => expect(form.update).toHaveBeenCalledWith({ reset: false }));
+		await waitFor(() =>
+			expect(form.update).toHaveBeenCalledWith({ reset: false, navigate: false })
+		);
 		expect(toasts.success).toHaveBeenCalledWith(
-			'Scan checked 3 comments: 2 matched the concern. 1 comment not checked.'
+			'Scan checked 3 comments: 2 matched. 1 comment not checked.'
 		);
 	});
 
@@ -141,10 +161,36 @@ describe('aiSearchBar', () => {
 		expect(screen.getByRole('button', { name: 'Scan this page' })).toHaveProperty('disabled', true);
 	});
 
-	it('is off, with the reason, when the site has no key', () => {
+	it('is one line, with the reason and no inputs, when the site has no key', () => {
 		render(AiSearchBar, { aiAvailable: false, ids: ['c1'] });
 		expect(screen.getByText(/this site has no API key set/)).toBeTruthy();
-		expect(screen.getByLabelText('Concern to scan for')).toHaveProperty('disabled', true);
+		expect(screen.queryByRole('textbox')).toBeNull();
+		expect(screen.queryByRole('button')).toBeNull();
+	});
+
+	it('toasts a thrown error, the rate limit’s 429 included, and goes nowhere', async () => {
+		form.result = { type: 'error', status: 429 } as Result;
+		render(AiSearchBar, { aiAvailable: true, ids: ['c1'] });
+		await fireEvent.input(screen.getByLabelText('Search in plain words'), {
+			target: { value: 'trolling' }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: 'Search with AI' }));
+		await waitFor(() =>
+			expect(toasts.error).toHaveBeenCalledWith('The request failed. Try again in a moment.')
+		);
+		expect(goto).not.toHaveBeenCalled();
+		form.result = { type: 'error', status: 429, error: { message: 'Too many requests' } } as Result;
+		await fireEvent.click(screen.getByRole('button', { name: 'Search with AI' }));
+		await waitFor(() => expect(toasts.error).toHaveBeenLastCalledWith('Too many requests'));
+	});
+
+	it('toasts a scan that threw, without applying the error to the page', async () => {
+		form.result = { type: 'error', status: 429, error: { message: 'Too many requests' } } as Result;
+		render(AiSearchBar, { aiAvailable: true, ids: ['c1'] });
+		await fireEvent.input(screen.getByLabelText('Scan for'), { target: { value: 'x' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Scan this page' }));
+		await waitFor(() => expect(toasts.error).toHaveBeenCalledWith('Too many requests'));
+		expect(form.update).not.toHaveBeenCalled();
 	});
 });
 
@@ -247,7 +293,7 @@ describe('moderationTable', () => {
 			me: { id: 'mod', role: 'moderator' },
 			selected: []
 		} as never);
-		expect(screen.getByText('No verdict')).toBeTruthy();
+		expect(screen.getByText('Not checked')).toBeTruthy();
 		expect(screen.getByText('None')).toBeTruthy();
 		expect(screen.getByText('Not scanned')).toBeTruthy();
 	});
