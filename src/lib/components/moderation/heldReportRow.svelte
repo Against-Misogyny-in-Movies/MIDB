@@ -6,7 +6,7 @@
 	import ReportRowShell from '#lib/components/moderation/reportRowShell.svelte';
 	import type { ActionOutcome, HeldReport } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { HOLD_REASON_LABELS } from '#lib/media/utils/readerReports.ts';
+	import { HOLD_REASON_LABELS } from '#lib/media/utils/communityReports.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 	import { accountLine } from '#lib/media/utils/reportAccount.ts';

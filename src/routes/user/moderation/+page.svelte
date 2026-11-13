@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
-	import ReaderReportsPanel from '#lib/components/moderation/readerReportsPanel.svelte';
+	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import type { ActionOutcome } from '#lib/media/types/moderation.ts';
@@ -13,7 +13,7 @@
 
 	type Tab = 'pending' | 'reported' | 'reports' | 'recent';
 	/**
-	 * `?tab=reports` and `?title=` open the reader-reports tab, every other URL opens Pending. A
+	 * `?tab=reports` and `?title=` open the community-reports tab, every other URL opens Pending. A
 	 * click on a tab overrides it until the URL changes (a title's reports, back to the list).
 	 */
 	let tab = $derived<Tab>(data.titleId || data.tab === 'reports' ? 'reports' : 'pending');
@@ -23,7 +23,7 @@
 		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
 		{
 			id: 'reports' as const,
-			label: 'Reader reports',
+			label: 'MIDB community reports',
 			count: data.held.length
 		},
 		{ id: 'recent' as const, label: 'Recent actions', count: null }
@@ -114,7 +114,7 @@
 				</ul>
 			{/if}
 		{:else if tab === 'reports'}
-			<ReaderReportsPanel
+			<CommunityReportsPanel
 				held={data.held}
 				flagged={data.flagged}
 				openTitle={data.openTitle}

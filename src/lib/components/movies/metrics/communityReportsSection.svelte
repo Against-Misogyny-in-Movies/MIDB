@@ -2,39 +2,59 @@
 	import { onMount, untrack } from 'svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
-	import ReaderReportCounts from './readerReportCounts.svelte';
-	import ReaderReportFlag from './readerReportFlag.svelte';
-	import ReaderReportOwn from './readerReportOwn.svelte';
-	import { READER_REPORT_MIN } from '#lib/media/utils/readerReports.ts';
-	import { ReaderReportsState } from '#lib/media/utils/readerReportsState.svelte.js';
+	import CommunityReportCounts from './communityReportCounts.svelte';
+	import CommunityReportFlag from './communityReportFlag.svelte';
+	import CommunityReportOwn from './communityReportOwn.svelte';
+	import { COMMUNITY_REPORT_MIN } from '#lib/media/utils/communityReports.ts';
+	import type { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		kind: 'movie' | 'tv';
 		tmdbId: string;
-		/** Tests give the section a fetcher; the pages use the browser's. */
-		fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
+		/** The title's reports, owned by the page so the header badge reads the same counts. */
+		reports: CommunityReportsState;
 	}
 
-	let { kind, tmdbId, fetcher }: Props = $props();
+	let { kind, tmdbId, reports }: Props = $props();
 
-	// One section per title: the pages key it on the TMDB id, so these never change.
-	// svelte-ignore state_referenced_locally
-	const reports = new ReaderReportsState(kind, tmdbId, fetcher);
-
-	// The section opens for a link to it (`#reader-reports`, which the sign-in return path carries).
-	// It is read on mount only: the server render never knows the hash, and the section is below the
-	// fold, so opening it moves nothing the reader sees.
+	// The section opens for a link to it (`#community-reports`, which the sign-in return path carries
+	// and the header badge points at). The hash is read on mount, because the server render never
+	// knows it, and again on `hashchange`. A click on a link to the section opens it too, because a
+	// link to the hash the page is already on fires no `hashchange`. The section is below the fold,
+	// so opening it moves nothing the reader sees.
 	let open = $state(false);
 
+	function openSection() {
+		open = true;
+		// A reader may have closed the section since the prop was set, so the element is opened directly.
+		const el = document.getElementById('community-reports');
+		if (el instanceof HTMLDetailsElement) el.open = true;
+	}
+
+	function openForHash() {
+		if (location.hash === '#community-reports') openSection();
+	}
+
+	function openForLink(event: MouseEvent) {
+		if (event.target instanceof Element && event.target.closest('a[href="#community-reports"]'))
+			openSection();
+	}
+
 	onMount(() => {
-		open = location.hash === '#reader-reports';
+		open = location.hash === '#community-reports';
+		window.addEventListener('hashchange', openForHash);
+		document.addEventListener('click', openForLink);
 		// The page is cached for everyone, so the reader's own report comes from the private
 		// endpoint once the session says who is reading.
 		void session.load();
 		void reports.load();
 		if (session.likelyUser) void reports.loadViewer();
+		return () => {
+			window.removeEventListener('hashchange', openForHash);
+			document.removeEventListener('click', openForLink);
+		};
 	});
 
 	$effect(() => {
@@ -46,11 +66,16 @@
 	});
 
 	const signInHref = $derived(
-		`/auth?next=${encodeURIComponent(`${titleHref(kind, Number(tmdbId)) ?? '/'}#reader-reports`)}`
+		`/auth?next=${encodeURIComponent(`${titleHref(kind, Number(tmdbId)) ?? '/'}#community-reports`)}`
 	);
 
 	const total = $derived(reports.counts?.total ?? 0);
 	const counts = $derived(reports.counts && 'categories' in reports.counts ? reports.counts : null);
+	/**
+	 * Whether the report form is open: the "Counts look wrong" link waits, but the flag component
+	 * stays mounted so a note already typed in its plate survives.
+	 */
+	let editing = $state(false);
 	const status = $derived(
 		reports.phase === 'loading'
 			? 'Loading'
@@ -67,15 +92,15 @@
 </script>
 
 <CollapsibleSection
-	id="reader-reports"
-	title="Reader reports"
+	id="community-reports"
+	title="MIDB community reports"
 	icon="ri-survey-fill"
 	hue="var(--brand)"
 	{status}
 	tone="neutral"
 	busy={reports.phase === 'loading'}
 	{open}
-	learnHref="/resources#reader-reports"
+	learnHref="/resources#community-reports"
 >
 	<div class="reports">
 		<div class="slot" data-report-counts aria-busy={reports.phase === 'loading'}>
@@ -85,26 +110,26 @@
 					Try again
 				</button>
 			{:else if reports.phase === 'loading'}
-				<div class="skeleton" aria-label="Loading reader reports">
+				<div class="skeleton" aria-label="Loading community reports">
 					{#each { length: 6 } as _, i (i)}
 						<div class="skeleton-row"></div>
 					{/each}
 				</div>
 			{:else if counts}
-				<ReaderReportCounts {counts} />
+				<CommunityReportCounts {counts} />
 			{:else}
 				<p class="below">
 					{total === 0
-						? 'No counted reader reports yet.'
-						: `${total} counted so far. Counts show once ${READER_REPORT_MIN} are counted.`}
+						? 'No counted community reports yet.'
+						: `${total} counted so far. Counts show once ${COMMUNITY_REPORT_MIN} are counted.`}
 				</p>
 			{/if}
 		</div>
 
-		<ReaderReportOwn state={reports} {signInHref} />
+		<CommunityReportOwn state={reports} {signInHref} bind:editing />
 
 		{#if canFlag}
-			<ReaderReportFlag state={reports} />
+			<CommunityReportFlag state={reports} hideTrigger={editing} />
 		{/if}
 	</div>
 </CollapsibleSection>
@@ -114,7 +139,7 @@
 
 	/*
 	 * The counts' full height: five category rows and the framing row, each a name line and a
-	 * figures line on phones and one line from 40rem (readerReportCounts.svelte, `.line`: two or one
+	 * figures line on phones and one line from 40rem (communityReportCounts.svelte, `.line`: two or one
 	 * 1.25rem text lines, 2px apart, in 0.5rem of padding above and below), with a 1px hairline
 	 * between rows. The skeleton draws those rows and every shorter state sits at the top of the
 	 * same height, so nothing below the slot moves when the counts arrive.

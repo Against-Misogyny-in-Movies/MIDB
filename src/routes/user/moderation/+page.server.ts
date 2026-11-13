@@ -23,27 +23,26 @@ import {
 	rejectAccountReports,
 	rejectReport,
 	type ReportModerationResult
-} from '#lib/server/data/reader-report-moderation.ts';
+} from '#lib/server/data/community-report-moderation.ts';
 import {
 	getOpenTitle,
 	listFlaggedTitles,
 	listHeldReports
-} from '#lib/server/data/reader-report-queue.ts';
+} from '#lib/server/data/community-report-queue.ts';
 import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
 import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
-
-const STAFF = ['moderator', 'administrator'] as const;
+import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 /**
- * The page and both of its views. `?tab=reports` opens the reader-reports tab, and
- * `?title=<id>` opens one title's reader reports in it; without a title the tab lists the held
+ * The page and both of its views. `?tab=reports` opens the community-reports tab, and
+ * `?title=<id>` opens one title's community reports in it; without a title the tab lists the held
  * reports and the flagged titles.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
-	await requireRole(locals, STAFF, { page: true });
+	await requireRole(locals, STAFF_ROLES, { page: true });
 	const titleId = url.searchParams.get('title')?.trim() || null;
 	const [pending, reported, recent, held, flagged, openTitle, syncDates] = await Promise.all([
 		listPendingQueue(),
@@ -95,7 +94,7 @@ type Outcome = ModerationResult | ReportModerationResult | InvalidRequest;
 /**
  * One moderator action: the guard (403 for anyone else), the rate limit, then `run` over the
  * form. `key` names the row the answer belongs to; `after` runs on success (a comment action
- * purges its title's list there, so the change is public at once). The reader-report data
+ * purges its title's list there, so the change is public at once). The community-report data
  * functions purge their own counts.
  */
 async function act(
@@ -105,7 +104,7 @@ async function act(
 	run: (staff: UserRow, data: FormData) => Promise<Outcome> | Outcome,
 	after?: (result: Extract<Outcome, { ok: true }>) => void
 ) {
-	const staff = await requireRole(event.locals, STAFF);
+	const staff = await requireRole(event.locals, STAFF_ROLES);
 	await rateLimit(event, 'RL_MODERATE', { userId: staff.id });
 	const data = await event.request.formData();
 	const target = key(data);

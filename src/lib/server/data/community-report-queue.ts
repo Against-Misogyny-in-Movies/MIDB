@@ -9,10 +9,10 @@ import {
 } from '#db/schema/community.ts';
 import { titleUm, umSource } from '#db/schema/sources.ts';
 import { titles } from '#db/schema/titles.ts';
-import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/readerReports.ts';
+import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/communityReports.ts';
 import { activeMute } from './mute.ts';
 import { QUEUE_LIMIT } from './moderation-queue.ts';
-import { countsFromDate } from './reader-reports.ts';
+import { countsFromDate } from './community-reports.ts';
 
 type ReportRow = typeof reports.$inferSelect;
 
@@ -138,7 +138,7 @@ async function accountsOf(rows: AccountRow[]): Promise<Map<string, ReportAccount
 				reportCount: reportCounts.get(r.userId) ?? 0,
 				commentCount: commentCounts.get(r.userId) ?? 0,
 				role: r.role,
-				countsFrom: countsFromDate(r.accountCreatedAt).toISOString(),
+				countsFrom: countsFromDate(r.accountCreatedAt, r.role).toISOString(),
 				restricted: r.bannedAt ? 'banned' : activeMute(r.mutedUntil) ? 'muted' : null
 			}
 		])

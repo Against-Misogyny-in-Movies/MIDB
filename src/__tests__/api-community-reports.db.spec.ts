@@ -13,7 +13,7 @@ import {
 } from '#test/cloudflare-workers.stub.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import type { TitleRow } from '#lib/server/data/title-queries.ts';
-import type { ReportCounts, ViewerReportResponse } from '#lib/media/types/reader-reports.ts';
+import type { ReportCounts, ViewerReportResponse } from '#lib/media/types/community-reports.ts';
 
 const resolveWriteRef = vi.fn();
 const resolveCommentTitle = vi.fn();
@@ -156,6 +156,22 @@ describe('guards', () => {
 	it('answers 429 past the content-report limit, per user', async () => {
 		for (let i = 0; i < 10; i++) expect((await put()).status).toBe(200);
 		expect((await put()).status).toBe(429);
+	});
+});
+
+describe('staff and the write limits', () => {
+	it('does not rate-limit a moderator on the report writes, and still refuses a mute', async () => {
+		await db
+			.insert(users)
+			.values(userValues('mod', { role: 'moderator', createdAt: new Date(Date.now() - DAY) }));
+		const mod = await asUser('mod');
+		for (let i = 0; i < 12; i++) expect((await put({}, { user: mod })).status).toBe(200);
+		for (let i = 0; i < 12; i++)
+			expect((await call(flag.POST, { method: 'POST', body: {}, user: mod })).status).toBe(200);
+		for (let i = 0; i < 12; i++)
+			expect((await call(reports.DELETE, { method: 'DELETE', user: mod })).status).toBe(204);
+		const muted = { ...mod, mutedUntil: new Date(Date.now() + 60_000) } as UserRow;
+		expect((await put({}, { user: muted })).status).toBe(403);
 	});
 });
 

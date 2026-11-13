@@ -6,9 +6,9 @@ import {
 	reportLevel,
 	sexualLevel,
 	type ConcernFlagKey
-} from '#lib/media/utils/readerReports.ts';
+} from '#lib/media/utils/communityReports.ts';
 import { REPORT_NOTE_MAX } from '#lib/media/utils/comments.ts';
-import type { ReportAnswers } from '#lib/server/data/reader-reports.ts';
+import type { ReportAnswers } from '#lib/server/data/community-reports.ts';
 
 /** A level answer: a value of the set, or null for "not sure". Absent means null too. */
 const answer = <T extends readonly [string, ...string[]]>(values: T) =>

@@ -8,15 +8,21 @@
 	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import DddEpisodeSelector from '#lib/components/movies/metrics/dddEpisodeSelector.svelte';
-	import ReaderReportsSection from '#lib/components/movies/metrics/readerReportsSection.svelte';
+	import CommunityReportsBadge from '#lib/components/movies/metrics/communityReportsBadge.svelte';
+	import CommunityReportsSection from '#lib/components/movies/metrics/communityReportsSection.svelte';
 	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
+	import { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import { TitleView } from '#lib/media/utils/titleView.svelte.js';
 
 	let { data }: { data: PageData } = $props();
 	const view = new TitleView(() => data, 'tv');
 	const episodes = view.episodes!;
 	const series = $derived(view.media);
+	// One state per title, recreated when the TMDB id changes; the header badge and the section share it.
+	// Derived from the id, so a new media object for the same title keeps the loaded counts.
+	const tmdbId = $derived(series.tmdbId);
+	const reports = $derived(new CommunityReportsState('tv', tmdbId));
 	const ddd = $derived(view.ddd);
 </script>
 
@@ -26,6 +32,9 @@
 
 <article class="title-page">
 	<DetailHeader media={series}>
+		{#snippet aside()}
+			<CommunityReportsBadge {reports} />
+		{/snippet}
 		{#snippet verdict()}
 			<VerdictPanel safety={view.safety} representation={view.representation} />
 		{/snippet}
@@ -43,7 +52,7 @@
 		/>
 
 		{#key series.tmdbId}
-			<ReaderReportsSection kind="tv" tmdbId={series.tmdbId} />
+			<CommunityReportsSection kind="tv" tmdbId={series.tmdbId} {reports} />
 		{/key}
 
 		<DddMetricSection {ddd} visibleTags={view.visibleTags}>

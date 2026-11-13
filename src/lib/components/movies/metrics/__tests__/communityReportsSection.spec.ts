@@ -1,92 +1,26 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ViewerReportView } from '#lib/media/types/reader-reports.ts';
-import type { PublicUser } from '#lib/media/types/user.ts';
+import type { ViewerReportView } from '#lib/media/types/community-reports.ts';
+import { BASE, ME, api, counts, json, stored, viewer } from './communityReportsFixtures.ts';
 
 vi.mock('$app/env', () => ({ browser: true }));
 
-const { default: ReaderReportsSection } = await import('../readerReportsSection.svelte');
+const { default: CommunityReportsSection } = await import('../communityReportsSection.svelte');
+const { CommunityReportsState } = await import('#lib/media/utils/communityReportsState.svelte.js');
+const { default: CommunityReportsBadge } = await import('../communityReportsBadge.svelte');
 const { session } = await import('#lib/media/utils/session.svelte.js');
 
-const ME: PublicUser = {
-	id: 'me',
-	username: 'mary',
-	avatarKey: null,
-	role: 'user',
-	displayName: 'mary'
-};
-
-const BASE = '/api/titles/movie/603/reports';
-
-type Handler = (init?: RequestInit) => Response | Promise<Response>;
-const json = (body: unknown, status = 200) =>
-	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-
-function api(routes: Record<string, Handler>) {
-	return vi.fn(async (input: string, init?: RequestInit) => {
-		const handler = routes[`${init?.method ?? 'GET'} ${input.split('?')[0]}`];
-		return handler ? handler(init) : json({ message: 'Not found' }, 404);
-	});
-}
-
-const flags = Object.fromEntries(
-	[
-		'rapeMenDisImp',
-		'sexHarOnScrn',
-		'sexAdultTeen',
-		'childSexAbuse',
-		'incest',
-		'attemptedRape',
-		'rapeOffScrn',
-		'rapeOnScreen'
-	].map((k) => [k, { yes: k === 'incest' ? 2 : 0, no: 1, unsure: 0 }])
-);
-
-const COUNTS = {
-	total: 7,
-	categories: {
-		sexual: { present: 5, none: 2 },
-		partner: { none: 6, mentioned: 1 },
-		physical: { on_screen: 4, mentioned: 1, none: 2 },
-		stalking: { none: 7 },
-		objectification: { some_scenes: 3, none: 4 }
-	},
-	flags,
-	framing: { condemned: 3, unclear: 0, played_for_laughs: 0, glamorised_or_justified: 0 }
-};
-
-function stored(over: Partial<ViewerReportView> = {}): ViewerReportView {
-	return {
-		sexualPresent: 'none',
-		partnerLevel: null,
-		physicalLevel: null,
-		stalkingLevel: null,
-		objectificationLevel: null,
-		framing: null,
-		status: 'counted',
-		holdReason: null,
-		createdAt: '2026-10-01T00:00:00.000Z',
-		updatedAt: '2026-10-01T00:00:00.000Z',
-		countsFrom: '2026-10-08T00:00:00.000Z',
-		...over
-	} as unknown as ViewerReportView;
-}
-
-const counts =
-	(body: unknown = COUNTS): Handler =>
-	() =>
-		json(body);
-const viewer = (report: ViewerReportView | null, mutedUntil: string | null = null): Handler => {
-	return () => json({ report, mutedUntil });
-};
-
 function mount(fetcher: ReturnType<typeof api>) {
-	return render(ReaderReportsSection, { kind: 'movie', tmdbId: '603', fetcher });
+	return render(CommunityReportsSection, {
+		kind: 'movie',
+		tmdbId: '603',
+		reports: new CommunityReportsState('movie', '603', fetcher)
+	});
 }
 
 afterEach(cleanup);
 
-describe('ReaderReportsSection counts', () => {
+describe('CommunityReportsSection counts', () => {
 	beforeEach(() => session.clear());
 
 	it('reserves a busy slot while loading, then shows the counts', async () => {
@@ -108,7 +42,7 @@ describe('ReaderReportsSection counts', () => {
 
 	it('says so when nobody reported', async () => {
 		mount(api({ [`GET ${BASE}`]: counts({ total: 0 }) }));
-		expect(await screen.findByText('No counted reader reports yet.')).toBeTruthy();
+		expect(await screen.findByText('No counted community reports yet.')).toBeTruthy();
 	});
 
 	it('opens the sexual row onto the Unconsenting Media flags', async () => {
@@ -119,20 +53,20 @@ describe('ReaderReportsSection counts', () => {
 	});
 });
 
-describe('ReaderReportsSection signed out', () => {
+describe('CommunityReportsSection signed out', () => {
 	beforeEach(() => session.clear());
 
 	it('offers sign-in and no form or flag link', async () => {
 		mount(api({ [`GET ${BASE}`]: counts() }));
 		await screen.findByText('Physical violence or murder');
 		const link = await screen.findByRole('link', { name: 'Sign in to add a report' });
-		expect(link.getAttribute('href')).toBe('/auth?next=%2Fmovie%2F603%23reader-reports');
+		expect(link.getAttribute('href')).toBe('/auth?next=%2Fmovie%2F603%23community-reports');
 		expect(screen.queryByRole('button', { name: 'Add a report' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Counts look wrong' })).toBeNull();
 	});
 });
 
-describe('ReaderReportsSection signed in', () => {
+describe('CommunityReportsSection signed in', () => {
 	beforeEach(() => session.set(ME));
 
 	it('shows the status of the reader’s own report and lets it be edited', async () => {
@@ -244,13 +178,13 @@ describe('ReaderReportsSection signed in', () => {
 		);
 		await fireEvent.click(await screen.findByRole('button', { name: 'Counts look wrong' }));
 		await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'One report is off' } });
-		await fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-		await waitFor(() => expect(screen.getByText(/Counts flagged/)).toBeTruthy());
+		await fireEvent.click(screen.getByRole('button', { name: 'Send to moderators' }));
+		await waitFor(() => expect(screen.getByText('Sent to the moderators.')).toBeTruthy());
 		expect(sent).toEqual({ note: 'One report is off' });
 	});
 });
 
-describe('ReaderReportsSection reader states', () => {
+describe('CommunityReportsSection reader states', () => {
 	beforeEach(() => session.set(ME));
 
 	it('explains a save without "I watched this" and focuses the checkbox', async () => {
@@ -311,6 +245,27 @@ describe('ReaderReportsSection reader states', () => {
 		).toBeTruthy();
 	});
 
+	it('says a saved report that a moderator rejected does not count', async () => {
+		let saved: ViewerReportView | null = null;
+		mount(
+			api({
+				[`GET ${BASE}`]: counts(),
+				[`GET ${BASE}/viewer`]: () => json({ report: saved, mutedUntil: null }),
+				[`PUT ${BASE}`]: () => {
+					saved = stored({ status: 'rejected' });
+					return json({ status: 'rejected', holdReason: null });
+				}
+			})
+		);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Add a report' }));
+		await fireEvent.click(screen.getByLabelText('I watched this'));
+		await fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
+		expect(
+			await screen.findByText('Report saved. A moderator rejected it, so it does not count.')
+		).toBeTruthy();
+		expect(screen.queryByText(/The counts above include it/)).toBeNull();
+	});
+
 	it('offers Try again when the reader’s report cannot be loaded', async () => {
 		let attempts = 0;
 		mount(
@@ -340,7 +295,9 @@ describe('ReaderReportsSection reader states', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Add a report' }));
 		await fireEvent.click(screen.getByLabelText('I watched this'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
-		expect(await screen.findByText('Report saved.')).toBeTruthy();
+		expect(
+			await screen.findByText('Report saved. The counts above include it once the page reloads.')
+		).toBeTruthy();
 		expect(screen.getByText(/This account’s report could not be loaded/)).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
 	});
@@ -383,20 +340,104 @@ describe('ReaderReportsSection reader states', () => {
 	});
 });
 
-describe('ReaderReportsSection layout', () => {
+describe('CommunityReportsSection layout', () => {
 	beforeEach(() => session.clear());
 
-	it('opens for the #reader-reports hash and carries an id for it', async () => {
-		window.location.hash = '#reader-reports';
+	it('opens for the #community-reports hash and carries an id for it', async () => {
+		window.location.hash = '#community-reports';
 		const { container } = mount(api({ [`GET ${BASE}`]: counts() }));
 		const details = container.querySelector('details')!;
-		expect(details.id).toBe('reader-reports');
+		expect(details.id).toBe('community-reports');
 		await waitFor(() => expect(details.open).toBe(true));
 		window.location.hash = '';
+	});
+
+	it('opens when the hash changes to #community-reports', async () => {
+		window.location.hash = '';
+		const { container } = mount(api({ [`GET ${BASE}`]: counts() }));
+		const details = container.querySelector('details')!;
+		expect(details.open).toBe(false);
+		window.location.hash = '#community-reports';
+		await waitFor(() => expect(details.open).toBe(true));
+		window.location.hash = '';
+	});
+
+	it('opens again when the badge is clicked on the hash the page is already on', async () => {
+		window.location.hash = '';
+		const reports = new CommunityReportsState('movie', '603', api({ [`GET ${BASE}`]: counts() }));
+		const { container } = render(CommunityReportsBadge, { reports });
+		const section = render(CommunityReportsSection, { kind: 'movie', tmdbId: '603', reports });
+		const details = section.container.querySelector('details')!;
+		const link = container.querySelector('a')!;
+		// A same-hash click fires no `hashchange`, and SvelteKit cancels the browser's own jump.
+		link.addEventListener('click', (event) => event.preventDefault());
+		expect(details.open).toBe(false);
+		await fireEvent.click(link);
+		await waitFor(() => expect(details.open).toBe(true));
+		details.open = false;
+		await fireEvent.click(link);
+		await waitFor(() => expect(details.open).toBe(true));
 	});
 
 	it('gives the framing row its own total', async () => {
 		mount(api({ [`GET ${BASE}`]: counts() }));
 		expect(await screen.findByText(', of 3 who answered')).toBeTruthy();
+	});
+});
+
+describe('CommunityReportsBadge', () => {
+	beforeEach(() => session.clear());
+
+	function badge(fetcher: ReturnType<typeof api>) {
+		const reports = new CommunityReportsState('movie', '603', fetcher);
+		const view = render(CommunityReportsBadge, { reports });
+		return { reports, ...view };
+	}
+
+	it('keeps its slot busy while loading, then reads the number and links to the section', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts() }));
+		const busy = container.querySelector('.badge')!;
+		expect(busy.getAttribute('aria-busy')).toBe('true');
+		expect(container.querySelector('a')!.getAttribute('href')).toBe('#community-reports');
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('7 counted community reports'));
+		expect(busy.getAttribute('aria-busy')).toBeNull();
+	});
+
+	it('keeps the number and the label in one inline wrapper, not as flex items of the badge', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts() }));
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('7 counted community reports'));
+		const badgeEl = container.querySelector('.badge')!;
+		// The badge is `inline-flex`, which drops whitespace between its direct children.
+		const wrapper = container.querySelector('.num')!.parentElement!;
+		expect(wrapper).not.toBe(badgeEl);
+		expect(wrapper.parentElement).toBe(badgeEl);
+		expect(badgeEl.children).toHaveLength(1);
+		expect(wrapper.textContent).toBe('7 counted community reports');
+	});
+
+	it('reads the singular for one report', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts({ total: 1 }) }));
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('1 counted community report'));
+		expect(container.textContent).not.toContain('1 counted community reports');
+	});
+
+	it('reads "MIDB community reports" with no number on an error', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: () => json({}, 500) }));
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('MIDB community reports'));
+		expect(container.textContent).not.toMatch(/\d/);
+	});
+
+	it('shares one counts request with the section', async () => {
+		const fetcher = api({ [`GET ${BASE}`]: counts() });
+		const reports = new CommunityReportsState('movie', '603', fetcher);
+		render(CommunityReportsBadge, { reports });
+		render(CommunityReportsSection, { kind: 'movie', tmdbId: '603', reports });
+		await screen.findByText('Physical violence or murder');
+		const calls = fetcher.mock.calls.filter(([url]) => url.split('?')[0] === BASE);
+		expect(calls).toHaveLength(1);
 	});
 });

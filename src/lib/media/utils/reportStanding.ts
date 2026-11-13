@@ -1,4 +1,4 @@
-import type { ContentReportStatus } from '#lib/media/utils/readerReports.ts';
+import type { ContentReportStatus } from '#lib/media/utils/communityReports.ts';
 import { reportStatusTone, type BadgeTone } from '#lib/media/utils/tones.ts';
 import { formatDate } from '#lib/media/utils/format.ts';
 

@@ -24,7 +24,7 @@ vi.mock('$app/forms', () => ({
 }));
 
 const { default: TitleReportRow } = await import('../titleReportRow.svelte');
-const { default: ReaderReportsPanel } = await import('../readerReportsPanel.svelte');
+const { default: CommunityReportsPanel } = await import('../communityReportsPanel.svelte');
 const { default: ReportAnswers } = await import('../reportAnswers.svelte');
 const { default: RecentActionRow } = await import('../recentActionRow.svelte');
 
@@ -96,7 +96,9 @@ describe('the title report row', () => {
 	it('names the account once, in the header', () => {
 		mountRow(titleReport());
 		expect(screen.getAllByText(/anna/)).toHaveLength(1);
-		expect(screen.getByText(/100 days old, 3 reader reports not rejected, 1 comment/)).toBeTruthy();
+		expect(
+			screen.getByText(/100 days old, 3 community reports not rejected, 1 comment/)
+		).toBeTruthy();
 	});
 
 	it.each([
@@ -142,25 +144,25 @@ describe('the title report row', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Reject all from this account' }));
 		expect(
 			screen.getByText(
-				/Reject all 3 reader reports from anna\? They leave the counts on every title they cover\./
+				/Reject all 3 community reports from anna\? They leave the counts on every title they cover\./
 			)
 		).toBeTruthy();
-		const confirm = screen.getByRole('button', { name: 'Reject all reader reports' });
+		const confirm = screen.getByRole('button', { name: 'Reject all community reports' });
 		expect(confirm.closest('form')!.getAttribute('action')).toBe('?/rejectAccountReports');
 		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-		expect(screen.queryByRole('button', { name: 'Reject all reader reports' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Reject all community reports' })).toBeNull();
 	});
 
-	it('says in the mute and ban sentences that the reader reports leave the counts', async () => {
+	it('says in the mute and ban sentences that the community reports leave the counts', async () => {
 		mountRow(titleReport());
 		await fireEvent.click(screen.getByRole('button', { name: 'Mute account' }));
 		expect(
 			screen.getByText(
-				/Until the mute ends, the account cannot write, edit, delete, vote on or report comments, and its reader reports leave the counts\./
+				/Until the mute ends, the account cannot write, edit, delete, vote on or report comments, and its community reports leave the counts\./
 			)
 		).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: 'Ban account' }));
-		expect(screen.getByText(/its reader reports leave the counts/)).toBeTruthy();
+		expect(screen.getByText(/its community reports leave the counts/)).toBeTruthy();
 	});
 
 	it('passes UM’s flags to the answers of a contradicting report', () => {
@@ -211,7 +213,7 @@ describe('the open title view', () => {
 	const me = { id: 'mod', role: 'moderator' };
 
 	function mountPanel(outcome = null as never, flags: FlaggedTitle[] = [flagged]) {
-		return render(ReaderReportsPanel, {
+		return render(CommunityReportsPanel, {
 			held: [],
 			flagged: flags,
 			openTitle: open,
@@ -230,9 +232,9 @@ describe('the open title view', () => {
 		expect(screen.queryByText('A removed account')).toBeNull();
 	});
 
-	it('links back to the reader-reports list, 44px on a coarse pointer', () => {
+	it('links back to the community-reports list, 44px on a coarse pointer', () => {
 		mountPanel();
-		const back = screen.getByRole('link', { name: /Back to reader reports/ });
+		const back = screen.getByRole('link', { name: /Back to community reports/ });
 		expect(back.getAttribute('href')).toBe('?tab=reports');
 		expect(back.querySelector('.ri-arrow-left-s-line')).not.toBeNull();
 	});
@@ -260,7 +262,7 @@ describe('the open title view', () => {
 
 	it('shows no actions for a report of an administrator', () => {
 		const admin = titleReport({ account: account({ role: 'administrator' }) });
-		render(ReaderReportsPanel, {
+		render(CommunityReportsPanel, {
 			held: [],
 			flagged: [],
 			openTitle: { ...open, reports: [admin] },
@@ -308,9 +310,9 @@ describe('the action log sentences', () => {
 	};
 
 	it.each([
-		['approve_report', /counted a reader report by\s*anna/],
-		['reject_report', /rejected a reader report by\s*anna/],
-		['reject_account_reports', /rejected every reader report by\s*anna/]
+		['approve_report', /counted a community report by\s*anna/],
+		['reject_report', /rejected a community report by\s*anna/],
+		['reject_account_reports', /rejected every community report by\s*anna/]
 	] as const)('%s names the account, and the title where it has one', (action, text) => {
 		mountEntry(entry(action === 'reject_account_reports' ? { action, title: null } : { action }));
 		expect(document.body.textContent?.replace(/\s+/g, ' ')).toMatch(text);

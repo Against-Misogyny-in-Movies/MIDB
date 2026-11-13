@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { ReportCounts } from '#lib/media/types/reader-reports.ts';
+	import type { ReportCounts } from '#lib/media/types/community-reports.ts';
 	import {
 		CONCERN_FLAGS,
 		REPORT_CATEGORIES,
 		REPORT_FRAMING_LABELS,
 		reportFraming
-	} from '#lib/media/utils/readerReports.ts';
+	} from '#lib/media/utils/communityReports.ts';
 	import { categoryFigures, type Figure } from '#lib/media/utils/reportFigures.ts';
 
 	interface Props {

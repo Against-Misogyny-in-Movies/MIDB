@@ -5,8 +5,8 @@ import {
 	type ReportFraming,
 	type ReportLevel,
 	type SexualLevel
-} from '#lib/media/utils/readerReports.ts';
-import type { ViewerReportView } from '#lib/media/types/reader-reports.ts';
+} from '#lib/media/utils/communityReports.ts';
+import type { ViewerReportView } from '#lib/media/types/community-reports.ts';
 
 /** A radio group cannot hold null, so "not sure" is its own value in the form. */
 export const UNSURE = 'unsure';
@@ -74,6 +74,15 @@ export function asksFraming(draft: ReportDraft): boolean {
 		)
 	);
 }
+
+/**
+ * Whether every level question is "not sure". The flags and the framing are asked only after a
+ * non-"not sure" answer, so they cannot hold one.
+ */
+export const allUnsure = (draft: ReportDraft): boolean =>
+	[draft.sexual, draft.partner, draft.physical, draft.stalking, draft.objectification].every(
+		(answer) => answer === UNSURE
+	);
 
 /** Save waits for "I watched this". */
 export const canSave = (draft: ReportDraft): boolean => draft.watched;

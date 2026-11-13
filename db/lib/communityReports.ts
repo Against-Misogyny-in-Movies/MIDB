@@ -1,7 +1,7 @@
 /**
- * Plain data the reader-report schema (`db/schema/community.ts`) and the app share: the enum
+ * Plain data the community-report schema (`db/schema/community.ts`) and the app share: the enum
  * tuples behind its CHECK constraints. It lives in `db/lib/` because the Node-run graph cannot
- * import from `src/`; the app reaches it through `#lib/media/utils/readerReports.ts`.
+ * import from `src/`; the app reaches it through `#lib/media/utils/communityReports.ts`.
  */
 
 /** What a report says about partner or family abuse, physical violence and stalking. NULL means not sure. */

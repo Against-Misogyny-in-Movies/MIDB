@@ -1,4 +1,4 @@
-import { and, eq, gt, ne, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gt, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { communityContentReports as reports } from '#db/schema/community.ts';
@@ -19,8 +19,9 @@ import {
 	type ReportFraming,
 	type ReportLevel,
 	type SexualLevel
-} from '#lib/media/utils/readerReports.ts';
-import { holdReasonFor, type HoldFacts, type HoldReason } from './reader-report-holds.ts';
+} from '#lib/media/utils/communityReports.ts';
+import { isStaff, STAFF_ROLES } from '#lib/media/utils/staff.ts';
+import { holdReasonFor, type HoldFacts, type HoldReason } from './community-report-holds.ts';
 import {
 	getOrCreateTitleRow,
 	type TitleKind,
@@ -65,9 +66,11 @@ export type ReportWriteResult = {
 	holdReason: HoldReason | null;
 };
 
-/** When a report from an account created at `createdAt` starts counting. */
-export function countsFromDate(createdAt: Date): Date {
-	return new Date(createdAt.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS);
+/** When a report from an account created at `createdAt` starts counting: at once for staff. */
+export function countsFromDate(createdAt: Date, role: string): Date {
+	return isStaff(role)
+		? createdAt
+		: new Date(createdAt.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS);
 }
 
 /** The title's Unconsenting Media concern flags, selected by `CONCERN_FLAGS`. */
@@ -130,19 +133,22 @@ async function loadHoldFacts(
 /**
  * Stores a reader's report of a title (one per account per title; a second call overwrites the
  * first) and decides whether it counts: the three hold rules run on every write, an edit
- * included. A `rejected` report stays rejected and holds no reason; the write statement itself
+ * included, except for a staff account (`user.role`, from the request's guard), which is never held. A `rejected` report stays rejected and holds no reason; the write statement itself
  * keeps it so, so a moderator's rejection cannot be undone by a concurrent edit.
  */
 export async function upsertReport(
-	userId: string,
+	user: { id: string; role: string },
 	kind: TitleKind,
 	ref: TitleRef,
 	answers: ReportAnswers
 ): Promise<ReportWriteResult> {
+	const userId = user.id;
 	const flags = flagValues(answers);
 	const title = await getOrCreateTitleRow(kind, ref);
 
-	const reason = holdReasonFor(await loadHoldFacts(userId, title.id, answers, flags, Date.now()));
+	const reason = isStaff(user.role)
+		? null
+		: holdReasonFor(await loadHoldFacts(userId, title.id, answers, flags, Date.now()));
 	const status: ContentReportStatus = reason ? 'held' : 'counted';
 
 	const values = {
@@ -190,7 +196,7 @@ export async function getViewerReport(
 	titleId: string
 ): Promise<ViewerReport | null> {
 	const [row] = await db
-		.select({ report: reports, accountCreatedAt: users.createdAt })
+		.select({ report: reports, accountCreatedAt: users.createdAt, role: users.role })
 		.from(reports)
 		.innerJoin(users, eq(reports.userId, users.id))
 		.where(and(eq(reports.userId, userId), eq(reports.titleId, titleId)));
@@ -198,7 +204,7 @@ export async function getViewerReport(
 	const { userId: _u, titleId: _t, ...rest } = row.report;
 	return {
 		...rest,
-		countsFrom: countsFromDate(row.accountCreatedAt)
+		countsFrom: countsFromDate(row.accountCreatedAt, row.role)
 	};
 }
 
@@ -224,7 +230,7 @@ const levelsOf = (set: 'violence' | 'sexual' | 'objectification') =>
 const count = (cond: SQL) => sql<number>`coalesce(sum(CASE WHEN ${cond} THEN 1 ELSE 0 END), 0)`;
 
 /**
- * The counts for a title: only reports that are `counted`, whose account is at least
+ * The counts for a title: only reports that are `counted`, whose account is staff or at least
  * `REPORT_ACCOUNT_MIN_AGE_DAYS` old and is neither banned nor muted. The age is applied here,
  * so a report starts counting on its own, and a cached count can lag by its TTL. Two grouped
  * reads: the categories with the framing and the total, then the flags, which only the reports
@@ -235,7 +241,10 @@ export async function getReportCounts(titleId: string): Promise<ReportCounts> {
 	const where = and(
 		eq(reports.titleId, titleId),
 		eq(reports.status, 'counted'),
-		sql`${users.createdAt} <= ${now - REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS}`,
+		or(
+			inArray(users.role, [...STAFF_ROLES]),
+			sql`${users.createdAt} <= ${now - REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS}`
+		),
 		sql`${users.bannedAt} IS NULL`,
 		sql`(${users.mutedUntil} IS NULL OR ${users.mutedUntil} <= ${now})`
 	);

@@ -1,5 +1,5 @@
 import { cache, waitUntil } from 'cloudflare:workers';
-import { commentsTag, readerReportsTag } from './cache.ts';
+import { commentsTag, communityReportsTag } from './cache.ts';
 
 type PurgeTitle = { kind: string; tmdbId: number | string | null };
 
@@ -34,23 +34,23 @@ export function purgeTitleComments(title: PurgeTitle): void {
 }
 
 /**
- * Purges a title's edge-cached reader-report counts (`readerReportsTag`). A title with no TMDB
- * id has none to purge; `PUBLIC_READER_REPORTS` bounds a failed purge.
+ * Purges a title's edge-cached community-report counts (`communityReportsTag`). A title with no TMDB
+ * id has none to purge; `PUBLIC_COMMUNITY_REPORTS` bounds a failed purge.
  */
 export function purgeTitleReports(title: PurgeTitle): void {
 	if (title.tmdbId === null) return;
-	purgeTags('reader-reports', [readerReportsTag(title.kind, title.tmdbId)]);
+	purgeTags('community-reports', [communityReportsTag(title.kind, title.tmdbId)]);
 }
 
 /**
- * Purges the reader-report counts of several titles, `PURGE_TAGS_PER_REQUEST` tags to a
+ * Purges the community-report counts of several titles, `PURGE_TAGS_PER_REQUEST` tags to a
  * request. Titles with no TMDB id have none to purge.
  */
 export function purgeTitlesReports(titles: PurgeTitle[]): void {
 	const tags = titles.flatMap((t) =>
-		t.tmdbId === null ? [] : [readerReportsTag(t.kind, t.tmdbId)]
+		t.tmdbId === null ? [] : [communityReportsTag(t.kind, t.tmdbId)]
 	);
 	for (let i = 0; i < tags.length; i += PURGE_TAGS_PER_REQUEST) {
-		purgeTags('reader-reports', tags.slice(i, i + PURGE_TAGS_PER_REQUEST));
+		purgeTags('community-reports', tags.slice(i, i + PURGE_TAGS_PER_REQUEST));
 	}
 }

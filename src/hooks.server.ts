@@ -5,6 +5,7 @@ import { getAuth } from '#lib/server/auth/auth.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { asPrivate } from '#lib/server/http/cache.ts';
 import { getUserById, type UserRow } from '#lib/server/data/user-queries.ts';
+import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 /** `/user` and `/user/*` only: `/users…` and `/username` are not account routes. */
 function isAccountPath(pathname: string): boolean {
@@ -55,7 +56,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (pathname.startsWith('/user/moderation')) {
 		// The guard throws; a thrown redirect or error would skip `withSafeCacheHeaders`.
 		try {
-			await requireRole(event.locals, ['moderator', 'administrator'], { page: true });
+			await requireRole(event.locals, STAFF_ROLES, { page: true });
 		} catch (err) {
 			if (isRedirect(err)) {
 				return withSafeCacheHeaders(

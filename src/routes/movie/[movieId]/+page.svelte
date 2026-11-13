@@ -7,11 +7,13 @@
 	import CastAndCrew from '#lib/components/movies/facts/castAndCrew.svelte';
 	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
-	import ReaderReportsSection from '#lib/components/movies/metrics/readerReportsSection.svelte';
+	import CommunityReportsBadge from '#lib/components/movies/metrics/communityReportsBadge.svelte';
+	import CommunityReportsSection from '#lib/components/movies/metrics/communityReportsSection.svelte';
 	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
 	import { BECHDEL_TIERS } from '#lib/media/utils/metrics.ts';
 	import { bechdelTone } from '#lib/media/utils/tones.ts';
+	import { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import { TitleView } from '#lib/media/utils/titleView.svelte.js';
 
 	const BECHDEL_CRITERIA = BECHDEL_TIERS.slice(0, 3);
@@ -19,6 +21,10 @@
 	let { data }: { data: PageData } = $props();
 	const view = new TitleView(() => data, 'movie');
 	const movie = $derived(view.media);
+	// One state per title, recreated when the TMDB id changes; the header badge and the section share it.
+	// Derived from the id, so a new media object for the same title keeps the loaded counts.
+	const tmdbId = $derived(movie.tmdbId);
+	const reports = $derived(new CommunityReportsState('movie', tmdbId));
 	const bechdel = $derived(data.bechdel);
 </script>
 
@@ -28,6 +34,9 @@
 
 <article class="title-page">
 	<DetailHeader media={movie}>
+		{#snippet aside()}
+			<CommunityReportsBadge {reports} />
+		{/snippet}
 		{#snippet verdict()}
 			<VerdictPanel safety={view.safety} representation={view.representation} />
 		{/snippet}
@@ -77,7 +86,7 @@
 		/>
 
 		{#key movie.tmdbId}
-			<ReaderReportsSection kind="movie" tmdbId={movie.tmdbId} />
+			<CommunityReportsSection kind="movie" tmdbId={movie.tmdbId} {reports} />
 		{/key}
 
 		<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} />

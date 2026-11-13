@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { getTableColumns } from 'drizzle-orm';
 import { communityContentReports } from '#db/schema/community.ts';
 import { UM_FLAGS } from '#lib/media/utils/metrics.ts';
-import { CONCERN_FLAGS, REPORT_CATEGORIES, sexualLevel } from '#lib/media/utils/readerReports.ts';
+import {
+	CONCERN_FLAGS,
+	REPORT_CATEGORIES,
+	sexualLevel
+} from '#lib/media/utils/communityReports.ts';
 
 describe('concern flags', () => {
 	it('are the UM flags but noRape, and match the report table columns', () => {

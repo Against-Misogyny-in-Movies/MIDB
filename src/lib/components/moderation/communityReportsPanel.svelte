@@ -39,7 +39,7 @@
 {#if openTitle}
 	<section class="group" aria-labelledby="open-title">
 		<a class="back" href="?tab=reports"
-			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Back to reader reports</a
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Back to community reports</a
 		>
 		<h2 id="open-title" class="heading" tabindex="-1">
 			{#if openHref}<a class="link" href={openHref}>{openTitle.name}</a>{:else}{openTitle.name}{/if}
@@ -52,7 +52,7 @@
 			</div>
 		{/if}
 		{#if openTitle.reports.length === 0}
-			<p class="empty" id="moderation-empty" tabindex="-1">This title has no reader reports.</p>
+			<p class="empty" id="moderation-empty" tabindex="-1">This title has no community reports.</p>
 		{:else}
 			<ul class="card list">
 				{#each openTitle.reports as report (report.account.userId)}
@@ -69,15 +69,15 @@
 {:else if titleId}
 	<section class="group">
 		<a class="back" href="?tab=reports"
-			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Back to reader reports</a
+			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Back to community reports</a
 		>
-		<p class="empty">That title has no reader reports or no longer exists.</p>
+		<p class="empty">That title has no community reports or no longer exists.</p>
 	</section>
 {:else}
 	<section class="group" aria-labelledby="held-heading">
 		<h2 id="held-heading" class="heading">Held</h2>
 		{#if held.length === 0}
-			<p class="empty" id="moderation-empty" tabindex="-1">No reader reports are waiting.</p>
+			<p class="empty" id="moderation-empty" tabindex="-1">No community reports are waiting.</p>
 		{:else}
 			<ul class="card list">
 				{#each held as report (`${report.account.userId}:${report.titleId}`)}

@@ -7,7 +7,7 @@ import { purgeTitleReports, purgeTitlesReports } from '#lib/server/http/purge-ti
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { runBatch, type BatchStatement } from './comment-status.ts';
 import { targetAllowed } from './moderation-target.ts';
-import { titleSelect, type ReportedTitle } from './reader-report-queue.ts';
+import { titleSelect, type ReportedTitle } from './community-report-queue.ts';
 import type { UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -18,7 +18,7 @@ export type ReportModerationResult =
 	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
 
 /**
- * The log row for an action on reader reports, written only while a report matching `where`
+ * The log row for an action on community reports, written only while a report matching `where`
  * exists, so a lost race leaves neither a status change nor a log line. It is one row, naming
  * the report's account and the title `title` selects (the report's own, or NULL for an action
  * that covers several titles).

@@ -1,7 +1,7 @@
 /**
- * The reader-report vocabulary and thresholds, defined once for the endpoints, the form, the
+ * The community-report vocabulary and thresholds, defined once for the endpoints, the form, the
  * counts and the Methodology copy. The enum tuples the schema's CHECKs also use live in
- * `db/lib/readerReports.ts` and are re-exported here.
+ * `db/lib/communityReports.ts` and are re-exported here.
  */
 
 import { UM_FLAGS, type UmFlagKey } from '#lib/media/utils/metrics.ts';
@@ -12,7 +12,7 @@ import type {
 	reportLevel,
 	sexualLevel,
 	objectificationLevel
-} from '#db/lib/readerReports.ts';
+} from '#db/lib/communityReports.ts';
 
 export {
 	contentReportStatus,
@@ -21,7 +21,7 @@ export {
 	reportFraming,
 	reportLevel,
 	sexualLevel
-} from '#db/lib/readerReports.ts';
+} from '#db/lib/communityReports.ts';
 
 export type ReportLevel = (typeof reportLevel)[number];
 export type SexualLevel = (typeof sexualLevel)[number];
@@ -37,7 +37,7 @@ export const CONCERN_FLAGS: readonly { key: ConcernFlagKey; label: string }[] = 
 );
 
 /** Counted reports needed before the counts show; below it the section gives the total only. */
-export const READER_REPORT_MIN = 3;
+export const COMMUNITY_REPORT_MIN = 3;
 
 /** An account's reports count once it is this many days old. */
 export const REPORT_ACCOUNT_MIN_AGE_DAYS = 7;

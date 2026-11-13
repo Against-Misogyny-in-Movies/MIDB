@@ -5,13 +5,13 @@ import {
 	isBurst,
 	isBusyNewAccount,
 	type HoldFacts
-} from '#lib/server/data/reader-report-holds.ts';
+} from '#lib/server/data/community-report-holds.ts';
 import {
 	BURST_COUNT,
 	NEW_ACCOUNT_DAYS,
 	NEW_ACCOUNT_REPORT_MAX,
 	type ConcernFlagKey
-} from '#lib/media/utils/readerReports.ts';
+} from '#lib/media/utils/communityReports.ts';
 
 const NO_UM_FLAGS: Record<ConcernFlagKey, boolean> = {
 	rapeMenDisImp: false,

@@ -11,7 +11,7 @@
 		name: string;
 		/** Hidden inputs the action reads (the comment's id, the account's id). */
 		fields: Record<string, string>;
-		/** The account's reader reports that are not rejected, for `rejectAll`. */
+		/** The account's community reports that are not rejected, for `rejectAll`. */
 		reportCount?: number;
 		busy: string | null;
 		submit: ReturnType<typeof rowSubmit>;
@@ -32,7 +32,7 @@
 		reject: 'Reject comment',
 		mute: 'Mute account',
 		ban: 'Ban account',
-		rejectAll: 'Reject all reader reports'
+		rejectAll: 'Reject all community reports'
 	};
 	const shownToAuthor = $derived(kind === 'hide' || kind === 'reject');
 </script>
@@ -50,15 +50,15 @@
 			reason.
 		{:else if kind === 'mute'}
 			Mute {name}? Until the mute ends, the account cannot write, edit, delete, vote on or report
-			comments, and its reader reports leave the counts.
+			comments, and its community reports leave the counts.
 		{:else if kind === 'ban'}
-			Ban {name}? Its sessions end, it cannot sign in again, its reader reports leave the counts,
+			Ban {name}? Its sessions end, it cannot sign in again, its community reports leave the counts,
 			and this page has no way to undo a ban.
 		{:else if reportCount === 1}
-			Reject the reader report from {name}? It leaves the counts of the title it covers.
+			Reject the community report from {name}? It leaves the counts of the title it covers.
 		{:else}
-			Reject all {reportCount} reader reports from {name}? They leave the counts on every title they
-			cover.
+			Reject all {reportCount} community reports from {name}? They leave the counts on every title
+			they cover.
 		{/if}
 	</p>
 	{#if kind === 'mute'}

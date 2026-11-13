@@ -9,23 +9,23 @@ import {
 	moderationActions,
 	titleCountFlags
 } from '#db/schema/community.ts';
-import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/readerReports.ts';
+import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.ts';
 import { userValues } from '#db/test/users.ts';
 import {
 	approveReport,
 	rejectAccountReports,
 	rejectReport
-} from '#lib/server/data/reader-report-moderation.ts';
+} from '#lib/server/data/community-report-moderation.ts';
 import {
 	getOpenTitle,
 	listFlaggedTitles,
 	listHeldReports,
 	listTitleReports
-} from '#lib/server/data/reader-report-queue.ts';
+} from '#lib/server/data/community-report-queue.ts';
 import { banAccount, muteUser } from '#lib/server/data/moderation-actions.ts';
 import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
 import { listRecentActions } from '#lib/server/data/moderation-queue.ts';
-import { getReportCounts } from '#lib/server/data/reader-reports.ts';
+import { getReportCounts } from '#lib/server/data/community-reports.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 const purged = vi.hoisted(() => vi.fn());

@@ -9,7 +9,7 @@
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { accountLine } from '#lib/media/utils/reportAccount.ts';
 	import { effectiveStanding, moderatorStandingLabel } from '#lib/media/utils/reportStanding.ts';
-	import { HOLD_REASON_LABELS } from '#lib/media/utils/readerReports.ts';
+	import { HOLD_REASON_LABELS } from '#lib/media/utils/communityReports.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	interface Props {

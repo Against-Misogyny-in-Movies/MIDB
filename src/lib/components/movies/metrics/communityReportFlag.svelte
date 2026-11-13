@@ -1,14 +1,16 @@
 <script lang="ts">
 	import Notice from '#lib/components/ui/notice.svelte';
-	import type { ReaderReportsState } from '#lib/media/utils/readerReportsState.svelte.js';
+	import type { CommunityReportsState } from '#lib/media/utils/communityReportsState.svelte.js';
 	import { REPORT_NOTE_MAX } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 
 	interface Props {
-		state: ReaderReportsState;
+		state: CommunityReportsState;
+		/** Hides the "Counts look wrong" link while the report form is open; an open plate stays. */
+		hideTrigger?: boolean;
 	}
 
-	let { state: reports }: Props = $props();
+	let { state: reports, hideTrigger = false }: Props = $props();
 
 	let open = $state(false);
 	let note = $state('');
@@ -39,22 +41,26 @@
 
 <div class="flag">
 	{#if open}
-		<form class="plate form" onsubmit={submit}>
+		<form class="plate form" aria-labelledby="report-flag-title" onsubmit={submit}>
+			<p id="report-flag-title" class="intro">
+				Asks the moderators to review this title’s community reports.
+			</p>
 			<label class="note">
-				<span class="label">Note (optional)</span>
+				<span class="label">What looks wrong (optional)</span>
 				<textarea
 					class="input field"
 					rows="2"
+					aria-describedby="report-flag-count"
 					maxlength={REPORT_NOTE_MAX}
 					bind:value={note}
 					bind:this={field}></textarea>
 			</label>
 			<div class="row">
 				<button class="btn btn--ink" type="submit" disabled={reports.busy.flag}>
-					{reports.busy.flag ? 'Sending…' : 'Send'}
+					{reports.busy.flag ? 'Sending…' : 'Send to moderators'}
 				</button>
 				<button class="btn btn--ghost" type="button" onclick={close}>Cancel</button>
-				<span class="label count">{note.length} / {REPORT_NOTE_MAX}</span>
+				<span id="report-flag-count" class="label count">{note.length} / {REPORT_NOTE_MAX}</span>
 			</div>
 			{#if reports.errors.flag}
 				<Notice tone="error">{reports.errors.flag}</Notice>
@@ -62,9 +68,9 @@
 		</form>
 	{:else if reports.flagged}
 		<div class="sent" tabindex="-1" bind:this={sent}>
-			<Notice tone="success">Counts flagged. Moderators review them.</Notice>
+			<Notice tone="success">Sent to the moderators.</Notice>
 		</div>
-	{:else}
+	{:else if !hideTrigger}
 		<button class="link wrong" type="button" bind:this={trigger} onclick={show}>
 			Counts look wrong
 		</button>
@@ -77,6 +83,11 @@
 	.form {
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
+	}
+
+	.intro {
+		@apply text-sm;
+		margin: 0;
 	}
 
 	.note {

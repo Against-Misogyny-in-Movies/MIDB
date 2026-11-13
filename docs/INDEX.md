@@ -21,7 +21,7 @@ Read whole.
   - 108–120 Making a change (~440) ← 3
   - 121–137 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
-- `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
+- `.claude/rules/copy-standards.md` — Copy standards (~480 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
 - `.claude/rules/docs-standards.md` — Docs standards (~1.1K tok)
 - `.claude/rules/style-standards.md` — Style standards (~1.3K tok)
@@ -42,21 +42,21 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~3.7K tok)
+- `DESIGN.md` — Design (~4.0K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–62 Components (~1.8K)
-  - 63–69 Pages (~420)
+  - 37–62 Components (~2.0K)
+  - 63–69 Pages (~470)
   - 70–73 Motion (~90)
   - 74–77 Browser surfaces (~50)
   - 78–81 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~50.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~51.1K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–268 Directory layout (~8.3K)
+  - 68–268 Directory layout (~8.4K)
     - 259–268 File-organisation conventions (~450)
   - 269–282 Styling & theming (~950)
   - 283–295 Copy & voice (~540) ← 1
@@ -64,41 +64,41 @@ Read the sections your task touches.
   - 327–366 User & roles (~2.5K)
     - 359–366 Migrations (~350)
   - 367–396 Source sync (~1.8K) ← 3
-  - 397–462 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.4K)
+  - 397–462 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
   - 463–488 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.2K) ← 2
   - 489–508 UM Disambiguation (~630)
   - 509–517 UM flag rendering (~250)
-  - 518–525 Reader reports (`src/lib/server/data/reader-report*.ts`, `src/routes/api/titles/…/reports`) (~410)
-  - 526–534 Reader reports section (`movies/metrics/readerReportsSection.svelte`) (~560)
-  - 535–546 Shared marker pattern (metric row markers) (~410) ← 5
-  - 547–587 Component library (`src/lib/components/`) (~5.8K)
-  - 588–598 Live search (`src/lib/components/search/`) (~710)
-  - 599–612 Server cache (`src/lib/server/cache/`) (~690)
-  - 613–628 TMDB integration (~810)
-  - 629–647 Auth flow (Better Auth) (~1.9K)
-  - 648–667 Caching policy (~1.4K) ← 6
-  - 668–724 Configuration & environment (~3.2K)
-    - 684–696 Local run sequence (~130)
-    - 697–700 npm scripts (~200)
-    - 701–711 CI (`.github/workflows/tests.yml`) (~490)
-    - 712–724 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 725–740 Testing (~1.2K)
-    - 735–740 Verification baseline (~80)
-  - 741–749 Known gaps / TODO (~180) ← 1
-  - 750–758 Related docs (~140)
+  - 518–526 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 527–537 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 538–549 Shared marker pattern (metric row markers) (~410) ← 5
+  - 550–590 Component library (`src/lib/components/`) (~5.9K)
+  - 591–601 Live search (`src/lib/components/search/`) (~710)
+  - 602–615 Server cache (`src/lib/server/cache/`) (~690)
+  - 616–631 TMDB integration (~810)
+  - 632–650 Auth flow (Better Auth) (~1.9K)
+  - 651–670 Caching policy (~1.4K) ← 6
+  - 671–727 Configuration & environment (~3.2K)
+    - 687–699 Local run sequence (~130)
+    - 700–703 npm scripts (~200)
+    - 704–714 CI (`.github/workflows/tests.yml`) (~490)
+    - 715–727 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 728–743 Testing (~1.2K)
+    - 738–743 Verification baseline (~80)
+  - 744–752 Known gaps / TODO (~180) ← 1
+  - 753–761 Related docs (~140)
 
 ## Phases
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~2.6K tok)
+- `docs/phases/STATUS.md` — Phase status (~2.8K tok)
 
 ## Policies
 
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~2.8K tok)
+- `SECURITY.md` — Security (~2.9K tok)
 - `PRIVACY.md` — Privacy (~2.5K tok)
 - `ACCESSIBILITY.md` — Accessibility (~520 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)

@@ -5,12 +5,12 @@ import {
 	NEW_ACCOUNT_REPORT_MAX,
 	type ConcernFlagKey,
 	type SexualLevel
-} from '#lib/media/utils/readerReports.ts';
-import type { holdReason } from '#lib/media/utils/readerReports.ts';
+} from '#lib/media/utils/communityReports.ts';
+import type { holdReason } from '#lib/media/utils/communityReports.ts';
 
 export type HoldReason = (typeof holdReason)[number];
 
-/** The facts the three hold rules read, loaded by `reader-reports.ts`. */
+/** The facts the three hold rules read, loaded by `community-reports.ts`. */
 export type HoldFacts = {
 	/** The report's sexual-violence and flag answers; null is not sure. */
 	sexualPresent: SexualLevel | null;

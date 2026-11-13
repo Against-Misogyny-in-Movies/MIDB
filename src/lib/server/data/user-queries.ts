@@ -8,7 +8,7 @@ import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
-import { countsFromDate } from './reader-reports.ts';
+import { countsFromDate } from './community-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -142,7 +142,7 @@ export type UserRating = {
 	restricted: 'banned' | 'muted' | null;
 };
 
-/** A reader's reader reports, newest first, in every status, with the title joined. */
+/** A reader's community reports, newest first, in every status, with the title joined. */
 export async function getUserRatings(userId: string): Promise<UserRating[]> {
 	const rows = await db
 		.select({
@@ -150,6 +150,7 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 			titleId: communityContentReports.titleId,
 			updatedAt: communityContentReports.updatedAt,
 			accountCreatedAt: users.createdAt,
+			role: users.role,
 			bannedAt: users.bannedAt,
 			mutedUntil: users.mutedUntil,
 			...titleRef
@@ -159,9 +160,9 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 		.innerJoin(users, eq(communityContentReports.userId, users.id))
 		.where(eq(communityContentReports.userId, userId))
 		.orderBy(desc(communityContentReports.updatedAt), desc(communityContentReports.titleId));
-	return rows.map(({ accountCreatedAt, bannedAt, mutedUntil, ...row }) => ({
+	return rows.map(({ accountCreatedAt, role, bannedAt, mutedUntil, ...row }) => ({
 		...row,
-		countsFrom: countsFromDate(accountCreatedAt),
+		countsFrom: countsFromDate(accountCreatedAt, role),
 		restricted: bannedAt !== null ? 'banned' : activeMute(mutedUntil) ? 'muted' : null
 	}));
 }

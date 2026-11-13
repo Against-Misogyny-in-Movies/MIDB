@@ -14,20 +14,20 @@
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
-		<h1 class="display">Reader reports</h1>
+		<h1 class="display">MIDB community reports</h1>
 	</header>
 
 	{#if data.banned}
-		<Notice tone="warn">This account is banned, so none of its reader reports count.</Notice>
+		<Notice tone="warn">This account is banned, so none of its community reports count.</Notice>
 	{:else if data.mutedUntil}
 		<Notice tone="warn">
-			This account is muted until {formatDate(data.mutedUntil)}, so none of its reader reports
+			This account is muted until {formatDate(data.mutedUntil)}, so none of its community reports
 			count.
 		</Notice>
 	{/if}
 
 	{#if data.ratings.length === 0}
-		<p class="empty">No reader reports yet. Reports are added from a film or series page.</p>
+		<p class="empty">No community reports yet. Reports are added from a film or series page.</p>
 	{:else}
 		<ul class="card history">
 			{#each data.ratings as row (row.titleId)}

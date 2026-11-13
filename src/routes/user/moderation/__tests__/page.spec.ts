@@ -60,7 +60,7 @@ describe('the moderation tabs', () => {
 	});
 });
 
-describe('the reader-reports tab', () => {
+describe('the community-reports tab', () => {
 	it('lists held reports and flagged titles under their headings', async () => {
 		render(Page, {
 			data: {
@@ -77,17 +77,17 @@ describe('the reader-reports tab', () => {
 			},
 			form: null
 		} as never);
-		await fireEvent.click(tab(/Reader reports/));
+		await fireEvent.click(tab(/MIDB community reports/));
 		expect(screen.getByRole('heading', { name: 'Held' })).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Flagged titles 1' })).toBeTruthy();
 		expect(screen.getByText('Counts look wrong: 1 open')).toBeTruthy();
-		expect(screen.getByRole('link', { name: 'See reader reports' }).getAttribute('href')).toBe(
+		expect(screen.getByRole('link', { name: 'See community reports' }).getAttribute('href')).toBe(
 			'?title=t2'
 		);
-		expect(tab(/Reader reports/).textContent).toContain('0');
+		expect(tab(/MIDB community reports/).textContent).toContain('0');
 	});
 
-	it('opens on the reader-reports tab when a title is open', () => {
+	it('opens on the community-reports tab when a title is open', () => {
 		render(Page, {
 			data: {
 				...DATA,
@@ -102,15 +102,15 @@ describe('the reader-reports tab', () => {
 			},
 			form: null
 		} as never);
-		expect(tab(/Reader reports/).getAttribute('aria-selected')).toBe('true');
-		expect(screen.getByText('This title has no reader reports.')).toBeTruthy();
+		expect(tab(/MIDB community reports/).getAttribute('aria-selected')).toBe('true');
+		expect(screen.getByText('This title has no community reports.')).toBeTruthy();
 	});
 });
 
-describe('the reader-reports URL', () => {
+describe('the community-reports URL', () => {
 	it('opens the tab for ?tab=reports, and Pending otherwise', () => {
 		const { unmount } = render(Page, { data: { ...DATA, tab: 'reports' }, form: null } as never);
-		expect(tab(/Reader reports/).getAttribute('aria-selected')).toBe('true');
+		expect(tab(/MIDB community reports/).getAttribute('aria-selected')).toBe('true');
 		unmount();
 		render(Page, { data: DATA, form: null } as never);
 		expect(tab(/Pending/).getAttribute('aria-selected')).toBe('true');
@@ -125,15 +125,17 @@ describe('the reader-reports URL', () => {
 			},
 			form: null
 		} as never);
-		expect(tab(/Reader reports/).textContent?.trim()).toBe('Reader reports0');
+		expect(tab(/MIDB community reports/).textContent?.trim()).toBe('MIDB community reports0');
 	});
 
 	it('says so, with a way back, when the title has no reports or does not exist', () => {
 		render(Page, { data: { ...DATA, titleId: 'gone' }, form: null } as never);
-		expect(tab(/Reader reports/).getAttribute('aria-selected')).toBe('true');
-		expect(screen.getByText('That title has no reader reports or no longer exists.')).toBeTruthy();
-		expect(screen.getByRole('link', { name: /Back to reader reports/ }).getAttribute('href')).toBe(
-			'?tab=reports'
-		);
+		expect(tab(/MIDB community reports/).getAttribute('aria-selected')).toBe('true');
+		expect(
+			screen.getByText('That title has no community reports or no longer exists.')
+		).toBeTruthy();
+		expect(
+			screen.getByRole('link', { name: /Back to community reports/ }).getAttribute('href')
+		).toBe('?tab=reports');
 	});
 });

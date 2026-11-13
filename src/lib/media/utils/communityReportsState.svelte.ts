@@ -1,16 +1,16 @@
 import type {
-	ReaderReportsResponse,
+	CommunityReportsResponse,
 	ViewerReportResponse
-} from '#lib/media/types/reader-reports.ts';
+} from '#lib/media/types/community-reports.ts';
 import { REPORT_NOTE_MAX } from '#lib/media/utils/comments.ts';
 import { describeStatus, requestJson, type Fetcher } from '#lib/media/utils/commentApi.ts';
-import type { ContentReportStatus } from '#lib/media/utils/readerReports.ts';
+import type { ContentReportStatus } from '#lib/media/utils/communityReports.ts';
 import { reportBody, type ReportDraft } from '#lib/media/utils/reportDraft.ts';
 
 type Action = 'load' | 'viewer' | 'save' | 'delete' | 'flag';
 
 const FAILED: Record<Action, string> = {
-	load: 'The reader reports could not be loaded',
+	load: 'The community reports could not be loaded',
 	viewer: 'This account’s report could not be loaded',
 	save: 'The report was not saved',
 	delete: 'The report was not deleted',
@@ -30,16 +30,16 @@ function describe(action: Action, status: number): string {
 }
 
 /**
- * One title's reader reports: the public counts (edge-cached, the same for every reader), the
+ * One title's community reports: the public counts (edge-cached, the same for every reader), the
  * signed-in reader's own report (`private, no-store`) and the writes. Counts are not refetched
  * after a write, because they are edge-cached and a purge lands a moment later. Each failure
  * is stored under the key of its action, so the component shows it beside that control.
  */
-export class ReaderReportsState {
+export class CommunityReportsState {
 	readonly #base: string;
 	readonly #fetch: Fetcher;
 
-	counts = $state<ReaderReportsResponse | null>(null);
+	counts = $state<CommunityReportsResponse | null>(null);
 	phase = $state<'loading' | 'ready' | 'error'>('loading');
 	viewer = $state<ViewerReportResponse | null>(null);
 	/** `idle` until a signed-in reader's report is requested; `ready` also after a 401. */
@@ -48,6 +48,8 @@ export class ReaderReportsState {
 	busy = $state<Partial<Record<Action, boolean>>>({});
 	/** The status a save answered, shown once beside the reader's report. */
 	saved = $state<{ status: ContentReportStatus } | null>(null);
+	/** Set by a delete that went through, so "Add a report" can say so; cleared by a save, by `clearViewer()` and when the form opens. */
+	deleted = $state(false);
 	flagged = $state(false);
 
 	constructor(kind: 'movie' | 'tv', tmdbId: string, fetcher?: Fetcher) {
@@ -58,7 +60,7 @@ export class ReaderReportsState {
 	async load(): Promise<void> {
 		this.phase = 'loading';
 		delete this.errors.load;
-		const reply = await requestJson<ReaderReportsResponse>(this.#fetch, 'GET', this.#base);
+		const reply = await requestJson<CommunityReportsResponse>(this.#fetch, 'GET', this.#base);
 		if (!reply.ok) {
 			this.errors.load = describe('load', reply.status);
 			this.phase = 'error';
@@ -93,6 +95,7 @@ export class ReaderReportsState {
 		this.viewer = null;
 		this.viewerPhase = 'idle';
 		this.saved = null;
+		this.deleted = false;
 		delete this.errors.viewer;
 	}
 
@@ -116,6 +119,7 @@ export class ReaderReportsState {
 			return false;
 		}
 		this.saved = { status: reply.data.status };
+		this.deleted = false;
 		await this.loadViewer();
 		this.busy.save = false;
 		return true;
@@ -130,6 +134,7 @@ export class ReaderReportsState {
 			return false;
 		}
 		this.saved = null;
+		this.deleted = true;
 		if (this.viewer) this.viewer = { ...this.viewer, report: null };
 		return true;
 	}

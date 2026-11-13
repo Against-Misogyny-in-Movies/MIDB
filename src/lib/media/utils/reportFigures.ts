@@ -8,13 +8,16 @@ import {
 	sexualLevel,
 	SEXUAL_LEVEL_LABELS,
 	type ReportCategory
-} from '#lib/media/utils/readerReports.ts';
-import type { ReportCounts } from '#lib/media/types/reader-reports.ts';
+} from '#lib/media/utils/communityReports.ts';
+import type { ReportCounts } from '#lib/media/types/community-reports.ts';
 
 export type Figure = { label: string; n: number };
 
-/** Each level set's levels, most serious first (the tuples run from the least serious), with the labels the form uses. */
-const ORDER = {
+/**
+ * Each level set's levels, most serious first (the tuples run from the least serious), with the
+ * labels the form uses. The counts and the report form both list answers in this order.
+ */
+export const REPORT_LEVEL_ORDER = {
 	sexual: sexualLevel.toReversed().map((l) => [l, SEXUAL_LEVEL_LABELS[l]] as const),
 	violence: reportLevel.toReversed().map((l) => [l, REPORT_LEVEL_LABELS[l]] as const),
 	objectification: objectificationLevel
@@ -27,7 +30,7 @@ export function categoryFigures(counts: ReportCounts, key: ReportCategory): Figu
 	const category = REPORT_CATEGORIES.find((c) => c.key === key);
 	if (!category) return [];
 	const row: Record<string, number | undefined> = counts.categories[key];
-	const figures: Figure[] = ORDER[category.levels].map(([level, label]) => ({
+	const figures: Figure[] = REPORT_LEVEL_ORDER[category.levels].map(([level, label]) => ({
 		label,
 		n: row[level] ?? 0
 	}));
