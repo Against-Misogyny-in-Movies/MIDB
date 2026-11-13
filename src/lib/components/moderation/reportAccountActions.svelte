@@ -27,7 +27,7 @@
 	const mine = $derived(outcome?.id === account.userId ? outcome : null);
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 	const DONE: Record<string, string> = {
-		rejectAccountReports: 'Every reader report of the account is rejected.',
+		rejectAccountReports: 'Every community report of the account is rejected.',
 		mute: 'Account muted.',
 		ban: 'Account banned.'
 	};

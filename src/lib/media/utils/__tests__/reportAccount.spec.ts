@@ -17,15 +17,15 @@ const account: ReportAccount = {
 };
 
 describe('accountLine', () => {
-	it('reads the name, age, reader reports not rejected and comments', () => {
+	it('reads the name, age, community reports not rejected and comments', () => {
 		expect(accountLine(account, true, NOW)).toBe(
-			'anna, 3 days old, 1 reader report not rejected, 2 comments'
+			'anna, 3 days old, 1 community report not rejected, 2 comments'
 		);
 	});
 
 	it('leaves the name out for a row that names the account already', () => {
 		expect(accountLine({ ...account, username: null }, false, NOW)).toBe(
-			'3 days old, 1 reader report not rejected, 2 comments'
+			'3 days old, 1 community report not rejected, 2 comments'
 		);
 		expect(accountLine({ ...account, username: null }, true, NOW)).toMatch(/^An account, /);
 	});

@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { authorizeWrite, privateJson, readBody } from '#lib/server/http/comment-request.ts';
-import { countFlagSchema } from '#lib/server/http/reader-report-request.ts';
+import { countFlagSchema } from '#lib/server/http/community-report-request.ts';
 import { upsertCountFlag } from '#lib/server/data/count-flags.ts';
 import { parseTitleParams, resolveCommentTitle } from '#lib/server/data/comment-title.ts';
 

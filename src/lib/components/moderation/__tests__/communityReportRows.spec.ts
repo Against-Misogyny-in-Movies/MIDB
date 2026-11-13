@@ -96,7 +96,9 @@ describe('the title report row', () => {
 	it('names the account once, in the header', () => {
 		mountRow(titleReport());
 		expect(screen.getAllByText(/anna/)).toHaveLength(1);
-		expect(screen.getByText(/100 days old, 3 community reports not rejected, 1 comment/)).toBeTruthy();
+		expect(
+			screen.getByText(/100 days old, 3 community reports not rejected, 1 comment/)
+		).toBeTruthy();
 	});
 
 	it.each([

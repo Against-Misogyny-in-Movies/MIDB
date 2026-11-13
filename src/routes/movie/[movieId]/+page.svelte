@@ -7,7 +7,7 @@
 	import CastAndCrew from '#lib/components/movies/facts/castAndCrew.svelte';
 	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
-	import ReaderReportsSection from '#lib/components/movies/metrics/readerReportsSection.svelte';
+	import CommunityReportsSection from '#lib/components/movies/metrics/communityReportsSection.svelte';
 	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
 	import { BECHDEL_TIERS } from '#lib/media/utils/metrics.ts';
@@ -77,7 +77,7 @@
 		/>
 
 		{#key movie.tmdbId}
-			<ReaderReportsSection kind="movie" tmdbId={movie.tmdbId} />
+			<CommunityReportsSection kind="movie" tmdbId={movie.tmdbId} />
 		{/key}
 
 		<DddMetricSection ddd={view.ddd} visibleTags={view.visibleTags} />

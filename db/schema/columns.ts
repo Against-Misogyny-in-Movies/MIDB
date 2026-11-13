@@ -37,7 +37,7 @@ type NotNullFlag = ReturnType<ReturnType<typeof booleanFlag>['notNull']>;
 
 /**
  * The eight concern flags as nullable columns, for a reader's answers, where NULL is "not
- * sure". `readerReports.spec.ts` keeps the key list in step with `UM_FLAGS`.
+ * sure". `communityReports.spec.ts` keeps the key list in step with `UM_FLAGS`.
  */
 export const umConcernFlagColumns = () =>
 	Object.fromEntries(

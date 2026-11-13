@@ -370,7 +370,7 @@ describe('the held report row', () => {
 		render(HeldReportRow, { report: base, outcome: null });
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
 		expect(
-			screen.getByText(/anna, 3 days old, 4 reader reports not rejected, 1 comment/)
+			screen.getByText(/anna, 3 days old, 4 community reports not rejected, 1 comment/)
 		).toBeTruthy();
 		expect(screen.getByText('Busy new account')).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Count it' })).toBeTruthy();

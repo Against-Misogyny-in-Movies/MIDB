@@ -38,8 +38,8 @@ vi.mock('#lib/server/http/purge-title.ts', () => ({
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
-vi.mock('#lib/server/data/reader-report-moderation.ts', () => reports);
-vi.mock('#lib/server/data/reader-report-queue.ts', () => reports);
+vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
+vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
 vi.mock('#lib/server/data/source-sync.ts', () => ({
 	getSourceSyncDates: () => getSourceSyncDates()
@@ -162,7 +162,7 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 	});
 });
 
-describe('the reader-reports view', () => {
+describe('the community-reports view', () => {
 	it('returns the held reports, the flagged titles and no open title without ?title=', async () => {
 		reports.listHeldReports.mockResolvedValue([{ titleId: 't1' }]);
 		reports.listFlaggedTitles.mockResolvedValue([{ titleId: 't2' }]);
@@ -188,7 +188,7 @@ describe('the reader-reports view', () => {
 	});
 });
 
-describe('reader-report actions', () => {
+describe('community-report actions', () => {
 	it('count and reject call the data function with the actor, account and title', async () => {
 		expect(await run('countReport', REPORT_FIELDS)).toEqual({ id: 'u1:t1', done: 'countReport' });
 		expect(reports.approveReport).toHaveBeenCalledWith(MOD, 'u1', 't1');

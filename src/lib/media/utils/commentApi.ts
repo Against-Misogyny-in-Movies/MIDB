@@ -38,7 +38,7 @@ export type StatusWording = {
 
 /**
  * One sentence for a failed request, from its status: `failed` says what failed, `wording` the
- * statuses that differ between actions. The sequence is shared by the comments and the reader reports.
+ * statuses that differ between actions. The sequence is shared by the comments and the community reports.
  */
 export function describeStatus(failed: string, status: number, wording: StatusWording): string {
 	if (status === 0) return `${failed}. The server could not be reached.`;
@@ -82,7 +82,7 @@ export type Reply<T> =
 	| { ok: false; status: number; message: string };
 
 /**
- * One JSON request to a comment or reader report endpoint. A network failure is status 0; a
+ * One JSON request to a comment or community report endpoint. A network failure is status 0; a
  * failed response keeps the `message` the endpoint sent (SvelteKit's error body), which names a
  * muted or banned account. A 204 has no body, so its `data` is undefined.
  */

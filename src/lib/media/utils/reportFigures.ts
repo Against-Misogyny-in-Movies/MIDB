@@ -8,8 +8,8 @@ import {
 	sexualLevel,
 	SEXUAL_LEVEL_LABELS,
 	type ReportCategory
-} from '#lib/media/utils/readerReports.ts';
-import type { ReportCounts } from '#lib/media/types/reader-reports.ts';
+} from '#lib/media/utils/communityReports.ts';
+import type { ReportCounts } from '#lib/media/types/community-reports.ts';
 
 export type Figure = { label: string; n: number };
 

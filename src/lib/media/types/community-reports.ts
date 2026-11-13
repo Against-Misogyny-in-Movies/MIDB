@@ -1,6 +1,10 @@
 import type { ReportCounts, ViewerReport } from '#lib/server/data/community-reports.ts';
 
-export type { ReportAnswers, ReportCounts, ViewerReport } from '#lib/server/data/community-reports.ts';
+export type {
+	ReportAnswers,
+	ReportCounts,
+	ViewerReport
+} from '#lib/server/data/community-reports.ts';
 
 /** `GET …/reports`: the whole counts at or above `COMMUNITY_REPORT_MIN`, else the total only. */
 export type CommunityReportsResponse = { total: number } | ({ total: number } & ReportCounts);

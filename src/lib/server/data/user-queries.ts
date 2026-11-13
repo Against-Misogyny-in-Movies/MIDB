@@ -8,7 +8,7 @@ import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
-import { countsFromDate } from './reader-reports.ts';
+import { countsFromDate } from './community-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -142,7 +142,7 @@ export type UserRating = {
 	restricted: 'banned' | 'muted' | null;
 };
 
-/** A reader's reader reports, newest first, in every status, with the title joined. */
+/** A reader's community reports, newest first, in every status, with the title joined. */
 export async function getUserRatings(userId: string): Promise<UserRating[]> {
 	const rows = await db
 		.select({

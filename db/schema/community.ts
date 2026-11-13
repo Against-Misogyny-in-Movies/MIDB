@@ -35,7 +35,7 @@ import {
 	reportFraming,
 	reportLevel,
 	sexualLevel
-} from '../lib/readerReports.ts';
+} from '../lib/communityReports.ts';
 
 // One table per metric shape, so each can hold what it names.
 
@@ -227,7 +227,7 @@ export const moderationActions = sqliteTable(
 			onDelete: 'set null'
 		}),
 		targetUserId: text('target_user_id').references(() => users.id, { onDelete: 'set null' }),
-		/** The title a reader-report or count-flag action concerns; null on comment and user actions. */
+		/** The title a community-report or count-flag action concerns; null on comment and user actions. */
 		targetTitleId: text('target_title_id').references(() => titles.id, { onDelete: 'set null' }),
 		action: text('action', { enum: moderationAction }).notNull(),
 		reason: text('reason'),
@@ -251,7 +251,7 @@ export const moderationActions = sqliteTable(
  * A reader's report of what a title shows. One per account per title (a series report covers
  * any episode). A NULL level, flag or framing means not sure or not answered. `status` says
  * whether it counts; an account's age is applied when the counts are read, not stored here
- * (`#lib/server/data/reader-reports.ts`).
+ * (`#lib/server/data/community-reports.ts`).
  */
 export const communityContentReports = sqliteTable(
 	'community_content_reports',
@@ -288,7 +288,7 @@ export const communityContentReports = sqliteTable(
 	]
 );
 
-/** A reader's "counts look wrong" flag on a title's reader report counts. One per account per title. */
+/** A reader's "counts look wrong" flag on a title's community report counts. One per account per title. */
 export const titleCountFlags = sqliteTable(
 	'title_count_flags',
 	{

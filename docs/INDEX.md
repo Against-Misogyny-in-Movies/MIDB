@@ -21,7 +21,7 @@ Read whole.
   - 108–120 Making a change (~440) ← 3
   - 121–137 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
-- `.claude/rules/copy-standards.md` — Copy standards (~470 tok)
+- `.claude/rules/copy-standards.md` — Copy standards (~480 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
 - `.claude/rules/docs-standards.md` — Docs standards (~1.1K tok)
 - `.claude/rules/style-standards.md` — Style standards (~1.3K tok)
@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 70–73 Motion (~90)
   - 74–77 Browser surfaces (~50)
   - 78–81 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~50.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~50.1K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
@@ -68,8 +68,8 @@ Read the sections your task touches.
   - 463–488 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.2K) ← 2
   - 489–508 UM Disambiguation (~630)
   - 509–517 UM flag rendering (~250)
-  - 518–525 Reader reports (`src/lib/server/data/reader-report*.ts`, `src/routes/api/titles/…/reports`) (~410)
-  - 526–534 Reader reports section (`movies/metrics/readerReportsSection.svelte`) (~560)
+  - 518–525 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~410)
+  - 526–534 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~560) ← 1
   - 535–546 Shared marker pattern (metric row markers) (~410) ← 5
   - 547–587 Component library (`src/lib/components/`) (~5.8K)
   - 588–598 Live search (`src/lib/components/search/`) (~710)
@@ -97,7 +97,7 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-community-reports.md` — Plan: MIDB community reports (~1.9K tok)
+- `docs/plans/plan-community-reports.md` — Plan: MIDB community reports (~2.5K tok)
 
 ## Policies
 

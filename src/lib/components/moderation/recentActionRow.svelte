@@ -25,9 +25,9 @@
 		dismiss: 'dismissed the reports on a comment',
 		mute: 'muted',
 		ban: 'banned',
-		approve_report: 'counted a reader report by',
-		reject_report: 'rejected a reader report by',
-		reject_account_reports: 'rejected every reader report by',
+		approve_report: 'counted a community report by',
+		reject_report: 'rejected a community report by',
+		reject_account_reports: 'rejected every community report by',
 		resolve_count_flag: 'resolved Counts look wrong on',
 		dismiss_count_flag: 'dismissed Counts look wrong on'
 	};
@@ -54,7 +54,7 @@
 	const editedSince = $derived(
 		entry.commentEditedAt !== null && entry.commentEditedAt > entry.createdAt
 	);
-	/** A comment action links to the title's page, a reader-report action to its reports here. */
+	/** A comment action links to the title's page, a community-report action to its reports here. */
 	const href = $derived(
 		!entry.title
 			? undefined

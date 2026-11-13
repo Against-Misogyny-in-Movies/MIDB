@@ -5,8 +5,8 @@ import {
 	type ReportFraming,
 	type ReportLevel,
 	type SexualLevel
-} from '#lib/media/utils/readerReports.ts';
-import type { ViewerReportView } from '#lib/media/types/reader-reports.ts';
+} from '#lib/media/utils/communityReports.ts';
+import type { ViewerReportView } from '#lib/media/types/community-reports.ts';
 
 /** A radio group cannot hold null, so "not sure" is its own value in the form. */
 export const UNSURE = 'unsure';

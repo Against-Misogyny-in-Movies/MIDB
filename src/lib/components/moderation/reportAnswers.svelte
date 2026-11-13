@@ -7,7 +7,7 @@
 		REPORT_FRAMING_LABELS,
 		answerLines,
 		type ConcernFlagKey
-	} from '#lib/media/utils/readerReports.ts';
+	} from '#lib/media/utils/communityReports.ts';
 
 	interface Props {
 		answers: ReportAnswerColumns;

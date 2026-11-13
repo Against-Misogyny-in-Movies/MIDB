@@ -7,7 +7,7 @@ import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
 import { targetAllowed } from './moderation-target.ts';
-import { purgeReportedTitles } from './reader-report-moderation.ts';
+import { purgeReportedTitles } from './community-report-moderation.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];

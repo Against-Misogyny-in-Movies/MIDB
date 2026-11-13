@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ViewerReportView } from '#lib/media/types/reader-reports.ts';
+import type { ViewerReportView } from '#lib/media/types/community-reports.ts';
 import {
 	asksFlags,
 	asksFraming,

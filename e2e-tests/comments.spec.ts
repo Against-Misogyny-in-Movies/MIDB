@@ -165,7 +165,7 @@ test.describe('on a film page', () => {
 			'Awaiting review'
 		);
 
-		// The second reader reports the author's comment.
+		// The second community reports the author's comment.
 		await comment.getByRole('button', { name: 'Report', exact: true }).click();
 		await other.page.getByLabel('Spam').check();
 		await other.page.getByRole('button', { name: 'Send report' }).click();

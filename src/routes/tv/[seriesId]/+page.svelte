@@ -8,7 +8,7 @@
 	import CommentsSection from '#lib/components/comments/commentsSection.svelte';
 	import CollapsibleSection from '#lib/components/movies/sections/collapsibleSection.svelte';
 	import DddEpisodeSelector from '#lib/components/movies/metrics/dddEpisodeSelector.svelte';
-	import ReaderReportsSection from '#lib/components/movies/metrics/readerReportsSection.svelte';
+	import CommunityReportsSection from '#lib/components/movies/metrics/communityReportsSection.svelte';
 	import UmMetricSection from '#lib/components/movies/metrics/umMetricSection.svelte';
 	import DddMetricSection from '#lib/components/movies/metrics/dddMetricSection.svelte';
 	import { TitleView } from '#lib/media/utils/titleView.svelte.js';
@@ -43,7 +43,7 @@
 		/>
 
 		{#key series.tmdbId}
-			<ReaderReportsSection kind="tv" tmdbId={series.tmdbId} />
+			<CommunityReportsSection kind="tv" tmdbId={series.tmdbId} />
 		{/key}
 
 		<DddMetricSection {ddd} visibleTags={view.visibleTags}>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '#lib/server/db.ts';
 import { titles } from '#db/schema/titles.ts';
-import { readerReportsTag } from '#lib/server/http/cache.ts';
+import { communityReportsTag } from '#lib/server/http/cache.ts';
 
 const getMovie = vi.fn();
 const getSeries = vi.fn();
@@ -24,8 +24,8 @@ describe('parseTitleParams', () => {
 		const padded = parseTitleParams('movie', '0348');
 		const plain = parseTitleParams('movie', '348');
 		expect(padded).toEqual({ kind: 'movie', tmdbId: '348' });
-		expect(readerReportsTag(padded.kind, padded.tmdbId)).toBe(
-			readerReportsTag(plain.kind, plain.tmdbId)
+		expect(communityReportsTag(padded.kind, padded.tmdbId)).toBe(
+			communityReportsTag(plain.kind, plain.tmdbId)
 		);
 	});
 

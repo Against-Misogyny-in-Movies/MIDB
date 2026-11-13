@@ -73,13 +73,13 @@ export const PUBLIC_COMMENTS = {
 };
 
 /**
- * PUBLIC_READER_REPORTS: a title's reader-report counts, the same for everyone, on the policy of
+ * PUBLIC_COMMUNITY_REPORTS: a title's community-report counts, the same for everyone, on the policy of
  * `PUBLIC_COMMENTS`. The response carries `Cache-Tag: reports:<kind>:<tmdbId>`
- * (`readerReportsHeaders`), and every report write purges that tag (`purgeTitleReports`). A
+ * (`communityReportsHeaders`), and every report write purges that tag (`purgeTitleReports`). A
  * report that starts counting on its own (its account reaches the minimum age) does not purge,
  * so the counts can trail by up to one TTL.
  */
-export const PUBLIC_READER_REPORTS = PUBLIC_COMMENTS;
+export const PUBLIC_COMMUNITY_REPORTS = PUBLIC_COMMENTS;
 
 /** A per-title cache tag: `<prefix>:<kind>:<tmdbId>`. */
 export function titleTag(prefix: string, kind: string, tmdbId: number | string): string {
@@ -104,12 +104,12 @@ export const commentsTag = (kind: string, tmdbId: number | string): string =>
 export const commentsHeaders = (kind: string, tmdbId: number | string): Record<string, string> =>
 	titleHeaders(PUBLIC_COMMENTS, 'comments', kind, tmdbId);
 
-/** The cache tag shared by one title's reader-report counts. */
-export const readerReportsTag = (kind: string, tmdbId: number | string): string =>
+/** The cache tag shared by one title's community-report counts. */
+export const communityReportsTag = (kind: string, tmdbId: number | string): string =>
 	titleTag('reports', kind, tmdbId);
 
-/** `PUBLIC_READER_REPORTS` plus the title's `Cache-Tag`, for the counts endpoint. */
-export const readerReportsHeaders = (
+/** `PUBLIC_COMMUNITY_REPORTS` plus the title's `Cache-Tag`, for the counts endpoint. */
+export const communityReportsHeaders = (
 	kind: string,
 	tmdbId: number | string
-): Record<string, string> => titleHeaders(PUBLIC_READER_REPORTS, 'reports', kind, tmdbId);
+): Record<string, string> => titleHeaders(PUBLIC_COMMUNITY_REPORTS, 'reports', kind, tmdbId);

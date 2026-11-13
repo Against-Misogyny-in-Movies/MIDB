@@ -133,7 +133,7 @@
 			>Comment history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
 		<a href="/user/metrics"
-			>Reader reports <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
+			>MIDB community reports <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
 		>
 	</nav>
 

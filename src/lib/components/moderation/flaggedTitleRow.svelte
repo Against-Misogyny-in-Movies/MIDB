@@ -30,7 +30,7 @@
 		{/each}
 	</ul>
 	{#snippet actions()}
-		<a class="btn btn--ink" href="?title={flagged.titleId}">See reader reports</a>
+		<a class="btn btn--ink" href="?title={flagged.titleId}">See community reports</a>
 	{/snippet}
 </ReportRowShell>
 

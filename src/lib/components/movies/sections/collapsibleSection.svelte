@@ -5,7 +5,7 @@
 	import { formatDate } from '#lib/media/utils/format.ts';
 
 	interface Props {
-		/** The `<details>` id, for a link that opens the section (`#reader-reports`). */
+		/** The `<details>` id, for a link that opens the section (`#community-reports`). */
 		id?: string;
 		title: string;
 		/** Remixicon class for the icon disk, e.g. "ri-chat-3-fill". */
