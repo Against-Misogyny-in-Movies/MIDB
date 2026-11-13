@@ -39,6 +39,7 @@ vi.mock('#lib/server/http/purge-title.ts', () => ({
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
 vi.mock('#lib/server/data/reader-report-moderation.ts', () => reports);
+vi.mock('#lib/server/data/reader-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
 vi.mock('#lib/server/data/source-sync.ts', () => ({
 	getSourceSyncDates: () => getSourceSyncDates()

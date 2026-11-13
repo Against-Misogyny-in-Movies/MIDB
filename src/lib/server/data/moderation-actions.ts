@@ -6,6 +6,7 @@ import type { CommentStatus } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
+import { targetAllowed } from './moderation-target.ts';
 import { purgeReportedTitles } from './reader-report-moderation.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
 
@@ -183,22 +184,6 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 		return { ok: false, reason: 'invalid-state' };
 	}
 	return { ok: true, title };
-}
-
-/**
- * A moderator may act on an ordinary account; only an administrator may act on a moderator; no
- * one acts on an administrator or on themselves.
- */
-async function targetAllowed(
-	actor: UserRow,
-	targetId: string
-): Promise<UserRow | 'not-found' | 'forbidden-target'> {
-	if (actor.id === targetId) return 'forbidden-target';
-	const [target] = await db.select().from(users).where(eq(users.id, targetId));
-	if (!target) return 'not-found';
-	if (target.role === 'administrator') return 'forbidden-target';
-	if (target.role === 'moderator' && actor.role !== 'administrator') return 'forbidden-target';
-	return target;
 }
 
 function logUserAction(

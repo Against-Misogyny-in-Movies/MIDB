@@ -137,8 +137,13 @@ export type RecentAction = {
 	commentStatus: CommentStatus | null;
 	/** When the author last edited the comment, so the log can say it changed after the action. */
 	commentEditedAt: string | null;
-	/** The title the comment is on, for a link back to it. */
-	title: { kind: CommentWithTitle['title']['kind']; tmdbId: number | null; name: string } | null;
+	/** The title the comment is on, or the title a report or count-flag action concerns. */
+	title: {
+		id: string;
+		kind: CommentWithTitle['title']['kind'];
+		tmdbId: number | null;
+		name: string;
+	} | null;
 };
 
 /** The latest moderation actions, newest first. */
@@ -149,11 +154,14 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 			targetBody: comments.body,
 			targetStatus: comments.status,
 			targetEditedAt: comments.editedAt,
-			title: { kind: titles.kind, tmdbId: titles.tmdbId, name: titles.title }
+			title: { id: titles.id, kind: titles.kind, tmdbId: titles.tmdbId, name: titles.title }
 		})
 		.from(moderationActions)
 		.leftJoin(comments, eq(moderationActions.targetCommentId, comments.id))
-		.leftJoin(titles, eq(comments.titleId, titles.id))
+		.leftJoin(
+			titles,
+			eq(titles.id, sql`coalesce(${comments.titleId}, ${moderationActions.targetTitleId})`)
+		)
 		.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id))
 		.limit(limit);
 	const userIds = [

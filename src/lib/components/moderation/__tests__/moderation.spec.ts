@@ -254,7 +254,7 @@ describe('RecentActionRow', () => {
 		commentId: 'c1',
 		commentStatus: 'rejected',
 		commentEditedAt: null,
-		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
+		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
 
@@ -345,7 +345,10 @@ describe('the held report row', () => {
 			username: 'anna',
 			createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
 			reportCount: 4,
-			commentCount: 1
+			commentCount: 1,
+			role: 'user',
+			countsFrom: new Date(Date.now() + 4 * 86_400_000).toISOString(),
+			restricted: null
 		},
 		holdReason: 'busy_new_account',
 		createdAt: '2026-11-10T10:00:00.000Z',

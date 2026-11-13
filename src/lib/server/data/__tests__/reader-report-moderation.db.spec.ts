@@ -9,23 +9,31 @@ import {
 	moderationActions,
 	titleCountFlags
 } from '#db/schema/community.ts';
+import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/readerReports.ts';
 import { userValues } from '#db/test/users.ts';
 import {
 	approveReport,
-	getOpenTitle,
-	listFlaggedTitles,
-	listHeldReports,
-	listTitleReports,
 	rejectAccountReports,
 	rejectReport
 } from '#lib/server/data/reader-report-moderation.ts';
+import {
+	getOpenTitle,
+	listFlaggedTitles,
+	listHeldReports,
+	listTitleReports
+} from '#lib/server/data/reader-report-queue.ts';
 import { banAccount, muteUser } from '#lib/server/data/moderation-actions.ts';
 import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
+import { listRecentActions } from '#lib/server/data/moderation-queue.ts';
 import { getReportCounts } from '#lib/server/data/reader-reports.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 
 const purged = vi.hoisted(() => vi.fn());
-vi.mock('#lib/server/http/purge-title.ts', () => ({ purgeTitleReports: purged }));
+const purgedMany = vi.hoisted(() => vi.fn());
+vi.mock('#lib/server/http/purge-title.ts', () => ({
+	purgeTitleReports: purged,
+	purgeTitlesReports: purgedMany
+}));
 
 const DAY = 86_400_000;
 let mod: UserRow;
@@ -34,6 +42,7 @@ let b: string;
 
 beforeEach(async () => {
 	purged.mockClear();
+	purgedMany.mockClear();
 	const old = new Date(Date.now() - 100 * DAY);
 	await db
 		.insert(users)
@@ -120,7 +129,8 @@ describe('rejectAccountReports', () => {
 			{ action: 'reject_account_reports', targetUserId: 'r1', targetTitleId: null }
 		]);
 		expect(rows).toHaveLength(1);
-		expect(purged).toHaveBeenCalledTimes(2);
+		expect(purgedMany).toHaveBeenCalledTimes(1);
+		expect(purgedMany.mock.calls[0][0]).toHaveLength(2);
 		expect(await onScreen(a)).toBe(1);
 	});
 
@@ -132,12 +142,44 @@ describe('rejectAccountReports', () => {
 	});
 });
 
+describe('who may be acted on', () => {
+	it('refuses a moderator acting on their own report or an administrator’s, changing nothing', async () => {
+		await db.insert(users).values(userValues('boss', { role: 'administrator' }));
+		await report('mod', a);
+		await report('boss', a);
+		for (const id of ['mod', 'boss']) {
+			expect(await rejectReport(mod, id, a)).toEqual({ ok: false, reason: 'forbidden-target' });
+			expect(await approveReport(mod, id, a)).toEqual({ ok: false, reason: 'forbidden-target' });
+			expect(await rejectAccountReports(mod, id)).toEqual({
+				ok: false,
+				reason: 'forbidden-target'
+			});
+		}
+		expect((await statusOf('mod', a)).status).toBe('counted');
+		expect(await log()).toHaveLength(0);
+		expect(purged).not.toHaveBeenCalled();
+		expect(purgedMany).not.toHaveBeenCalled();
+	});
+
+	it('lets only an administrator act on a moderator’s reports', async () => {
+		await db.insert(users).values(userValues('mod2', { role: 'moderator' }));
+		await report('mod2', a);
+		expect(await rejectReport(mod, 'mod2', a)).toEqual({ ok: false, reason: 'forbidden-target' });
+		const [admin] = await db
+			.insert(users)
+			.values(userValues('boss', { role: 'administrator' }))
+			.returning();
+		expect((await rejectReport(admin, 'mod2', a)).ok).toBe(true);
+	});
+});
+
 describe('mute and ban purge the counts of every reported title', () => {
 	it('purges both titles on a mute, and the counts drop the account', async () => {
 		await report('r1', a);
 		await report('r1', b, 'held', 'busy_new_account');
 		await muteUser(mod, 'r1', 24, null);
-		expect(purged).toHaveBeenCalledTimes(2);
+		expect(purgedMany).toHaveBeenCalledTimes(1);
+		expect(purgedMany.mock.calls[0][0]).toHaveLength(2);
 		expect(await onScreen(a)).toBe(0);
 	});
 
@@ -145,12 +187,13 @@ describe('mute and ban purge the counts of every reported title', () => {
 		await report('r1', a);
 		await report('r1', b);
 		await banAccount(mod, 'r1', null);
-		expect(purged).toHaveBeenCalledTimes(2);
+		expect(purgedMany.mock.calls[0][0]).toHaveLength(2);
 	});
 
 	it('purges nothing for an account with no reports', async () => {
 		await muteUser(mod, 'r2', 24, null);
 		expect(purged).not.toHaveBeenCalled();
+		expect(purgedMany.mock.calls.flatMap((c) => c[0])).toHaveLength(0);
 	});
 });
 
@@ -178,6 +221,24 @@ describe('count flag actions', () => {
 	it('writes no log row for a missing flag', async () => {
 		expect(await resolveCountFlag('nope', 'mod')).toBe(false);
 		expect(await log()).toHaveLength(0);
+	});
+});
+
+describe('the action log', () => {
+	it('names the title of a report action and of a count-flag action, not of a whole-account one', async () => {
+		await report('r1', a);
+		await report('r1', b);
+		const [flag] = await db
+			.insert(titleCountFlags)
+			.values({ titleId: b, reporterId: 'r2' })
+			.returning();
+		await rejectReport(mod, 'r1', a);
+		await resolveCountFlag(flag.id, 'mod');
+		await rejectAccountReports(mod, 'r1');
+		const byAction = new Map((await listRecentActions()).map((e) => [e.action, e.title]));
+		expect(byAction.get('reject_report')).toMatchObject({ id: a, name: 'Alien' });
+		expect(byAction.get('resolve_count_flag')).toMatchObject({ id: b, name: 'Dark' });
+		expect(byAction.get('reject_account_reports')).toBeNull();
 	});
 });
 
@@ -236,6 +297,60 @@ describe('queues', () => {
 		expect(flagged[0].flags.map((f) => f.note)).toEqual(expect.arrayContaining([null, 'Too low']));
 		await resolveCountFlag(flagged[1].flags[0].id, 'mod');
 		expect((await listFlaggedTitles()).map((f) => f.titleId)).toEqual([a]);
+	});
+});
+
+describe('account facts', () => {
+	it('reports the role, when reports start to count and why an account is left out', async () => {
+		await db
+			.update(users)
+			.set({ mutedUntil: new Date(Date.now() + DAY) })
+			.where(eq(users.id, 'r1'));
+		await db.update(users).set({ bannedAt: new Date() }).where(eq(users.id, 'r2'));
+		await report('r1', a);
+		await report('r2', a);
+		const list = await listTitleReports(a);
+		const byId = new Map(list.map((r) => [r.account.userId, r.account]));
+		expect(byId.get('r1')).toMatchObject({ role: 'user', restricted: 'muted' });
+		expect(byId.get('r2')).toMatchObject({ restricted: 'banned' });
+		const created = Date.now() - 100 * DAY;
+		expect(
+			Math.abs(
+				Date.parse(byId.get('r1')!.countsFrom) - (created + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY)
+			)
+		).toBeLessThan(DAY);
+	});
+
+	it('reads accounts past one statement’s parameter limit', async () => {
+		const old = new Date(Date.now() - 100 * DAY);
+		for (let i = 0; i < 105; i++) {
+			await db.insert(users).values(userValues(`bulk${i}`, { createdAt: old, updatedAt: old }));
+			await report(`bulk${i}`, a);
+		}
+		expect(await listTitleReports(a)).toHaveLength(105);
+	});
+
+	it('gives the title view UM’s flags on a contradicts_source report', async () => {
+		await db.insert(umSource).values({
+			umId: 1,
+			cleanName: 'alien',
+			cleanTitleKey: 'alien',
+			noRape: false,
+			rapeMenDisImp: false,
+			sexHarOnScrn: false,
+			sexAdultTeen: false,
+			childSexAbuse: false,
+			incest: false,
+			attemptedRape: false,
+			rapeOffScrn: false,
+			rapeOnScreen: true
+		});
+		await db.insert(titleUm).values({ titleId: a, umId: 1 });
+		await report('r1', a, 'held', 'contradicts_source');
+		await report('r2', a);
+		const list = await listTitleReports(a);
+		expect(list.find((r) => r.account.userId === 'r1')?.um).toMatchObject({ rapeOnScreen: true });
+		expect(list.find((r) => r.account.userId === 'r2')?.um).toBeNull();
 	});
 });
 

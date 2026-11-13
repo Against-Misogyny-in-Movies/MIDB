@@ -3,16 +3,19 @@ import { commentsTag, readerReportsTag } from './cache.ts';
 
 type PurgeTitle = { kind: string; tmdbId: number | string | null };
 
+/** The tags one purge request carries; a longer list goes in several requests. */
+export const PURGE_TAGS_PER_REQUEST = 30;
+
 /**
- * Purges one edge cache tag after the response (`waitUntil`). A failed purge is logged under
- * `label` and swallowed: the write has already succeeded, and the short edge TTL of the policy
- * that set the tag bounds how long the entry can stay stale.
+ * Purges edge cache tags after the response (`waitUntil`), in one request for the tags given. A
+ * failed purge is logged under `label` and swallowed: the write has already succeeded, and the
+ * short edge TTL of the policy that set the tag bounds how long the entry can stay stale.
  */
-function purgeTag(label: string, tag: string): void {
+function purgeTags(label: string, tags: string[]): void {
 	waitUntil(
 		(async () => {
 			try {
-				const result = await cache.purge({ tags: [tag] });
+				const result = await cache.purge({ tags });
 				if (!result.success) console.error(`[${label}] cache purge failed`, result.errors);
 			} catch (err) {
 				console.error(`[${label}] cache purge failed`, err);
@@ -27,7 +30,7 @@ function purgeTag(label: string, tag: string): void {
  */
 export function purgeTitleComments(title: PurgeTitle): void {
 	if (title.tmdbId === null) return;
-	purgeTag('comments', commentsTag(title.kind, title.tmdbId));
+	purgeTags('comments', [commentsTag(title.kind, title.tmdbId)]);
 }
 
 /**
@@ -36,5 +39,18 @@ export function purgeTitleComments(title: PurgeTitle): void {
  */
 export function purgeTitleReports(title: PurgeTitle): void {
 	if (title.tmdbId === null) return;
-	purgeTag('reader-reports', readerReportsTag(title.kind, title.tmdbId));
+	purgeTags('reader-reports', [readerReportsTag(title.kind, title.tmdbId)]);
+}
+
+/**
+ * Purges the reader-report counts of several titles, `PURGE_TAGS_PER_REQUEST` tags to a
+ * request. Titles with no TMDB id have none to purge.
+ */
+export function purgeTitlesReports(titles: PurgeTitle[]): void {
+	const tags = titles.flatMap((t) =>
+		t.tmdbId === null ? [] : [readerReportsTag(t.kind, t.tmdbId)]
+	);
+	for (let i = 0; i < tags.length; i += PURGE_TAGS_PER_REQUEST) {
+		purgeTags('reader-reports', tags.slice(i, i + PURGE_TAGS_PER_REQUEST));
+	}
 }
