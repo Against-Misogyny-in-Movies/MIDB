@@ -19,6 +19,15 @@ export {
 	reportStatus
 } from '#db/lib/comments.ts';
 
+/** A plain-language table query is at most this many characters. */
+export const AI_QUERY_MAX = 300;
+
+/** An AI scan sends this many comments per model call. */
+export const SCAN_BATCH = 25;
+
+/** An AI scan makes at most this many calls, so it covers one page of the table. */
+export const SCAN_MAX_BATCHES = 2;
+
 /** Distinct open reports that move a published comment back to review. */
 export const REPORT_THRESHOLD = 3;
 

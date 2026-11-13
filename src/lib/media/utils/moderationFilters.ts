@@ -7,13 +7,13 @@ export const TABLE_PAGE_SIZE = 50;
 export const TABLE_SORTS = ['newest', 'oldest', 'reports', 'severity'] as const;
 
 /** Longest text a substring filter takes. */
-const TEXT_MAX = 200;
+export const TABLE_TEXT_MAX = 200;
 /** The last page the table pages to; a larger one reads as none. */
 const PAGE_MAX = 10_000;
 
 const severity = z.number().int().min(1).max(3);
 const page = z.number().int().min(1).max(PAGE_MAX);
-const text = z.string().trim().min(1).max(TEXT_MAX);
+const text = z.string().trim().min(1).max(TABLE_TEXT_MAX);
 /** A calendar day, `YYYY-MM-DD`, that exists. */
 const day = z
 	.string()
