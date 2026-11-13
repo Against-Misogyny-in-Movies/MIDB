@@ -6,3 +6,6 @@ export interface LetterboxdResult {
 	/** The film's page on Letterboxd. */
 	url: string;
 }
+
+/** A lookup's answer: the rating, null when Letterboxd has none, `'failed'` when the lookup failed. */
+export type LetterboxdOutcome = LetterboxdResult | null | 'failed';

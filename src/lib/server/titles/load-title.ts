@@ -1,7 +1,7 @@
 import type { Movie } from '#lib/media/types/movie.ts';
 import type { Series } from '#lib/media/types/series.ts';
 import type { DddResult } from '#lib/media/types/ddd.ts';
-import type { LetterboxdResult } from '#lib/media/types/letterboxd.ts';
+import type { LetterboxdOutcome } from '#lib/media/types/letterboxd.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import { getMovie, getSeries } from '#lib/server/integrations/tmdb/index.ts';
 import { getTriggerTagsForSeries, getTriggerTagsLive } from '#lib/server/integrations/ddd.ts';
@@ -24,8 +24,8 @@ export interface TitlePageData<M extends Movie | Series> {
 	syncedAt: SourceSyncDates;
 	/** Un-awaited, so SvelteKit streams it after first paint. */
 	triggerTags: Promise<DddResult>;
-	/** Un-awaited like `triggerTags`; resolves null for a series, without keys or on an error. */
-	letterboxd: Promise<LetterboxdResult | null>;
+	/** Un-awaited like `triggerTags`; resolves null for a series or without keys, and 'failed' on an error. */
+	letterboxd: Promise<LetterboxdOutcome>;
 	/** Both Letterboxd keys are set and the title is a film: the page renders the slot. */
 	letterboxdEnabled: boolean;
 }

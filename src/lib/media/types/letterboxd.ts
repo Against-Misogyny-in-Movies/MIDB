@@ -1,1 +1,4 @@
-export type { LetterboxdResult } from '#lib/server/integrations/letterboxd-types.ts';
+export type {
+	LetterboxdOutcome,
+	LetterboxdResult
+} from '#lib/server/integrations/letterboxd-types.ts';

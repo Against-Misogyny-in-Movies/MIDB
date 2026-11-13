@@ -7,7 +7,7 @@ import {
 	signRequest
 } from '#lib/server/integrations/letterboxd.ts';
 
-const INPUTS = { nonce: 'nonce-1', timestamp: 1_700_000_000 };
+const INPUTS = () => ({ nonce: 'nonce-1', timestamp: 1_700_000_000 });
 
 const urlOf = (call: unknown[] | undefined) => call?.[0] as string;
 const headersOf = (call: unknown[] | undefined) =>
@@ -110,51 +110,113 @@ describe('getLetterboxdRating', () => {
 		expect(spy).not.toHaveBeenCalled();
 	});
 
-	it('is null for a non-200 lookup', async () => {
+	it('is failed for a non-200 lookup', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json({}, false));
-		expect(await getLetterboxdRating('1', INPUTS)).toBeNull();
+		expect(await getLetterboxdRating('1', INPUTS)).toBe('failed');
 	});
 
-	it('is null for a non-200 statistics answer', async () => {
+	it('is failed for a non-200 statistics answer', async () => {
 		vi.spyOn(globalThis, 'fetch')
 			.mockResolvedValueOnce(json(lookupBody))
 			.mockResolvedValueOnce(json({}, false));
-		expect(await getLetterboxdRating('2', INPUTS)).toBeNull();
+		expect(await getLetterboxdRating('2', INPUTS)).toBe('failed');
 	});
 
-	it.each([
-		['no items', { items: [] }],
-		['a body that is not an object', 'nope'],
-		['an item without an id', { items: [{ links: [] }] }]
-	])('is null for a malformed lookup: %s', async (_name, body) => {
-		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(body));
+	it('is null, not failed, for a film Letterboxd does not know', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json({ items: [] }));
 		expect(await getLetterboxdRating('3', INPUTS)).toBeNull();
 	});
 
-	it.each([
-		['no rating', {}],
-		['a rating out of range', { rating: 9 }],
-		['a rating that is not a number', { rating: '4' }]
-	])('is null for malformed statistics: %s', async (_name, body) => {
+	it('is null, not failed, for a film with no average', async () => {
 		vi.spyOn(globalThis, 'fetch')
 			.mockResolvedValueOnce(json(lookupBody))
-			.mockResolvedValueOnce(json(body));
+			.mockResolvedValueOnce(json({ counts: { ratings: 3 } }));
 		expect(await getLetterboxdRating('4', INPUTS)).toBeNull();
 	});
 
-	it('is null on a timeout or a network error', async () => {
-		vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new DOMException('t', 'TimeoutError'));
-		expect(await getLetterboxdRating('5', INPUTS)).toBeNull();
+	it.each([
+		['a body that is not an object', 'nope'],
+		['an item without an id', { items: [{ links: [] }] }]
+	])('is failed for a malformed lookup: %s', async (_name, body) => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(body));
+		expect(await getLetterboxdRating('8', INPUTS)).toBe('failed');
 	});
 
-	it('is null when the body is not JSON', async () => {
+	it.each([
+		['a rating out of range', { rating: 9 }],
+		['a rating that is not a number', { rating: '4' }],
+		['a body that is not an object', 'nope']
+	])('is failed for malformed statistics: %s', async (_name, body) => {
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(json(lookupBody))
+			.mockResolvedValueOnce(json(body));
+		expect(await getLetterboxdRating('9', INPUTS)).toBe('failed');
+	});
+
+	it('is failed on a timeout or a network error', async () => {
+		vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new DOMException('t', 'TimeoutError'));
+		expect(await getLetterboxdRating('5', INPUTS)).toBe('failed');
+	});
+
+	it('draws a fresh nonce for each of the two requests', async () => {
+		const spy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(json(lookupBody))
+			.mockResolvedValueOnce(json(statsBody));
+		await getLetterboxdRating('10');
+		const nonces = spy.mock.calls.map((c) => new URL(urlOf(c)).searchParams.get('nonce'));
+		expect(nonces).toHaveLength(2);
+		expect(nonces[0]).toBeTruthy();
+		expect(nonces[1]).toBeTruthy();
+		expect(nonces[0]).not.toBe(nonces[1]);
+	});
+
+	it('shares one timeout signal between the two requests', async () => {
+		const spy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(json(lookupBody))
+			.mockResolvedValueOnce(json(statsBody));
+		await getLetterboxdRating('11', INPUTS);
+		const signals = spy.mock.calls.map((c) => (c[1] as RequestInit).signal);
+		expect(signals[0]).toBeInstanceOf(AbortSignal);
+		expect(signals[0]).toBe(signals[1]);
+	});
+
+	it.each([
+		['https://letterboxd.com/film/the-matrix/', 'https://letterboxd.com/film/the-matrix/'],
+		['https://boxd.it/abc12', 'https://boxd.it/abc12'],
+		['https://www.letterboxd.com/film/x/', 'https://www.letterboxd.com/film/x/']
+	])('keeps the film link %s', async (url, expected) => {
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(json({ items: [{ id: 'a', links: [{ type: 'letterboxd', url }] }] }))
+			.mockResolvedValueOnce(json(statsBody));
+		const result = await getLetterboxdRating('12', INPUTS);
+		expect(result).toMatchObject({ url: expected });
+	});
+
+	it.each([
+		['javascript:alert(1)'],
+		['http://letterboxd.com/film/x/'],
+		['https://evil.example/film/x/'],
+		['https://letterboxd.com.evil.example/'],
+		['https://notletterboxd.com/'],
+		['not a url']
+	])('replaces the unsafe film link %s with the fallback page', async (url) => {
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(json({ items: [{ id: 'a', links: [{ type: 'letterboxd', url }] }] }))
+			.mockResolvedValueOnce(json(statsBody));
+		const result = await getLetterboxdRating('603', INPUTS);
+		expect(result).toMatchObject({ url: 'https://letterboxd.com/tmdb/603' });
+	});
+
+	it('is failed when the body is not JSON', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
 			ok: true,
 			json: async () => {
 				throw new SyntaxError('bad');
 			}
 		} as unknown as Response);
-		expect(await getLetterboxdRating('6', INPUTS)).toBeNull();
+		expect(await getLetterboxdRating('6', INPUTS)).toBe('failed');
 	});
 
 	it('answers a repeat lookup from the cache', async () => {

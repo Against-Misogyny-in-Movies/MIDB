@@ -274,7 +274,8 @@
 				<p>
 					Film pages show the average rating from Letterboxd, out of 5, with a link to the film
 					there. It does not affect either verdict. The rating is fetched when a film page opens and
-					cached for one day. Series have none, and a film without a rating shows no data.
+					cached. Series have none. A film that Letterboxd has no rating for shows no data, and a
+					failed lookup shows not available.
 				</p>
 			</MetricArticle>
 

@@ -140,7 +140,7 @@
 	--src-um: light-dark(#4a0080, #e2c4f8);
 	--src-ddd: light-dark(#a030d8, #a56ae0);
 	--src-tmdb: light-dark(#2d0050, #d4aef4);
-	--src-letterboxd: light-dark(#7a1cb0, #8b57d6);
+	--src-letterboxd: light-dark(#600c98, #cc79f4);
 
 	/* Avatar portraits (user/avatars): a violet ramp from plate to hair. Every face takes the same
 	   tone; light (a cap, a collar) stays near white in both themes. */

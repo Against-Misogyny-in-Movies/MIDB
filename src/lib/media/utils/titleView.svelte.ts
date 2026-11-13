@@ -1,7 +1,7 @@
 import type { Movie } from '#lib/media/types/movie.ts';
 import type { Series } from '#lib/media/types/series.ts';
 import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
-import type { LetterboxdResult } from '#lib/media/types/letterboxd.ts';
+import type { LetterboxdOutcome } from '#lib/media/types/letterboxd.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import { umFlagCount } from './metrics';
 import {
@@ -24,7 +24,7 @@ export interface TitleViewData<M extends Movie | Series> {
 	umCandidates?: UmEntry[];
 	triggerTags: Promise<DddResult>;
 	/** Film pages only (see `loadTitle`). */
-	letterboxd?: Promise<LetterboxdResult | null>;
+	letterboxd?: Promise<LetterboxdOutcome>;
 	letterboxdEnabled?: boolean;
 }
 

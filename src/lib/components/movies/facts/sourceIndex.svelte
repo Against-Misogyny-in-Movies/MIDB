@@ -25,14 +25,18 @@
 				this={item.href ? 'a' : 'span'}
 				class="item"
 				href={item.href ?? undefined}
-				rel={item.external ? 'noopener' : undefined}
-				title={item.hint}
+				target={item.external ? '_blank' : undefined}
+				rel={item.external ? 'noopener noreferrer' : undefined}
+				aria-label={item.href ? item.ariaLabel : undefined}
 			>
 				<i class={meta.icon} style="--hue: {meta.hue}" aria-hidden="true"></i>
 				<span class="text">
 					<span class="name">{item.label}</span>
 					<span class="value" class:value--empty={!item.hasData} aria-busy={item.busy || undefined}
-						>{item.value}</span
+						>{item.value}{#if item.external}<i
+								class="ri-external-link-line external"
+								aria-hidden="true"
+							></i>{/if}</span
 					>
 				</span>
 			</svelte:element>
@@ -59,7 +63,7 @@
 		}
 	}
 
-	@media (min-width: 800px) {
+	@media (min-width: 900px) {
 		.source-index--four {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
@@ -70,10 +74,18 @@
 		gap: 10px;
 	}
 
-	i {
+	i:not(.external) {
 		@apply shrink-0;
 		font-size: 1rem;
 		color: var(--hue);
+	}
+
+	.external {
+		margin-inline-start: 4px;
+		font-size: 0.875rem;
+		font-weight: 400;
+		color: var(--ink-muted);
+		vertical-align: -1px;
 	}
 
 	.text {

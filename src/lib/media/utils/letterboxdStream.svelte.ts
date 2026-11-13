@@ -1,32 +1,11 @@
-import type { LetterboxdResult } from '#lib/media/types/letterboxd.ts';
+import type { LetterboxdOutcome } from '#lib/media/types/letterboxd.ts';
+import { createStreamedState } from './streamedState.svelte.js';
 
 /**
- * The streamed Letterboxd rating. `current` is undefined while the lookup runs and null when
- * there is no rating (no key, an unknown film, an error), so the slot can tell loading from empty.
+ * The streamed Letterboxd rating. `current` is undefined while the lookup runs, null when
+ * Letterboxd has no rating and `'failed'` when the lookup failed or the stream errored, so the
+ * slot can tell loading, empty and unavailable apart.
  */
-export function createLetterboxdState(
-	getPromise: () => Promise<LetterboxdResult | null> | undefined
-) {
-	let current = $state<LetterboxdResult | null | undefined>(undefined);
-
-	$effect(() => {
-		let cancelled = false;
-		current = undefined;
-		const promise = getPromise();
-		if (!promise) return;
-		void promise
-			.catch((): null => null)
-			.then((result) => {
-				if (!cancelled) current = result;
-			});
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	return {
-		get current() {
-			return current;
-		}
-	};
+export function createLetterboxdState(getPromise: () => Promise<LetterboxdOutcome> | undefined) {
+	return createStreamedState<LetterboxdOutcome, undefined>(getPromise, 'failed', undefined);
 }

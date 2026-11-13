@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
 - `PRODUCT.md` — Product (~680 tok)
-- `DESIGN.md` — Design (~5.5K tok)
+- `DESIGN.md` — Design (~5.6K tok)
   - 5–8 Idea (~70)
-  - 9–24 Colour (~880) ← 1
+  - 9–24 Colour (~930) ← 1
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~3.1K) ← 1
+  - 37–65 Components (~3.2K) ← 1
   - 66–73 Pages (~830)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~59.0K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~59.1K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
@@ -64,7 +64,7 @@ Read the sections your task touches.
   - 343–383 User & roles (~2.6K)
     - 376–383 Migrations (~330)
   - 384–413 Source sync (~1.8K) ← 3
-  - 414–482 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.9K)
+  - 414–482 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.0K)
   - 483–516 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~3.6K) ← 2
   - 517–536 UM Disambiguation (~630)
   - 537–545 UM flag rendering (~250)
@@ -114,7 +114,7 @@ Read before a change that touches what they describe.
   - 20–30 Supply chain (~500)
   - 31–36 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~3.4K tok)
-  - 5–15 Reading the site (~600)
+  - 5–15 Reading the site (~620)
   - 16–32 Signing in (~730)
   - 33–46 Ratings and comments (~1.9K)
   - 47–50 Contact (~40)
