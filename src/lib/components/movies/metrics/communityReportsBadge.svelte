@@ -21,9 +21,11 @@
 		{#if reports.phase === 'error'}
 			MIDB community reports
 		{:else}
-			<!-- While loading the number is a hidden digit that holds its slot. -->
-			<span class="num" class:pending={loading}>{loading ? '0' : total}</span>
-			{label}
+			<!-- The badge is a flex container, which drops the space between a number and its label.
+				One inline wrapper keeps it. While loading the number is a hidden digit that holds its slot. -->
+			<span class="text"
+				><span class="num" class:pending={loading}>{loading ? '0' : total}</span> {label}</span
+			>
 		{/if}
 	</Badge>
 </a>

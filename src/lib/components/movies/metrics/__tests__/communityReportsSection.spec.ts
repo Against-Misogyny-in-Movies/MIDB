@@ -404,6 +404,19 @@ describe('CommunityReportsBadge', () => {
 		expect(busy.getAttribute('aria-busy')).toBeNull();
 	});
 
+	it('keeps the number and the label in one inline wrapper, not as flex items of the badge', async () => {
+		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts() }));
+		await reports.load();
+		await waitFor(() => expect(container.textContent).toContain('7 counted community reports'));
+		const badgeEl = container.querySelector('.badge')!;
+		// The badge is `inline-flex`, which drops whitespace between its direct children.
+		const wrapper = container.querySelector('.num')!.parentElement!;
+		expect(wrapper).not.toBe(badgeEl);
+		expect(wrapper.parentElement).toBe(badgeEl);
+		expect(badgeEl.children).toHaveLength(1);
+		expect(wrapper.textContent).toBe('7 counted community reports');
+	});
+
 	it('reads the singular for one report', async () => {
 		const { reports, container } = badge(api({ [`GET ${BASE}`]: counts({ total: 1 }) }));
 		await reports.load();
