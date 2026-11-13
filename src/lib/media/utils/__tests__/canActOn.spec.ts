@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canActOn } from '../canActOn.ts';
+import { canActOn, canCloseFlag } from '../canActOn.ts';
 
 const user = { id: 'u', role: 'user' };
 const mod = { id: 'm', role: 'moderator' };
@@ -27,5 +27,16 @@ describe('canActOn', () => {
 		expect(canActOn(admin, admin, 'restrict')).toBe(false);
 		expect(canActOn(admin, admin, 'moderate')).toBe(true);
 		expect(canActOn(admin, admin)).toBe(true);
+	});
+});
+
+describe('canCloseFlag', () => {
+	it('refuses a moderator their own flag and lets them close anyone else’s', () => {
+		expect(canCloseFlag(mod, 'm')).toBe(false);
+		for (const reporter of ['u', 'm2', 'a']) expect(canCloseFlag(mod, reporter)).toBe(true);
+	});
+
+	it('lets an administrator close any flag, their own included', () => {
+		for (const reporter of ['u', 'm', 'a', 'a2']) expect(canCloseFlag(admin, reporter)).toBe(true);
 	});
 });

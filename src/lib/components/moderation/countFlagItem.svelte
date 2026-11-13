@@ -6,7 +6,7 @@
 
 	interface Props {
 		flag: FlaggedTitle['flags'][number];
-		/** False for a moderator's own flag. */
+		/** Whether the acting staff member may close this flag (`canCloseFlag`). */
 		canAct: boolean;
 	}
 
@@ -25,7 +25,7 @@
 
 <li class="flag" tabindex="-1" bind:this={root}>
 	<p class="line">
-		<span class="label">{flag.reporter ?? 'An account'}</span>
+		<span class="label">Reported by {flag.reporter ?? 'An account'}</span>
 		<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 		{#if flag.note}<span class="note">{flag.note}</span>{/if}
 	</p>
@@ -44,6 +44,8 @@
 				</form>
 			{/each}
 		</div>
+	{:else}
+		<p class="label">Another moderator or an administrator closes this flag.</p>
 	{/if}
 </li>
 

@@ -19,3 +19,13 @@ export function canActOn(
 	if (me.role === 'administrator') return !(action === 'restrict' && target.id === me.id);
 	return target.id !== me.id && target.role === 'user';
 }
+
+/**
+ * Whether a staff member may close a "Counts look wrong" flag raised by `reporterId`. An
+ * administrator may close any flag; a moderator any but their own. The server decides
+ * (`closeFlag`, `docs/architecture.md`, Comments), and the flag list hides the buttons it would
+ * refuse.
+ */
+export function canCloseFlag(me: { id: string; role: string }, reporterId: string): boolean {
+	return me.role === 'administrator' || reporterId !== me.id;
+}

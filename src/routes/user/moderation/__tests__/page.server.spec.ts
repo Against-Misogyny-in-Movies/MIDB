@@ -219,8 +219,11 @@ describe('community-report actions', () => {
 		});
 		flags.resolveCountFlag.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		expect(await run('resolveFlag', REPORT_FIELDS)).toMatchObject({ status: 409 });
-		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'forbidden-target' });
-		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({ status: 403 });
+		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
+		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({
+			status: 403,
+			data: { error: 'A moderator cannot close their own flag.' }
+		});
 	});
 });
 

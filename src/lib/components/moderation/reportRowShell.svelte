@@ -12,11 +12,13 @@
 		children?: Snippet;
 		/** The row's own buttons. */
 		actions?: Snippet;
+		/** Shown in place of the buttons when the acting staff member may not act on the row. */
+		readOnly?: string;
 		/** Further actions after the row's own. */
 		footer?: Snippet;
 	}
 
-	let { root = $bindable(), name, meta, children, actions, footer }: Props = $props();
+	let { root = $bindable(), name, meta, children, actions, readOnly, footer }: Props = $props();
 </script>
 
 <li class="item" tabindex="-1" bind:this={root}>
@@ -25,7 +27,11 @@
 		{@render meta?.()}
 	</header>
 	{@render children?.()}
-	{#if actions}<div class="actions">{@render actions()}</div>{/if}
+	{#if readOnly}
+		<p class="label">{readOnly}</p>
+	{:else if actions}
+		<div class="actions">{@render actions()}</div>
+	{/if}
 	{@render footer?.()}
 </li>
 

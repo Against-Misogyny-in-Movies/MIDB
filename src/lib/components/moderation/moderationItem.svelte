@@ -100,71 +100,75 @@
 				{#each item.reports as report (report.createdAt + report.reason)}
 					<li>
 						<Badge tone="neutral">{REPORT_REASON_LABELS[report.reason]}</Badge>
-						<span class="label">{report.reporter ?? 'Account'}</span>
-						{#if report.note}<span class="note">{report.note}</span>{/if}
+						<span class="label">Reported by {report.reporter ?? 'An account'}</span>
 						<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
+						{#if report.note}<span class="note">{report.note}</span>{/if}
 					</li>
 				{/each}
 			</ul>
 		</section>
 	{/if}
 
-	<div class="actions">
-		{#if canModerate && comment.status === 'pending'}
-			<form method="POST" action="?/approve" use:enhance={submit('approve')}>
-				<input type="hidden" name="id" value={comment.id} />
-				<button
-					class="btn btn--ink"
-					aria-busy={busy === 'approve'}
-					disabled={busy !== null && busy !== 'approve'}
-				>
-					Approve
-				</button>
-			</form>
-		{/if}
-		{#if canModerate && item.reports.length > 0}
-			<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
-				<input type="hidden" name="id" value={comment.id} />
-				<button
-					class="btn btn--ink"
-					aria-busy={busy === 'dismiss'}
-					disabled={busy !== null && busy !== 'dismiss'}
-				>
-					Dismiss reports
-				</button>
-			</form>
-		{/if}
-		{#if canModerate}
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'hide'}
-				onclick={() => toggle('hide')}>Hide</button
-			>
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'reject'}
-				onclick={() => toggle('reject')}>Reject</button
-			>
-		{/if}
-		{#if canRestrict}
-			{#if !item.authorMutedUntil}
+	{#if !canModerate && !canRestrict}
+		<p class="label decides">An administrator decides on this comment.</p>
+	{:else}
+		<div class="actions">
+			{#if canModerate && comment.status === 'pending'}
+				<form method="POST" action="?/approve" use:enhance={submit('approve')}>
+					<input type="hidden" name="id" value={comment.id} />
+					<button
+						class="btn btn--ink"
+						aria-busy={busy === 'approve'}
+						disabled={busy !== null && busy !== 'approve'}
+					>
+						Approve
+					</button>
+				</form>
+			{/if}
+			{#if canModerate && item.reports.length > 0}
+				<form method="POST" action="?/dismiss" use:enhance={submit('dismiss')}>
+					<input type="hidden" name="id" value={comment.id} />
+					<button
+						class="btn btn--ink"
+						aria-busy={busy === 'dismiss'}
+						disabled={busy !== null && busy !== 'dismiss'}
+					>
+						Dismiss reports
+					</button>
+				</form>
+			{/if}
+			{#if canModerate}
 				<button
 					class="btn btn--ghost"
 					type="button"
-					aria-expanded={panel === 'mute'}
-					onclick={() => toggle('mute')}>Mute author</button
+					aria-expanded={panel === 'hide'}
+					onclick={() => toggle('hide')}>Hide</button
+				>
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'reject'}
+					onclick={() => toggle('reject')}>Reject</button
 				>
 			{/if}
-			<button
-				class="btn btn--ghost"
-				type="button"
-				aria-expanded={panel === 'ban'}
-				onclick={() => toggle('ban')}>Ban author</button
-			>
-		{/if}
-	</div>
+			{#if canRestrict}
+				{#if !item.authorMutedUntil}
+					<button
+						class="btn btn--ghost"
+						type="button"
+						aria-expanded={panel === 'mute'}
+						onclick={() => toggle('mute')}>Mute author</button
+					>
+				{/if}
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'ban'}
+					onclick={() => toggle('ban')}>Ban author</button
+				>
+			{/if}
+		</div>
+	{/if}
 
 	{#if panel}
 		<ModerationConfirm
@@ -228,6 +232,10 @@
 	.actions {
 		@apply flex flex-wrap;
 		gap: var(--spacing-sm);
+		margin-top: var(--spacing-xs);
+	}
+
+	.decides {
 		margin-top: var(--spacing-xs);
 	}
 </style>

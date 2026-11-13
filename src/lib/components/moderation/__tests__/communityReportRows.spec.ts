@@ -151,6 +151,7 @@ describe('the title report row', () => {
 		expect(screen.queryByRole('button', { name: 'Reject all from this account' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
+		expect(screen.getByText('An administrator decides on this report.')).toBeTruthy();
 	});
 
 	it('offers an administrator their own report but not Mute or Ban on themselves', () => {
@@ -261,7 +262,8 @@ describe('the open title view', () => {
 		expect(screen.getByRole('heading', { name: 'Counts look wrong' }).className).toContain(
 			'heading'
 		);
-		expect(screen.getByText('An account')).toBeTruthy();
+		expect(screen.getByText('Reported by bo')).toBeTruthy();
+		expect(screen.getByText('Reported by An account')).toBeTruthy();
 		expect(screen.queryByText('A removed account')).toBeNull();
 	});
 
@@ -311,6 +313,9 @@ describe('the open title view', () => {
 		});
 		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull();
+		expect(
+			screen.getByText('Another moderator or an administrator closes this flag.')
+		).toBeTruthy();
 		unmount();
 		render(CommunityReportsPanel, {
 			...props,
@@ -395,5 +400,12 @@ describe('the action log sentences', () => {
 	it('keeps a comment action’s title link on the title page', () => {
 		mountEntry(entry({ action: 'hide', targetUser: null, commentId: 'c1' }));
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
+	});
+});
+
+describe('the account actions group', () => {
+	it('renders nothing for an administrator on themselves with no reports to reject', () => {
+		mountRow(titleReport({ account: account({ reportCount: 0 }) }), true, false);
+		expect(screen.queryByText('Account')).toBeNull();
 	});
 });

@@ -62,7 +62,7 @@ describe('count flags', () => {
 
 	it('refuses a moderator closing their own flag, changing nothing', async () => {
 		const own = await flag('mod');
-		const refused = { ok: false, reason: 'forbidden-target' };
+		const refused = { ok: false, reason: 'own-flag' };
 		expect(await resolveCountFlag(own, mod)).toEqual(refused);
 		expect(await dismissCountFlag(own, mod)).toEqual(refused);
 		expect(await flagCounts(titleId)).toEqual({ open: 1, resolved: 0, dismissed: 0 });

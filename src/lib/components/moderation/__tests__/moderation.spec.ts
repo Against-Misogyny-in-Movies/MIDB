@@ -130,8 +130,8 @@ describe('ModerationItem', () => {
 			]
 		});
 		expect(screen.getByText('2 open reports')).toBeTruthy();
-		expect(screen.getByText('bo')).toBeTruthy();
-		expect(screen.getByText('Account')).toBeTruthy();
+		expect(screen.getByText('Reported by bo')).toBeTruthy();
+		expect(screen.getByText('Reported by An account')).toBeTruthy();
 		expect(screen.getByText('Spam')).toBeTruthy();
 		expect(screen.getByText('An advert')).toBeTruthy();
 		expect(screen.getByText('Hate or bigotry')).toBeTruthy();
@@ -456,6 +456,7 @@ describe('the held report row', () => {
 		render(HeldReportRow, { report: base, canAct: false });
 		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
+		expect(screen.getByText('An administrator decides on this report.')).toBeTruthy();
 	});
 
 	it('shows UM flags only when the report contradicts the source', () => {

@@ -4,6 +4,7 @@ import { requireRole } from '#lib/server/auth/guards.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
 import type { ModerationResult } from '#lib/server/data/moderation-actions.ts';
 import type { ReportModerationResult } from '#lib/server/data/community-report-moderation.ts';
+import type { FlagCloseResult } from '#lib/server/data/count-flags.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import type { ScanFailure } from '#lib/server/moderation/scan.ts';
 import { SCAN_CONCERN_MAX } from '#lib/media/utils/comments.ts';
@@ -17,10 +18,13 @@ export function text(data: FormData, name: string): string | null {
 	return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+type FlagCloseRefusal = Extract<FlagCloseResult, { ok: false }>['reason'];
+
 /** Why a request is refused before or instead of a change. */
 type Refusal =
 	| Extract<ModerationResult | ReportModerationResult, { ok: false }>['reason']
 	| ScanFailure
+	| FlagCloseRefusal
 	| 'invalid'
 	| 'bulk-unchanged';
 
@@ -31,7 +35,11 @@ type Refusal =
  */
 type ExtraOutcome = { ok: true; extra: Record<string, unknown> } | { ok: false; reason: Refusal };
 
-export type Outcome = ModerationResult | ReportModerationResult | ExtraOutcome;
+export type Outcome =
+	| ModerationResult
+	| ReportModerationResult
+	| Extract<FlagCloseResult, { ok: false }>
+	| ExtraOutcome;
 
 const AI_FAILED: [number, string] = [
 	502,
@@ -46,6 +54,7 @@ const refusals: Record<Refusal, [number, string]> = {
 		403,
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
+	'own-flag': [403, 'A moderator cannot close their own flag.'],
 	'bulk-unchanged': [
 		409,
 		'None of the selected comments could be changed: none is in a status this action applies to.'

@@ -40,7 +40,10 @@
 	);
 </script>
 
-<ReportRowShell bind:root>
+<ReportRowShell
+	bind:root
+	readOnly={canAct ? undefined : 'An administrator decides on this report.'}
+>
 	{#snippet name()}{report.account.username ?? 'An account'}{/snippet}
 	{#snippet meta()}
 		<Badge tone={standing.tone}>{standing.label}</Badge>

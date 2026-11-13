@@ -22,8 +22,7 @@ import {
 import {
 	approveReport,
 	rejectAccountReports,
-	rejectReport,
-	type ReportModerationResult
+	rejectReport
 } from '#lib/server/data/community-report-moderation.ts';
 import {
 	getOpenTitle,
@@ -110,7 +109,7 @@ const purgeComments = (result: Extract<Outcome, { ok: true }>) => {
 };
 
 /** A closed flag changes no counts, so it names no title; a flag that was not open is refused. */
-const flagResult = (closed: FlagCloseResult): ReportModerationResult =>
+const flagResult = (closed: FlagCloseResult): Outcome =>
 	closed.ok ? { ok: true, titles: [] } : closed;
 
 /** A reason for a hide or a reject, cut to the limit the author's page shows. */

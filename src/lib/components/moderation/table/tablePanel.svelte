@@ -6,6 +6,7 @@
 	import TableSort from '#lib/components/moderation/table/tableSort.svelte';
 	import TablePager from '#lib/components/moderation/table/tablePager.svelte';
 	import type { ModerationTable as Table } from '#lib/media/types/moderation.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import type { TableFilters as Filters } from '#lib/media/utils/moderationFilters.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 
@@ -22,7 +23,11 @@
 	/** Only rows still on the page count: a filter or a reload can drop a ticked one. */
 	const selected = $derived(ticked.filter((id) => table.rows.some((row) => row.comment.id === id)));
 	const ids = $derived(table.rows.map((row) => row.comment.id));
-	const allSelected = $derived(ids.length > 0 && selected.length === ids.length);
+	/** The rows the acting staff member may act on; the others have no checkbox to tick. */
+	const selectable = $derived(
+		table.rows.filter((row) => canActOn(me, row.author)).map((row) => row.comment.id)
+	);
+	const allSelected = $derived(selectable.length > 0 && selected.length === selectable.length);
 </script>
 
 <div class="panel">
@@ -30,16 +35,16 @@
 	<TableFilters {filters} />
 
 	<div class="above">
-		{#if ids.length > 0}
+		{#if selectable.length > 0}
 			<label class="all">
 				<input
 					id={TABLE_FOCUS.selectAll}
 					type="checkbox"
 					checked={allSelected}
 					indeterminate={selected.length > 0 && !allSelected}
-					onchange={() => (ticked = allSelected ? [] : [...ids])}
+					onchange={() => (ticked = allSelected ? [] : [...selectable])}
 				/>
-				Select all {ids.length} on this page
+				Select all {selectable.length} on this page
 			</label>
 		{/if}
 		<TableSort {filters} />

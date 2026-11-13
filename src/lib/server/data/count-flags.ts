@@ -1,13 +1,14 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { moderationActions, titleCountFlags } from '#db/schema/community.ts';
+import { canCloseFlag } from '#lib/media/utils/canActOn.ts';
 import { runBatch } from './comment-status.ts';
 import type { UserRow } from './user-queries.ts';
 
-/** How a close ends: `forbidden-target` when a moderator closes their own flag. */
+/** How a close ends: `own-flag` when a moderator closes their own flag. */
 export type FlagCloseResult =
 	| { ok: true }
-	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
+	| { ok: false; reason: 'not-found' | 'invalid-state' | 'own-flag' };
 
 /** The "counts look wrong" flags on a title, by status. */
 export async function flagCounts(
@@ -25,8 +26,9 @@ export async function flagCounts(
 
 /**
  * Moves an open flag to `status` and logs it in the same batch, the log row only while the flag
- * is still open. A moderator cannot close their own flag; an administrator can. `invalid-state` when the flag is not open, `not-found`
- * when it does not exist. Counts do not change, so nothing is purged.
+ * is still open. `canCloseFlag` decides who may: a moderator cannot close their own flag, and
+ * gets `own-flag`. `invalid-state` when the flag is not open, `not-found` when it does not
+ * exist. Counts do not change, so nothing is purged.
  */
 async function closeFlag(
 	flagId: string,
@@ -39,8 +41,7 @@ async function closeFlag(
 		.from(titleCountFlags)
 		.where(eq(titleCountFlags.id, flagId));
 	if (!flag) return { ok: false, reason: 'not-found' };
-	if (flag.reporterId === actorId && actor.role !== 'administrator')
-		return { ok: false, reason: 'forbidden-target' };
+	if (!canCloseFlag(actor, flag.reporterId)) return { ok: false, reason: 'own-flag' };
 	const action = status === 'resolved' ? 'resolve_count_flag' : 'dismiss_count_flag';
 	const open = and(eq(titleCountFlags.id, flagId), eq(titleCountFlags.status, 'open'));
 	const results = await runBatch([

@@ -7,6 +7,7 @@
 		REPORT_REASON_LABELS,
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
+	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
@@ -36,6 +37,12 @@
 	{#if rows.length === 0}
 		<p class="empty">No comments match these filters.</p>
 	{:else}
+		{#if rows.some((row) => !canActOn(me, row.author))}
+			<p id="not-selectable" class="sr-only">
+				An administrator decides on comments by moderators and administrators, so these are not
+				selectable.
+			</p>
+		{/if}
 		<!-- The stacked layout below `lg` sets `display: block`, which drops the table semantics unless the roles are explicit. -->
 		<!-- svelte-ignore a11y_no_redundant_roles -->
 		<table role="table">
@@ -75,7 +82,9 @@
 									type="checkbox"
 									value={id}
 									bind:group={selected}
+									disabled={!canActOn(me, row.author)}
 									aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
+									aria-describedby={canActOn(me, row.author) ? undefined : 'not-selectable'}
 								/>
 							</label>
 						</td>

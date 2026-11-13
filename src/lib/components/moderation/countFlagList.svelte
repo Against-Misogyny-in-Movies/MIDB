@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CountFlagItem from '#lib/components/moderation/countFlagItem.svelte';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
+	import { canCloseFlag } from '#lib/media/utils/canActOn.ts';
 
 	interface Props {
 		flags: FlaggedTitle['flags'];
@@ -13,7 +14,7 @@
 
 <ul class="flags">
 	{#each flags as flag (flag.id)}
-		<CountFlagItem {flag} canAct={flag.reporterId !== me.id || me.role === 'administrator'} />
+		<CountFlagItem {flag} canAct={canCloseFlag(me, flag.reporterId)} />
 	{/each}
 </ul>
 

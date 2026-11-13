@@ -28,7 +28,10 @@
 	const href = $derived(titleHref(report.title.kind, report.title.tmdbId));
 </script>
 
-<ReportRowShell bind:root>
+<ReportRowShell
+	bind:root
+	readOnly={canAct ? undefined : 'An administrator decides on this report.'}
+>
 	{#snippet name()}
 		{#if href}<a class="link" {href}>{report.title.name}</a>{:else}{report.title.name}{/if}
 	{/snippet}

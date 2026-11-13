@@ -39,6 +39,7 @@ const { default: BulkBar } = await import('../bulkBar.svelte');
 const { default: AiSearchBar } = await import('../aiSearchBar.svelte');
 const { default: ModerationTable } = await import('../moderationTable.svelte');
 const { default: TablePager } = await import('../tablePager.svelte');
+const { default: TablePanel } = await import('../tablePanel.svelte');
 
 afterEach(() => {
 	cleanup();
@@ -309,6 +310,72 @@ describe('moderationTable', () => {
 		await fireEvent.click(toggle);
 		expect(toggle.getAttribute('aria-expanded')).toBe('true');
 		expect(screen.getByText(/Mocks a survivor\./)).toBeTruthy();
+	});
+});
+
+describe('the row checkboxes', () => {
+	const base = {
+		comment: {
+			id: 'c1',
+			parentId: null,
+			rootId: null,
+			body: 'A comment',
+			status: 'pending',
+			moderationSource: null,
+			moderationReason: null,
+			createdAt: '2026-11-10T10:00:00Z',
+			editedAt: null
+		},
+		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
+		aiCategories: [],
+		reports: [],
+		authorCommentCount: 1,
+		authorMutedUntil: null,
+		severity: null,
+		aiFailure: null,
+		latestLabel: null
+	};
+	const author = (id: string, role: string) => ({
+		id,
+		username: id,
+		avatarKey: null,
+		role,
+		displayName: id
+	});
+	const rows = [
+		{ ...base, comment: { ...base.comment, id: 'c1' }, author: author('anna', 'user') },
+		{ ...base, comment: { ...base.comment, id: 'c2' }, author: author('adm', 'administrator') },
+		{ ...base, comment: { ...base.comment, id: 'c3' }, author: author('mod', 'moderator') }
+	];
+	const checkboxes = () =>
+		screen.getAllByRole<HTMLInputElement>('checkbox', { name: /Select the comment by/ });
+
+	it('disables the checkbox of a comment the moderator may not act on, with a reason', () => {
+		render(ModerationTable, { rows, me: { id: 'mod', role: 'moderator' }, selected: [] } as never);
+		expect(checkboxes().map((box) => box.disabled)).toEqual([false, true, true]);
+		const reason = checkboxes()[1].getAttribute('aria-describedby')!;
+		expect(document.getElementById(reason)?.textContent).toMatch(/administrator decides/);
+		expect(checkboxes()[0].getAttribute('aria-describedby')).toBeNull();
+	});
+
+	it('leaves every checkbox enabled for an administrator', () => {
+		render(ModerationTable, {
+			rows,
+			me: { id: 'a0', role: 'administrator' },
+			selected: []
+		} as never);
+		expect(checkboxes().every((box) => !box.disabled)).toBe(true);
+	});
+
+	it('selects only the rows the moderator may act on with Select all', async () => {
+		render(TablePanel, {
+			table: { rows, total: 3, page: 1, pageSize: 25 },
+			filters: FILTERS,
+			aiAvailable: false,
+			me: { id: 'mod', role: 'moderator' }
+		} as never);
+		await fireEvent.click(screen.getByRole('checkbox', { name: /Select all 1 on this page/ }));
+		expect(checkboxes().map((box) => box.checked)).toEqual([true, false, false]);
 	});
 });
 

@@ -42,21 +42,21 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.2K tok)
 - `PRODUCT.md` — Product (~620 tok)
-- `DESIGN.md` — Design (~4.6K tok)
+- `DESIGN.md` — Design (~4.7K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~880) ← 1
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–64 Components (~2.7K) ← 1
+  - 37–64 Components (~2.8K) ← 1
   - 65–71 Pages (~450)
   - 72–75 Motion (~110)
   - 76–79 Browser surfaces (~50)
   - 80–83 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~54.7K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~54.8K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~870)
-  - 68–274 Directory layout (~8.9K)
+  - 68–274 Directory layout (~9.0K)
     - 265–274 File-organisation conventions (~450)
   - 275–288 Styling & theming (~950)
   - 289–301 Copy & voice (~540) ← 1
@@ -65,7 +65,7 @@ Read the sections your task touches.
     - 366–373 Migrations (~330)
   - 374–403 Source sync (~1.8K) ← 3
   - 404–469 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~2.5K)
-  - 470–502 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.8K) ← 2
+  - 470–502 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~2.9K) ← 2
   - 503–522 UM Disambiguation (~630)
   - 523–531 UM flag rendering (~250)
   - 532–540 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
