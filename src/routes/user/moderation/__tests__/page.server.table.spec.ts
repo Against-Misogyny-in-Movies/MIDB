@@ -410,6 +410,19 @@ describe('?/bulk', () => {
 		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'a2']);
 	});
 
+	it('also purges the profiles of the authors of the published replies', async () => {
+		actionsFns.hideComment
+			.mockResolvedValueOnce({ ok: true, title: ALIEN, authorId: 'a1', replyAuthorIds: ['r1'] })
+			.mockResolvedValueOnce({
+				ok: true,
+				title: DARK,
+				authorId: 'a2',
+				replyAuthorIds: ['r1', 'r2']
+			});
+		await run('bulk', [['op', 'hide'], ...ids(2)]);
+		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'r1', 'a2', 'r2']);
+	});
+
 	it('purges no title for a comment with none', async () => {
 		actionsFns.dismissReports.mockResolvedValue({ ok: true, title: null });
 		await run('bulk', [['op', 'dismiss'], ...ids(1)]);

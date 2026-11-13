@@ -12,6 +12,7 @@ import type {
 } from '#lib/media/types/profile.ts';
 import { USERNAME_RE } from '#lib/media/utils/username.ts';
 import { COMMENT_PAGE_SIZE, afterCursor, decodeCursor, encodeCursor } from './comment-queries.ts';
+import { displayNameOf } from './user-queries.ts';
 import { countedReportsWhere } from './community-reports.ts';
 
 /** What an account's public profile reads of its user row: enough to show and to cache it, nothing private. */
@@ -87,11 +88,11 @@ export async function getProfileComments(
 				body: comment.body,
 				score: comment.score,
 				createdAt: comment.createdAt.toISOString(),
-				editedAt: comment.editedAt?.toISOString() ?? null,
+				edited: comment.editedAt !== null,
 				title: { kind, tmdbId, name: titleName },
 				inReplyTo:
 					parentStatus === 'published'
-						? { displayName: parentName ?? 'Account', username: parentName }
+						? { displayName: displayNameOf(parentName), username: parentName }
 						: null
 			})
 		),
@@ -109,15 +110,14 @@ async function getProfileReports(userId: string): Promise<ProfileReport[]> {
 		.select({
 			kind: titles.kind,
 			tmdbId: titles.tmdbId,
-			name: titles.title,
-			updatedAt: reports.updatedAt
+			name: titles.title
 		})
 		.from(reports)
 		.innerJoin(users, eq(reports.userId, users.id))
 		.innerJoin(titles, eq(reports.titleId, titles.id))
 		.where(and(eq(reports.userId, userId), countedReportsWhere()))
 		.orderBy(desc(reports.updatedAt), desc(reports.titleId));
-	return rows.map((row) => ({ ...row, updatedAt: row.updatedAt.toISOString() }));
+	return rows;
 }
 
 /** The sum of the scores of an account's published comments. */
@@ -146,7 +146,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfile 
 		username: owner.username,
 		avatarKey: owner.avatarKey,
 		staffRole: owner.role === 'user' ? null : owner.role,
-		joinedAt: owner.createdAt.toISOString(),
+		joinedAt: owner.createdAt.toISOString().slice(0, 10),
 		scoreTotal,
 		comments: commentPage,
 		reports: profileReports

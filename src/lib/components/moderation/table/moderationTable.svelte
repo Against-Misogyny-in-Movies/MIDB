@@ -303,6 +303,13 @@
 	}
 
 	@media (pointer: coarse) {
+		/* The author's profile link is a standalone link: a 44px touch target. */
+		.author .name :global(a) {
+			display: inline-flex;
+			align-items: center;
+			min-height: 2.75rem;
+		}
+
 		.actions .chip {
 			height: 2.75rem;
 		}

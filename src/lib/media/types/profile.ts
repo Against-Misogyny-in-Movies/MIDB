@@ -5,9 +5,10 @@ export type ProfileComment = {
 	id: string;
 	body: string;
 	score: number;
-	/** ISO timestamps, because the page is cached as JSON. */
+	/** ISO timestamp, because the page is cached as JSON. */
 	createdAt: string;
-	editedAt: string | null;
+	/** Whether the author edited it; the time of the edit is not sent. */
+	edited: boolean;
 	title: { kind: TitleKind; tmdbId: number | null; name: string };
 	/** The author of the published comment this one answers, linked to their profile when they have a username. */
 	inReplyTo: { displayName: string; username: string | null } | null;
@@ -25,8 +26,6 @@ export type ProfileReport = {
 	kind: TitleKind;
 	tmdbId: number | null;
 	name: string;
-	/** ISO timestamp of the report's last change. */
-	updatedAt: string;
 };
 
 /**
@@ -40,7 +39,7 @@ export type PublicProfile = {
 	avatarKey: string | null;
 	/** Set for a moderator or an administrator, null for any other account. */
 	staffRole: 'moderator' | 'administrator' | null;
-	/** ISO timestamp of the account's creation. */
+	/** The day the account was created, `YYYY-MM-DD` (UTC); never the time. */
 	joinedAt: string;
 	/** The sum of the scores of the account's published comments. */
 	scoreTotal: number;

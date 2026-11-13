@@ -14,6 +14,7 @@ import type {
 } from '#lib/media/types/comments.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
 import { decideStatus } from '#lib/server/moderation/decide.ts';
+import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { activeMute } from './mute.ts';
 import { toPublicUser } from './user-queries.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
@@ -299,7 +300,13 @@ export async function getCommentWithTitle(id: string): Promise<CommentWithTitle 
 
 type WriteFailure = 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict';
 export type CommentWrite =
-	| { ok: true; comment: OwnComment; title: CommentWithTitle['title'] }
+	| {
+			ok: true;
+			comment: OwnComment;
+			title: CommentWithTitle['title'];
+			/** An edit that moved the comment into or out of `published`: the authors of its published replies. */
+			replyAuthorIds?: string[];
+	  }
 	| { ok: false; reason: WriteFailure };
 
 /**
@@ -390,6 +397,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		kind: title.kind,
 		parentBody
 	});
+	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, decision.status);
 	const moved = await runMove(
 		statusMove(comment.id, comment.status, decision.status, {
 			body,
@@ -401,7 +409,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 	);
 	if (!moved) return { ok: false, reason: 'conflict' };
 	const [stored] = await db.select().from(comments).where(eq(comments.id, id));
-	return { ok: true, comment: toOwnComment(stored), title };
+	return { ok: true, comment: toOwnComment(stored), title, replyAuthorIds };
 }
 
 /**
@@ -412,12 +420,16 @@ export async function editComment(id: string, userId: string, body: string): Pro
 export async function softDeleteComment(
 	id: string,
 	userId: string
-): Promise<{ ok: true; title: CommentWithTitle['title'] } | { ok: false; reason: WriteFailure }> {
+): Promise<
+	| { ok: true; title: CommentWithTitle['title']; replyAuthorIds: string[] }
+	| { ok: false; reason: WriteFailure }
+> {
 	const found = await getCommentWithTitle(id);
 	if (!found || found.comment.status === 'deleted') return { ok: false, reason: 'not-found' };
 	if (found.comment.userId !== userId) return { ok: false, reason: 'forbidden' };
+	const replyAuthorIds = await replyAuthorsAffected(id, found.comment.status, 'deleted');
 	if (!(await runMove(statusMove(id, found.comment.status, 'deleted')))) {
 		return { ok: false, reason: 'conflict' };
 	}
-	return { ok: true, title: found.title };
+	return { ok: true, title: found.title, replyAuthorIds };
 }

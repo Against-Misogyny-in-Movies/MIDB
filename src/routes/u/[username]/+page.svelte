@@ -3,8 +3,8 @@
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import ProfileComments from '#lib/components/user/profileComments.svelte';
+	import ProfileReports from '#lib/components/user/profileReports.svelte';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	let { data }: { data: PageData } = $props();
 
@@ -43,32 +43,16 @@
 		</div>
 	</header>
 
+	<section class="card" aria-labelledby="reports-heading">
+		<h2 id="reports-heading">Counted community reports</h2>
+		<ProfileReports reports={profile.reports} />
+	</section>
+
 	<section class="card" aria-labelledby="comments-heading">
 		<h2 id="comments-heading">Comments</h2>
 		{#key profile.id}
 			<ProfileComments username={profile.username} first={profile.comments} />
 		{/key}
-	</section>
-
-	<section class="card" aria-labelledby="reports-heading">
-		<h2 id="reports-heading">Counted community reports</h2>
-		{#if profile.reports.length === 0}
-			<p class="empty">No counted community reports.</p>
-		{:else}
-			<ul class="rows">
-				{#each profile.reports as report (`${report.kind}:${report.tmdbId}:${report.name}`)}
-					{@const href = titleHref(report.kind, report.tmdbId)}
-					<li>
-						{#if href}<a class="link title" {href}>{report.name}</a>{:else}<span class="title"
-								>{report.name}</span
-							>{/if}
-						<time class="label" datetime={report.updatedAt}>
-							Updated {formatDate(report.updatedAt)}
-						</time>
-					</li>
-				{/each}
-			</ul>
-		{/if}
 	</section>
 </div>
 
@@ -92,7 +76,7 @@
 	}
 
 	h1 {
-		@apply truncate;
+		overflow-wrap: anywhere;
 		font-size: 1.875rem;
 	}
 
@@ -122,26 +106,5 @@
 		@apply font-semibold;
 		font-size: 1.125rem;
 		padding: var(--spacing-md) 20px;
-	}
-
-	.rows {
-		@apply flex flex-col list-none m-0 p-0;
-	}
-
-	.rows li {
-		@apply flex flex-wrap items-center justify-between;
-		gap: var(--spacing-xs) var(--spacing-md);
-		padding: var(--spacing-sm) 20px;
-		border-top: 1px solid var(--border);
-	}
-
-	.title {
-		@apply font-semibold;
-	}
-
-	.empty {
-		@apply text-ink-muted;
-		padding: var(--spacing-md) 20px;
-		border-top: 1px solid var(--border);
 	}
 </style>

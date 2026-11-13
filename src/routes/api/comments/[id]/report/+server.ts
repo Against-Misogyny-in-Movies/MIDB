@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { purgeProfile, purgeTitleComments } from '#lib/server/http/purge-title.ts';
+import { purgeProfiles, purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import {
 	authorizeWrite,
 	commentIdParam,
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async (event) => {
 	}
 	if (result.status !== 'published') {
 		purgeTitleComments(result.title);
-		purgeProfile(result.authorId);
+		purgeProfiles([result.authorId, ...result.replyAuthorIds]);
 	}
 	return privateJson(
 		{ alreadyReported: result.alreadyReported },

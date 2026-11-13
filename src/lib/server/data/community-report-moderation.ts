@@ -53,7 +53,8 @@ function logReportAction(
 }
 
 /**
- * Moves one report between statuses, logging it, in one batch; the purge of the title's counts and the account's profile follows. The actor
+ * Moves one report between statuses, logging it, in one batch; the purge of the title's counts
+ * and the account's profile follows. The actor
  * must be allowed to act on the report's account (`targetAllowed`).
  */
 async function moveReport(
@@ -128,7 +129,8 @@ export async function purgeReportedTitles(userId: string): Promise<void> {
 
 /**
  * Rejects every report of an account that is not rejected already, on every title, with one
- * log row for the account. The counts of the titles the update changed and the account's profile are purged. The actor
+ * log row for the account. The counts of the titles the update changed and the account's profile
+ * are purged. The actor
  * must be allowed to act on the account (`targetAllowed`).
  */
 export async function rejectAccountReports(
@@ -154,8 +156,8 @@ export async function rejectAccountReports(
 	]);
 	const moved = results[1];
 	if (!Array.isArray(moved) || moved.length === 0) return { ok: false, reason: 'invalid-state' };
+	purgeProfile(userId);
 	const affected = await titlesById(moved.map((r: { titleId: string }) => r.titleId));
 	purgeTitlesReports(affected);
-	purgeProfile(userId);
 	return { ok: true, titles: affected };
 }

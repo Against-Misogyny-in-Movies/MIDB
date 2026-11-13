@@ -24,6 +24,11 @@ const RESERVED = new Set([
 	'root'
 ]);
 
+/** The name shown for an account: its username, or "Account" for a row with none. */
+export function displayNameOf(username: string | null | undefined): string {
+	return username || 'Account';
+}
+
 /**
  * Map a row to the client-safe shape. The email is never copied: it reaches the client on
  * /user/profile alone. Every account has a generated or chosen username, which is its display
@@ -35,7 +40,7 @@ export function toPublicUser(row: UserRow): PublicUser {
 		username: row.username,
 		avatarKey: row.avatarKey,
 		role: row.role,
-		displayName: row.username || 'Account'
+		displayName: displayNameOf(row.username)
 	};
 }
 

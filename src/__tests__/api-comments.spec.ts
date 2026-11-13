@@ -114,7 +114,11 @@ beforeEach(async () => {
 		title: { kind: 'movie', tmdbId: 348 }
 	});
 	editComment.mockResolvedValue({ ok: true, comment: OWN, title: { kind: 'movie', tmdbId: 348 } });
-	softDeleteComment.mockResolvedValue({ ok: true, title: { kind: 'movie', tmdbId: 348 } });
+	softDeleteComment.mockResolvedValue({
+		ok: true,
+		title: { kind: 'movie', tmdbId: 348 },
+		replyAuthorIds: []
+	});
 	setVote.mockResolvedValue({ ok: true, score: 1, vote: 1 });
 	removeVote.mockResolvedValue({ ok: true, score: 0, vote: null });
 	reportComment.mockResolvedValue({
@@ -122,7 +126,8 @@ beforeEach(async () => {
 		alreadyReported: false,
 		status: 'published',
 		title: { kind: 'movie', tmdbId: 348 },
-		authorId: 'author'
+		authorId: 'author',
+		replyAuthorIds: []
 	});
 	listTitleComments.mockResolvedValue({ comments: [], nextCursor: null });
 	getViewerCommentState.mockResolvedValue({
@@ -320,6 +325,16 @@ describe('PATCH and DELETE a comment', () => {
 		await Promise.all(waitUntilPromises);
 		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1'] }]);
 
+		resetCloudflareStub();
+		softDeleteComment.mockResolvedValue({
+			ok: true,
+			title: { kind: 'movie', tmdbId: 348 },
+			replyAuthorIds: ['replier']
+		});
+		await call(comment.DELETE, { params, method: 'DELETE', body: {} });
+		await Promise.all(waitUntilPromises);
+		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1', 'profile:replier'] }]);
+
 		softDeleteComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
 		expect(
 			await status(
@@ -403,11 +418,12 @@ describe('POST a report', () => {
 			alreadyReported: false,
 			status: 'pending',
 			title: { kind: 'movie', tmdbId: 348 },
-			authorId: 'author'
+			authorId: 'author',
+			replyAuthorIds: ['replier']
 		});
 		await post({ user: user({ id: 'u2' }) });
 		await Promise.all(waitUntilPromises);
-		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:author'] }]);
+		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:author', 'profile:replier'] }]);
 	});
 
 	it('answers 200 for a repeat, 403 for your own comment, 404 for a missing one, 400 for a bad reason', async () => {

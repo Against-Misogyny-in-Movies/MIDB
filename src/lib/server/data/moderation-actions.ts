@@ -7,6 +7,7 @@ import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
 import { targetAllowed } from './moderation-target.ts';
+import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { purgeProfile } from '#lib/server/http/purge-title.ts';
 import { purgeReportedTitles } from './community-report-moderation.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
@@ -19,6 +20,8 @@ export type ModerationResult =
 			title: CommentWithTitle['title'] | null;
 			/** The comment's author, when the action changed what their public profile shows. */
 			authorId?: string;
+			/** The authors of its published replies, whose profiles name it, when it entered or left `published`. */
+			replyAuthorIds?: string[];
 	  }
 	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
 
@@ -102,6 +105,8 @@ async function moveComment(
 	if (typeof author === 'string') return { ok: false, reason: author };
 	if (!spec.from.includes(comment.status)) return { ok: false, reason: 'invalid-state' };
 
+	// Read before the move, so a failed read cannot leave a move whose purge is skipped.
+	const replyAuthorIds = await replyAuthorsAffected(commentId, comment.status, spec.to);
 	const moved = await runMove([
 		logCommentAction(actor.id, commentId, action, spec.reason, comment.status),
 		...(spec.reports
@@ -112,9 +117,8 @@ async function moveComment(
 			moderationReason: spec.reason
 		})
 	]);
-	return moved
-		? { ok: true, title, authorId: comment.userId }
-		: { ok: false, reason: 'invalid-state' };
+	if (!moved) return { ok: false, reason: 'invalid-state' };
+	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
 }
 
 /** Publishes a pending comment; its reports, if any, are dismissed. */
@@ -170,6 +174,9 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 	if (open === 0) return { ok: false, reason: 'invalid-state' };
 
 	const restores = comment.status === 'pending' && comment.moderationSource === 'reports';
+	const replyAuthorIds = restores
+		? await replyAuthorsAffected(commentId, 'pending', 'published')
+		: [];
 	const results = await runBatch([
 		logCommentAction(
 			actor.id,
@@ -191,7 +198,8 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 	if (!Array.isArray(resolved) || resolved.length === 0) {
 		return { ok: false, reason: 'invalid-state' };
 	}
-	return { ok: true, title, ...(restores ? { authorId: comment.userId } : {}) };
+	if (!restores) return { ok: true, title };
+	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
 }
 
 function logUserAction(
@@ -222,8 +230,8 @@ export async function muteUser(
 		db.update(users).set({ mutedUntil: until }).where(eq(users.id, targetId)),
 		logUserAction(actor.id, targetId, 'mute', reason, hours)
 	]);
-	await purgeReportedTitles(targetId);
 	purgeProfile(targetId);
+	await purgeReportedTitles(targetId);
 	return { ok: true, title: null };
 }
 
@@ -243,7 +251,7 @@ export async function banAccount(
 		...banStatements(targetId, reason),
 		logUserAction(actor.id, targetId, 'ban', reason)
 	]);
-	await purgeReportedTitles(targetId);
 	purgeProfile(targetId);
+	await purgeReportedTitles(targetId);
 	return { ok: true, title: null };
 }

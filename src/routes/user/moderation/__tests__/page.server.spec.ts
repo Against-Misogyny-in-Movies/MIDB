@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
 const purgeTitleComments = vi.fn();
-const purgeProfile = vi.fn();
+const purgeProfiles = vi.fn();
 const queries = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
 	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
-	purgeProfile: (...args: unknown[]) => purgeProfile(...args)
+	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
@@ -92,7 +92,7 @@ beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(MOD);
 	rateLimit.mockReset().mockResolvedValue(undefined);
 	purgeTitleComments.mockReset();
-	purgeProfile.mockReset();
+	purgeProfiles.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	for (const fn of Object.values(reports))
@@ -255,13 +255,24 @@ describe('purging', () => {
 				authorId: 'author-1'
 			});
 			await run(name);
-			expect(purgeProfile).toHaveBeenCalledExactlyOnceWith('author-1');
+			expect(purgeProfiles).toHaveBeenCalledExactlyOnceWith(['author-1']);
 		}
 	);
 
+	it('purges the profiles of the authors of the published replies with the author’s', async () => {
+		queries.hideComment.mockResolvedValue({
+			ok: true,
+			title: TITLE,
+			authorId: 'author-1',
+			replyAuthorIds: ['replier-1', 'replier-2']
+		});
+		await run('hide');
+		expect(purgeProfiles).toHaveBeenCalledExactlyOnceWith(['author-1', 'replier-1', 'replier-2']);
+	});
+
 	it('a result with no author (a dismiss that restored nothing) purges no profile', async () => {
 		await run('dismiss');
-		expect(purgeProfile).not.toHaveBeenCalled();
+		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 
 	it('a refused action purges nothing and says why', async () => {
@@ -269,7 +280,7 @@ describe('purging', () => {
 		const result = await run('approve');
 		expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
 		expect(purgeTitleComments).not.toHaveBeenCalled();
-		expect(purgeProfile).not.toHaveBeenCalled();
+		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 
 	it('mute and ban touch no list', async () => {

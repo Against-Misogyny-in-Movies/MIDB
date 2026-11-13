@@ -10,7 +10,7 @@ const entry = (id: string, over: Partial<ProfileComment> = {}): ProfileComment =
 	body: `Text of ${id}`,
 	score: 3,
 	createdAt: '2026-11-01T10:00:00.000Z',
-	editedAt: null,
+	edited: false,
 	title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 	inReplyTo: null,
 	...over
@@ -21,10 +21,10 @@ const PROFILE: PublicProfile = {
 	username: 'anna',
 	avatarKey: null,
 	staffRole: null,
-	joinedAt: '2026-01-15T10:00:00.000Z',
+	joinedAt: '2026-01-15',
 	scoreTotal: 42,
 	comments: { comments: [entry('c1'), entry('c2')], nextCursor: null },
-	reports: [{ kind: 'tv', tmdbId: 70523, name: 'Dark', updatedAt: '2026-10-02T10:00:00.000Z' }]
+	reports: [{ kind: 'tv', tmdbId: 70523, name: 'Dark' }]
 };
 
 const mount = (profile: PublicProfile = PROFILE) => render(Page, { data: { profile } } as never);
@@ -39,7 +39,7 @@ describe('the public profile page', () => {
 	it('shows the name, join date and comment score, and no role for an ordinary account', () => {
 		mount();
 		expect(screen.getByRole('heading', { level: 1, name: 'anna' })).toBeTruthy();
-		expect(screen.getByText('Joined').nextElementSibling?.textContent).toMatch(/2026/);
+		expect(screen.getByText('Joined').nextElementSibling?.textContent).toBe('January 15, 2026');
 		expect(screen.getByText('Comment score').nextElementSibling?.textContent).toBe('42');
 		expect(screen.queryByText('Moderator')).toBeNull();
 		expect(screen.queryByText('Administrator')).toBeNull();
@@ -73,9 +73,26 @@ describe('the public profile page', () => {
 		expect(screen.getByText('Unrouted').closest('a')).toBeNull();
 	});
 
-	it('lists the counted community reports by title', () => {
+	it('lists the counted community reports by title, with no date', () => {
 		mount();
+		const row = screen.getByRole('link', { name: 'Dark' }).closest('li')!;
 		expect(screen.getByRole('link', { name: 'Dark' }).getAttribute('href')).toBe('/tv/70523');
+		expect(row.textContent?.trim()).toBe('Dark');
+		expect(screen.queryByText(/Updated/)).toBeNull();
+	});
+
+	it('puts the counted community reports above the comments', () => {
+		mount();
+		const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+		expect(headings).toEqual(['Counted community reports', 'Comments']);
+	});
+
+	it('says Edited for an edited comment, without a time', () => {
+		mount({
+			...PROFILE,
+			comments: { comments: [entry('c6', { edited: true })], nextCursor: null }
+		});
+		expect(screen.getByText('Edited')).toBeTruthy();
 	});
 
 	it('says so when there are no comments and no counted community reports', () => {
@@ -116,7 +133,7 @@ describe('showing more comments', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Show more comments' }));
 		await waitFor(() =>
 			expect(toasts.items.map((t) => t.text)).toEqual([
-				'More comments could not be loaded. Try again.'
+				'More comments could not be loaded. Try again in a moment.'
 			])
 		);
 		expect(screen.getByRole('button', { name: 'Show more comments' })).toBeTruthy();

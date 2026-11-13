@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import { purgeProfile, purgeProfiles, purgeTitleComments } from '#lib/server/http/purge-title.ts';
+import { purgeProfiles, purgeTitleComments } from '#lib/server/http/purge-title.ts';
 import { act, text, type ActionEvent, type Outcome } from '#lib/server/http/moderation-action.ts';
 import { env } from '#lib/server/env.ts';
 import {
@@ -93,7 +93,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	};
 };
 
-/** A comment action answers for the comment row, or for the account row when it names only an account. */
+/**
+ * A comment action answers for the comment row, or for the account row when it names only an
+ * account.
+ */
 const commentKey = (data: FormData) => text(data, 'id') ?? text(data, 'userId');
 const accountKey = (data: FormData) => text(data, 'userId');
 const flagKey = (data: FormData) => text(data, 'id');
@@ -104,13 +107,15 @@ const reportKey = (data: FormData) => {
 };
 
 /**
- * A comment action's title list is purged once it succeeds, and so is its author's profile when
- * the action changed what it shows; a user action has no title (mute and ban purge the profile
- * themselves).
+ * A comment action's title list is purged once it succeeds, and so are its author's profile and
+ * those of its published replies when the action changed what they show; a user action has no
+ * title (mute and ban purge the profile themselves).
  */
 const purgeComments = (result: Extract<Outcome, { ok: true }>) => {
 	if ('title' in result && result.title) purgeTitleComments(result.title);
-	if ('authorId' in result && result.authorId) purgeProfile(result.authorId);
+	if ('authorId' in result && result.authorId) {
+		purgeProfiles([result.authorId, ...(result.replyAuthorIds ?? [])]);
+	}
 };
 
 /** A closed flag changes no counts, so it names no title; a flag that was not open is refused. */
@@ -150,9 +155,10 @@ function pageIds(data: FormData): string[] | null {
 
 /**
  * Applies one operation to each comment in turn. Each function checks the comment's state and
- * the author's standing itself, so a refusal costs only its own comment. Every title touched and every author's
- * profile is purged once, however many of its comments changed, and also when a later write throws: the
- * changes already made are public by then.
+ * the author's standing itself, so a refusal costs only its own comment. Every title touched and
+ * every profile (the authors' and those of their published replies) is purged once, however many
+ * comments changed, and also when a later write throws: the changes already made are public by
+ * then.
  */
 function bulk(event: ActionEvent) {
 	return act(
@@ -177,6 +183,7 @@ function bulk(event: ActionEvent) {
 					applied += 1;
 					if (result.title) touched.set(result.title.id, result.title);
 					if (result.authorId) authors.add(result.authorId);
+					for (const id of result.replyAuthorIds ?? []) authors.add(id);
 				}
 			} finally {
 				for (const title of touched.values()) purgeTitleComments(title);

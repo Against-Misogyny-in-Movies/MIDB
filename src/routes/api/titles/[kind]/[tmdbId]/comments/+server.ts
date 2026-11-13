@@ -41,7 +41,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	return Response.json(list, { headers: commentsHeaders(kind, tmdbId) });
 };
 
-/** Stores a comment or a reply and answers it with its status (201). Purges the title's list and the author's profile. */
+/**
+ * Stores a comment or a reply and answers it with its status (201). Purges the title's list and
+ * the author's profile.
+ */
 export const POST: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
 	const user = await authorizeWrite(event, 'RL_COMMENT');

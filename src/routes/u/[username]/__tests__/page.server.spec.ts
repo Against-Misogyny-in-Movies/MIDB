@@ -27,9 +27,9 @@ beforeEach(() => getPublicProfile.mockReset());
 describe('/u/[username] load', () => {
 	it('returns the profile with PUBLIC_PAGE and the account’s cache tag, never reading the user', async () => {
 		getPublicProfile.mockResolvedValue(PROFILE);
-		const { result, setHeaders, getUser } = run('Anna');
+		const { result, setHeaders, getUser } = run('anna');
 		await expect(result).resolves.toEqual({ profile: PROFILE });
-		expect(getPublicProfile).toHaveBeenCalledWith('Anna');
+		expect(getPublicProfile).toHaveBeenCalledWith('anna');
 		expect(setHeaders).toHaveBeenCalledExactlyOnceWith({
 			...PUBLIC_PAGE,
 			'cache-tag': 'profile:anna-id'
@@ -41,6 +41,14 @@ describe('/u/[username] load', () => {
 		getPublicProfile.mockResolvedValue(null);
 		const { result, setHeaders, getUser } = run('nobody');
 		await expect(result).rejects.toSatisfy((e) => isHttpError(e) && e.status === 404);
+		expect(setHeaders).not.toHaveBeenCalled();
+		expect(getUser).not.toHaveBeenCalled();
+	});
+
+	it('redirects an address that differs from the stored username, with no cache policy', async () => {
+		getPublicProfile.mockResolvedValue(PROFILE);
+		const { result, setHeaders, getUser } = run('Anna');
+		await expect(result).rejects.toMatchObject({ status: 308, location: '/u/anna' });
 		expect(setHeaders).not.toHaveBeenCalled();
 		expect(getUser).not.toHaveBeenCalled();
 	});

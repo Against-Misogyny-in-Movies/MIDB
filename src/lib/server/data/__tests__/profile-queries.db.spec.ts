@@ -93,7 +93,7 @@ describe('getPublicProfile', () => {
 			avatarKey: 'anna-av',
 			staffRole: null
 		});
-		expect(profile?.joinedAt).toBe(old().toISOString().slice(0, 10) + profile?.joinedAt.slice(10));
+		expect(profile?.joinedAt).toBe(old().toISOString().slice(0, 10));
 		expect(JSON.stringify(profile)).not.toContain('@');
 		expect(Object.keys(profile!).sort()).toEqual([
 			'avatarKey',
@@ -180,6 +180,7 @@ describe('counted community reports', () => {
 		await report('anna-id', dark);
 		await report('bea-id', alien);
 		const { reports } = (await getPublicProfile('anna'))!;
+		expect(reports.every((r) => Object.keys(r).sort().join() === 'kind,name,tmdbId')).toBe(true);
 		expect(reports.map((r) => [r.kind, r.tmdbId, r.name])).toEqual([
 			['tv', 70523, 'Dark'],
 			['movie', 348, 'Alien']

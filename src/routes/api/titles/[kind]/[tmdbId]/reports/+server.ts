@@ -19,8 +19,8 @@ import { COMMUNITY_REPORT_MIN } from '#lib/media/utils/communityReports.ts';
 import type { CommunityReportsResponse } from '#lib/media/types/community-reports.ts';
 
 /**
- * A title's community-report counts: `PUBLIC_COMMUNITY_REPORTS` with the title's `Cache-Tag`, the same
- * for every reader. It never reads the user, and sets no cookie. Below `COMMUNITY_REPORT_MIN`
+ * A title's community-report counts: `PUBLIC_COMMUNITY_REPORTS` with the title's `Cache-Tag`, the
+ * same for every reader. It never reads the user, and sets no cookie. Below `COMMUNITY_REPORT_MIN`
  * counted reports it answers the total only. A title nobody reported has no row and answers a
  * zero total (a GET writes nothing).
  */
@@ -56,7 +56,10 @@ export const PUT: RequestHandler = async (event) => {
 	return privateJson({ status: result.status, holdReason: result.holdReason });
 };
 
-/** Withdraws the reader's report (204, also when there was none). Purges the title's counts and the reader's profile when one existed. */
+/**
+ * Withdraws the reader's report (204, also when there was none). Purges the title's counts and
+ * the reader's profile when one existed.
+ */
 export const DELETE: RequestHandler = async (event) => {
 	const { kind, tmdbId } = parseTitleParams(event.params.kind, event.params.tmdbId);
 	const user = await authorizeWrite(event, 'RL_CONTENT_REPORT');
