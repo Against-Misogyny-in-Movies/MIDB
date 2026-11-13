@@ -31,8 +31,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | 6     | CI, deploy, docs              | completed   | 2026-11-12. The workflows have not run against a real account (Open items).                                 |
 | 7     | Avatars and usernames         | completed   | 2026-11-12.                                                                                                 |
 | R1    | Reader reports: data          | completed   | 2026-11-12.                                                                                                 |
-| R2    | Reader reports: API           | active      | 2026-11-12. Started.                                                                                        |
-| R3    | Reader reports: moderation    | not started |                                                                                                             |
+| R2    | Reader reports: API           | completed   | 2026-11-13.                                                                                                 |
+| R3    | Reader reports: moderation    | active      | 2026-11-13. Started.                                                                                        |
 | R4    | Reader reports: UI            | not started |                                                                                                             |
 | R5    | Reader reports: copy and docs | not started |                                                                                                             |
 
