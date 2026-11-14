@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-const profile = await import('../profile/+server.ts');
-const comments = await import('../comments/+server.ts');
-const metrics = await import('../metrics/+server.ts');
+const profile = await import('../profile/+page.server.ts');
+const comments = await import('../comments/+page.server.ts');
+const metrics = await import('../metrics/+page.server.ts');
 const security = await import('../security/+server.ts');
 
 type Handler = (event: never) => unknown;
@@ -25,9 +25,9 @@ async function redirectOf(handler: Handler, event: never) {
 
 describe('the old account pages', () => {
 	it.each([
-		['/user/profile', profile.GET, '/u/anna'],
-		['/user/comments', comments.GET, '/u/anna'],
-		['/user/metrics', metrics.GET, '/u/anna#reports']
+		['/user/profile', profile.load, '/u/anna'],
+		['/user/comments', comments.load, '/u/anna'],
+		['/user/metrics', metrics.load, '/u/anna#reports']
 	])('%s goes to the reader’s profile', async (_path, handler, location) => {
 		expect(await redirectOf(handler as Handler, signedIn('anna'))).toMatchObject({
 			status: 303,
@@ -37,7 +37,7 @@ describe('the old account pages', () => {
 
 	it('sends a signed-out reader to sign in', async () => {
 		const event = { locals: { getUser: async () => null } } as never;
-		expect(await redirectOf(profile.GET as Handler, event)).toMatchObject({
+		expect(await redirectOf(profile.load as Handler, event)).toMatchObject({
 			status: 303,
 			location: '/auth'
 		});
