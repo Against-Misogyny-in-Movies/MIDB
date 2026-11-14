@@ -92,26 +92,11 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~4.0K tok)
-  - 5–16 Rules (~270)
+- `docs/phases/STATUS.md` — Phase status (~4.2K tok)
+  - 5–16 Rules (~260)
   - 17–57 Phases (~1.6K)
-  - 58–97 Open items (~950) ← 1
-  - 98–142 Standing decisions (~1.1K)
-
-## Live plans
-
-Read when a task names the plan.
-
-- `docs/plans/plan-security-hardening.md` — Plan: security hardening (~4.4K tok)
-  - 5–8 Kept as they are (~100)
-  - 9–25 Phase SH1: moderation decisions stick (~790)
-  - 26–39 Phase SH2: sock puppets and brigades (~430)
-  - 40–55 Phase SH3: accounts (~460)
-  - 56–71 Phase SH4: platform (~550)
-  - 72–87 Phase SH5: username shape (~390)
-  - 88–142 Review fixes (~1.5K)
-    - 92–118 Fix A: server (~930)
-    - 119–142 Fix B: screens and copy (~590)
+  - 58–104 Open items (~1.1K) ← 1
+  - 105–152 Standing decisions (~1.2K)
 
 ## Policies
 
@@ -119,7 +104,7 @@ Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
 - `SECURITY.md` — Security (~5.4K tok)
-  - 5–23 Network (~4.7K) ← 1
+  - 5–23 Network (~4.7K)
   - 24–34 Supply chain (~570)
   - 35–40 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~3.5K tok)
