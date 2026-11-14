@@ -121,13 +121,16 @@ async function getProfileReports(userId: string): Promise<ProfileReport[]> {
 	return rows;
 }
 
-/** The sum of the scores of an account's published comments. */
-async function getScoreTotal(userId: string): Promise<number> {
+/** The number of an account's published comments and the sum of their scores. */
+async function getCommentStats(userId: string): Promise<{ count: number; scoreTotal: number }> {
 	const [row] = await db
-		.select({ total: sql<number>`coalesce(sum(${comments.score}), 0)` })
+		.select({
+			count: sql<number>`count(*)`,
+			scoreTotal: sql<number>`coalesce(sum(${comments.score}), 0)`
+		})
 		.from(comments)
 		.where(and(eq(comments.userId, userId), eq(comments.status, 'published')));
-	return row?.total ?? 0;
+	return { count: row?.count ?? 0, scoreTotal: row?.scoreTotal ?? 0 };
 }
 
 /**
@@ -137,8 +140,8 @@ async function getScoreTotal(userId: string): Promise<number> {
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
 	const owner = await findProfileOwner(username);
 	if (!owner) return null;
-	const [scoreTotal, commentPage, profileReports] = await Promise.all([
-		getScoreTotal(owner.id),
+	const [stats, commentPage, profileReports] = await Promise.all([
+		getCommentStats(owner.id),
 		getProfileComments(owner.id),
 		getProfileReports(owner.id)
 	]);
@@ -148,7 +151,8 @@ export async function getPublicProfile(username: string): Promise<PublicProfile 
 		avatarKey: owner.avatarKey,
 		staffRole: owner.role === 'user' ? null : owner.role,
 		joinedAt: owner.createdAt.toISOString().slice(0, 10),
-		scoreTotal,
+		scoreTotal: stats.scoreTotal,
+		commentCount: stats.count,
 		comments: commentPage,
 		reports: profileReports
 	};

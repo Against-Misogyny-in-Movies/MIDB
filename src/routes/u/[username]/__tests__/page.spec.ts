@@ -23,6 +23,7 @@ const PROFILE: PublicProfile = {
 	staffRole: null,
 	joinedAt: '2026-01-15',
 	scoreTotal: 42,
+	commentCount: 2,
 	comments: { comments: [entry('c1'), entry('c2')], nextCursor: null },
 	reports: [{ kind: 'tv', tmdbId: 70523, name: 'Dark' }]
 };

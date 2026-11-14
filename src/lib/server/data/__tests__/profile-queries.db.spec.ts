@@ -112,6 +112,7 @@ describe('getPublicProfile', () => {
 		expect(JSON.stringify(profile)).not.toContain('@');
 		expect(Object.keys(profile!).sort()).toEqual([
 			'avatarKey',
+			'commentCount',
 			'comments',
 			'id',
 			'joinedAt',
@@ -162,20 +163,23 @@ describe('getPublicProfile', () => {
 		expect(list.find((c) => c.id === orphan)?.inReplyTo).toBeNull();
 	});
 
-	it('sums the score of published comments only', async () => {
+	it('sums the score of published comments only, and counts them', async () => {
 		await comment({ score: 5 });
 		await comment({ score: -2 });
 		await comment({ score: 100, status: 'rejected' });
 		await comment({ score: 100, status: 'pending' });
 		await comment({ score: 100, userId: 'bea-id' });
 		expect((await getPublicProfile('anna'))?.scoreTotal).toBe(3);
+		expect((await getPublicProfile('anna'))?.commentCount).toBe(2);
 		expect((await getPublicProfile('bea'))?.scoreTotal).toBe(100);
+		expect((await getPublicProfile('bea'))?.commentCount).toBe(1);
 	});
 
 	it('has a zero total and empty lists for an account with nothing public', async () => {
 		const profile = await getPublicProfile('bea');
 		expect(profile).toMatchObject({
 			scoreTotal: 0,
+			commentCount: 0,
 			comments: { comments: [], nextCursor: null },
 			reports: []
 		});

@@ -1,4 +1,7 @@
 import type { TitleKind } from '#lib/server/data/title-queries.ts';
+import type { UserCommentRow } from '#lib/media/types/comments.ts';
+import type { ContentReportStatus } from '#lib/media/utils/communityReports.ts';
+import type { Restriction } from '#lib/media/utils/reportStanding.ts';
 
 /** One published comment on a public profile, with the title it is on. No moderation reason. */
 export type ProfileComment = {
@@ -43,6 +46,31 @@ export type PublicProfile = {
 	joinedAt: string;
 	/** The sum of the scores of the account's published comments. */
 	scoreTotal: number;
+	/** How many published comments the account has. */
+	commentCount: number;
 	comments: ProfileCommentPage;
 	reports: ProfileReport[];
+};
+
+/** One of the reader's own community reports on their profile, in any status, with its standing's inputs. */
+export type OwnReport = {
+	status: ContentReportStatus;
+	kind: TitleKind;
+	tmdbId: number | null;
+	title: string;
+	/** ISO timestamps, because the endpoint answers JSON. */
+	updatedAt: string;
+	countsFrom: string;
+	restricted: Restriction | null;
+};
+
+/**
+ * What the profile's owner sees beyond the public page (`GET /api/me/profile`): every comment in
+ * every status, every community report with its standing, and the account's mute.
+ */
+export type OwnProfile = {
+	comments: UserCommentRow[];
+	reports: OwnReport[];
+	/** The end of the account's mute while it is in the future; otherwise null. */
+	mutedUntil: string | null;
 };
