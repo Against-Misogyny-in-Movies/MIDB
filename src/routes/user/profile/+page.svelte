@@ -129,7 +129,7 @@
 		shapeChecked = true;
 		const before: Profile = { username: user?.username ?? '', avatarKey: user?.avatarKey ?? null };
 		return async ({ result, update }) => {
-			await update();
+			await update({ reset: false });
 			saving = false;
 			if (result.type === 'success') {
 				status = 'idle';
@@ -310,9 +310,15 @@
 		color: var(--danger);
 	}
 
-	/* One slot for the longest line, so a state change moves nothing below the field. */
+	/* One slot for the longest line (the taken text: three lines on a phone, two from 40rem), so a state change moves nothing below the field. */
 	.status {
-		min-height: calc(var(--status-lines, 3) * 1.25rem);
+		min-height: 3.75rem;
+	}
+
+	@media (min-width: 40rem) {
+		.status {
+			min-height: 2.5rem;
+		}
 	}
 
 	.hint--format,
