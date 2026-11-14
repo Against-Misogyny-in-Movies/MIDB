@@ -58,7 +58,8 @@
 				{#each GENDERS as g (g.key)}
 					<th scope="col" class="count-col">
 						<span class="swatch" style="--seg: var({g.color});" aria-hidden="true"></span>
-						<abbr title={g.label}>{g.short}</abbr>
+						<abbr title={g.label} aria-hidden="true">{g.short}</abbr>
+						<span class="sr-only">{g.label}</span>
 					</th>
 				{/each}
 			</tr>

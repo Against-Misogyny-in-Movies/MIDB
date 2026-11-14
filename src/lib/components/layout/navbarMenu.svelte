@@ -5,7 +5,8 @@
 	import { profileHref } from '#lib/media/utils/profileHref.ts';
 
 	// Below md the bar keeps only search, the account slot and the theme toggle; this menu
-	// carries the rest. Closes on outside pointerdown and Escape. Account links read the client
+	// carries the rest as a disclosure of plain links (no ARIA menu roles, so Tab moves through
+	// them). Closes on outside pointerdown and Escape. Account links read the client
 	// session (the navbar starts it); the Moderation link is a convenience only, authorization
 	// stays server-side.
 	const canModerate = $derived(
@@ -15,6 +16,7 @@
 	let open = $state(false);
 	let root = $state<HTMLElement | null>(null);
 	let firstLink = $state<HTMLAnchorElement | null>(null);
+	let trigger = $state<HTMLButtonElement | null>(null);
 	const menuId = $props.id();
 
 	async function toggle() {
@@ -30,7 +32,11 @@
 	}
 
 	function onKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') close();
+		// Escape hands focus back to the button, so it does not fall to the page when the panel unmounts.
+		if (event.key === 'Escape' && open) {
+			close();
+			trigger?.focus();
+		}
 	}
 
 	function onWindowPointerDown(event: PointerEvent) {
@@ -44,11 +50,11 @@
 
 <div class="root" bind:this={root}>
 	<button
+		bind:this={trigger}
 		class="trigger"
 		onclick={toggle}
 		aria-label="Menu"
 		title="Menu"
-		aria-haspopup="menu"
 		aria-expanded={open}
 		aria-controls={menuId}
 	>
@@ -56,26 +62,23 @@
 	</button>
 
 	{#if open}
-		<div class="panel" id={menuId} role="menu">
-			<a bind:this={firstLink} href="/resources" class="item" role="menuitem" onclick={close}>
-				Methodology
-			</a>
+		<div class="panel" id={menuId}>
+			<a bind:this={firstLink} href="/resources" class="item" onclick={close}>Methodology</a>
 			{#if canModerate}
-				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>
+				<a href="/user/moderation" class="item" onclick={close}>Moderation</a>
 			{/if}
 			{#if session.likelyUser}
 				<a
 					href={profileHref(session.user?.username) ?? '/user/profile'}
 					class="item"
-					role="menuitem"
 					onclick={close}>Profile</a
 				>
-				<a href="/user/settings" class="item" role="menuitem" onclick={close}>Settings</a>
+				<a href="/user/settings" class="item" onclick={close}>Settings</a>
 				{#if session.status === 'user'}
 					<LogoutButton variant="menu" />
 				{/if}
 			{:else}
-				<a href="/auth" class="item" role="menuitem" onclick={close}>Sign in</a>
+				<a href="/auth" class="item" onclick={close}>Sign in</a>
 			{/if}
 		</div>
 	{/if}
@@ -123,5 +126,20 @@
 
 	.item:focus-visible {
 		outline-offset: -2px;
+	}
+
+	/* A 44px touch target; the negative margin keeps the icon where it sits in the bar. */
+	@media (pointer: coarse) {
+		.trigger {
+			@apply items-center justify-center;
+			min-width: 2.75rem;
+			min-height: 2.75rem;
+			margin: -0.75rem;
+		}
+
+		.item {
+			@apply flex items-center;
+			min-height: 2.75rem;
+		}
 	}
 </style>

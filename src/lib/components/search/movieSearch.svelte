@@ -28,7 +28,7 @@
 	<SearchInput
 		value={search.query}
 		{listboxId}
-		expanded={search.results.length > 0}
+		expanded={search.expanded}
 		loading={search.loading || search.navigatingTo !== null}
 		activeDescendant={search.activeId}
 		oninput={(q) => search.search(q)}

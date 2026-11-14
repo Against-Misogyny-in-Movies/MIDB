@@ -48,7 +48,8 @@
 	learnHref="/resources#ddd"
 >
 	{#if ddd === null}
-		<div class="skeleton" aria-busy="true" aria-label="Loading warnings">
+		<div class="skeleton" role="status">
+			<span class="sr-only">Loading warnings</span>
 			<div class="skeleton-row"></div>
 			<div class="skeleton-row"></div>
 			<div class="skeleton-row"></div>

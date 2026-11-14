@@ -43,11 +43,8 @@
 						aria-controls={commentId}
 						onclick={() => toggle(tag.topicItemId)}
 					>
-						{tag.doesName}
-						<i
-							class="ri-chat-3-line comment-icon"
-							aria-label={isExpanded ? 'Hide voter comment' : 'Show voter comment'}
-						></i>
+						{tag.doesName}<span class="sr-only">: voter comment</span>
+						<i class="ri-chat-3-line comment-icon" aria-hidden="true"></i>
 					</button>
 				{:else}
 					<span class="tag-name">{tag.doesName}</span>
@@ -69,8 +66,8 @@
 				</span>
 			</div>
 
-			{#if tag.comment && isExpanded}
-				<p class="comment" id={commentId}>{tag.comment}</p>
+			{#if tag.comment}
+				<p class="comment" id={commentId} hidden={!isExpanded}>{tag.comment}</p>
 			{/if}
 		</li>
 	{/each}

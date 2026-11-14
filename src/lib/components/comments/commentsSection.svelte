@@ -250,7 +250,8 @@
 					Try again
 				</button>
 			{:else if showSkeleton}
-				<div class="skeleton" aria-label="Loading comments">
+				<div class="skeleton" role="status">
+					<span class="sr-only">Loading comments</span>
 					<div class="skeleton-row"></div>
 					<div class="skeleton-row"></div>
 					<div class="skeleton-row"></div>

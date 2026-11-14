@@ -31,6 +31,12 @@ describe('DddMetricSection', () => {
 		expect(el.querySelector('.skeleton')).toBeTruthy();
 	});
 
+	it('names the loading skeleton as a status', () => {
+		const status = details(null, []).querySelector('.skeleton')!;
+		expect(status.getAttribute('role')).toBe('status');
+		expect(status.textContent).toContain('Loading warnings');
+	});
+
 	it('starts closed with warnings', () => {
 		const el = details(result, [tag]);
 		expect(el.open).toBe(false);

@@ -48,6 +48,11 @@ export class MovieSearchState {
 		return this.open && this.query.trim().length > 0;
 	}
 
+	/** Whether the results listbox is on the page, for the input's `aria-expanded`. */
+	get expanded() {
+		return this.isOpen && this.results.length > 0;
+	}
+
 	/** The id of the currently highlighted option, for `aria-activedescendant`. */
 	get activeId() {
 		const item = this.results[this.activeIndex];
