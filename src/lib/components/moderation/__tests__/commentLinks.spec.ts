@@ -41,7 +41,7 @@ function inList<T>(component: T, props: Record<string, unknown>) {
 }
 
 describe('links to a comment from the moderation views', () => {
-	it('links the date of a moderation item to the comment', () => {
+	it('links a moderation item to the comment with View comment, not its date', () => {
 		const item: ModerationItem = {
 			comment: COMMENT,
 			author: AUTHOR,
@@ -52,12 +52,14 @@ describe('links to a comment from the moderation views', () => {
 			authorMutedUntil: null
 		};
 		inList(ModerationItemRow, { item, me: MOD });
-		const link = screen.getByRole('link', { name: /Nov/ });
+		const link = screen.getByRole('link', { name: 'View comment' });
 		expect(link.getAttribute('href')).toBe(HREF);
+		expect(document.querySelector('time')?.closest('a')).toBeNull();
+		expect(document.querySelector('time')?.textContent).toBe('01/11/2026');
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
 	});
 
-	it('shows a plain date when the title has no TMDB id', () => {
+	it('adds no comment link when the title has no TMDB id', () => {
 		const item = {
 			comment: COMMENT,
 			author: AUTHOR,
@@ -72,7 +74,7 @@ describe('links to a comment from the moderation views', () => {
 		expect(screen.queryByRole('link', { name: /Alien/ })).toBeNull();
 	});
 
-	it('links the Posted date of a table row to the comment', () => {
+	it('links a table row to the comment from its actions, not its Posted date', () => {
 		const row = {
 			comment: COMMENT,
 			author: AUTHOR,
@@ -86,8 +88,15 @@ describe('links to a comment from the moderation views', () => {
 			latestLabel: null
 		};
 		render(ModerationTable, { rows: [row], me: MOD, selected: [] } as never);
-		const cell = document.querySelector('td.posted') as HTMLElement;
-		expect(within(cell).getByRole('link').getAttribute('href')).toBe(HREF);
+		const posted = document.querySelector('td.posted') as HTMLElement;
+		expect(within(posted).queryByRole('link')).toBeNull();
+		expect(posted.textContent?.trim()).toBe('01/11/2026');
+		const actions = document.querySelector('td.actions') as HTMLElement;
+		expect(
+			within(actions)
+				.getByRole('link', { name: 'View the comment by anna on its title page' })
+				.getAttribute('href')
+		).toBe(HREF);
 	});
 
 	describe('recent actions', () => {

@@ -63,11 +63,12 @@ describe('CommentHistoryRow', () => {
 		expect(screen.getByText('Reply')).toBeTruthy();
 	});
 
-	it('links the date to the comment on its title page, or shows it plain with no TMDB id', () => {
+	it('links to the comment on its title page with View comment, never its date', () => {
 		mount(row());
-		expect(screen.getByRole('link', { name: /Nov/ }).getAttribute('href')).toBe(
+		expect(screen.getByRole('link', { name: 'View comment' }).getAttribute('href')).toBe(
 			'/movie/348#comment-c1'
 		);
+		expect(document.querySelector('time')?.closest('a')).toBeNull();
 		cleanup();
 		mount(row({ tmdbId: null }));
 		expect(screen.queryByRole('link')).toBeNull();

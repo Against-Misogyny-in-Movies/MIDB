@@ -235,11 +235,13 @@ describe('CommentsSection links to a comment', () => {
 		expect(document.querySelector('.comment--linked')).toBeNull();
 	});
 
-	it('links each comment date to the comment', async () => {
+	it('shows each comment date as plain text, with Copy link as the way to share it', async () => {
 		mount(api());
 		await screen.findByText('Text of first');
-		const link = document.querySelector('#comment-first a.link[href*="#comment-"]');
-		expect(link?.getAttribute('href')).toBe('/movie/603#comment-first');
+		const item = document.getElementById('comment-first')!;
+		expect(item.querySelector('a[href*="#comment-"]')).toBeNull();
+		expect(item.querySelector('time')?.textContent).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+		expect(within(item).getByRole('button', { name: 'Copy link' })).toBeTruthy();
 	});
 
 	it('links each author name to their public profile', async () => {

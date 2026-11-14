@@ -1,8 +1,8 @@
 <script lang="ts">
-	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import ProfileRows from '#lib/components/user/profileRows.svelte';
 	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
+	import { formatDate } from '#lib/media/utils/format.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
@@ -59,17 +59,14 @@
 	empty="No published comments."
 >
 	{#snippet row(comment)}
+		{@const permalink = commentHref(comment.title.kind, comment.title.tmdbId, comment.id)}
 		<p class="line">
 			<ProfileTitleLink
 				kind={comment.title.kind}
 				tmdbId={comment.title.tmdbId}
 				name={comment.title.name}
 			/>
-			<CommentDate
-				class="label"
-				href={commentHref(comment.title.kind, comment.title.tmdbId, comment.id)}
-				createdAt={comment.createdAt}
-			/>
+			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
 			{#if comment.edited}<span class="label">Edited</span>{/if}
 			<span class="label num">Score {comment.score}</span>
 		</p>
@@ -82,6 +79,7 @@
 			</p>
 		{/if}
 		<p class="body">{comment.body}</p>
+		{#if permalink}<a class="chip view" href={permalink}>View comment</a>{/if}
 	{/snippet}
 </ProfileRows>
 {#if shown.length > 0 && nextCursor}
@@ -114,6 +112,10 @@
 		@apply text-base;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+
+	.view {
+		align-self: flex-start;
 	}
 
 	.more {

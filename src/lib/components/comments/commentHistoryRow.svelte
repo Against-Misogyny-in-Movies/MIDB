@@ -3,12 +3,12 @@
 	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
-	import CommentDate from './commentDate.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import { commentResult, unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
+	import { formatDate } from '#lib/media/utils/format.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { commentHref } from '#lib/media/utils/titleHref.ts';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
@@ -88,7 +88,7 @@
 <li class="row" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<div class="meta">
 		<ProfileTitleLink kind={comment.kind} tmdbId={comment.tmdbId} name={comment.title} />
-		<CommentDate class="label" href={permalink} createdAt={comment.createdAt} />
+		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
 		{#if comment.parentId}<span class="label">Reply</span>{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		{#if comment.status === 'published'}<span class="label num">Score {comment.score}</span>{/if}
@@ -124,6 +124,8 @@
 				: ''}
 		</p>
 	{/if}
+
+	{#if permalink}<a class="chip view" href={permalink}>View comment</a>{/if}
 
 	{#if editable || deletable}
 		<div class="actions">
@@ -176,6 +178,10 @@
 	.body {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+
+	.view {
+		align-self: flex-start;
 	}
 
 	.actions {
