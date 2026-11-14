@@ -123,8 +123,8 @@ describe('the Turnstile check on a passkey registration', () => {
 		const res = await open.handler(
 			new Request(`${site}/api/auth${PASSKEY_REGISTER_PATH}`, { headers: { origin: site } })
 		);
-		expect(res.status).toBe(500);
-		expect(await res.json()).toMatchObject({ code: 'UNKNOWN_ERROR' });
+		expect(res.status).toBe(503);
+		expect(await res.json()).toMatchObject({ code: 'SIGN_UP_UNAVAILABLE' });
 		expect(error).toHaveBeenCalledWith(expect.stringContaining('TURNSTILE_SECRET_KEY'));
 		error.mockRestore();
 	});

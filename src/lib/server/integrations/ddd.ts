@@ -11,12 +11,12 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const FAILED_TTL_MS = 60 * 1000;
 
 /** A lookup's result, and whether DDD answered with a non-OK status on the way. */
-interface Lookup {
+export interface DddLookup {
 	result: DddResult;
 	failed: boolean;
 }
 
-const ttlFor = (lookup: Lookup) => (lookup.failed ? FAILED_TTL_MS : CACHE_TTL_MS);
+const ttlFor = (lookup: DddLookup) => (lookup.failed ? FAILED_TTL_MS : CACHE_TTL_MS);
 
 interface DddSearchItem {
 	id: number;
@@ -84,12 +84,13 @@ async function fetchMediaTags(
  * Only tags where `yesSum >= noSum && yesSum > 0` are returned (community says "yes").
  *
  * @param imdbId - The IMDb id string (e.g. `"tt0052080"`), or `null` if unknown.
- * @returns A `DddResult` with the DDD item id and filtered tag list, or an empty result if not found.
+ * @returns The `DddResult` with the DDD item id and filtered tag list (empty if not found), and
+ * whether DDD answered with an error status, so a caller does not keep a failed answer.
  */
-export async function getTriggerTagsLive(imdbId: string | null): Promise<DddResult> {
-	if (!imdbId) return EMPTY;
+export async function getTriggerTagsLive(imdbId: string | null): Promise<DddLookup> {
+	if (!imdbId) return { result: EMPTY, failed: false };
 
-	const { result } = await getCached<Lookup>(`ddd:imdb:${imdbId}`, ttlFor, async () => {
+	return getCached<DddLookup>(`ddd:imdb:${imdbId}`, ttlFor, async () => {
 		// Step 1: look up by imdb id
 		const searchRes = await fetch(`${DDD_BASE}/dddsearch?imdb=${encodeURIComponent(imdbId)}`, {
 			headers: dddHeaders()
@@ -107,7 +108,6 @@ export async function getTriggerTagsLive(imdbId: string | null): Promise<DddResu
 		const { tags, isSeries, failed } = await fetchMediaTags(itemId);
 		return { result: { itemId, tags, isSeries }, failed };
 	});
-	return result;
 }
 
 /**
@@ -116,14 +116,15 @@ export async function getTriggerTagsLive(imdbId: string | null): Promise<DddResu
  * by TMDB id (preferred) or first-air year (fallback). Results are cached as `getTriggerTagsLive` does.
  *
  * @param series - Object with `title`, `tmdbId`, and `firstAirDate` (YYYY-MM-DD or empty).
- * @returns A `DddResult` with `isSeries: true`, the matched item id, and filtered tags.
+ * @returns The `DddResult` with `isSeries: true`, the matched item id and filtered tags, and
+ * whether DDD answered with an error status.
  */
 export async function getTriggerTagsForSeries(series: {
 	title: string;
 	tmdbId: string;
 	firstAirDate: string;
-}): Promise<DddResult> {
-	const { result } = await getCached<Lookup>(`ddd:tmdb:${series.tmdbId}`, ttlFor, async () => {
+}): Promise<DddLookup> {
+	return getCached<DddLookup>(`ddd:tmdb:${series.tmdbId}`, ttlFor, async () => {
 		const empty: DddResult = { ...EMPTY, isSeries: true };
 		// Text-search by title (imdb= lookup fails for TV series)
 		const searchRes = await fetch(`${DDD_BASE}/dddsearch?q=${encodeURIComponent(series.title)}`, {
@@ -151,5 +152,4 @@ export async function getTriggerTagsForSeries(series: {
 		const { tags, failed } = await fetchMediaTags(match.id);
 		return { result: { itemId: match.id, tags, isSeries: true }, failed };
 	});
-	return result;
 }

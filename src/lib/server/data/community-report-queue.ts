@@ -12,7 +12,7 @@ import { titles } from '#db/schema/titles.ts';
 import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/communityReports.ts';
 import { activeMute } from './mute.ts';
 import { QUEUE_LIMIT } from './moderation-queue.ts';
-import { countsFromDate } from './community-reports.ts';
+import { countsFromDate } from './counting-account.ts';
 
 type ReportRow = typeof reports.$inferSelect;
 

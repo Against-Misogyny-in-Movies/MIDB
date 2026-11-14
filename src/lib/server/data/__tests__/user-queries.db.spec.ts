@@ -8,9 +8,12 @@ import { foldUsername } from '#lib/media/utils/username.ts';
 import {
 	banUser,
 	getUserById,
-	isUsernameAvailable,
+	usernameAvailability,
 	updateProfile
 } from '#lib/server/data/user-queries.ts';
+
+const isUsernameAvailable = async (name: string, id: string) =>
+	(await usernameAvailability(name, id)) === 'available';
 
 const OLD = new Date('2020-01-01T00:00:00Z');
 
@@ -95,7 +98,19 @@ describe('updateProfile', () => {
 	});
 });
 
-describe('isUsernameAvailable', () => {
+describe('usernameAvailability', () => {
+	it('names the first rule a name breaks, in the order updateProfile checks them', async () => {
+		await insertUser(userValues('sub-a', { username: 'mary_w' }));
+		expect(await usernameAvailability('ab', 'sub-b')).toBe('format');
+		expect(await usernameAvailability('9lives', 'sub-b')).toBe('format');
+		expect(await usernameAvailability('midb_fan', 'sub-b')).toBe('reserved');
+		expect(await usernameAvailability('kill_yourself', 'sub-b')).toBe('blocked');
+		expect(await usernameAvailability('mary_w', 'sub-b')).toBe('taken');
+		expect(await usernameAvailability('adah', 'sub-b')).toBe('available');
+	});
+});
+
+describe('availability as a yes or no', () => {
 	it('matches case-insensitively', async () => {
 		await insertUser(userValues('sub-a', { username: 'Mary' }));
 		expect(await isUsernameAvailable('MARY', 'sub-b')).toBe(false);
@@ -180,6 +195,30 @@ describe('updateProfile rules', () => {
 		expect(await db.select().from(retiredUsernames)).toEqual([]);
 		const row = await getUserById('sub-a');
 		expect(row?.usernameChangedAt?.getTime()).toBeLessThan(Date.now() - DAY / 2);
+	});
+
+	it.each(['ab', 'a_b_c_', '9lives', 'admin_x', 'xmidbx'])(
+		'saves an avatar for an account whose stored name %s breaks the new rules',
+		async (stored) => {
+			await insertUser(userValues('sub-a', { username: stored }));
+			expect(await updateProfile('sub-a', { username: stored, avatarKey: 'kahlo' })).toMatchObject({
+				ok: true,
+				user: { username: stored, avatarKey: 'kahlo' }
+			});
+			expect(await updateProfile('sub-a', { avatarKey: 'davis' })).toMatchObject({ ok: true });
+			expect(await db.select().from(retiredUsernames)).toEqual([]);
+		}
+	);
+
+	it('still checks the shape of a name the account changes to', async () => {
+		await insertUser(userValues('sub-a', { username: 'ab' }));
+		expect(await updateProfile('sub-a', { username: 'abc' })).toEqual({
+			ok: false,
+			reason: 'username-format'
+		});
+		expect(await updateProfile('sub-a', { username: 'abcd', avatarKey: 'kahlo' })).toMatchObject({
+			ok: true
+		});
 	});
 
 	it('holds a retired name for others for 90 days, but not for its owner or after', async () => {

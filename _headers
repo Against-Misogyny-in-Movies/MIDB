@@ -1,0 +1,15 @@
+# Workers Assets serves static files without the request hook, so these repeat the hook's
+# security headers (src/lib/server/http/security-headers.ts; a test keeps them equal). The
+# adapter appends its own rules for /_app/*.
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# The pre-paint theme script is a blocking script on every page; an hour keeps it off the
+# critical path on repeat visits without pinning a changed file for long.
+/theme-init.js
+  Cache-Control: public, max-age=3600

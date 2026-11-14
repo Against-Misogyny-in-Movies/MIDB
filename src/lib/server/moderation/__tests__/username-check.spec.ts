@@ -8,6 +8,8 @@ describe('usernameRefusal', () => {
 		['xmoderatorx', 'reserved'],
 		['midb_official', 'reserved'],
 		['m1db', 'reserved'],
+		['m_1_d_b', 'reserved'],
+		['admіn_x', 'reserved'],
 		['support', 'reserved'],
 		['the_staff', 'reserved'],
 		['faggot', 'blocked'],
@@ -18,7 +20,17 @@ describe('usernameRefusal', () => {
 		expect(usernameRefusal(name)).toBe(reason);
 	});
 
-	it.each(['mary_w', 'kyle_77', 'rootsy', 'supporter', 'film_fan'])('allows %s', (name) => {
+	it.each([
+		'mary_w',
+		'kyle_77',
+		'rootsy',
+		'supporter',
+		'film_fan',
+		'brad_mine',
+		'sad_mint',
+		'ahmed_in',
+		'ada_mid_bay'
+	])('allows %s', (name) => {
 		expect(usernameRefusal(name)).toBeNull();
 	});
 });

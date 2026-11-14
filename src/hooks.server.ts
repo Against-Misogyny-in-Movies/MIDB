@@ -4,6 +4,7 @@ import { getSessionCookie } from 'better-auth/cookies';
 import { getAuth } from '#lib/server/auth/auth.ts';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { asPrivate } from '#lib/server/http/cache.ts';
+import { SECURITY_HEADERS } from '#lib/server/http/security-headers.ts';
 import { getUserById, type UserRow } from '#lib/server/data/user-queries.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
@@ -24,18 +25,10 @@ function withSafeCacheHeaders(response: Response): Response {
 	return asPrivate(response);
 }
 
-const SECURITY_HEADERS = {
-	'strict-transport-security': 'max-age=63072000; includeSubDomains',
-	'x-content-type-options': 'nosniff',
-	'referrer-policy': 'strict-origin-when-cross-origin',
-	'x-frame-options': 'DENY',
-	'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
-	'cross-origin-opener-policy': 'same-origin'
-};
-
 /**
  * Every response the hook returns carries the security headers (`docs/architecture.md`, Caching policy). The response is copied, because one from `fetch`, a library or `Response.redirect` has
- * immutable headers. Assets served by Workers Assets never reach the hook and do not carry them.
+ * immutable headers. Files served by Workers Assets never reach the hook; the `_headers` file in the project root gives them
+ * the same headers.
  */
 function withSecurityHeaders(response: Response): Response {
 	const out = new Response(response.body, response);

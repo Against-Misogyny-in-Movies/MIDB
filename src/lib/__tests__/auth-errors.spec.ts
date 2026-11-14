@@ -32,6 +32,12 @@ describe('passkeyErrorMessage', () => {
 		).toMatch(/automated sign-ups/);
 	});
 
+	it('says account creation is unavailable when the site has no Turnstile secret', () => {
+		expect(
+			passkeyErrorMessage({ status: 503, code: 'SIGN_UP_UNAVAILABLE', message: 'x' }, 'sign-up')
+		).toBe('Account creation is not available right now.');
+	});
+
 	it('does not blame the bot check for a 403 that is not one', () => {
 		const originFailure = { status: 403, code: 'INVALID_ORIGIN', message: 'Invalid origin' };
 		expect(passkeyErrorMessage(originFailure, 'sign-in')).toMatch(/could not be verified/);

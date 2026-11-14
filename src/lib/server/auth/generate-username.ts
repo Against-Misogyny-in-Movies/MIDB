@@ -20,8 +20,8 @@ export function randomUsername(): string {
 }
 
 /**
- * A username no account has, for a new account. It draws a candidate, asks `isTaken`
- * (case-insensitive, against the database) and draws again on a collision, up to
+ * A username no account has, for a new account. It draws a candidate, asks `isTaken` (in
+ * production the rename check: look-alikes and recently retired names count) and draws again on a collision, up to
  * `USERNAME_ATTEMPTS` times, then throws so the sign-up fails instead of storing a duplicate.
  */
 export async function generateUsername(

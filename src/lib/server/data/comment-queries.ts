@@ -380,7 +380,8 @@ export async function createComment(input: {
  * so a published comment goes back through `decideStatus`. A hidden or deleted comment, and one
  * a moderator rejected, cannot be edited, which keeps an author from reviving what a moderator
  * removed (an automatic reject stays editable). A pending comment that a moderator or the
- * reports sent to review stays pending after an edit that the check would publish. Anyone but
+ * reports sent to review stays pending, with its source and reason, after any edit, whatever the
+ * check decides; the new body and the check's verdict are stored. Anyone but
  * the author gets `not-found`, whatever the comment's status. A comment that left the status the
  * edit read (a moderator acted meanwhile) answers `conflict`.
  */
@@ -413,10 +414,11 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		kind: title.kind,
 		parentBody
 	});
-	// A person's or the reports' hold on a pending comment is lifted only by a moderator.
+	// A person's or the reports' hold on a pending comment is lifted only by a moderator, so
+	// whatever the check decides, the comment stays pending with its source and reason. A reject
+	// would otherwise make it editable again (an automatic reject is) and the next edit publish it.
 	const held =
 		comment.status === 'pending' &&
-		decision.status === 'published' &&
 		(comment.moderationSource === 'moderator' || comment.moderationSource === 'reports');
 	const status = held ? 'pending' : decision.status;
 	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, status);

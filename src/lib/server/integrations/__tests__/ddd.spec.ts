@@ -25,7 +25,7 @@ describe('getTriggerTagsLive', () => {
 
 	it('returns EMPTY for null imdbId', async () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
-		const result = await getTriggerTagsLive(null);
+		const { result } = await getTriggerTagsLive(null);
 		expect(result).toEqual({ itemId: null, tags: [], isSeries: false });
 	});
 
@@ -72,7 +72,7 @@ describe('getTriggerTagsLive', () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const result = await getTriggerTagsLive('tt0052080');
+		const { result } = await getTriggerTagsLive('tt0052080');
 		expect(result.itemId).toBe(42);
 		expect(result.tags).toHaveLength(2);
 		expect(result.tags[0]).toMatchObject({
@@ -115,7 +115,7 @@ describe('getTriggerTagsLive', () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const result = await getTriggerTagsLive('tt1111111');
+		const { result } = await getTriggerTagsLive('tt1111111');
 		expect(result.tags).toHaveLength(1);
 		expect(result.tags[0].topicId).toBe(1);
 	});
@@ -126,7 +126,7 @@ describe('getTriggerTagsLive', () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const result = await getTriggerTagsLive('tt9999999');
+		const { result } = await getTriggerTagsLive('tt9999999');
 		expect(result).toEqual({ itemId: null, tags: [], isSeries: false });
 	});
 
@@ -152,8 +152,8 @@ describe('getTriggerTagsLive', () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const first = await getTriggerTagsLive('tt0052080');
-		const second = await getTriggerTagsLive('tt0052080');
+		const { result: first } = await getTriggerTagsLive('tt0052080');
+		const { result: second } = await getTriggerTagsLive('tt0052080');
 
 		expect(second).toEqual(first);
 		expect(fetchSpy).toHaveBeenCalledTimes(2); // search + media, not 4
@@ -194,7 +194,7 @@ describe('getTriggerTagsForSeries', () => {
 		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const result = await getTriggerTagsForSeries({
+		const { result } = await getTriggerTagsForSeries({
 			title: 'Game of Thrones',
 			tmdbId: '1399',
 			firstAirDate: '2011-04-17'
@@ -217,7 +217,7 @@ describe('getTriggerTagsForSeries', () => {
 		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const result = await getTriggerTagsForSeries({
+		const { result } = await getTriggerTagsForSeries({
 			title: 'Breaking Bad',
 			tmdbId: '1396',
 			firstAirDate: '2008-01-20'
@@ -232,7 +232,7 @@ describe('getTriggerTagsForSeries', () => {
 		const { getTriggerTagsForSeries } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		const result = await getTriggerTagsForSeries({
+		const { result } = await getTriggerTagsForSeries({
 			title: 'Unknown Show',
 			tmdbId: '99999',
 			firstAirDate: '2020-01-01'
@@ -253,8 +253,8 @@ describe('getTriggerTagsForSeries', () => {
 		await clearCache();
 
 		const series = { title: 'Game of Thrones', tmdbId: '1399', firstAirDate: '2011-04-17' };
-		const first = await getTriggerTagsForSeries(series);
-		const second = await getTriggerTagsForSeries(series);
+		const { result: first } = await getTriggerTagsForSeries(series);
+		const { result: second } = await getTriggerTagsForSeries(series);
 
 		expect(second).toEqual(first);
 		expect(fetchSpy).toHaveBeenCalledTimes(2);
@@ -280,7 +280,7 @@ describe('a non-OK upstream answer', () => {
 		const { getTriggerTagsLive } = await import('#lib/server/integrations/ddd.ts');
 		await clearCache();
 
-		await getTriggerTagsLive('tt0000009');
+		expect((await getTriggerTagsLive('tt0000009')).failed).toBe(true);
 		await getTriggerTagsLive('tt0000009');
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 
@@ -290,7 +290,7 @@ describe('a non-OK upstream answer', () => {
 
 		// The retry succeeded (no items), so this answer lasts the full hour.
 		vi.advanceTimersByTime(30 * 60 * 1000);
-		await getTriggerTagsLive('tt0000009');
+		expect((await getTriggerTagsLive('tt0000009')).failed).toBe(false);
 		expect(fetchSpy).toHaveBeenCalledTimes(2);
 	});
 
@@ -320,9 +320,8 @@ describe('a non-OK upstream answer', () => {
 
 		const series = { title: 'X', tmdbId: '555', firstAirDate: '2020-01-01' };
 		await expect(getTriggerTagsForSeries(series)).resolves.toEqual({
-			itemId: null,
-			tags: [],
-			isSeries: true
+			result: { itemId: null, tags: [], isSeries: true },
+			failed: true
 		});
 		vi.advanceTimersByTime(61 * 1000);
 		await getTriggerTagsForSeries(series);

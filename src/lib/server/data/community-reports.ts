@@ -6,7 +6,6 @@ import { titleUm, umSource } from '#db/schema/sources.ts';
 import {
 	BURST_WINDOW_HOURS,
 	CONCERN_FLAGS,
-	REPORT_ACCOUNT_MIN_AGE_DAYS,
 	REPORT_CATEGORIES,
 	objectificationLevel,
 	reportFraming,
@@ -21,7 +20,8 @@ import {
 	type SexualLevel
 } from '#lib/media/utils/communityReports.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
-import { countingAccountWhere } from './counting-account.ts';
+import { countingAccountWhere, countsFromDate } from './counting-account.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
 import { holdReasonFor, type HoldFacts, type HoldReason } from './community-report-holds.ts';
 import {
 	getOrCreateTitleRow,
@@ -30,7 +30,6 @@ import {
 	type TitleRow
 } from './title-queries.ts';
 
-const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
 
 /** A reader's answers: a null level, flag or framing is "not sure" or "not answered". */
@@ -66,13 +65,6 @@ export type ReportWriteResult = {
 	status: ContentReportStatus;
 	holdReason: HoldReason | null;
 };
-
-/** When a report from an account created at `createdAt` starts counting: at once for staff. */
-export function countsFromDate(createdAt: Date, role: string): Date {
-	return isStaff(role)
-		? createdAt
-		: new Date(createdAt.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS);
-}
 
 /** The title's Unconsenting Media concern flags, selected by `CONCERN_FLAGS`. */
 const umFlagSelect = Object.fromEntries(

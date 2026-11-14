@@ -1,9 +1,7 @@
-import { alias } from 'drizzle-orm/sqlite-core';
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
-import { commentReports, commentVotes, comments, moderationActions } from '#db/schema/community.ts';
-import { titles } from '#db/schema/titles.ts';
+import { commentReports, comments, moderationActions } from '#db/schema/community.ts';
 import type { CommentStatus } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
@@ -12,6 +10,7 @@ import {
 	runMove,
 	statusMove,
 	stillIn,
+	editedSince,
 	unchangedSince,
 	type BatchStatement,
 	type EditedAt
@@ -20,6 +19,7 @@ import { lastActionByAdministrator, targetAllowed } from './moderation-target.ts
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { purgeProfile, purgeProfiles, purgeTitlesComments } from '#lib/server/http/purge-title.ts';
 import { purgeReportedTitles } from './community-report-moderation.ts';
+import { banReach, banWeightStatements } from './ban-weight.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -33,7 +33,14 @@ export type ModerationResult =
 			/** The authors of its published replies, whose profiles name it, when it entered or left `published`. */
 			replyAuthorIds?: string[];
 	  }
-	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
+	| {
+			ok: false;
+			/**
+			 * `edited`: the text changed after the moderator's view loaded. `admin-acted`: an
+			 * administrator took the latest action, which binds a moderator.
+			 */
+			reason: 'not-found' | 'invalid-state' | 'forbidden-target' | 'edited' | 'admin-acted';
+	  };
 
 /**
  * The log row for an action on a comment, written only if the comment is still in `from` when
@@ -92,6 +99,27 @@ const resolveOpenReports = (
 		)
 		.returning({ id: commentReports.id });
 
+/**
+ * Why a batch that moved nothing lost: the comment's text changed since the moderator's view
+ * (`edited`), or it left the expected status or lost its reports (`invalid-state`).
+ */
+async function lostRace(
+	commentId: string,
+	from: readonly CommentStatus[],
+	editedAt: EditedAt | undefined
+): Promise<'edited' | 'invalid-state'> {
+	const [now] = await db
+		.select({ status: comments.status, editedAt: comments.editedAt })
+		.from(comments)
+		.where(eq(comments.id, commentId));
+	const stale =
+		editedAt !== undefined &&
+		now &&
+		from.includes(now.status) &&
+		editedSince(now.editedAt, editedAt);
+	return stale ? 'edited' : 'invalid-state';
+}
+
 /** A moderator is bound by an administrator's latest action on the comment; an administrator is not. */
 async function heldByAdministrator(actor: UserRow, commentId: string): Promise<boolean> {
 	return actor.role !== 'administrator' && (await lastActionByAdministrator(commentId));
@@ -101,10 +129,10 @@ async function heldByAdministrator(actor: UserRow, commentId: string): Promise<b
  * One moderator action on a comment, as a single batch: the log row, the status move (with its
  * reply counts) and the resolution of the comment's open reports. The actor must be allowed to
  * act on the comment's author (`targetAllowed`), and a moderator may not undo an administrator's
- * latest action when `spec.adminBinds` is set. A spec with `editedAt` makes the comment public
- * only if its stored `editedAt` still equals it, so the moderator publishes the text they saw.
- * When the comment left the expected status or was edited between the read and the batch,
- * nothing is written and the result is `invalid-state`.
+ * latest action when `spec.adminBinds` is set (`admin-acted`). A spec with `editedAt` makes the
+ * comment public only if its stored `editedAt` still equals it, so the moderator publishes the
+ * text they saw; a comment edited since answers `edited`. When the comment left the expected
+ * status between the read and the batch, nothing is written and the result is `invalid-state`.
  */
 async function moveComment(
 	actor: UserRow,
@@ -127,9 +155,12 @@ async function moveComment(
 	const author = await targetAllowed(actor, comment.userId);
 	if (typeof author === 'string') return { ok: false, reason: author };
 	if (spec.adminBinds && (await heldByAdministrator(actor, commentId))) {
-		return { ok: false, reason: 'forbidden-target' };
+		return { ok: false, reason: 'admin-acted' };
 	}
 	if (!spec.from.includes(comment.status)) return { ok: false, reason: 'invalid-state' };
+	if (spec.editedAt !== undefined && editedSince(comment.editedAt, spec.editedAt)) {
+		return { ok: false, reason: 'edited' };
+	}
 	const version = spec.editedAt === undefined ? undefined : unchangedSince(spec.editedAt);
 
 	// Read before the move, so a failed read cannot leave a move whose purge is skipped.
@@ -147,7 +178,7 @@ async function moveComment(
 			version
 		)
 	]);
-	if (!moved) return { ok: false, reason: 'invalid-state' };
+	if (!moved) return { ok: false, reason: await lostRace(commentId, spec.from, spec.editedAt) };
 	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
 }
 
@@ -209,7 +240,7 @@ export async function dismissReports(
 	const { comment, title } = found;
 	const author = await targetAllowed(actor, comment.userId);
 	if (typeof author === 'string') return { ok: false, reason: author };
-	if (await heldByAdministrator(actor, commentId)) return { ok: false, reason: 'forbidden-target' };
+	if (await heldByAdministrator(actor, commentId)) return { ok: false, reason: 'admin-acted' };
 	const [{ open }] = await db
 		.select({ open: sql<number>`count(*)` })
 		.from(commentReports)
@@ -217,6 +248,7 @@ export async function dismissReports(
 	if (open === 0) return { ok: false, reason: 'invalid-state' };
 
 	const restores = comment.status === 'pending' && comment.moderationSource === 'reports';
+	if (restores && editedSince(comment.editedAt, editedAt)) return { ok: false, reason: 'edited' };
 	const version = restores ? unchangedSince(editedAt) : undefined;
 	const replyAuthorIds = restores
 		? await replyAuthorsAffected(commentId, 'pending', 'published')
@@ -249,7 +281,10 @@ export async function dismissReports(
 	]);
 	const resolved = results[1];
 	if (!Array.isArray(resolved) || resolved.length === 0) {
-		return { ok: false, reason: 'invalid-state' };
+		return {
+			ok: false,
+			reason: restores ? await lostRace(commentId, ['pending'], editedAt) : 'invalid-state'
+		};
 	}
 	if (!restores) return { ok: true, title };
 	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
@@ -294,48 +329,6 @@ export async function muteUser(
 	return { ok: true, title: null };
 }
 
-/** The reason the log row and the hidden comments of a ban carry. */
-const BAN_COMMENT_REASON = 'Account banned';
-
-/**
- * What a ban changes that the edge caches show: the titles whose lists lose a hidden comment
- * or a vote, and the profiles of the authors whose scores change and of the authors of the
- * published replies to a hidden comment.
- */
-async function banReach(targetId: string) {
-	const reply = alias(comments, 'reply');
-	const [hidden, voted, replied] = await Promise.all([
-		db
-			.selectDistinct({ kind: titles.kind, tmdbId: titles.tmdbId })
-			.from(comments)
-			.innerJoin(titles, eq(comments.titleId, titles.id))
-			.where(
-				and(eq(comments.userId, targetId), inArray(comments.status, ['published', 'pending']))
-			),
-		db
-			.selectDistinct({ kind: titles.kind, tmdbId: titles.tmdbId, authorId: comments.userId })
-			.from(commentVotes)
-			.innerJoin(comments, eq(commentVotes.commentId, comments.id))
-			.innerJoin(titles, eq(comments.titleId, titles.id))
-			.where(eq(commentVotes.userId, targetId)),
-		db
-			.selectDistinct({ userId: reply.userId })
-			.from(comments)
-			.innerJoin(reply, eq(reply.parentId, comments.id))
-			.where(
-				and(
-					eq(comments.userId, targetId),
-					eq(comments.status, 'published'),
-					eq(reply.status, 'published')
-				)
-			)
-	]);
-	return {
-		titles: [...hidden, ...voted],
-		profiles: [...voted.map((v) => v.authorId), ...replied.map((r) => r.userId)]
-	};
-}
-
 /**
  * Bans a user and ends their sessions (`banStatements`), with the log row in the same batch.
  * The same batch takes the account's weight away: its comment votes are deleted and the score
@@ -354,39 +347,10 @@ export async function banAccount(
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
 	const reach = await banReach(targetId);
-	const live = and(
-		eq(comments.userId, targetId),
-		inArray(comments.status, ['published', 'pending'])
-	);
-	const publishedOfTarget = sql`SELECT parent_id FROM comments WHERE user_id = ${targetId} AND status = 'published' UNION SELECT root_id FROM comments WHERE user_id = ${targetId} AND status = 'published'`;
 	await runBatch([
 		...banStatements(targetId, reason),
 		logUserAction(actor.id, targetId, 'ban', reason),
-		db
-			.update(comments)
-			.set({
-				replyCount: sql`max(${comments.replyCount} - (SELECT count(*) FROM comments c WHERE c.user_id = ${targetId} AND c.status = 'published' AND (c.parent_id = ${comments.id} OR c.root_id = ${comments.id})), 0)`,
-				updatedAt: sql`${comments.updatedAt}`
-			})
-			.where(sql`${comments.id} IN (${publishedOfTarget})`),
-		db
-			.update(comments)
-			.set({
-				score: sql`(SELECT coalesce(sum(v.value), 0) FROM comment_votes v WHERE v.comment_id = ${comments.id} AND v.user_id <> ${targetId})`,
-				updatedAt: sql`${comments.updatedAt}`
-			})
-			.where(
-				sql`${comments.id} IN (SELECT comment_id FROM comment_votes WHERE user_id = ${targetId})`
-			),
-		db.delete(commentVotes).where(eq(commentVotes.userId, targetId)),
-		db
-			.update(comments)
-			.set({
-				status: 'hidden',
-				moderationSource: 'moderator',
-				moderationReason: BAN_COMMENT_REASON
-			})
-			.where(live)
+		...banWeightStatements(targetId)
 	]);
 	purgeProfile(targetId);
 	purgeProfiles(reach.profiles);

@@ -1,4 +1,5 @@
 import { APIError, getAuthoritativeSessionFromCtx, getIP } from 'better-auth/api';
+import { SIGN_UP_UNAVAILABLE_CODE } from '#lib/auth-errors.ts';
 import { isLocalOrigin } from '#lib/server/http/origin.ts';
 import type { AuthEndpointContext } from './types.ts';
 
@@ -41,9 +42,10 @@ export async function verifyTurnstile(
  * `hooks.before` step: a passkey registration with no session (a sign-up) must carry a valid
  * Turnstile token. A signed-in reader adding a passkey is not a sign-up and needs none. The
  * session is read from the database, so a revoked cookie does not skip the check. The error
- * codes are the captcha plugin's (`MISSING_RESPONSE`, `VERIFICATION_FAILED`, `UNKNOWN_ERROR`),
- * which `#lib/auth-errors.ts` maps. With no secret, a sign-up is refused (`UNKNOWN_ERROR`) unless
- * the site's origin is local, so a missing secret cannot switch the check off in production.
+ * codes are the captcha plugin's (`MISSING_RESPONSE`, `VERIFICATION_FAILED`, `UNKNOWN_ERROR`)
+ * and `SIGN_UP_UNAVAILABLE_CODE`, which `#lib/auth-errors.ts` maps. With no secret, a sign-up is
+ * refused (`SIGN_UP_UNAVAILABLE_CODE`) unless the site's origin is local, so a missing secret
+ * cannot switch the check off in production.
  */
 export async function guardPasskeySignUp(
 	ctx: AuthEndpointContext,
@@ -55,9 +57,9 @@ export async function guardPasskeySignUp(
 	if (await getAuthoritativeSessionFromCtx(ctx)) return;
 	if (!turnstileSecret) {
 		console.error('[auth] TURNSTILE_SECRET_KEY is missing: passkey sign-ups are refused');
-		throw new APIError('INTERNAL_SERVER_ERROR', {
-			message: 'Something went wrong',
-			code: 'UNKNOWN_ERROR'
+		throw new APIError('SERVICE_UNAVAILABLE', {
+			message: 'Account creation is not available right now.',
+			code: SIGN_UP_UNAVAILABLE_CODE
 		});
 	}
 

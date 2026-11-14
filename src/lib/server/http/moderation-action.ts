@@ -31,6 +31,21 @@ export function viewedEditedAt(data: FormData, name = 'editedAt'): EditedAt | un
 	return /^\d{1,15}$/.test(value) ? Number(value) : undefined;
 }
 
+/** A publishing action refused for want of the `editedAt` the moderator's view carried. */
+type MissingVersion = { ok: false; reason: 'invalid' };
+
+/**
+ * Runs an action that makes a comment public with the `editedAt` its row showed (`viewedEditedAt`),
+ * or refuses it as `invalid` when the form carries none, so no action publishes text nobody
+ * saw. The single actions and the bulk operations share it.
+ */
+export function withViewedEditedAt(
+	editedAt: EditedAt | undefined,
+	run: (editedAt: EditedAt) => Promise<ModerationResult>
+): Promise<ModerationResult | MissingVersion> {
+	return editedAt === undefined ? Promise.resolve({ ok: false, reason: 'invalid' }) : run(editedAt);
+}
+
 type FlagCloseRefusal = Extract<FlagCloseResult, { ok: false }>['reason'];
 
 /** Why a request is refused before or instead of a change. */
@@ -63,6 +78,11 @@ const refusals: Record<Refusal, [number, string]> = {
 	invalid: [400, 'The request was not valid.'],
 	'not-found': [404, 'The comment, report or account no longer exists.'],
 	'invalid-state': [409, 'It is no longer in a state this action applies to.'],
+	edited: [409, 'The comment was edited after this page loaded. Read the new text, then decide.'],
+	'admin-acted': [
+		403,
+		'An administrator acted on this comment last, so only an administrator can approve, restore or dismiss its reports.'
+	],
 	'forbidden-target': [
 		403,
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'

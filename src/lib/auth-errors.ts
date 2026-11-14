@@ -14,6 +14,9 @@ const TOO_MANY = 'Too many attempts. Wait a minute and try again.';
 /** The code the server puts on a refused removal of the last sign-in method. */
 export const LAST_METHOD_CODE = 'LAST_SIGN_IN_METHOD';
 
+/** The code of a sign-up the server refuses because it has no Turnstile secret outside localhost. */
+export const SIGN_UP_UNAVAILABLE_CODE = 'SIGN_UP_UNAVAILABLE';
+
 /** Codes Better Auth's captcha plugin and `guardPasskeySignUp` use for a failed check. */
 const CAPTCHA_CODES = new Set(['VERIFICATION_FAILED', 'MISSING_RESPONSE']);
 
@@ -50,8 +53,8 @@ function isCaptchaFailure(error: AuthClientError): boolean {
 }
 
 /**
- * The sentence shown next to a failed passkey action. A rate limit, a ban, a failed Turnstile
- * check (sign-up only), a dismissed prompt and a duplicate passkey each get their own;
+ * The sentence shown next to a failed passkey action. A rate limit, a ban, a sign-up the site
+ * cannot take, a failed Turnstile check (sign-up only), a dismissed prompt and a duplicate passkey each get their own;
  * anything else gets the action's fallback.
  */
 export function passkeyErrorMessage(error: AuthClientError, action: Action): string {
@@ -59,6 +62,8 @@ export function passkeyErrorMessage(error: AuthClientError, action: Action): str
 	if (error.status === 403 && /banned/i.test(error.message ?? '')) {
 		return 'This account is banned.';
 	}
+	if (error.code === SIGN_UP_UNAVAILABLE_CODE)
+		return 'Account creation is not available right now.';
 	if (action === 'sign-up' && isCaptchaFailure(error)) {
 		return 'The check against automated sign-ups failed. Try again.';
 	}

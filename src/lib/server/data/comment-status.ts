@@ -36,6 +36,10 @@ export const stillIn = (id: string, status: CommentStatus, editedAt?: EditedAt):
 /** A comment's `edited_at` in milliseconds as a moderator's view loaded it; null when never edited. */
 export type EditedAt = number | null;
 
+/** Whether the stored `edited_at` differs from the one a moderator's view carried. */
+export const editedSince = (stored: Date | null, viewed: EditedAt): boolean =>
+	(stored?.getTime() ?? null) !== viewed;
+
 /**
  * A condition (for `statusMove`'s and `logCommentAction`'s `extraWhere`) that holds while the
  * comment's text is the one the moderator saw: its stored `edited_at` equals `editedAt`.

@@ -289,6 +289,16 @@ describe('purging', () => {
 		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 
+	it.each([
+		['edited', 409, /edited after this page loaded/],
+		['admin-acted', 403, /administrator acted on this comment last/]
+	] as const)('a %s refusal answers %i with its own message', async (reason, status, message) => {
+		queries.approveComment.mockResolvedValue({ ok: false, reason });
+		const result = await run('approve');
+		expect(result).toMatchObject({ status, data: { id: 'c1' } });
+		expect((result as { data: { error: string } }).data.error).toMatch(message);
+	});
+
 	it('mute and ban touch no list', async () => {
 		queries.muteUser.mockResolvedValue({ ok: true, title: null });
 		queries.banAccount.mockResolvedValue({ ok: true, title: null });

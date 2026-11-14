@@ -139,6 +139,48 @@ describe('a ban takes the account’s weight away', () => {
 	});
 });
 
+describe('a ban and the reply counts of nested threads', () => {
+	it('takes a nested reply off its parent and its root, whose parent is not the root', async () => {
+		await addUser('bad');
+		await addUser('other');
+		await addComment('root', 'author');
+		await addComment('mid', 'other', { parentId: 'root', rootId: 'root' });
+		await addComment('deep', 'bad', { parentId: 'mid', rootId: 'root' });
+		await addComment('sibling', 'other', { parentId: 'root', rootId: 'root' });
+		await db.update(comments).set({ replyCount: 3 }).where(eq(comments.id, 'root'));
+		await db.update(comments).set({ replyCount: 1 }).where(eq(comments.id, 'mid'));
+
+		expect(await banAccount(admin, 'bad', null)).toMatchObject({ ok: true });
+
+		expect(await row('deep')).toMatchObject({ status: 'hidden' });
+		expect((await row('mid')).replyCount).toBe(0);
+		expect((await row('root')).replyCount).toBe(2);
+		expect(await row('mid')).toMatchObject({ status: 'published' });
+		expect(await row('sibling')).toMatchObject({ status: 'published' });
+	});
+
+	it('hides a banned account replying under its own comment and keeps others’ replies counted', async () => {
+		await addUser('bad');
+		await addUser('other');
+		await addComment('mine', 'bad');
+		await addComment('mine-reply', 'bad', { parentId: 'mine', rootId: 'mine' });
+		await addComment('their-reply', 'other', { parentId: 'mine', rootId: 'mine' });
+		await addComment('nested', 'other', { parentId: 'mine-reply', rootId: 'mine' });
+		await db.update(comments).set({ replyCount: 3 }).where(eq(comments.id, 'mine'));
+		await db.update(comments).set({ replyCount: 1 }).where(eq(comments.id, 'mine-reply'));
+
+		expect(await banAccount(admin, 'bad', null)).toMatchObject({ ok: true });
+
+		for (const id of ['mine', 'mine-reply'])
+			expect(await row(id)).toMatchObject({ status: 'hidden', moderationReason: 'Account banned' });
+		expect(await row('their-reply')).toMatchObject({ status: 'published' });
+		expect(await row('nested')).toMatchObject({ status: 'published' });
+		// Only the banned account's own reply leaves the count; the others' stay.
+		expect((await row('mine')).replyCount).toBe(2);
+		expect((await row('mine-reply')).replyCount).toBe(1);
+	});
+});
+
 describe('bursts from fresh accounts', () => {
 	const answers: ReportAnswers = {
 		sexualPresent: null,

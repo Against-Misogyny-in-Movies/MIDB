@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { error, isHttpError, type RequestEvent } from '@sveltejs/kit';
+import { isHttpError, type RequestEvent } from '@sveltejs/kit';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import {
 	purgeCalls,
@@ -29,13 +29,7 @@ vi.mock('#lib/server/data/comment-votes.ts', () => ({ setVote, removeVote }));
 vi.mock('#lib/server/data/comment-reports.ts', () => ({ reportComment }));
 vi.mock('#lib/server/data/comment-title.ts', () => ({
 	findCommentTitle,
-	resolveCommentTitle,
-	// The real one imports the TMDB client; this keeps its contract.
-	parseTitleParams: (kind: string, tmdbId: string) => {
-		if ((kind !== 'movie' && kind !== 'tv') || !/^\d{1,9}$/.test(tmdbId))
-			error(404, 'Title not found');
-		return { kind, tmdbId: String(Number(tmdbId)) };
-	}
+	resolveCommentTitle
 }));
 
 const list = await import('../routes/api/titles/[kind]/[tmdbId]/comments/+server');

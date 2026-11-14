@@ -2,8 +2,14 @@ import { inArray, or, sql, type SQL } from 'drizzle-orm';
 import { users } from '#db/schema/auth.ts';
 import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.ts';
 import { isStaff, STAFF_ROLES } from '#lib/media/utils/staff.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
 
-const DAY_MS = 86_400_000;
+/** When a report or vote from an account created at `createdAt` starts counting: at once for staff. */
+export function countsFromDate(createdAt: Date, role: string): Date {
+	return isStaff(role)
+		? createdAt
+		: new Date(createdAt.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS);
+}
 
 /**
  * The rule for an account whose reports and votes carry weight, over `users`: staff, or at
@@ -22,7 +28,5 @@ export function accountOldEnough(
 	user: { role: string; createdAt: Date },
 	now: number = Date.now()
 ): boolean {
-	return (
-		isStaff(user.role) || user.createdAt.getTime() <= now - REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS
-	);
+	return countsFromDate(user.createdAt, user.role).getTime() <= now;
 }

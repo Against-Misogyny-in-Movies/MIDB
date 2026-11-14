@@ -7,6 +7,7 @@ import {
 	act,
 	text,
 	viewedEditedAt,
+	withViewedEditedAt,
 	type ActionEvent,
 	type Outcome
 } from '#lib/server/http/moderation-action.ts';
@@ -135,25 +136,27 @@ const reasonOf = (data: FormData) => text(data, 'reason')?.slice(0, MODERATION_R
 /** What a bulk operation reads for one comment: the reason, and the `editedAt` its row showed. */
 type BulkInput = { reason: string | null; editedAt: EditedAt | undefined };
 
-const invalidState = (): Promise<ModerationResult> =>
-	Promise.resolve({ ok: false, reason: 'invalid-state' });
-
 /**
  * The five operations a bulk action applies to each comment, by the single-comment functions.
- * The operations that publish need the row's `editedAt`; a row without one is refused.
+ * The operations that publish need the row's `editedAt` (`withViewedEditedAt`); a row without one
+ * is refused.
  */
 const BULK_OPS = {
 	approve: (staff, id, { editedAt }) =>
-		editedAt === undefined ? invalidState() : approveComment(staff, id, editedAt),
+		withViewedEditedAt(editedAt, (viewed) => approveComment(staff, id, viewed)),
 	hide: (staff, id, { reason }) => hideComment(staff, id, reason),
 	reject: (staff, id, { reason }) => rejectComment(staff, id, reason),
 	restore: (staff, id, { editedAt }) =>
-		editedAt === undefined ? invalidState() : restoreComment(staff, id, editedAt),
+		withViewedEditedAt(editedAt, (viewed) => restoreComment(staff, id, viewed)),
 	dismiss: (staff, id, { editedAt }) =>
-		editedAt === undefined ? invalidState() : dismissReports(staff, id, editedAt)
+		withViewedEditedAt(editedAt, (viewed) => dismissReports(staff, id, viewed))
 } satisfies Record<
 	string,
-	(staff: UserRow, id: string, input: BulkInput) => Promise<ModerationResult>
+	(
+		staff: UserRow,
+		id: string,
+		input: BulkInput
+	) => Promise<ModerationResult | { ok: false; reason: 'invalid' }>
 >;
 
 const isBulkOp = (op: string | null): op is keyof typeof BULK_OPS =>
@@ -173,7 +176,9 @@ function pageIds(data: FormData): string[] | null {
 }
 
 /**
- * Applies one operation to each comment in turn. Each function checks the comment's state and
+ * Applies one operation to each comment in turn. The result counts the comments applied, refused
+ * and, of those refused, edited since the page loaded.
+ * Each function checks the comment's state and
  * the author's standing itself, so a refusal costs only its own comment. Every title touched and
  * every profile (the authors' and those of their published replies) is purged once, however many
  * comments changed, and also when a later write throws: the changes already made are public by
@@ -195,13 +200,17 @@ function bulk(event: ActionEvent) {
 			>();
 			const authors = new Set<string>();
 			let applied = 0;
+			let edited = 0;
 			try {
 				for (const id of ids) {
 					const result = await BULK_OPS[op](staff, id, {
 						reason,
 						editedAt: viewedEditedAt(data, `editedAt.${id}`)
 					});
-					if (!result.ok) continue;
+					if (!result.ok) {
+						if (result.reason === 'edited') edited += 1;
+						continue;
+					}
 					applied += 1;
 					if (result.title) touched.set(result.title.id, result.title);
 					if (result.authorId) authors.add(result.authorId);
@@ -212,7 +221,7 @@ function bulk(event: ActionEvent) {
 				purgeProfiles(authors);
 			}
 			if (applied === 0) return { ok: false, reason: 'bulk-unchanged' };
-			return { ok: true, extra: { op, applied, refused: ids.length - applied } };
+			return { ok: true, extra: { op, applied, refused: ids.length - applied, edited } };
 		}
 	);
 }
@@ -268,12 +277,10 @@ export const actions: Actions = {
 			event,
 			'approve',
 			commentKey,
-			(staff, data) => {
-				const editedAt = viewedEditedAt(data);
-				return editedAt === undefined
-					? { ok: false, reason: 'invalid' as const }
-					: approveComment(staff, text(data, 'id') ?? '', editedAt);
-			},
+			(staff, data) =>
+				withViewedEditedAt(viewedEditedAt(data), (editedAt) =>
+					approveComment(staff, text(data, 'id') ?? '', editedAt)
+				),
 			purgeComments
 		),
 	hide: (event) =>
@@ -297,12 +304,10 @@ export const actions: Actions = {
 			event,
 			'restore',
 			commentKey,
-			(staff, data) => {
-				const editedAt = viewedEditedAt(data);
-				return editedAt === undefined
-					? { ok: false, reason: 'invalid' as const }
-					: restoreComment(staff, text(data, 'id') ?? '', editedAt);
-			},
+			(staff, data) =>
+				withViewedEditedAt(viewedEditedAt(data), (editedAt) =>
+					restoreComment(staff, text(data, 'id') ?? '', editedAt)
+				),
 			purgeComments
 		),
 	dismiss: (event) =>
@@ -310,12 +315,10 @@ export const actions: Actions = {
 			event,
 			'dismiss',
 			commentKey,
-			(staff, data) => {
-				const editedAt = viewedEditedAt(data);
-				return editedAt === undefined
-					? { ok: false, reason: 'invalid' as const }
-					: dismissReports(staff, text(data, 'id') ?? '', editedAt);
-			},
+			(staff, data) =>
+				withViewedEditedAt(viewedEditedAt(data), (editedAt) =>
+					dismissReports(staff, text(data, 'id') ?? '', editedAt)
+				),
 			purgeComments
 		),
 	mute: (event) =>

@@ -18,8 +18,7 @@ vi.mock('#lib/server/integrations/anthropic.ts', () => ({
 const resolveCommentTitle = vi.fn();
 vi.mock('#lib/server/data/comment-title.ts', () => ({
 	resolveCommentTitle,
-	findCommentTitle: resolveCommentTitle,
-	parseTitleParams: (kind: string, tmdbId: string) => ({ kind, tmdbId })
+	findCommentTitle: resolveCommentTitle
 }));
 
 const { POST } = await import('../routes/api/titles/[kind]/[tmdbId]/comments/+server');

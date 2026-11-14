@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import type { Movie } from '#lib/media/types/movie.ts';
 import type { Series } from '#lib/media/types/series.ts';
 import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
+import type { TitleSources } from '#lib/media/types/title-sources.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import { umFlagCount } from '#lib/media/utils/metrics.ts';
 import { scoreRepresentation, scoreSafety } from '#lib/media/utils/verdict.ts';
@@ -64,15 +65,32 @@ function tag(topicItemId: number, season: number | null, episode: number | null)
 	};
 }
 
-/** A promise the test settles by hand, standing in for the streamed DDD lookup. */
+/** Lets the request, its body and the stream's effect run. */
+async function settled() {
+	await new Promise((r) => setTimeout(r, 0));
+	flushSync();
+}
+
+const json = (body: TitleSources) =>
+	({ ok: true, status: 200, json: async () => body }) as unknown as Response;
+
+/** The sources request the test settles by hand: `resolve` answers it with a DDD result. */
 function deferred() {
 	let resolve!: (r: DddResult) => void;
-	const promise = new Promise<DddResult>((r) => (resolve = r));
-	return { promise, resolve };
+	const response = new Promise<Response>((r) => {
+		resolve = (ddd) => r(json({ ddd, letterboxd: null }));
+	});
+	const fetchMock = vi.fn(() => response);
+	vi.stubGlobal('fetch', fetchMock);
+	stubbed = true;
+	return { fetchMock, response, resolve };
 }
 
 let cleanup: (() => void) | null = null;
+let stubbed = false;
 afterEach(() => {
+	vi.unstubAllGlobals();
+	stubbed = false;
 	cleanup?.();
 	cleanup = null;
 });
@@ -82,6 +100,8 @@ function mount<K extends 'movie' | 'tv'>(
 	kind: K,
 	initial: TitleViewData<K extends 'movie' ? Movie : Series>
 ) {
+	// A request nothing answers, unless the test stubbed its own.
+	if (!stubbed) vi.stubGlobal('fetch', () => new Promise<Response>(() => {}));
 	const state = $state({ data: initial });
 	let view!: TitleView<K>;
 	cleanup = $effect.root(() => {
@@ -91,8 +111,6 @@ function mount<K extends 'movie' | 'tv'>(
 	return { view, state };
 }
 
-const pending = () => new Promise<DddResult>(() => {});
-
 describe('TitleView: UM selection', () => {
 	test('a seeded umEntry wins over candidates', () => {
 		const seeded = um(1, { rapeOnScreen: true });
@@ -100,8 +118,7 @@ describe('TitleView: UM selection', () => {
 			media: media<Movie>('603'),
 			bechdel: null,
 			umEntry: seeded,
-			umCandidates: [um(2), um(3)],
-			triggerTags: pending()
+			umCandidates: [um(2), um(3)]
 		});
 		expect(view.umData).toEqual(seeded);
 		expect(view.hasUmCandidates).toBe(false);
@@ -113,8 +130,7 @@ describe('TitleView: UM selection', () => {
 			media: media<Movie>('603'),
 			bechdel: null,
 			umEntry: null,
-			umCandidates: [only],
-			triggerTags: pending()
+			umCandidates: [only]
 		});
 		expect(view.umData).toEqual(only);
 		expect(view.hasUmCandidates).toBe(false);
@@ -126,8 +142,7 @@ describe('TitleView: UM selection', () => {
 			media: media<Movie>('1'),
 			bechdel: null,
 			umEntry: null,
-			umCandidates: candidates,
-			triggerTags: pending()
+			umCandidates: candidates
 		});
 		expect(view.umData).toBeNull();
 		expect(view.hasUmCandidates).toBe(true);
@@ -150,8 +165,7 @@ describe('TitleView: UM selection', () => {
 		const { view } = mount('movie', {
 			media: media<Movie>('1'),
 			bechdel: null,
-			umEntry: null,
-			triggerTags: pending()
+			umEntry: null
 		});
 		expect(view.umCandidates).toEqual([]);
 		expect(view.umData).toBeNull();
@@ -163,8 +177,7 @@ describe('TitleView: UM selection', () => {
 			media: media<Movie>('1'),
 			bechdel: null,
 			umEntry: entry,
-			umCandidates: [],
-			triggerTags: pending()
+			umCandidates: []
 		});
 		expect(view.flagCount).toBe(umFlagCount(entry));
 		expect(view.flagCount).toBe(2);
@@ -178,8 +191,7 @@ describe('TitleView: DDD stream and verdicts', () => {
 			media: media<Movie>('1'),
 			bechdel: null,
 			umEntry: um(8),
-			umCandidates: [],
-			triggerTags: ddd.promise
+			umCandidates: []
 		});
 		expect(view.ddd).toBeNull();
 		expect(view.safety.pending).toBe(true);
@@ -187,8 +199,7 @@ describe('TitleView: DDD stream and verdicts', () => {
 
 		const result: DddResult = { itemId: 9, tags: [tag(1, null, null)], isSeries: false };
 		ddd.resolve(result);
-		await ddd.promise;
-		await Promise.resolve();
+		await settled();
 		flushSync();
 		expect(view.ddd).toEqual(result);
 		expect(view.safety.pending).toBe(false);
@@ -197,15 +208,15 @@ describe('TitleView: DDD stream and verdicts', () => {
 	});
 
 	test('a failed DDD lookup settles to an empty result', async () => {
+		vi.stubGlobal('fetch', () => Promise.reject(new Error('down')));
+		stubbed = true;
 		const { view } = mount('tv', {
 			media: media<Series>('1399', { seasons: [] }),
 			bechdel: null,
 			umEntry: null,
-			umCandidates: [],
-			triggerTags: Promise.reject(new Error('down'))
+			umCandidates: []
 		});
-		await new Promise((r) => setTimeout(r, 0));
-		flushSync();
+		await settled();
 		expect(view.ddd).toEqual({ itemId: null, tags: [], isSeries: true });
 	});
 
@@ -216,8 +227,7 @@ describe('TitleView: DDD stream and verdicts', () => {
 			media: m,
 			bechdel,
 			umEntry: null,
-			umCandidates: [],
-			triggerTags: pending()
+			umCandidates: []
 		});
 		expect(view.isSeries).toBe(false);
 		expect(view.episodes).toBeNull();
@@ -240,8 +250,7 @@ describe('TitleView: DDD stream and verdicts', () => {
 			media: s,
 			bechdel: { rating: 3 },
 			umEntry: null,
-			umCandidates: [],
-			triggerTags: ddd.promise
+			umCandidates: []
 		});
 		expect(view.representation.signalsTotal).toBe(3);
 		expect(view.representation).toEqual(
@@ -261,8 +270,7 @@ describe('TitleView: DDD stream and verdicts', () => {
 			isSeries: true
 		};
 		ddd.resolve(result);
-		await ddd.promise;
-		await Promise.resolve();
+		await settled();
 		flushSync();
 
 		// No season picked: series-level and unscoped tags.
@@ -271,5 +279,50 @@ describe('TitleView: DDD stream and verdicts', () => {
 		flushSync();
 		expect(view.visibleTags.map((t) => t.topicItemId)).toEqual([1, 2]);
 		expect(view.safety).toEqual(scoreSafety(null, { ...result, tags: view.visibleTags }));
+	});
+});
+
+describe('TitleView: the sources request', () => {
+	const film = { media: media<Movie>('603'), bechdel: null, umEntry: null, umCandidates: [] };
+
+	test('one request per title, after mount, feeds DDD and Letterboxd', async () => {
+		const ddd: DddResult = { itemId: 3, tags: [tag(1, null, null)], isSeries: false };
+		const rating = { rating: 4.1, ratingCount: 10, url: 'https://letterboxd.com/film/x/' };
+		const fetchMock = vi.fn(async () => json({ ddd, letterboxd: rating }));
+		vi.stubGlobal('fetch', fetchMock);
+		stubbed = true;
+		const { view } = mount('movie', { ...film, letterboxdEnabled: true });
+		expect(view.ddd).toBeNull();
+		await settled();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock).toHaveBeenCalledWith('/api/titles/movie/603/sources');
+		expect(view.ddd).toEqual(ddd);
+		expect(view.sources.find((i) => i.source === 'letterboxd')).toMatchObject({
+			hasData: true,
+			busy: false
+		});
+	});
+
+	test('a non-OK answer settles DDD to empty and Letterboxd to failed', async () => {
+		vi.stubGlobal('fetch', async () => ({ ok: false, status: 429 }) as Response);
+		stubbed = true;
+		const { view } = mount('movie', { ...film, letterboxdEnabled: true });
+		await settled();
+		expect(view.ddd).toEqual({ itemId: null, tags: [], isSeries: false });
+		expect(view.sources.find((i) => i.source === 'letterboxd')).toMatchObject({ busy: false });
+	});
+
+	test('another title starts another request', async () => {
+		const fetchMock = vi.fn(async () =>
+			json({ ddd: { itemId: null, tags: [], isSeries: false }, letterboxd: null })
+		);
+		vi.stubGlobal('fetch', fetchMock);
+		stubbed = true;
+		const { state } = mount('movie', film);
+		await settled();
+		state.data = { ...state.data, media: media<Movie>('604') };
+		await settled();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(fetchMock).toHaveBeenLastCalledWith('/api/titles/movie/604/sources');
 	});
 });

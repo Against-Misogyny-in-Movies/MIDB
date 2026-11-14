@@ -1,21 +1,18 @@
-import { and, desc, eq, gt, ne } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
-import {
-	RETIRED_USERNAME_DAYS,
-	USERNAME_CHANGE_WAIT_DAYS,
-	NEW_USERNAME_RE,
-	foldUsername
-} from '#lib/media/utils/username.ts';
+import { USERNAME_CHANGE_WAIT_DAYS, NEW_USERNAME_RE } from '#lib/media/utils/username.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
+import { isTakenByOthers } from './username-taken.ts';
 import { usernameRefusal } from '#lib/server/moderation/username-check.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
-import { countsFromDate } from './community-reports.ts';
+import { countsFromDate } from './counting-account.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -65,36 +62,10 @@ export async function banUser(id: string, reason: string | null): Promise<void> 
 type ProfileUpdate = { username?: string; avatarKey?: string };
 type ProfileResult = { ok: true; user: UserRow } | { ok: false; reason: string };
 
-const DAY_MS = 86_400_000;
-
 /**
- * Whether `username` (lowercase) is held by another account: as its current name or a look-alike
- * of it (`foldUsername`), or as a name it retired within `RETIRED_USERNAME_DAYS`. Both reads use
- * the `username_folded` indexes. The account's own retired names do not count.
- */
-async function isTakenByOthers(username: string, id: string): Promise<boolean> {
-	const folded = foldUsername(username);
-	const cutoff = new Date(Date.now() - RETIRED_USERNAME_DAYS * DAY_MS);
-	const [current, retired] = await Promise.all([
-		db.query.users.findFirst({
-			columns: { id: true },
-			where: and(eq(users.usernameFolded, folded), ne(users.id, id))
-		}),
-		db.query.retiredUsernames.findFirst({
-			columns: { username: true },
-			where: and(
-				eq(retiredUsernames.usernameFolded, folded),
-				ne(retiredUsernames.userId, id),
-				gt(retiredUsernames.retiredAt, cutoff)
-			)
-		})
-	]);
-	return current !== undefined || retired !== undefined;
-}
-
-/**
- * Update display profile. Refuses a muted account, then validates format, the reserved names,
- * the comment blocklist and the avatar registry. A rename waits `USERNAME_CHANGE_WAIT_DAYS`
+ * Update display profile. Refuses a muted account, then validates the avatar registry and, only
+ * when the username changes, its format, the reserved names and the comment blocklist (a stored
+ * name is never checked again). A rename waits `USERNAME_CHANGE_WAIT_DAYS`
  * after the last one (staff and the first rename are exempt) and cannot take a name, or a
  * look-alike of one, that another account holds or retired in the last `RETIRED_USERNAME_DAYS`;
  * the old name is retired in the same batch.
@@ -110,20 +81,22 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 
 	if (data.username !== undefined) {
 		const normalized = data.username.toLowerCase();
-		if (!NEW_USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
-		const refusal = usernameRefusal(normalized);
-		if (refusal) return { ok: false, reason: `username-${refusal}` };
 		renamed = normalized !== current.username?.toLowerCase();
+		// A name already stored is not checked again: only a rename meets the shape, reserved and
+		// blocklist rules, so an account with an older name still saves its avatar.
 		if (renamed) {
+			if (!NEW_USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
+			const refusal = usernameRefusal(normalized);
+			if (refusal) return { ok: false, reason: `username-${refusal}` };
 			const waitEnds = current.usernameChangedAt
 				? current.usernameChangedAt.getTime() + USERNAME_CHANGE_WAIT_DAYS * DAY_MS
 				: 0;
 			if (!isStaff(current.role) && waitEnds > Date.now()) {
 				return { ok: false, reason: 'username-too-soon' };
 			}
-			if (await isTakenByOthers(normalized, id)) return { ok: false, reason: 'username-taken' };
+			if (await isTakenByOthers(db, normalized, id)) return { ok: false, reason: 'username-taken' };
+			patch.username = normalized;
 		}
-		patch.username = normalized;
 	}
 
 	if (data.avatarKey !== undefined) {
@@ -157,16 +130,24 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 	}
 }
 
+/** Whether a username can be chosen, or the first rule it breaks. */
+export type UsernameAvailability = 'available' | 'taken' | 'reserved' | 'blocked' | 'format';
+
 /**
  * Whether `username` could be chosen by the account `excludingId`: `updateProfile`'s own checks
  * of shape, reserved names, the blocklist and names held by other accounts (including
- * look-alikes and names they retired). The wait after a rename and a mute are not part of it.
- * Used for the debounced inline check on the profile edit form.
+ * look-alikes and names they retired), in that order. The wait after a rename and a mute are
+ * not part of it. Used for the debounced inline check on the profile edit form.
  */
-export async function isUsernameAvailable(username: string, excludingId: string): Promise<boolean> {
+export async function usernameAvailability(
+	username: string,
+	excludingId: string
+): Promise<UsernameAvailability> {
 	const normalized = username.toLowerCase();
-	if (!NEW_USERNAME_RE.test(normalized) || usernameRefusal(normalized)) return false;
-	return !(await isTakenByOthers(normalized, excludingId));
+	if (!NEW_USERNAME_RE.test(normalized)) return 'format';
+	const refusal = usernameRefusal(normalized);
+	if (refusal) return refusal;
+	return (await isTakenByOthers(db, normalized, excludingId)) ? 'taken' : 'available';
 }
 
 /** The title fields a history row needs to link back to its detail page. */

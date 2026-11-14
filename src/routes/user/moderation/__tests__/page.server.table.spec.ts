@@ -341,8 +341,9 @@ describe('?/bulk', () => {
 		actionsFns.hideComment
 			.mockResolvedValueOnce({ ok: true, title: ALIEN })
 			.mockResolvedValueOnce({ ok: true, title: ALIEN })
-			.mockResolvedValueOnce({ ok: false, reason: 'invalid-state' })
-			.mockResolvedValueOnce({ ok: true, title: DARK });
+			.mockResolvedValueOnce({ ok: false, reason: 'edited' })
+			.mockResolvedValueOnce({ ok: true, title: DARK })
+			.mockResolvedValueOnce({ ok: false, reason: 'invalid-state' });
 		const result = await run('bulk', [
 			['op', 'hide'],
 			['reason', '  Off topic  '],
@@ -350,6 +351,7 @@ describe('?/bulk', () => {
 			['ids', 'c2'],
 			['ids', 'c3'],
 			['ids', 'c4'],
+			['ids', 'c5'],
 			['ids', 'c1']
 		]);
 		expect(rateLimit).not.toHaveBeenCalled();
@@ -357,13 +359,14 @@ describe('?/bulk', () => {
 			['c1', 'Off topic'],
 			['c2', 'Off topic'],
 			['c3', 'Off topic'],
-			['c4', 'Off topic']
+			['c4', 'Off topic'],
+			['c5', 'Off topic']
 		]);
 		expect(actionsFns.hideComment.mock.calls[0][0]).toBe(STAFF);
 		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
 		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
 		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
-		expect(result).toEqual({ id: 'bulk', done: 'bulk', op: 'hide', applied: 3, refused: 1 });
+		expect(result).toMatchObject({ done: 'bulk', op: 'hide', applied: 3, refused: 2, edited: 1 });
 	});
 
 	it.each([
