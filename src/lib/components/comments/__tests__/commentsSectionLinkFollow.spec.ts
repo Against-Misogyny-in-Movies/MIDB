@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommentThread, CommentView } from '#lib/media/types/comments.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
@@ -95,9 +95,10 @@ describe('CommentsSection following a second link', () => {
 		mount(fetcher);
 		await screen.findByText('Text of first');
 		const article = document.getElementById('comment-first') as HTMLElement;
-		const edit = await screen.findByRole('button', { name: 'Edit' });
-		await waitFor(() => expect((edit as HTMLButtonElement).disabled).toBe(false));
-		await fireEvent.click(edit);
+		const more = await within(article).findByRole('button', { name: 'More actions' });
+		await waitFor(() => expect((more as HTMLButtonElement).disabled).toBe(false));
+		await fireEvent.click(more);
+		await fireEvent.click(within(article).getByRole('button', { name: 'Edit' }));
 		const draft = (await screen.findByLabelText('Edit comment')) as HTMLTextAreaElement;
 		await fireEvent.input(draft, { target: { value: 'Half-written edit' } });
 

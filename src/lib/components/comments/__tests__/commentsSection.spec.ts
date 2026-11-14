@@ -1,7 +1,13 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommentView, OwnComment, ViewerCommentState } from '#lib/media/types/comments.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
+
+/** Opens the comment's menu and returns its item with this name. */
+async function menuItem(scope: HTMLElement, name: string): Promise<HTMLElement> {
+	await fireEvent.click(within(scope).getByRole('button', { name: 'More actions' }));
+	return within(scope).getByRole('button', { name });
+}
 
 vi.mock('$app/env', () => ({ browser: true }));
 
@@ -215,11 +221,13 @@ describe('CommentsSection signed in', () => {
 		await screen.findByText('My words');
 		const mine = document.getElementById('comment-mine')!;
 		expect(mine.querySelector('[aria-label="Upvote"]')).toBeNull();
+		await fireEvent.click(within(mine).getByRole('button', { name: 'More actions' }));
 		expect(mine.textContent).toMatch(/Edit/);
 		expect(mine.textContent).toMatch(/Delete/);
 		expect(mine.textContent).not.toMatch(/Report/);
 		const other = document.getElementById('comment-a')!;
 		expect(other.querySelector('[aria-label="Upvote"]')).toBeTruthy();
+		await fireEvent.click(within(other).getByRole('button', { name: 'More actions' }));
 		expect(other.textContent).toMatch(/Report/);
 		expect(other.textContent).not.toMatch(/Edit/);
 	});
@@ -309,10 +317,7 @@ describe('CommentsSection signed in', () => {
 		);
 		await screen.findByText('My words');
 		const mine = document.getElementById('comment-mine')!;
-		const deleteButton = [...mine.querySelectorAll('button')].find(
-			(b) => b.textContent?.trim() === 'Delete'
-		)!;
-		await fireEvent.click(deleteButton);
+		await fireEvent.click(await menuItem(mine, 'Delete'));
 		expect(mine.textContent).toMatch(/Other readers no longer see its text/);
 		expect(mine.textContent).toMatch(/Replies stay under a placeholder/);
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
@@ -331,7 +336,7 @@ describe('CommentsSection signed in', () => {
 			})
 		);
 		await screen.findByText('Text of a');
-		await fireEvent.click(screen.getByRole('button', { name: 'Report' }));
+		await fireEvent.click(await menuItem(document.getElementById('comment-a')!, 'Report'));
 		const send = screen.getByRole('button', { name: 'Send report' }) as HTMLButtonElement;
 		expect(send.disabled).toBe(true);
 		await fireEvent.click(screen.getByLabelText('Spam'));
@@ -354,9 +359,7 @@ describe('CommentsSection signed in', () => {
 		);
 		await screen.findByText('My words');
 		const mine = document.getElementById('comment-mine')!;
-		await fireEvent.click(
-			[...mine.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Edit')!
-		);
+		await fireEvent.click(await menuItem(mine, 'Edit'));
 		expect(screen.getByText('Saving runs moderation again.')).toBeTruthy();
 		const field = screen.getByRole('textbox', { name: 'Edit comment' });
 		await fireEvent.input(field, { target: { value: 'Changed' } });
@@ -378,9 +381,7 @@ describe('CommentsSection signed in', () => {
 		);
 		await screen.findByText('My words');
 		const mine = document.getElementById('comment-mine')!;
-		await fireEvent.click(
-			[...mine.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Delete')!
-		);
+		await fireEvent.click(await menuItem(mine, 'Delete'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
 		await screen.findByText('This comment was removed.');
 		await waitFor(() => expect(document.activeElement?.id).toBe('comment-mine'));
@@ -397,9 +398,7 @@ describe('CommentsSection signed in', () => {
 		);
 		await screen.findByText('My words');
 		const mine = document.getElementById('comment-mine')!;
-		await fireEvent.click(
-			[...mine.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Delete')!
-		);
+		await fireEvent.click(await menuItem(mine, 'Delete'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }));
 		await waitFor(() => expect(document.getElementById('comment-mine')).toBeNull());
 		await waitFor(() => expect(document.activeElement?.id).toBe('comment-a'));
@@ -414,7 +413,7 @@ describe('CommentsSection signed in', () => {
 			})
 		);
 		await screen.findByText('Text of a');
-		await fireEvent.click(screen.getByRole('button', { name: 'Report' }));
+		await fireEvent.click(await menuItem(document.getElementById('comment-a')!, 'Report'));
 		await fireEvent.click(screen.getByLabelText('Spam'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
 		await waitFor(() => expect(document.activeElement?.id).toBe('comment-a'));
@@ -437,7 +436,7 @@ describe('CommentsSection signed in', () => {
 			/write, edit, delete, vote on or report/
 		);
 		expect(screen.queryByRole('textbox')).toBeNull();
-		for (const name of ['Upvote', 'Downvote', 'Reply', 'Report']) {
+		for (const name of ['Upvote', 'Downvote', 'Reply', 'More actions']) {
 			expect(screen.getByRole('button', { name })).toHaveProperty('disabled', true);
 		}
 	});

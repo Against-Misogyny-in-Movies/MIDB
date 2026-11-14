@@ -3,6 +3,7 @@
 	import Badge from '#lib/components/ui/badge.svelte';
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import CommentAction from './commentAction.svelte';
+	import CommentMenu from './commentMenu.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentDate from './commentDate.svelte';
 	import CommentComposer from './commentComposer.svelte';
@@ -62,6 +63,22 @@
 	const deleteKey = $derived(`delete:${comment.id}`);
 
 	const toggle = (next: NonNullable<typeof mode>) => (mode = mode === next ? null : next);
+
+	/** The less frequent actions, in the comment's menu: edit and delete on the reader's own, report on others'. */
+	const menuItems = $derived(
+		own
+			? [
+					...(closed
+						? []
+						: [{ label: 'Edit', expanded: mode === 'edit', onselect: () => toggle('edit') }]),
+					...(comment.review?.status === 'deleted'
+						? []
+						: [{ label: 'Delete', expanded: mode === 'delete', onselect: () => toggle('delete') }])
+				]
+			: signedIn && !comment.review
+				? [{ label: 'Report', expanded: mode === 'report', onselect: () => toggle('report') }]
+				: []
+	);
 
 	/** The comments next to this one, in the order focus falls back to when this one leaves the list. */
 	function neighbourIds(): string[] {
@@ -125,14 +142,18 @@
 					name={comment.author?.displayName ?? 'Account'}
 				/></span
 			>
-			{#if own && !comment.review}<Badge tone="brand">Author</Badge>{/if}
 			{#if role}<Badge tone="brand">{role}</Badge>{/if}
-			<CommentDate class="label" {href} createdAt={comment.createdAt} />
-			{#if comment.editedAt}<span class="label">Edited</span>{/if}
+			<CommentDate class="date" short {href} createdAt={comment.createdAt} />
+			{#if comment.editedAt}<span class="edited">Edited</span>{/if}
 			{#if comment.review}
 				<Badge tone={commentStatusTone(comment.review.status)}>
 					{COMMENT_STATUS_LABELS[comment.review.status]}
 				</Badge>
+			{/if}
+			{#if menuItems.length > 0}
+				<span class="more">
+					<CommentMenu label="More actions" items={menuItems} disabled={locked} />
+				</span>
 			{/if}
 		</header>
 
@@ -167,75 +188,47 @@
 		{/if}
 	{/if}
 
-	{#if !comment.removed}
+	{#if !comment.removed && !comment.review && (canVote || signedIn || comment.score !== 0)}
 		<div class="actions">
-			{#if !comment.review}
-				{#if canVote}
-					<div
-						class="votes"
-						role="group"
-						aria-label="Vote on this comment"
-						aria-describedby={votesHint ? votesHintId : undefined}
-						title={votesHint}
+			{#if canVote}
+				<div
+					class="votes"
+					role="group"
+					aria-label="Vote on this comment"
+					aria-describedby={votesHint ? votesHintId : undefined}
+					title={votesHint}
+				>
+					{#if votesHint}<span class="sr-only" id={votesHintId}>{votesHint}</span>{/if}
+					<CommentAction
+						icon
+						label="Upvote"
+						describedby={scoreId}
+						pressed={vote === 1}
+						disabled={voteLocked}
+						onclick={() => comments.vote(comment.id, 1)}
 					>
-						{#if votesHint}<span class="sr-only" id={votesHintId}>{votesHint}</span>{/if}
-						<CommentAction
-							icon
-							label="Upvote"
-							describedby={scoreId}
-							pressed={vote === 1}
-							disabled={voteLocked}
-							onclick={() => comments.vote(comment.id, 1)}
-						>
-							<i class="ri-arrow-up-line" aria-hidden="true"></i>
-						</CommentAction>
-						<span class="score" id={scoreId}
-							><span class="sr-only">Score</span> {comment.score}</span
-						>
-						<CommentAction
-							icon
-							label="Downvote"
-							describedby={scoreId}
-							pressed={vote === -1}
-							disabled={voteLocked}
-							onclick={() => comments.vote(comment.id, -1)}
-						>
-							<i class="ri-arrow-down-line" aria-hidden="true"></i>
-						</CommentAction>
-					</div>
-				{:else}
-					<span class="score score--alone">Score {comment.score}</span>
-				{/if}
+						<i class="ri-arrow-up-line" aria-hidden="true"></i>
+					</CommentAction>
+					<span class="score" id={scoreId}><span class="sr-only">Score</span> {comment.score}</span>
+					<CommentAction
+						icon
+						label="Downvote"
+						describedby={scoreId}
+						pressed={vote === -1}
+						disabled={voteLocked}
+						onclick={() => comments.vote(comment.id, -1)}
+					>
+						<i class="ri-arrow-down-line" aria-hidden="true"></i>
+					</CommentAction>
+				</div>
+			{:else}
+				<span class="score score--alone">Score {comment.score}</span>
 			{/if}
 
-			{#if signedIn && !comment.review}
+			{#if signedIn}
 				<CommentAction disabled={locked} expanded={mode === 'reply'} onclick={() => toggle('reply')}
-					>Reply</CommentAction
+					><i class="ri-reply-line" aria-hidden="true"></i>Reply</CommentAction
 				>
-			{/if}
-			{#if own}
-				{#if !closed}
-					<CommentAction disabled={locked} expanded={mode === 'edit'} onclick={() => toggle('edit')}
-						>Edit</CommentAction
-					>
-				{/if}
-				{#if comment.review?.status !== 'deleted'}
-					<CommentAction
-						disabled={locked}
-						expanded={mode === 'delete'}
-						onclick={() => toggle('delete')}
-					>
-						Delete
-					</CommentAction>
-				{/if}
-			{:else if signedIn && !comment.review}
-				<CommentAction
-					disabled={locked}
-					expanded={mode === 'report'}
-					onclick={() => toggle('report')}
-				>
-					Report
-				</CommentAction>
 			{/if}
 		</div>
 	{/if}
@@ -312,8 +305,30 @@
 		gap: var(--spacing-xs) var(--spacing-sm);
 	}
 
+	/* The name and the date read as text in the row; they show they are links on hover. */
 	.name {
 		@apply font-semibold;
+	}
+
+	.name :global(a),
+	.meta :global(.date) {
+		color: inherit;
+		text-decoration-color: transparent;
+	}
+
+	.name :global(a:hover),
+	.meta :global(.date:hover) {
+		text-decoration-color: currentColor;
+	}
+
+	.meta :global(.date),
+	.edited {
+		@apply text-ink-muted;
+	}
+
+	/* The menu sits at the row's end, so the actions it holds never move the name. */
+	.more {
+		margin-left: auto;
 	}
 
 	.body {
@@ -330,6 +345,12 @@
 		@apply flex flex-wrap items-center;
 		min-height: 2rem;
 		gap: var(--spacing-xs);
+		/* The vote arrows line up with the text above them, not with their own padding. */
+		margin-left: calc(-1 * var(--spacing-xs));
+	}
+
+	.actions :global(.ri-reply-line) {
+		margin-right: var(--spacing-xs);
 	}
 
 	.votes {
@@ -342,8 +363,9 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* A score with no vote arrows: a reader who cannot vote, or the reader's own comment. */
 	.score--alone {
-		@apply text-ink-muted font-normal;
-		padding-inline: var(--spacing-sm);
+		@apply text-ink-muted font-normal text-left;
+		padding-inline: var(--spacing-xs) var(--spacing-sm);
 	}
 </style>

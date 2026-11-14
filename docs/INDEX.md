@@ -42,12 +42,12 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
 - `PRODUCT.md` — Product (~680 tok)
-- `DESIGN.md` — Design (~5.6K tok)
+- `DESIGN.md` — Design (~5.8K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~3.2K) ← 1
+  - 37–65 Components (~3.4K) ← 1
   - 66–73 Pages (~830)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)

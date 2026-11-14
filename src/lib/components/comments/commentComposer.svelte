@@ -47,6 +47,8 @@
 	const empty = $derived(length === 0);
 	const unchanged = $derived(body.trim() === initial.trim());
 	const full = $derived(body.length >= COMMENT_BODY_MAX);
+	/** The count shows once the text nears the limit; a short comment needs no counter. */
+	const nearLimit = $derived(body.length >= COMMENT_BODY_MAX * 0.8);
 
 	onMount(() => {
 		if (autofocus) field?.focus();
@@ -67,6 +69,7 @@
 		id="{id}-field"
 		class="input field"
 		rows="2"
+		placeholder={label}
 		maxlength={COMMENT_BODY_MAX}
 		bind:value={body}
 		bind:this={field}
@@ -86,9 +89,11 @@
 		{#if oncancel}
 			<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
 		{/if}
-		<span class="label count" class:count--full={full}>
-			{body.length.toLocaleString('en-US')} / {COMMENT_BODY_MAX.toLocaleString('en-US')}
-		</span>
+		{#if nearLimit}
+			<span class="label count" class:count--full={full}>
+				{body.length.toLocaleString('en-US')} / {COMMENT_BODY_MAX.toLocaleString('en-US')}
+			</span>
+		{/if}
 	</div>
 	<div class="status" class:status--held={busy || error || settled} aria-live="polite">
 		{#if busy}
