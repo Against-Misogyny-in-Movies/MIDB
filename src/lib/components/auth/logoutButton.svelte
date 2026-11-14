@@ -52,4 +52,10 @@
 	.logout:focus-visible {
 		outline-offset: -2px;
 	}
+
+	@media (pointer: coarse) {
+		.logout {
+			min-height: 2.75rem;
+		}
+	}
 </style>

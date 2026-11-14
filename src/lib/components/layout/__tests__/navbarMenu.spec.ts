@@ -18,4 +18,13 @@ describe('NavbarMenu', () => {
 		expect(document.getElementById(trigger.getAttribute('aria-controls')!)).toContain(methodology);
 		expect(document.activeElement).toBe(methodology);
 	});
+
+	it('returns focus to the button when Escape closes it', async () => {
+		render(NavbarMenu);
+		const trigger = screen.getByRole('button', { name: 'Menu' });
+		await fireEvent.click(trigger);
+		await fireEvent.keyDown(window, { key: 'Escape' });
+		expect(trigger.getAttribute('aria-expanded')).toBe('false');
+		expect(document.activeElement).toBe(trigger);
+	});
 });
