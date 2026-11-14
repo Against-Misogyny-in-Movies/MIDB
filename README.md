@@ -1,6 +1,6 @@
 # MIDB
 
-[![Accessibility: WCAG 2.2 AA target](https://img.shields.io/badge/accessibility-WCAG_2.2_AA_target-6d28d9)](ACCESSIBILITY.md)
+[![Accessibility: WCAG 2.2 AA](https://img.shields.io/badge/accessibility-WCAG_2.2_AA-6d28d9)](ACCESSIBILITY.md)
 
 MIDB (Movie Information Database, working title) is a SvelteKit app that shows movies and TV series through a diversity and content-safety lens. Each title page combines live TMDB data with the Bechdel Test, Unconsenting Media advisories and Does The Dog Die trigger tags.
 
