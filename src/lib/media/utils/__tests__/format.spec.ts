@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	formatCurrency,
 	formatDate,
+	formatShortDate,
 	displayTitle,
 	formatRuntime,
 	countryName,
@@ -63,6 +64,17 @@ describe('languageName', () => {
 		const result = languageName('xx');
 		expect(typeof result).toBe('string');
 		expect(result.length).toBeGreaterThan(0);
+	});
+});
+
+describe('formatShortDate', () => {
+	test('abbreviates the month, read in UTC', () => {
+		expect(formatShortDate('2026-11-14T23:30:00Z')).toBe('Nov 14, 2026');
+	});
+
+	test('returns an em-dash for an empty or unparseable value', () => {
+		expect(formatShortDate('')).toBe('—');
+		expect(formatShortDate('not a date')).toBe('—');
 	});
 });
 

@@ -191,9 +191,19 @@
 		@apply text-ink;
 	}
 
-	/* The table takes the layout's whole column; the header and the tabs keep its left edge. */
+	/*
+	 * The table needs more room than the layout's column: on a wide screen the page grows past the
+	 * column on both sides, up to 90rem, and keeps a 1.5rem margin to the window's edges.
+	 */
 	.page.wide {
 		max-width: none;
+	}
+
+	@media (min-width: 64rem) {
+		.page.wide {
+			width: min(90rem, 100vw - 3rem);
+			margin-left: calc(50% - min(45rem, 50vw - 1.5rem));
+		}
 	}
 
 	h1 {

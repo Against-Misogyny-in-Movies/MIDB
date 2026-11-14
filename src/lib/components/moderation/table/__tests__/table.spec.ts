@@ -239,7 +239,7 @@ describe('moderationTable', () => {
 		}
 	};
 
-	it('labels every column header, and each cell for the stacked layout', () => {
+	it('labels every column header, with one cell per column in each row', () => {
 		render(ModerationTable, {
 			rows: [row],
 			me: { id: 'mod', role: 'moderator' },
@@ -259,19 +259,8 @@ describe('moderationTable', () => {
 			'Posted',
 			'Actions'
 		]);
-		const labels = [...document.querySelectorAll('tbody td[data-label]')].map((td) =>
-			td.getAttribute('data-label')
-		);
-		expect(labels).toEqual([
-			'Comment',
-			'Author',
-			'Title',
-			'Status',
-			'Automatic check',
-			'Reports',
-			'Scan',
-			'Posted'
-		]);
+		const [, body] = screen.getAllByRole('row');
+		expect(within(body).getAllByRole('cell')).toHaveLength(headers.length);
 	});
 
 	it('shows readable categories and severity, the reports and the latest scan', () => {
