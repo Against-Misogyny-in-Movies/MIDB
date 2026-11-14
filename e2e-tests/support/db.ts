@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
 
 /** Runs SQL against the local D1 that `wrangler dev` serves (`.wrangler/state`), and returns its rows. */
 export function d1<Row = Record<string, unknown>>(sql: string): Row[] {
@@ -27,6 +29,15 @@ export function seedTitle(kind: 'movie' | 'tv', tmdbId: number, title: string): 
 /** Gives the account the moderator role, as `db:seed:admin` does for an administrator. */
 export function makeModerator(username: string): void {
 	d1(`UPDATE user SET role = 'moderator' WHERE username = '${username.replace(/'/g, "''")}'`);
+}
+
+/**
+ * Backdates the account's `created_at` (epoch milliseconds) past `REPORT_ACCOUNT_MIN_AGE_DAYS`, so
+ * its votes and reports count. A passkey sign-up makes a fresh account that the rule refuses.
+ */
+export function ageAccount(username: string): void {
+	const created = Date.now() - (REPORT_ACCOUNT_MIN_AGE_DAYS + 1) * DAY_MS;
+	d1(`UPDATE user SET created_at = ${created} WHERE username = '${username.replace(/'/g, "''")}'`);
 }
 
 export interface SeededComment {
