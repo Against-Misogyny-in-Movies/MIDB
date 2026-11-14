@@ -38,6 +38,20 @@ describe('getUnconsentingCandidates', () => {
 		expect(result[0]).toMatchObject({ year: 2011, attemptedRape: true, noRape: false });
 	});
 
+	it('falls back to an entry a year off when none shares the year', async () => {
+		await insertUm(1, 'witch', 2015);
+		await insertUm(2, 'witch', null);
+		const result = await getUnconsentingCandidates(ref('The Witch', '2016-02-19'));
+		expect(result.map((c) => c.umId)).toEqual([1]);
+	});
+
+	it('prefers the exact year over a year off', async () => {
+		await insertUm(1, 'it', 2016);
+		await insertUm(2, 'it', 2017);
+		const result = await getUnconsentingCandidates(ref('It', '2017-09-06'));
+		expect(result.map((c) => c.umId)).toEqual([2]);
+	});
+
 	it('offers unknown-year entries when no year matches', async () => {
 		await insertUm(1, 'mean girls', 2004);
 		await insertUm(2, 'mean girls', null);
