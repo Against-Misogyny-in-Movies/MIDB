@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { ReportReason } from '#lib/media/types/comments.ts';
 	import {
 		REPORT_NOTE_MAX,
@@ -18,6 +19,10 @@
 	let { commentId, state: comments, onclose, onsent }: Props = $props();
 
 	let reason = $state<ReportReason | null>(null);
+	let reasons: HTMLFieldSetElement | undefined = $state();
+
+	// The form opens from the comment's menu, whose item leaves the page: the focus moves to the first reason.
+	onMount(() => reasons?.querySelector<HTMLInputElement>('input')?.focus());
 	let note = $state('');
 	const key = $derived(`report:${commentId}`);
 
@@ -29,7 +34,7 @@
 </script>
 
 <form class="plate report" onsubmit={submit}>
-	<fieldset class="reasons">
+	<fieldset class="reasons" bind:this={reasons}>
 		<legend class="label">Reason for the report</legend>
 		{#each reportReason as value (value)}
 			<label class="reason">

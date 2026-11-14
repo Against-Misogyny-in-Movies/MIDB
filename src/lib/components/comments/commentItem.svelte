@@ -87,6 +87,16 @@
 		return [all[at + 1]?.id, all[at - 1]?.id].filter((id): id is string => Boolean(id));
 	}
 
+	/**
+	 * Closes the panel without acting, and puts the focus back on what opened it: Reply, or the
+	 * menu button for an edit, a report or a delete (their menu items left the page with the menu).
+	 */
+	function cancelPanel(): void {
+		const opener = mode === 'reply' ? '[data-action="reply"]' : '.more button';
+		mode = null;
+		void focusAfterUpdate(() => root?.querySelector<HTMLElement>(opener) ?? root);
+	}
+
 	/** Closes the panel after it did its work, and puts the focus on the comment it acted on. */
 	async function closeAndFocus(): Promise<void> {
 		mode = null;
@@ -152,7 +162,11 @@
 			{/if}
 			{#if menuItems.length > 0}
 				<span class="more">
-					<CommentMenu label="More actions" items={menuItems} disabled={locked} />
+					<CommentMenu
+						label="More actions on the comment by {comment.author?.displayName ?? 'Account'}"
+						items={menuItems}
+						disabled={locked}
+					/>
 				</span>
 			{/if}
 		</header>
@@ -177,7 +191,7 @@
 				nested
 				autofocus
 				onsubmit={saveEdit}
-				oncancel={() => (mode = null)}
+				oncancel={cancelPanel}
 			/>
 		{:else}
 			<p class="body">{comment.body}</p>
@@ -226,7 +240,11 @@
 			{/if}
 
 			{#if signedIn}
-				<CommentAction disabled={locked} expanded={mode === 'reply'} onclick={() => toggle('reply')}
+				<CommentAction
+					data="reply"
+					disabled={locked}
+					expanded={mode === 'reply'}
+					onclick={() => toggle('reply')}
 					><i class="ri-reply-line" aria-hidden="true"></i>Reply</CommentAction
 				>
 			{/if}
@@ -243,14 +261,14 @@
 				nested
 				autofocus
 				onsubmit={sendReply}
-				oncancel={() => (mode = null)}
+				oncancel={cancelPanel}
 			/>
 		{/if}
 		{#if mode === 'report'}
 			<CommentReportForm
 				commentId={comment.id}
 				state={comments}
-				onclose={() => (mode = null)}
+				onclose={cancelPanel}
 				onsent={closeAndFocus}
 			/>
 		{/if}
@@ -264,7 +282,7 @@
 				cancelLabel="Keep comment"
 				busy={comments.busy[deleteKey]}
 				onconfirm={remove}
-				oncancel={() => (mode = null)}
+				oncancel={cancelPanel}
 			/>
 		{/if}
 	{/if}

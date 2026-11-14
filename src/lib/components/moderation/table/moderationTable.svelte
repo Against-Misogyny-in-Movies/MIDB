@@ -62,7 +62,7 @@
 						<th scope="col">Reports</th>
 						<th scope="col" class="scan">Scan</th>
 						<th scope="col" class="posted">Posted</th>
-						<th scope="col"><span class="sr-only">Actions</span></th>
+						<th scope="col" class="actions"><span class="sr-only">Actions</span></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -245,10 +245,6 @@
 		border-bottom: 0;
 	}
 
-	.row:hover > td {
-		background-color: var(--surface-sunken);
-	}
-
 	.select {
 		width: 2.5rem;
 		padding: 0;
@@ -311,8 +307,13 @@
 		@apply font-medium text-ink;
 	}
 
+	/* Review stays in view at the row's end while the table scrolls sideways. */
 	.actions {
+		position: sticky;
+		right: 0;
 		padding-right: var(--spacing-md);
+		background-color: var(--surface-raised);
+		box-shadow: inset 1px 0 0 var(--border);
 	}
 
 	@media (pointer: coarse) {

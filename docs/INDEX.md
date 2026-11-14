@@ -42,12 +42,12 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
 - `PRODUCT.md` — Product (~690 tok)
-- `DESIGN.md` — Design (~6.0K tok)
+- `DESIGN.md` — Design (~6.2K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~3.4K) ← 1
+  - 37–65 Components (~3.5K) ← 1
   - 66–73 Pages (~1.1K)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
@@ -92,17 +92,11 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~4.4K tok)
-  - 5–16 Rules (~270)
+- `docs/phases/STATUS.md` — Phase status (~4.5K tok)
+  - 5–16 Rules (~260)
   - 17–60 Phases (~1.8K)
-  - 61–107 Open items (~1.1K) ← 1
-  - 108–155 Standing decisions (~1.2K)
-
-## Live plans
-
-Read when a task names the plan.
-
-- `docs/plans/plan-profile.md` — Plan: one profile page (~540 tok)
+  - 61–110 Open items (~1.2K) ← 1
+  - 111–159 Standing decisions (~1.2K)
 
 ## Policies
 

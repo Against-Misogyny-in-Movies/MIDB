@@ -91,6 +91,7 @@
 		<CommentDate class="label" href={permalink} createdAt={comment.createdAt} />
 		{#if comment.parentId}<span class="label">Reply</span>{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
+		{#if comment.status === 'published'}<span class="label num">Score {comment.score}</span>{/if}
 		{#if comment.status !== 'published'}
 			<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge
 			>
@@ -155,6 +156,11 @@
 
 <style lang="postcss">
 	@reference "../../../app.css";
+
+	/* Focused after an edit or a delete; the ring sits inside, so a clipping card does not cut it. */
+	.row:focus-visible {
+		outline-offset: -2px;
+	}
 
 	.row {
 		@apply flex flex-col;

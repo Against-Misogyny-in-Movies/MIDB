@@ -8,6 +8,7 @@ const row = (over: Partial<UserCommentRow> = {}): UserCommentRow => ({
 	id: 'c1',
 	body: 'My words',
 	status: 'published',
+	score: 4,
 	moderationReason: null,
 	parentId: null,
 	replyCount: 0,
@@ -45,9 +46,15 @@ describe('CommentHistoryRow', () => {
 		expect(screen.getByText(label)).toBeTruthy();
 	});
 
-	it('has no status badge on a published comment', () => {
+	it('has no status badge on a published comment, and shows its score', () => {
 		mount(row({ status: 'published' }));
 		expect(screen.queryByText('Published')).toBeNull();
+		expect(screen.getByText('Score 4')).toBeTruthy();
+	});
+
+	it('shows no score on a comment that is not published', () => {
+		mount(row({ status: 'pending' }));
+		expect(screen.queryByText(/Score/)).toBeNull();
 	});
 
 	it('links the title and says which comment is a reply', () => {

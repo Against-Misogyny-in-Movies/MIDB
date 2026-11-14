@@ -5,7 +5,7 @@ import type { PublicUser } from '#lib/media/types/user.ts';
 
 /** Opens the comment's menu and returns its item with this name. */
 async function menuItem(scope: HTMLElement, name: string): Promise<HTMLElement> {
-	await fireEvent.click(within(scope).getByRole('button', { name: 'More actions' }));
+	await fireEvent.click(within(scope).getByRole('button', { name: /^More actions/ }));
 	return within(scope).getByRole('button', { name });
 }
 
@@ -221,13 +221,13 @@ describe('CommentsSection signed in', () => {
 		await screen.findByText('My words');
 		const mine = document.getElementById('comment-mine')!;
 		expect(mine.querySelector('[aria-label="Upvote"]')).toBeNull();
-		await fireEvent.click(within(mine).getByRole('button', { name: 'More actions' }));
+		await fireEvent.click(within(mine).getByRole('button', { name: /^More actions/ }));
 		expect(mine.textContent).toMatch(/Edit/);
 		expect(mine.textContent).toMatch(/Delete/);
 		expect(mine.textContent).not.toMatch(/Report/);
 		const other = document.getElementById('comment-a')!;
 		expect(other.querySelector('[aria-label="Upvote"]')).toBeTruthy();
-		await fireEvent.click(within(other).getByRole('button', { name: 'More actions' }));
+		await fireEvent.click(within(other).getByRole('button', { name: /^More actions/ }));
 		expect(other.textContent).toMatch(/Report/);
 		expect(other.textContent).not.toMatch(/Edit/);
 	});
@@ -436,7 +436,7 @@ describe('CommentsSection signed in', () => {
 			/write, edit, delete, vote on or report/
 		);
 		expect(screen.queryByRole('textbox')).toBeNull();
-		for (const name of ['Upvote', 'Downvote', 'Reply', 'More actions']) {
+		for (const name of ['Upvote', 'Downvote', 'Reply', /^More actions/]) {
 			expect(screen.getByRole('button', { name })).toHaveProperty('disabled', true);
 		}
 	});

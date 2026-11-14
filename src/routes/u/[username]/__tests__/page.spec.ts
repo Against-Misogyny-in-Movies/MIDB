@@ -182,6 +182,7 @@ describe('the owner’s view', () => {
 				id: 'p1',
 				body: 'Waiting text',
 				status: 'pending',
+				score: 0,
 				moderationReason: null,
 				parentId: null,
 				replyCount: 0,
@@ -194,6 +195,7 @@ describe('the owner’s view', () => {
 		],
 		reports: [
 			{
+				titleId: 't-dark',
 				status: 'held',
 				kind: 'tv',
 				tmdbId: 70523,

@@ -114,14 +114,23 @@
 		scoreTotal={profile.scoreTotal}
 	>
 		{#snippet actions()}
-			{#if isOwner && !editing}
-				<button
-					class="btn btn--ink"
-					type="button"
-					bind:this={editButton}
-					onclick={() => (editing = true)}>Edit profile</button
+			{#if isOwner}
+				{#if !editing}
+					<button
+						class="btn btn--ink"
+						type="button"
+						bind:this={editButton}
+						onclick={() => (editing = true)}
+						><i class="ri-edit-line" aria-hidden="true"></i><span class="btn-text"
+							>Edit profile</span
+						></button
+					>
+				{/if}
+				<a class="btn btn--ghost" href="/user/settings"
+					><i class="ri-settings-3-line" aria-hidden="true"></i><span class="btn-text"
+						>Settings</span
+					></a
 				>
-				<a class="btn btn--ghost" href="/user/settings">Settings</a>
 			{/if}
 		{/snippet}
 	</ProfileHeader>
@@ -151,7 +160,7 @@
 				role="tab"
 				id="tab-{t.id}"
 				aria-selected={tab === t.id}
-				aria-controls="panel-{t.id}"
+				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
 				tabindex={tab === t.id ? 0 : -1}
 				onclick={() => (tab = t.id)}
 				onkeydown={onTabKeydown}

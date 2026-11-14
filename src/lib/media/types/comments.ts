@@ -82,7 +82,7 @@ export type ViewerCommentState = {
 };
 
 /**
- * One of the reader's comments on `/user/comments`, in any status, with the title it is on:
+ * One of the reader's own comments on their profile (`GET /api/me/profile`), in any status, with the title it is on:
  * what `getUserComments` returns, with its dates as ISO strings for the load's JSON.
  */
 export type UserCommentRow = Omit<

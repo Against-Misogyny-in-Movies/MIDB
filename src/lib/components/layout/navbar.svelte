@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import ThemeToggle from '#lib/components/theme/themeToggle.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
+	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import NavbarSearch from './navbarSearch.svelte';
 	import NavbarMenu from './navbarMenu.svelte';
@@ -40,7 +41,7 @@
 						<i class="ri-shield-user-line" aria-hidden="true"></i>
 					</a>
 				{/if}
-				<a href="/user/profile" class="user-link">
+				<a href={profileHref(session.user.username) ?? '/user/profile'} class="user-link">
 					<Avatar avatarKey={session.user.avatarKey} size={24} />
 					<span class="username">{session.user.displayName}</span>
 				</a>

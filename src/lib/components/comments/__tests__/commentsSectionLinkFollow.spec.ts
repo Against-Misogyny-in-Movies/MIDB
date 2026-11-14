@@ -95,7 +95,7 @@ describe('CommentsSection following a second link', () => {
 		mount(fetcher);
 		await screen.findByText('Text of first');
 		const article = document.getElementById('comment-first') as HTMLElement;
-		const more = await within(article).findByRole('button', { name: 'More actions' });
+		const more = await within(article).findByRole('button', { name: /^More actions/ });
 		await waitFor(() => expect((more as HTMLButtonElement).disabled).toBe(false));
 		await fireEvent.click(more);
 		await fireEvent.click(within(article).getByRole('button', { name: 'Edit' }));

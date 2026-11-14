@@ -24,7 +24,7 @@ export function displayNameOf(username: string | null | undefined): string {
 
 /**
  * Map a row to the client-safe shape. The email is never copied: it reaches the client on
- * /user/profile alone. Every account has a generated or chosen username, which is its display
+ * /user/settings alone. Every account has a generated or chosen username, which is its display
  * name; only a row with none shows "Account".
  */
 export function toPublicUser(row: UserRow): PublicUser {
@@ -163,6 +163,7 @@ export async function getUserComments(userId: string) {
 			id: comments.id,
 			body: comments.body,
 			status: comments.status,
+			score: comments.score,
 			moderationReason: comments.moderationReason,
 			parentId: comments.parentId,
 			replyCount: comments.replyCount,

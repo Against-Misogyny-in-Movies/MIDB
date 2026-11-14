@@ -55,6 +55,7 @@ describe('getOwnProfile', () => {
 		const own = await getOwnProfile({ id: 'anna-id', mutedUntil: null });
 		expect(own.reports).toEqual([
 			{
+				titleId: alien,
 				status: 'held',
 				kind: 'movie',
 				tmdbId: 348,

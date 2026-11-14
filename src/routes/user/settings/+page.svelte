@@ -3,6 +3,7 @@
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
+	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { AUTH_PROVIDERS, providerIcon, providerLabel } from '#lib/media/utils/auth-providers.ts';
 	import { HEADING_ID, passkeyName, SignInMethods } from '#lib/signInMethods.svelte.ts';
@@ -52,10 +53,13 @@
 
 <div class="account-page">
 	<header>
-		<a href="/user/profile" class="back"
+		<a href={profileHref(data.me.username) ?? '/user/profile'} class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
-		<h1 class="display">Settings</h1>
+		<div class="title-row">
+			<h1 class="display">Settings</h1>
+			<LogoutButton />
+		</div>
 	</header>
 
 	<section class="card plain" aria-labelledby="email-heading">
@@ -263,8 +267,6 @@
 			</div>
 		{/if}
 	</section>
-
-	<p><LogoutButton /></p>
 </div>
 
 <style lang="postcss">
@@ -288,6 +290,12 @@
 
 	h1 {
 		font-size: 1.875rem;
+	}
+
+	/* Sign out sits beside the title, so the cards loading below it never move it. */
+	.title-row {
+		@apply flex flex-wrap items-center justify-between;
+		gap: var(--spacing-sm) var(--spacing-md);
 	}
 
 	h2 {

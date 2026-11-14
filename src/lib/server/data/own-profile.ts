@@ -20,6 +20,7 @@ export async function getOwnProfile(user: Pick<UserRow, 'id' | 'mutedUntil'>): P
 			editedAt: row.editedAt?.toISOString() ?? null
 		})),
 		reports: ratings.map((row) => ({
+			titleId: row.titleId,
 			status: row.status,
 			kind: row.kind,
 			tmdbId: row.tmdbId,

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	interface Props {
 		/** What the action does and what it loses. */
 		message: string;
@@ -11,10 +13,16 @@
 	}
 
 	let { message, confirmLabel, cancelLabel, busy = false, onconfirm, oncancel }: Props = $props();
+
+	let text: HTMLElement | undefined = $state();
+
+	// The plate opens from a control that may leave the page (a menu item), so the focus moves to
+	// the consequence it names; the buttons are next in the tab order.
+	onMount(() => text?.focus());
 </script>
 
 <div class="plate confirm">
-	<p class="text-sm">{message}</p>
+	<p class="text-sm" tabindex="-1" bind:this={text}>{message}</p>
 	<div class="row">
 		<button class="btn btn--ink" type="button" aria-busy={busy} onclick={onconfirm}>
 			{confirmLabel}

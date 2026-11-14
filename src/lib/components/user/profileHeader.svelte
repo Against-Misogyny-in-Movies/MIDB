@@ -49,10 +49,13 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	/* Avatar and name share a row; the owner's actions sit beside them, or under them on a phone. */
+	/*
+	 * Avatar, name and the owner's actions share one row at every width, so the actions arriving
+	 * after the session loads change no height: on a phone they are icon buttons.
+	 */
 	.profile-header {
 		@apply grid items-center;
-		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-columns: auto minmax(0, 1fr) auto;
 		gap: var(--spacing-md);
 	}
 
@@ -61,17 +64,21 @@
 		gap: var(--spacing-xs);
 	}
 
-	.actions {
-		grid-column: 1 / -1;
+	@media (max-width: 40rem) {
+		.actions :global(.btn) {
+			width: 2.75rem;
+			height: 2.75rem;
+			padding: 0;
+		}
+
+		.actions :global(.btn-text) {
+			@apply sr-only;
+		}
 	}
 
 	@media (min-width: 40rem) {
-		.profile-header {
-			grid-template-columns: auto minmax(0, 1fr) auto;
-		}
-
-		.actions {
-			grid-column: auto;
+		.actions :global(.btn i) {
+			display: none;
 		}
 	}
 

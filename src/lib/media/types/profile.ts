@@ -54,6 +54,8 @@ export type PublicProfile = {
 
 /** One of the reader's own community reports on their profile, in any status, with its standing's inputs. */
 export type OwnReport = {
+	/** The title's MIDB id: one report per account and title, so it keys the row. */
+	titleId: string;
 	status: ContentReportStatus;
 	kind: TitleKind;
 	tmdbId: number | null;

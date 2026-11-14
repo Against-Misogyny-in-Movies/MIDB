@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import { session } from '#lib/media/utils/session.svelte.js';
+	import { profileHref } from '#lib/media/utils/profileHref.ts';
 
 	// Below md the bar keeps only search, the account slot and the theme toggle; this menu
 	// carries the rest. Closes on outside pointerdown and Escape. Account links read the client
@@ -63,7 +64,12 @@
 				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>
 			{/if}
 			{#if session.likelyUser}
-				<a href="/user/profile" class="item" role="menuitem" onclick={close}>Profile</a>
+				<a
+					href={profileHref(session.user?.username) ?? '/user/profile'}
+					class="item"
+					role="menuitem"
+					onclick={close}>Profile</a
+				>
 				<a href="/user/settings" class="item" role="menuitem" onclick={close}>Settings</a>
 				{#if session.status === 'user'}
 					<LogoutButton variant="menu" />

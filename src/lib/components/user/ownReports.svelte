@@ -19,7 +19,7 @@
 	</p>
 {:else}
 	<ul class="rows">
-		{#each reports as report (`${report.kind}:${report.tmdbId}:${report.title}`)}
+		{#each reports as report (report.titleId)}
 			{@const standing = readerStandingLabel(effectiveStanding(report))}
 			<li>
 				<ProfileTitleLink kind={report.kind} tmdbId={report.tmdbId} name={report.title} />
