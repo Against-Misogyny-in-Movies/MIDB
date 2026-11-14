@@ -25,8 +25,9 @@
 
 	function added(value?: Date | string | null, withTime = false) {
 		if (!value) return '';
-		const when = new Date(value).toLocaleString(undefined, {
-			dateStyle: 'medium',
+		// The reader's own time zone, in the site's `dd/mm/yyyy` date format.
+		const when = new Date(value).toLocaleString('en-GB', {
+			dateStyle: 'short',
 			...(withTime && { timeStyle: 'short' })
 		});
 		return `Added ${when}`;

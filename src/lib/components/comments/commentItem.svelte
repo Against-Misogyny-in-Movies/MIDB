@@ -5,7 +5,6 @@
 	import CommentAction from './commentAction.svelte';
 	import CommentMenu from './commentMenu.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
-	import CommentDate from './commentDate.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import { unpublishedNote } from '#lib/media/utils/comments.ts';
 	import CommentReportForm from './commentReportForm.svelte';
@@ -16,6 +15,7 @@
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { commentHref } from '#lib/media/utils/titleHref.ts';
+	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
@@ -46,7 +46,7 @@
 	const votesOpenAt = $derived(comments.votesOpenAt);
 	const voteLocked = $derived(locked || votesOpenAt !== null);
 	const votesHint = $derived(votesOpenAt ? `Votes open on ${formatDate(votesOpenAt)}.` : undefined);
-	/** Each comment's date is a link to it, so a reader can copy the address. */
+	/** The comment's own address, which Copy link puts on the clipboard. */
 	const href = $derived(commentHref(comments.kind, Number(comments.tmdbId), comment.id));
 	const scoreId = $derived(`score-${comment.id}`);
 	const votesHintId = $derived(`votes-hint-${comment.id}`);
@@ -79,6 +79,16 @@
 				? [{ label: 'Report', expanded: mode === 'report', onselect: () => toggle('report') }]
 				: []
 	);
+
+	/** Puts the comment's full address on the clipboard. */
+	async function copyLink(): Promise<void> {
+		try {
+			await navigator.clipboard.writeText(new URL(href ?? '', location.href).href);
+			toasts.success('Link copied.');
+		} catch {
+			toasts.error('The link could not be copied.');
+		}
+	}
 
 	/** The comments next to this one, in the order focus falls back to when this one leaves the list. */
 	function neighbourIds(): string[] {
@@ -153,7 +163,7 @@
 				/></span
 			>
 			{#if role}<Badge tone="brand">{role}</Badge>{/if}
-			<CommentDate class="date" short {href} createdAt={comment.createdAt} />
+			<time class="date" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
 			{#if comment.editedAt}<span class="edited">Edited</span>{/if}
 			{#if comment.review}
 				<Badge tone={commentStatusTone(comment.review.status)}>
@@ -202,7 +212,7 @@
 		{/if}
 	{/if}
 
-	{#if !comment.removed && !comment.review && (canVote || signedIn || comment.score !== 0)}
+	{#if !comment.removed && !comment.review}
 		<div class="actions">
 			{#if canVote}
 				<div
@@ -235,7 +245,7 @@
 						<i class="ri-arrow-down-line" aria-hidden="true"></i>
 					</CommentAction>
 				</div>
-			{:else}
+			{:else if signedIn || comment.score !== 0}
 				<span class="score score--alone">Score {comment.score}</span>
 			{/if}
 
@@ -248,6 +258,9 @@
 					><i class="ri-reply-line" aria-hidden="true"></i>Reply</CommentAction
 				>
 			{/if}
+			<CommentAction onclick={copyLink}
+				><i class="ri-link" aria-hidden="true"></i>Copy link</CommentAction
+			>
 		</div>
 	{/if}
 
@@ -323,23 +336,21 @@
 		gap: var(--spacing-xs) var(--spacing-sm);
 	}
 
-	/* The name and the date read as text in the row; they show they are links on hover. */
+	/* The name reads as text in the row; it shows it is a link on hover. */
 	.name {
 		@apply font-semibold;
 	}
 
-	.name :global(a),
-	.meta :global(.date) {
+	.name :global(a) {
 		color: inherit;
 		text-decoration-color: transparent;
 	}
 
-	.name :global(a:hover),
-	.meta :global(.date:hover) {
+	.name :global(a:hover) {
 		text-decoration-color: currentColor;
 	}
 
-	.meta :global(.date),
+	.date,
 	.edited {
 		@apply text-ink-muted;
 	}
@@ -367,7 +378,8 @@
 		margin-left: calc(-1 * var(--spacing-xs));
 	}
 
-	.actions :global(.ri-reply-line) {
+	.actions :global(.ri-reply-line),
+	.actions :global(.ri-link) {
 		margin-right: var(--spacing-xs);
 	}
 

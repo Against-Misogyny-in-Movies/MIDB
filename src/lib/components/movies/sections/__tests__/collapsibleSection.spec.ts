@@ -12,7 +12,7 @@ const props = {
 describe('CollapsibleSection freshness', () => {
 	it('shows the sync date beside the source link', () => {
 		render(CollapsibleSection, { ...props, updatedAt: '2026-11-12T09:30:00.000Z' });
-		expect(screen.getByText('Updated November 12, 2026')).toBeTruthy();
+		expect(screen.getByText('Updated 12/11/2026')).toBeTruthy();
 		expect(screen.getByText('Source: BechdelTest.com')).toBeTruthy();
 	});
 
@@ -22,7 +22,7 @@ describe('CollapsibleSection freshness', () => {
 			updatedAt: '2026-11-12T09:30:00.000Z',
 			learnHref: '/resources#bechdel'
 		});
-		const date = screen.getByText('Updated November 12, 2026');
+		const date = screen.getByText('Updated 12/11/2026');
 		expect(date.tagName).toBe('TIME');
 		expect(date.getAttribute('datetime')).toBe('2026-11-12T09:30:00.000Z');
 		const group = date.parentElement!;

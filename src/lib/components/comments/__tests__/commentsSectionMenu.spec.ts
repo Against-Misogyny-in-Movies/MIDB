@@ -115,4 +115,23 @@ describe('CommentsSection, the comment menu', () => {
 		await fireEvent.click(await menuItem(document.getElementById('comment-a')!, 'Report'));
 		await waitFor(() => expect(document.activeElement?.getAttribute('type')).toBe('radio'));
 	});
+
+	it("copies the comment's full address with Copy link, and its date is not a link", async () => {
+		const writeText = vi.fn(async () => {});
+		Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+		mount(
+			api({
+				[`GET ${LIST}`]: list([view('a')]),
+				[`GET ${LIST}/viewer`]: viewer()
+			})
+		);
+		await screen.findByText('Text of a');
+		const item = document.getElementById('comment-a')!;
+		expect(item.querySelector('time')?.closest('a')).toBeNull();
+		await fireEvent.click(within(item).getByRole('button', { name: 'Copy link' }));
+		await waitFor(() =>
+			expect(writeText).toHaveBeenCalledWith(new URL('/movie/603#comment-a', location.href).href)
+		);
+		expect(toasts.items.map((t) => t.text)).toEqual(['Link copied.']);
+	});
 });

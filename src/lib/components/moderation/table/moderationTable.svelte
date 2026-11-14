@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
-	import CommentDate from '#lib/components/comments/commentDate.svelte';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
@@ -10,6 +9,7 @@
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
+	import { formatDate } from '#lib/media/utils/format.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
@@ -155,19 +155,31 @@
 								{/if}
 							</td>
 							<td class="posted">
-								<CommentDate class="num" short href={permalink} createdAt={row.comment.createdAt} />
+								<time class="num" datetime={row.comment.createdAt}
+									>{formatDate(row.comment.createdAt)}</time
+								>
 							</td>
 							<td class="actions">
-								<button
-									class="chip"
-									type="button"
-									aria-expanded={open}
-									aria-controls={open ? `detail-${id}` : undefined}
-									aria-label="{open ? 'Close' : 'Review'} the comment by {row.author.displayName}"
-									onclick={() => (openId = open ? null : id)}
-								>
-									{open ? 'Close' : 'Review'}
-								</button>
+								<div class="row-actions">
+									{#if permalink}
+										<a
+											class="chip"
+											href={permalink}
+											aria-label="View the comment by {row.author.displayName} on its title page"
+											>View comment</a
+										>
+									{/if}
+									<button
+										class="chip"
+										type="button"
+										aria-expanded={open}
+										aria-controls={open ? `detail-${id}` : undefined}
+										aria-label="{open ? 'Close' : 'Review'} the comment by {row.author.displayName}"
+										onclick={() => (openId = open ? null : id)}
+									>
+										{open ? 'Close' : 'Review'}
+									</button>
+								</div>
 							</td>
 						</tr>
 						{#if open}
@@ -308,6 +320,11 @@
 	}
 
 	/* Review stays in view at the row's end while the table scrolls sideways. */
+	.row-actions {
+		@apply flex items-center;
+		gap: var(--spacing-xs);
+	}
+
 	.actions {
 		position: sticky;
 		right: 0;

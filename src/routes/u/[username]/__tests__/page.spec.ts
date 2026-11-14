@@ -41,7 +41,7 @@ describe('the public profile page', () => {
 	it('shows the name, join date and comment score, and no role for an ordinary account', () => {
 		mount();
 		expect(screen.getByRole('heading', { level: 1, name: 'anna' })).toBeTruthy();
-		expect(screen.getByText('Joined').nextElementSibling?.textContent).toBe('January 15, 2026');
+		expect(screen.getByText('Joined').nextElementSibling?.textContent).toBe('15/01/2026');
 		expect(screen.getByText('Comment score').nextElementSibling?.textContent).toBe('42');
 		expect(screen.queryByText('Moderator')).toBeNull();
 		expect(screen.queryByText('Administrator')).toBeNull();

@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import {
 	formatCurrency,
 	formatDate,
-	formatShortDate,
 	displayTitle,
 	formatRuntime,
 	countryName,
@@ -67,24 +66,13 @@ describe('languageName', () => {
 	});
 });
 
-describe('formatShortDate', () => {
-	test('abbreviates the month, read in UTC', () => {
-		expect(formatShortDate('2026-11-14T23:30:00Z')).toBe('Nov 14, 2026');
-	});
-
-	test('returns an em-dash for an empty or unparseable value', () => {
-		expect(formatShortDate('')).toBe('—');
-		expect(formatShortDate('not a date')).toBe('—');
-	});
-});
-
 describe('formatDate', () => {
-	test('formats a TMDB date in UTC', () => {
-		expect(formatDate('2015-05-13')).toBe('May 13, 2015');
+	test('formats a TMDB date as dd/mm/yyyy, in UTC', () => {
+		expect(formatDate('2015-05-13')).toBe('13/05/2015');
 	});
 
 	test('reads a full timestamp in UTC, so a late-evening sync keeps its day', () => {
-		expect(formatDate('2026-11-12T23:59:00.000Z')).toBe('November 12, 2026');
+		expect(formatDate('2026-11-12T23:59:00.000Z')).toBe('12/11/2026');
 	});
 
 	test('returns — for an empty or invalid value', () => {

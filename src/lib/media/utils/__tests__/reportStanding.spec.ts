@@ -47,7 +47,7 @@ describe('standing labels', () => {
 
 	it('reads for the reader', () => {
 		expect(readerStandingLabel(counted)).toEqual({ label: 'Counted', tone: 'pos' });
-		expect(readerStandingLabel(young).label).toBe('Counts from November 20, 2026');
+		expect(readerStandingLabel(young).label).toBe('Counts from 20/11/2026');
 		expect(readerStandingLabel({ kind: 'held' })).toEqual({
 			label: 'Waiting for review',
 			tone: 'mid'

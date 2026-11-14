@@ -21,7 +21,7 @@ Read whole.
   - 108–120 Making a change (~440) ← 3
   - 121–137 Checking a change (~230) ← 6
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
-- `.claude/rules/copy-standards.md` — Copy standards (~480 tok)
+- `.claude/rules/copy-standards.md` — Copy standards (~530 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
 - `.claude/rules/docs-standards.md` — Docs standards (~1.1K tok)
 - `.claude/rules/style-standards.md` — Style standards (~1.3K tok)
@@ -47,7 +47,7 @@ Read the sections your task touches.
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~3.5K) ← 1
+  - 37–65 Components (~3.6K) ← 1
   - 66–73 Pages (~1.1K)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)

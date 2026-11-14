@@ -101,7 +101,7 @@ describe('CommunityReportsSection signed in', () => {
 			})
 		);
 		expect(await screen.findByText(/This account is muted/)).toBeTruthy();
-		expect(screen.getByText(/December 1, 2026/)).toBeTruthy();
+		expect(screen.getByText(/01\/12\/2026/)).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Add a report' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Counts look wrong' })).toBeNull();
 	});
