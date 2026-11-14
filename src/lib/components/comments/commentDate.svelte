@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDate } from '#lib/media/utils/format.ts';
+	import { formatDate, formatShortDate } from '#lib/media/utils/format.ts';
 
 	interface Props {
 		/** The comment's address on its title page; without one the date is plain text. */
@@ -7,17 +7,21 @@
 		createdAt: string;
 		/** Classes of the host row's date (`label`, `num`). */
 		class?: string;
+		/** The month abbreviated (`Nov 14, 2026`), for dense rows. */
+		short?: boolean;
 	}
 
-	let { href, createdAt, class: className = '' }: Props = $props();
+	let { href, createdAt, class: className = '', short = false }: Props = $props();
+
+	const text = $derived(short ? formatShortDate(createdAt) : formatDate(createdAt));
 </script>
 
 {#if href}
 	<a class="link date {className}" {href}>
-		<time datetime={createdAt}>{formatDate(createdAt)}</time>
+		<time datetime={createdAt}>{text}</time>
 	</a>
 {:else}
-	<time class={className} datetime={createdAt}>{formatDate(createdAt)}</time>
+	<time class={className} datetime={createdAt}>{text}</time>
 {/if}
 
 <style>

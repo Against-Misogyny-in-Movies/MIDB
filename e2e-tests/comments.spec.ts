@@ -178,12 +178,14 @@ test.describe('on a film page', () => {
 		);
 
 		// The second community reports the author's comment.
+		await comment.getByRole('button', { name: 'More actions' }).click();
 		await comment.getByRole('button', { name: 'Report', exact: true }).click();
 		await other.page.getByLabel('Spam').check();
 		await other.page.getByRole('button', { name: 'Send report' }).click();
 		await expect(other.page.getByText('Report sent. Moderators review it.')).toBeVisible();
 
 		// The author edits their comment. An edit is moderated again, so it is pending.
+		await own.getByRole('button', { name: 'More actions' }).click();
 		await own.getByRole('button', { name: 'Edit', exact: true }).click();
 		const editor = author.page.getByRole('textbox', { name: 'Edit comment' });
 		await editor.fill(editedText);

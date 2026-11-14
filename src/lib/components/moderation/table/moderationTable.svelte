@@ -44,158 +44,157 @@
 				selectable.
 			</p>
 		{/if}
-		<!-- The stacked layout below `lg` sets `display: block`, which drops the table semantics unless the roles are explicit. -->
-		<!-- svelte-ignore a11y_no_redundant_roles -->
-		<table role="table">
-			<caption class="sr-only">
-				{rows.length}
-				{rows.length === 1 ? 'comment' : 'comments'} on this page, with the automatic check, open reports
-				and latest scan of each
-			</caption>
-			<!-- svelte-ignore a11y_no_redundant_roles -->
-			<thead role="rowgroup">
-				<!-- svelte-ignore a11y_no_redundant_roles -->
-				<tr role="row">
-					<th role="columnheader" scope="col" class="select"><span class="sr-only">Select</span></th
-					>
-					<th role="columnheader" scope="col" class="comment">Comment</th>
-					<th role="columnheader" scope="col" class="author">Author</th>
-					<th role="columnheader" scope="col" class="title">Title</th>
-					<th role="columnheader" scope="col">Status</th>
-					<th role="columnheader" scope="col">Automatic check</th>
-					<th role="columnheader" scope="col">Reports</th>
-					<th role="columnheader" scope="col" class="scan">Scan</th>
-					<th role="columnheader" scope="col">Posted</th>
-					<th role="columnheader" scope="col"><span class="sr-only">Actions</span></th>
-				</tr>
-			</thead>
-			<!-- svelte-ignore a11y_no_redundant_roles -->
-			<tbody role="rowgroup">
-				{#each rows as row (row.comment.id)}
-					{@const id = row.comment.id}
-					{@const href = titleHref(row.title.kind, row.title.tmdbId)}
-					{@const permalink = commentHref(row.title.kind, row.title.tmdbId, id)}
-					{@const open = openId === id}
-					<!-- svelte-ignore a11y_no_redundant_roles -->
-					<tr class="row" role="row" data-open={open || undefined}>
-						<td class="select" role="cell">
-							<label class="pick">
-								<input
-									type="checkbox"
-									value={id}
-									bind:group={selected}
-									disabled={!canActOn(me, row.author)}
-									aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
-									aria-describedby={canActOn(me, row.author) ? undefined : 'not-selectable'}
-								/>
-							</label>
-						</td>
-						<td class="comment" role="cell" data-label="Comment">
-							<p class="clamp body">{row.comment.body}</p>
-						</td>
-						<td class="author" role="cell" data-label="Author">
-							<span class="name"
-								><ProfileLink username={row.author.username} name={row.author.displayName} /></span
-							>
-							{#if row.author.role !== 'user'}
-								<Badge tone="brand">
-									{row.author.role === 'moderator' ? 'Moderator' : 'Administrator'}
-								</Badge>
-							{/if}
-						</td>
-						<td class="title" role="cell" data-label="Title">
-							<span class="clamp">
-								{#if href}<a class="link" {href}>{row.title.name}</a>{:else}{row.title.name}{/if}
-							</span>
-						</td>
-						<td role="cell" data-label="Status">
-							<Badge tone={commentStatusTone(row.comment.status)}>
-								{COMMENT_STATUS_LABELS[row.comment.status]}
-							</Badge>
-						</td>
-						<td role="cell" data-label="Automatic check">
-							<div class="stack">
-								{#if row.aiFailure}
-									<span class="label">Check failed</span>
-								{:else if row.severity === null}
-									<span class="label">Not checked</span>
-								{:else if row.severity === 0 && row.aiCategories.length === 0}
-									<span class="label">Nothing found</span>
-								{:else}
-									{#if row.severity > 0}
-										{#if row.severity >= 2}
-											<Badge tone={severityTone(row.severity)}>Severity {row.severity}</Badge>
-										{:else}
-											<span class="label">Severity {row.severity}</span>
-										{/if}
-									{/if}
-									{#each row.aiCategories as category (category)}
-										<Badge tone="neutral">{categoryLabel(category)}</Badge>
-									{/each}
-								{/if}
-							</div>
-						</td>
-						<td role="cell" data-label="Reports">
-							{#if row.reports.length > 0}
-								<div class="stack">
-									<span class="num count">{row.reports.length} open</span>
-									<span class="label">{reasons(row).join(', ')}</span>
-								</div>
-							{:else}
-								<span class="label">None</span>
-							{/if}
-						</td>
-						<td class="scan" role="cell" data-label="Scan">
-							{#if row.latestLabel}
-								<div class="stack">
-									<Badge tone={row.latestLabel.matched ? 'mid' : 'neutral'}>
-										{row.latestLabel.matched ? 'Matched' : 'No match'}
-									</Badge>
-									<span class="label clamp">{row.latestLabel.concern}</span>
-								</div>
-							{:else}
-								<span class="label">Not scanned</span>
-							{/if}
-						</td>
-						<td role="cell" data-label="Posted">
-							<CommentDate class="num" href={permalink} createdAt={row.comment.createdAt} />
-						</td>
-						<td class="actions" role="cell">
-							<button
-								class="chip"
-								type="button"
-								aria-expanded={open}
-								aria-controls={open ? `detail-${id}` : undefined}
-								aria-label="{open ? 'Close' : 'Review'} the comment by {row.author.displayName}"
-								onclick={() => (openId = open ? null : id)}
-							>
-								{open ? 'Close' : 'Review'}
-							</button>
-						</td>
+		<div class="scroll">
+			<table>
+				<caption class="sr-only">
+					{rows.length}
+					{rows.length === 1 ? 'comment' : 'comments'} on this page, with the automatic check, open reports
+					and latest scan of each
+				</caption>
+				<thead>
+					<tr>
+						<th scope="col" class="select"><span class="sr-only">Select</span></th>
+						<th scope="col" class="comment">Comment</th>
+						<th scope="col" class="author">Author</th>
+						<th scope="col" class="title">Title</th>
+						<th scope="col">Status</th>
+						<th scope="col">Automatic check</th>
+						<th scope="col">Reports</th>
+						<th scope="col" class="scan">Scan</th>
+						<th scope="col" class="posted">Posted</th>
+						<th scope="col" class="actions"><span class="sr-only">Actions</span></th>
 					</tr>
-					{#if open}
-						<!-- svelte-ignore a11y_no_redundant_roles -->
-						<tr class="detail" role="row" id="detail-{id}">
-							<td role="cell" colspan={COLUMNS}>
-								{#if row.latestLabel}
-									<p class="scan-note label">
-										Latest scan for “{row.latestLabel.concern}”: {row.latestLabel.matched
-											? 'matched'
-											: 'no match'}. {row.latestLabel.reason}
-										{#if row.latestLabel.categories.length > 0}
-											({row.latestLabel.categories.map(categoryLabel).join(', ')})
-										{/if}
-									</p>
+				</thead>
+				<tbody>
+					{#each rows as row (row.comment.id)}
+						{@const id = row.comment.id}
+						{@const href = titleHref(row.title.kind, row.title.tmdbId)}
+						{@const permalink = commentHref(row.title.kind, row.title.tmdbId, id)}
+						{@const open = openId === id}
+						<tr class="row" data-open={open || undefined}>
+							<td class="select">
+								<label class="pick">
+									<input
+										type="checkbox"
+										value={id}
+										bind:group={selected}
+										disabled={!canActOn(me, row.author)}
+										aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
+										aria-describedby={canActOn(me, row.author) ? undefined : 'not-selectable'}
+									/>
+								</label>
+							</td>
+							<td class="comment">
+								<p class="clamp body">{row.comment.body}</p>
+							</td>
+							<td class="author">
+								<span class="name"
+									><ProfileLink
+										username={row.author.username}
+										name={row.author.displayName}
+									/></span
+								>
+								{#if row.author.role !== 'user'}
+									<Badge tone="brand">
+										{row.author.role === 'moderator' ? 'Moderator' : 'Administrator'}
+									</Badge>
 								{/if}
-								<ul class="item">
-									<ModerationItemRow item={row} {me} fallbackId={TABLE_FOCUS.card} />
-								</ul>
+							</td>
+							<td class="title">
+								<span class="clamp">
+									{#if href}<a class="link" {href}>{row.title.name}</a>{:else}{row.title.name}{/if}
+								</span>
+							</td>
+							<td>
+								<Badge tone={commentStatusTone(row.comment.status)}>
+									{COMMENT_STATUS_LABELS[row.comment.status]}
+								</Badge>
+							</td>
+							<td>
+								<div class="stack">
+									{#if row.aiFailure}
+										<span class="label">Check failed</span>
+									{:else if row.severity === null}
+										<span class="label">Not checked</span>
+									{:else if row.severity === 0 && row.aiCategories.length === 0}
+										<span class="label">Nothing found</span>
+									{:else}
+										{#if row.severity > 0}
+											{#if row.severity >= 2}
+												<Badge tone={severityTone(row.severity)}>Severity {row.severity}</Badge>
+											{:else}
+												<span class="label">Severity {row.severity}</span>
+											{/if}
+										{/if}
+										{#each row.aiCategories as category (category)}
+											<Badge tone="neutral">{categoryLabel(category)}</Badge>
+										{/each}
+									{/if}
+								</div>
+							</td>
+							<td>
+								{#if row.reports.length > 0}
+									<div class="stack">
+										<span class="num count">{row.reports.length} open</span>
+										<span class="label">{reasons(row).join(', ')}</span>
+									</div>
+								{:else}
+									<span class="label">None</span>
+								{/if}
+							</td>
+							<td class="scan">
+								{#if row.latestLabel}
+									<div class="stack">
+										<Badge tone={row.latestLabel.matched ? 'mid' : 'neutral'}>
+											{row.latestLabel.matched ? 'Matched' : 'No match'}
+										</Badge>
+										<span class="label clamp">{row.latestLabel.concern}</span>
+									</div>
+								{:else}
+									<span class="label">Not scanned</span>
+								{/if}
+							</td>
+							<td class="posted">
+								<CommentDate class="num" short href={permalink} createdAt={row.comment.createdAt} />
+							</td>
+							<td class="actions">
+								<button
+									class="chip"
+									type="button"
+									aria-expanded={open}
+									aria-controls={open ? `detail-${id}` : undefined}
+									aria-label="{open ? 'Close' : 'Review'} the comment by {row.author.displayName}"
+									onclick={() => (openId = open ? null : id)}
+								>
+									{open ? 'Close' : 'Review'}
+								</button>
 							</td>
 						</tr>
-					{/if}
-				{/each}
-			</tbody>
-		</table>
+						{#if open}
+							<tr class="detail" id="detail-{id}">
+								<td colspan={COLUMNS}>
+									<div class="detail-body">
+										{#if row.latestLabel}
+											<p class="scan-note label">
+												Latest scan for “{row.latestLabel.concern}”: {row.latestLabel.matched
+													? 'matched'
+													: 'no match'}. {row.latestLabel.reason}
+												{#if row.latestLabel.categories.length > 0}
+													({row.latestLabel.categories.map(categoryLabel).join(', ')})
+												{/if}
+											</p>
+										{/if}
+										<ul class="item">
+											<ModerationItemRow item={row} {me} fallbackId={TABLE_FOCUS.card} />
+										</ul>
+									</div>
+								</td>
+							</tr>
+						{/if}
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </div>
 
@@ -203,7 +202,7 @@
 	@reference "../../../../app.css";
 
 	.card {
-		/* `clip`, not `hidden`: it rounds the corners without making a scroll box the header would stick in. */
+		/* Rounds the corners of the scroll box inside. */
 		overflow: clip;
 	}
 
@@ -212,8 +211,15 @@
 		padding: var(--spacing-lg) var(--spacing-md);
 	}
 
+	/* The table keeps its columns at every width: where they do not fit, it scrolls sideways inside the card. */
+	.scroll {
+		overflow-x: auto;
+		container-type: inline-size;
+	}
+
 	table {
 		@apply w-full text-sm border-collapse;
+		min-width: 64rem;
 	}
 
 	th,
@@ -223,12 +229,16 @@
 		border-bottom: 1px solid var(--border);
 	}
 
+	/* Short values stay on one line, so every row reads across at the same height. */
+	td:not(.comment, .title, .scan, .author) {
+		white-space: nowrap;
+	}
+
 	th {
 		@apply font-medium text-ink-muted;
-		position: sticky;
-		top: 5rem;
-		z-index: 1;
+		white-space: nowrap;
 		background-color: var(--surface-raised);
+		border-bottom-color: var(--border-strong);
 	}
 
 	tbody tr:last-child td {
@@ -254,21 +264,20 @@
 		accent-color: var(--brand);
 	}
 
-	.author {
-		min-width: 5rem;
+	.comment {
+		min-width: 18rem;
+		width: 100%;
 	}
 
+	.author,
 	.title {
-		min-width: 6rem;
+		min-width: 7rem;
+		max-width: 10rem;
 	}
 
 	.scan {
-		min-width: 6rem;
-	}
-
-	.comment {
-		min-width: 8rem;
-		width: 100%;
+		min-width: 7rem;
+		max-width: 10rem;
 	}
 
 	.row[data-open] > td {
@@ -298,8 +307,13 @@
 		@apply font-medium text-ink;
 	}
 
+	/* Review stays in view at the row's end while the table scrolls sideways. */
 	.actions {
+		position: sticky;
+		right: 0;
 		padding-right: var(--spacing-md);
+		background-color: var(--surface-raised);
+		box-shadow: inset 1px 0 0 var(--border);
 	}
 
 	@media (pointer: coarse) {
@@ -327,6 +341,14 @@
 
 	.detail > td {
 		padding: 0;
+		white-space: normal;
+	}
+
+	/* An open review keeps to the visible part of the scroll box, wherever the table is scrolled. */
+	.detail-body {
+		position: sticky;
+		left: 0;
+		width: 100cqw;
 	}
 
 	.scan-note {
@@ -336,75 +358,5 @@
 
 	.item {
 		@apply list-none m-0 p-0;
-	}
-
-	/* Below the width the columns fit, each row is a list of label and value pairs. */
-	@media (max-width: 975px) {
-		table,
-		tbody,
-		tr,
-		td {
-			display: block;
-		}
-
-		thead {
-			@apply sr-only;
-		}
-
-		.row {
-			display: grid;
-			gap: var(--spacing-sm);
-			padding: var(--spacing-md);
-			border-top: 1px solid var(--border);
-		}
-
-		tbody > .row:first-child {
-			border-top: 0;
-		}
-
-		.row > td {
-			padding: 0;
-			border: 0;
-			background-color: transparent;
-		}
-
-		.row[data-open] {
-			background-color: var(--surface-sunken);
-		}
-
-		.row > td[data-label] {
-			display: grid;
-			grid-template-columns: 7rem 1fr;
-			gap: var(--spacing-sm);
-			align-items: start;
-			justify-items: start;
-		}
-
-		.row > td[data-label]::before {
-			@apply text-ink-muted;
-			/* The empty alternative keeps the label visual: the column header already names the cell. */
-			content: attr(data-label) / '';
-		}
-
-		.comment,
-		.author,
-		.title,
-		.scan {
-			min-width: 0;
-		}
-
-		.select,
-		.actions {
-			width: auto;
-			padding: 0;
-		}
-
-		.select {
-			justify-self: start;
-		}
-
-		.detail {
-			border-top: 1px solid var(--border);
-		}
 	}
 </style>

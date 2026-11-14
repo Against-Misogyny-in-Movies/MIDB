@@ -54,6 +54,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | SH3   | Security: accounts              | completed | 2026-11-14. Sign-up refuses without `TURNSTILE_SECRET_KEY` off localhost: set it in production.                   |
 | SH4   | Security: platform              | completed | 2026-11-14. Title pages not rendered with the CSP (no TMDB token here); sources load from the browser.            |
 | SH5   | Security: username shape        | completed | 2026-11-14. The vote lock for new accounts is tested in specs, not seen in a browser.                             |
+| P1    | Profile: data                   | completed | 2026-11-14.                                                                                                       |
+| P2    | Profile: page                   | completed | 2026-11-14. Rendered on seeded local data; dark theme not seen.                                                   |
+| P3    | Profile: settings and docs      | completed | 2026-11-14. The passkey e2e specs time out on sign-up in the cloud container, before this change too.             |
 
 ## Open items
 
@@ -92,6 +95,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 - **Letterboxd:**
   - Test the client against the real API once keys exist; the assumptions are listed in `src/lib/server/integrations/letterboxd.ts`.
+- **Profile:**
+  - The owner's view loads after the cached page paints: the list swaps to the owner's rows (with edit and delete, and the unpublished ones) and the tab counts change, which moves the rows below.
+  - Run `e2e-tests/passkeys.spec.ts` where passkey sign-up works; it times out in the cloud container.
 - **Comment links and profiles:**
   - Run `e2e-tests/commentLinks.spec.ts` once a TMDB token and the preview environment exist, and render a linked comment and the profile name links in moderation in a browser.
 
@@ -131,6 +137,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Administrators act on any account and comment, their own and other administrators' included, except muting or banning themselves (user decision, 2026-11-13).
   - Staff are not rate-limited, except on the AI moderation calls (user decision, 2026-11-13).
   - Public profiles show avatar, name, join date, staff role, comment score total, published comments and counted community reports (user decision, 2026-11-13).
+  - One profile page at `/u/<username>` for visitors and its owner, who also gets Edit profile and Settings; account security lives on `/user/settings` (user decision, 2026-11-14).
   - Votes do not purge the cached comment list; the reader's private viewer state carries current scores for comments they voted on (user decision, 2026-11-13).
   - Film pages show the Letterboxd average rating from the official API with a secret key, as the only outside rating (user decision, 2026-11-13).
 - **Security hardening:**

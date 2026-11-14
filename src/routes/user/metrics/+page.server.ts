@@ -1,14 +1,11 @@
-import type { PageServerLoad } from './$types';
+import { redirect } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.ts';
-import { activeMute } from '#lib/server/data/mute.ts';
-import { getUserRatings } from '#lib/server/data/user-queries.ts';
+import { profileHref } from '#lib/media/utils/profileHref.ts';
+import type { PageServerLoad } from './$types';
 
+/** The reader's community reports, with their standing, are the reports tab of their own profile. */
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await requireUser(locals, { page: true });
-	return {
-		ratings: await getUserRatings(user.id),
-		// The page is private, so the account's own mute may be named on it.
-		banned: user.bannedAt !== null,
-		mutedUntil: activeMute(user.mutedUntil)
-	};
+	const href = profileHref(user.username);
+	redirect(303, href ? `${href}#reports` : '/user/settings');
 };

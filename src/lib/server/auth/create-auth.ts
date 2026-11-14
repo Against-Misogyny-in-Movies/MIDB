@@ -137,7 +137,7 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 			user: {
 				create: {
 					// Every new account, whatever the sign-up path, gets a generated username. The
-					// reader changes it on /user/profile.
+					// reader changes it from their profile (`profileEditor.svelte`).
 					before: async (user) => ({
 						data: {
 							...user,

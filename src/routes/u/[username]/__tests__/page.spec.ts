@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProfileComment, PublicProfile } from '#lib/media/types/profile.ts';
+import type { OwnProfile, ProfileComment, PublicProfile } from '#lib/media/types/profile.ts';
 
 const { default: Page } = await import('../+page.svelte');
 const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+const { session } = await import('#lib/media/utils/session.svelte.js');
 
 const entry = (id: string, over: Partial<ProfileComment> = {}): ProfileComment => ({
 	id,
@@ -23,6 +24,7 @@ const PROFILE: PublicProfile = {
 	staffRole: null,
 	joinedAt: '2026-01-15',
 	scoreTotal: 42,
+	commentCount: 2,
 	comments: { comments: [entry('c1'), entry('c2')], nextCursor: null },
 	reports: [{ kind: 'tv', tmdbId: 70523, name: 'Dark' }]
 };
@@ -73,18 +75,43 @@ describe('the public profile page', () => {
 		expect(screen.getByText('Unrouted').closest('a')).toBeNull();
 	});
 
-	it('lists the counted community reports by title, with no date', () => {
+	it('lists the counted community reports by title, with no date', async () => {
 		mount();
+		await fireEvent.click(screen.getByRole('tab', { name: /Community reports/ }));
 		const row = screen.getByRole('link', { name: 'Dark' }).closest('li')!;
 		expect(screen.getByRole('link', { name: 'Dark' }).getAttribute('href')).toBe('/tv/70523');
 		expect(row.textContent?.trim()).toBe('Dark');
 		expect(screen.queryByText(/Updated/)).toBeNull();
 	});
 
-	it('puts the counted community reports above the comments', () => {
+	it('has a Comments tab, open first, and a Community reports tab, each with its count', () => {
 		mount();
-		const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-		expect(headings).toEqual(['Counted community reports', 'Comments']);
+		const tabs = screen.getAllByRole('tab');
+		expect(tabs.map((t) => t.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+			'Comments 2',
+			'Community reports 1'
+		]);
+		expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+		expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe('tab-comments');
+	});
+
+	it('moves between the tabs with the arrow keys', async () => {
+		mount();
+		await fireEvent.keyDown(screen.getByRole('tab', { name: /Comments/ }), { key: 'ArrowRight' });
+		expect(
+			screen.getByRole('tab', { name: /Community reports/ }).getAttribute('aria-selected')
+		).toBe('true');
+		expect(screen.getByRole('link', { name: 'Dark' })).toBeTruthy();
+	});
+
+	it('opens the reports tab from #reports', () => {
+		location.hash = '#reports';
+		try {
+			mount();
+			expect(screen.getByRole('link', { name: 'Dark' })).toBeTruthy();
+		} finally {
+			location.hash = '';
+		}
 	});
 
 	it('says Edited for an edited comment, without a time', () => {
@@ -95,11 +122,12 @@ describe('the public profile page', () => {
 		expect(screen.getByText('Edited')).toBeTruthy();
 	});
 
-	it('says so when there are no comments and no counted community reports', () => {
+	it('says so when there are no comments and no counted community reports', async () => {
 		mount({ ...PROFILE, comments: { comments: [], nextCursor: null }, reports: [] });
 		expect(screen.getByText('No published comments.')).toBeTruthy();
-		expect(screen.getByText('No counted community reports.')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Show more comments' })).toBeNull();
+		await fireEvent.click(screen.getByRole('tab', { name: /Community reports/ }));
+		expect(screen.getByText('No counted community reports.')).toBeTruthy();
 	});
 });
 
@@ -137,5 +165,109 @@ describe('showing more comments', () => {
 			])
 		);
 		expect(screen.getByRole('button', { name: 'Show more comments' })).toBeTruthy();
+	});
+});
+
+describe('the owner’s view', () => {
+	const ANNA = {
+		id: 'anna-id',
+		username: 'anna',
+		avatarKey: null,
+		role: 'user' as const,
+		displayName: 'anna'
+	};
+	const OWN: OwnProfile = {
+		comments: [
+			{
+				id: 'p1',
+				body: 'Waiting text',
+				status: 'pending',
+				score: 0,
+				moderationReason: null,
+				parentId: null,
+				replyCount: 0,
+				createdAt: '2026-11-02T10:00:00.000Z',
+				editedAt: null,
+				kind: 'movie',
+				tmdbId: 348,
+				title: 'Alien'
+			}
+		],
+		reports: [
+			{
+				titleId: 't-dark',
+				status: 'held',
+				kind: 'tv',
+				tmdbId: 70523,
+				title: 'Dark',
+				updatedAt: '2026-11-02T10:00:00.000Z',
+				countsFrom: '2026-01-01T00:00:00.000Z',
+				restricted: null
+			}
+		],
+		mutedUntil: null
+	};
+
+	afterEach(() => session.clear());
+
+	it('shows a visitor no owner actions', () => {
+		session.set({ ...ANNA, id: 'bea-id', username: 'bea', displayName: 'bea' });
+		mount();
+		expect(screen.queryByRole('button', { name: 'Edit profile' })).toBeNull();
+		expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+	});
+
+	it('gives the owner Edit profile and Settings, and their own comments and reports', async () => {
+		const fetcher = vi.fn(async () => Response.json(OWN));
+		vi.stubGlobal('fetch', fetcher);
+		session.set(ANNA);
+		mount();
+		expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe(
+			'/user/settings'
+		);
+		await screen.findByText('Waiting text');
+		expect(fetcher).toHaveBeenCalledWith('/api/me/profile', expect.anything());
+		expect(screen.getByText('Awaiting review')).toBeTruthy();
+		expect(screen.queryByText('Text of c1')).toBeNull();
+		await fireEvent.click(screen.getByRole('tab', { name: /Community reports/ }));
+		expect(screen.getByText('Waiting for review')).toBeTruthy();
+	});
+
+	it('opens the editor under the header and closes it on Cancel', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => Response.json(OWN))
+		);
+		session.set(ANNA);
+		mount();
+		await fireEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
+		expect(screen.getByRole('textbox', { name: 'Username' })).toBeTruthy();
+		expect(screen.getByRole('heading', { level: 1, name: 'anna' })).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+		expect(screen.queryByRole('textbox', { name: 'Username' })).toBeNull();
+		await waitFor(() =>
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Edit profile' }))
+		);
+	});
+
+	it('names a mute, and says when the private view did not load', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () =>
+				Response.json({ ...OWN, mutedUntil: new Date(Date.now() + 86_400_000).toISOString() })
+			)
+		);
+		session.set(ANNA);
+		mount();
+		expect(await screen.findByText(/This account is muted until/)).toBeTruthy();
+		cleanup();
+		session.clear();
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('{}', { status: 500 }))
+		);
+		session.set(ANNA);
+		mount();
+		expect(await screen.findByText(/could not be loaded/)).toBeTruthy();
 	});
 });

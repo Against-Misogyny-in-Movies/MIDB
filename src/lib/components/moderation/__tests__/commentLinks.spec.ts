@@ -86,7 +86,7 @@ describe('links to a comment from the moderation views', () => {
 			latestLabel: null
 		};
 		render(ModerationTable, { rows: [row], me: MOD, selected: [] } as never);
-		const cell = document.querySelector('td[data-label="Posted"]') as HTMLElement;
+		const cell = document.querySelector('td.posted') as HTMLElement;
 		expect(within(cell).getByRole('link').getAttribute('href')).toBe(HREF);
 	});
 

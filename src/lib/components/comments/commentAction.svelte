@@ -13,6 +13,8 @@
 		describedby?: string;
 		/** An icon-only action is square. */
 		icon?: boolean;
+		/** Names the action in `data-action`, so the comment can move the focus back to it. */
+		data?: string;
 		onclick: () => void;
 		children: Snippet;
 	}
@@ -24,6 +26,7 @@
 		label,
 		describedby,
 		icon = false,
+		data,
 		onclick,
 		children
 	}: Props = $props();
@@ -37,6 +40,7 @@
 	aria-describedby={describedby}
 	aria-expanded={expanded}
 	aria-pressed={pressed}
+	data-action={data}
 	{disabled}
 	{onclick}
 >

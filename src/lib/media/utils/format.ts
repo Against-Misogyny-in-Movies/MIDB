@@ -90,6 +90,26 @@ export function formatDate(iso: string): string {
 	return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
 }
 
+const shortDateFormatter = new Intl.DateTimeFormat('en-US', {
+	year: 'numeric',
+	month: 'short',
+	day: 'numeric',
+	timeZone: 'UTC'
+});
+
+/**
+ * Formats a date as `Nov 14, 2026`, for dense rows (a comment's date, a table cell). Read in
+ * UTC like `formatDate`, and an em-dash for an empty or unparseable value.
+ *
+ * @param iso - An ISO date or date-time string, or `''`.
+ * @returns The short date, or `"—"`.
+ */
+export function formatShortDate(iso: string): string {
+	if (!iso) return '—';
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? '—' : shortDateFormatter.format(date);
+}
+
 /**
  * Moves a trailing English article to the front. The Bechdel Test year pages (the synced
  * titles) and TMDB give titles in reading order (`"The Matrix"`), which pass through

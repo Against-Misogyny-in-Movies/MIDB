@@ -19,8 +19,12 @@ export async function addVirtualAuthenticator(page: Page): Promise<void> {
 	});
 }
 
-/** Creates an account with a passkey alone and returns its generated username. */
-export async function signUpWithPasskey(page: Page, next = '/user/profile'): Promise<string> {
+/**
+ * Creates an account with a passkey alone and returns its generated username. The default
+ * landing page makes no `/api/auth/*` request of its own, so sign-ups across the specs stay
+ * under the auth rate limit (`RL_AUTH`), which counts every such request per address.
+ */
+export async function signUpWithPasskey(page: Page, next = '/resources'): Promise<string> {
 	await addVirtualAuthenticator(page);
 	await page.goto(`/auth?next=${encodeURIComponent(next)}`);
 	await page.getByRole('button', { name: 'Create an account with a passkey' }).click();

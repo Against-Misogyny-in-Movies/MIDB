@@ -22,6 +22,7 @@ const PROFILE: PublicProfile = {
 	staffRole: null,
 	joinedAt: '2026-01-15',
 	scoreTotal: 0,
+	commentCount: 0,
 	comments: { comments: [entry('c1')], nextCursor: '99.c1' },
 	reports: []
 };

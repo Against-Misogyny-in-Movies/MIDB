@@ -5,8 +5,8 @@ type Result = { type: string; data?: Record<string, unknown> };
 
 const form = vi.hoisted(() => ({
 	result: { type: 'success', data: {} } as Result,
-	/** Stands for the page taking the action's answer: the `form` prop it would set. */
-	update: async () => {}
+	/** Stands for the request in flight: the answer comes back when it resolves. */
+	gate: async () => {}
 }));
 
 // `enhance` runs the page's submit function with the form's data, then its result handler.
@@ -19,17 +19,15 @@ vi.mock('$app/forms', () => ({
 	) => {
 		const onSubmit = (event: Event) => {
 			event.preventDefault();
-			void submit({ formData: new FormData(node) })({
-				result: form.result,
-				update: () => form.update()
-			});
+			const handle = submit({ formData: new FormData(node) });
+			void form.gate().then(() => handle({ result: form.result, update: async () => {} }));
 		};
 		node.addEventListener('submit', onSubmit);
 		return { destroy: () => node.removeEventListener('submit', onSubmit) };
 	}
 }));
 
-const { default: Page } = await import('../+page.svelte');
+const { default: ProfileEditor } = await import('../profileEditor.svelte');
 const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
 
 const ME = {
@@ -45,24 +43,35 @@ afterEach(() => {
 	cleanup();
 	toasts.clear();
 	form.result = { type: 'success', data: {} };
-	form.update = async () => {};
+	form.gate = async () => {};
 });
 
+const onsaved = vi.fn();
+
 function mount() {
-	return render(Page, { data: { me: ME, email: null }, form: null } as never);
+	return render(ProfileEditor, { user: ME, onsaved, oncancel: vi.fn() });
 }
 
-describe('the public profile link', () => {
-	it('links the reader’s own public profile', () => {
+describe('the rename warning', () => {
+	it('names the address that stops working and the wait, once the name changes', async () => {
 		mount();
-		expect(screen.getByRole('link', { name: /Public profile/ }).getAttribute('href')).toBe(
-			'/u/mary'
+		expect(document.getElementById('username-rename')).toBeNull();
+		await fireEvent.input(screen.getByRole('textbox', { name: 'Username' }), {
+			target: { value: 'maria' }
+		});
+		expect(document.getElementById('username-rename')?.textContent?.replace(/\s+/g, ' ')).toMatch(
+			/After a rename, links to \/u\/mary stop working, and the username cannot change again for \d+ days\./
 		);
 	});
 
-	it('is absent for an account with no username', () => {
-		render(Page, { data: { me: { ...ME, username: null }, email: null }, form: null } as never);
-		expect(screen.queryByRole('link', { name: /Public profile/ })).toBeNull();
+	it('leaves the wait out for staff, who have none', async () => {
+		render(ProfileEditor, { user: { ...ME, role: 'moderator' }, onsaved, oncancel: vi.fn() });
+		await fireEvent.input(screen.getByRole('textbox', { name: 'Username' }), {
+			target: { value: 'maria' }
+		});
+		expect(document.getElementById('username-rename')?.textContent?.trim()).toBe(
+			'After a rename, links to /u/mary stop working.'
+		);
 	});
 });
 
@@ -99,7 +108,7 @@ describe('the username field as the reader types', () => {
 				expect(document.getElementById('username-status')?.textContent).toBe('Available')
 			);
 			expect(fetcher).toHaveBeenCalledWith(
-				'/user/profile/availability?username=alicezz',
+				'/user/settings/availability?username=alicezz',
 				expect.anything()
 			);
 		} finally {
@@ -145,7 +154,7 @@ describe('the username field as the reader types', () => {
 describe('saving the profile', () => {
 	it('toasts a save that went through, and shows the button busy while it runs', async () => {
 		let release!: () => void;
-		form.update = () => new Promise<void>((r) => (release = r));
+		form.gate = () => new Promise<void>((r) => (release = r));
 		mount();
 		const save = screen.getByRole('button', { name: 'Save profile' });
 		await fireEvent.submit(save.closest('form')!);
@@ -161,13 +170,10 @@ describe('saving the profile', () => {
 	});
 
 	it('shows a refused username under its field, not as a toast, while the field still holds it', async () => {
-		const view = mount();
+		mount();
 		const field = screen.getByRole('textbox', { name: 'Username' });
 		await fireEvent.input(field, { target: { value: 'admin' } });
 		form.result = { type: 'failure', data: { error: 'username-reserved' } };
-		form.update = async () => {
-			await view.rerender({ data: { me: ME, email: null }, form: { error: 'username-reserved' } });
-		};
 		await fireEvent.submit(field.closest('form')!);
 		await waitFor(() =>
 			expect(document.getElementById('username-status')?.textContent).toMatch(/reserved/)
@@ -213,6 +219,7 @@ describe('saving the profile', () => {
 		await fireEvent.input(field, { target: { value: 'Maria' } });
 		await fireEvent.submit(field.closest('form')!);
 		await waitFor(() => expect(shown()).toEqual(['success: Username changed to maria.']));
+		expect(onsaved).toHaveBeenCalledWith({ ...ME, username: 'maria' });
 	});
 
 	it('toasts a refused avatar', async () => {

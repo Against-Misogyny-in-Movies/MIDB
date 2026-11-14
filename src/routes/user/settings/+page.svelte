@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
+	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { AUTH_PROVIDERS, providerIcon, providerLabel } from '#lib/media/utils/auth-providers.ts';
 	import { HEADING_ID, passkeyName, SignInMethods } from '#lib/signInMethods.svelte.ts';
@@ -44,18 +46,31 @@
 </script>
 
 <svelte:head>
-	<title>Sign-in methods | MIDB</title>
+	<title>Settings · MIDB</title>
 </svelte:head>
 
 <svelte:window onpageshow={(event) => event.persisted && methods.restored()} />
 
 <div class="account-page">
 	<header>
-		<a href="/user/profile" class="back"
+		<a href={profileHref(data.me.username) ?? '/user/profile'} class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
-		<h1 class="display">Sign-in methods</h1>
+		<div class="title-row">
+			<h1 class="display">Settings</h1>
+			<LogoutButton />
+		</div>
 	</header>
+
+	<section class="card plain" aria-labelledby="email-heading">
+		<h2 id="email-heading">Email</h2>
+		{#if data.email}
+			<p class="email">{data.email}</p>
+			<p class="hint">Not shown on the profile or on comments.</p>
+		{:else}
+			<p class="hint">This account has no email.</p>
+		{/if}
+	</section>
 
 	<section
 		class="card methods"
@@ -277,9 +292,25 @@
 		font-size: 1.875rem;
 	}
 
+	/* Sign out sits beside the title, so the cards loading below it never move it. */
+	.title-row {
+		@apply flex flex-wrap items-center justify-between;
+		gap: var(--spacing-sm) var(--spacing-md);
+	}
+
 	h2 {
 		@apply font-semibold;
 		font-size: 1.125rem;
+	}
+
+	.plain {
+		@apply flex flex-col;
+		gap: var(--spacing-sm);
+		padding: 24px;
+	}
+
+	.email {
+		overflow-wrap: anywhere;
 	}
 
 	.methods {

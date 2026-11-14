@@ -5,14 +5,14 @@ import type { UserRow } from '#lib/server/data/user-queries.ts';
 const usernameAvailability = vi.fn(async (): Promise<string> => 'available');
 vi.mock('#lib/server/data/user-queries.ts', () => ({ usernameAvailability }));
 
-const { GET } = await import('../routes/user/profile/availability/+server');
+const { GET } = await import('../routes/user/settings/availability/+server');
 const { clearCache } = await import('#lib/server/cache/index.ts');
 
 const user = (id: string) => ({ id, role: 'user' }) as UserRow;
 
 function call(signedIn: UserRow | null, username = 'zed', ip = '203.0.113.7') {
 	const event = {
-		url: new URL(`http://localhost/user/profile/availability?username=${username}`),
+		url: new URL(`http://localhost/user/settings/availability?username=${username}`),
 		locals: { getUser: async () => signedIn },
 		getClientAddress: () => ip
 	} as unknown as RequestEvent;
@@ -24,7 +24,7 @@ beforeEach(async () => {
 	usernameAvailability.mockClear();
 });
 
-describe('GET /user/profile/availability', () => {
+describe('GET /user/settings/availability', () => {
 	it('answers availability for a signed-in user', async () => {
 		const res = await call(user('alice'));
 		await expect(res.json()).resolves.toEqual({ available: true, reason: 'available' });

@@ -49,7 +49,7 @@ Trace the change against the phase exit and the behaviour it claims. Report a bu
   - A load with a public cache policy that reads `locals.getUser()`, a cookie, or anything else that depends on the request's user is a block.
   - A public response that can carry `Set-Cookie` is a block.
 - **Endpoints.** An endpoint or action that needs a user but skips `requireUser` / `requireRole` is a block. So is a role read from anywhere but the database.
-- **User data.** A `UserRow` or an email that reaches a client outside `/user/profile` is a block.
+- **User data.** A `UserRow` or an email that reaches a client outside `/user/settings` is a block.
 - **Secrets.** Server code or a secret reachable from client code, or a secret read at build time, is a block.
 - **Rate limits.** A write without a rate limit is a finding. So is a limit keyed on the user on a public route, or a limit inside a `try` that swallows the 429.
 - **External data.** Unvalidated input from a request or an external source written to the database is a finding.

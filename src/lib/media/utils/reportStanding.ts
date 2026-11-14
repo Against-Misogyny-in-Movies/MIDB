@@ -49,7 +49,7 @@ function shared(standing: Standing): StandingLabel | null {
 	}
 }
 
-/** The standing as its author reads it, on the title page and `/user/metrics`. */
+/** The standing as its author reads it, on the title page and their own profile. */
 export function readerStandingLabel(standing: Standing): StandingLabel {
 	if (standing.kind === 'held')
 		return { label: 'Waiting for review', tone: reportStatusTone('held') };

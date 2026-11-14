@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
-	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
-	import Badge from '#lib/components/ui/badge.svelte';
+	import { onMount } from 'svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
 	import {
 		NEW_USERNAME_MIN,
@@ -12,23 +10,30 @@
 		USERNAME_CHANGE_WAIT_DAYS,
 		USERNAME_MAX
 	} from '#lib/media/utils/username.ts';
-	import { profileHref } from '#lib/media/utils/profileHref.ts';
+	import { isStaff } from '#lib/media/utils/staff.ts';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import type { SubmitFunction } from '$app/forms';
+	import type { PublicUser } from '#lib/media/types/user.ts';
 
-	let { data, form } = $props();
+	interface Props {
+		/** The account as it is saved now. */
+		user: PublicUser;
+		/** The account as the server stored it after a save that went through. */
+		onsaved: (me: PublicUser) => void;
+		oncancel: () => void;
+	}
 
-	const user = $derived(form?.me ?? data.me);
-	const publicHref = $derived(profileHref(user?.username));
+	let { user, onsaved, oncancel }: Props = $props();
 
-	let selectedAvatar = $state<string | null>(null);
-	let usernameInput = $state('');
+	// The editor starts from the saved account; a later save hands the new one to the page.
+	// svelte-ignore state_referenced_locally
+	let selectedAvatar = $state<string | null>(user.avatarKey);
+	// svelte-ignore state_referenced_locally
+	let usernameInput = $state(user.username ?? '');
+	let field: HTMLInputElement | undefined = $state();
 
-	$effect.pre(() => {
-		selectedAvatar = user?.avatarKey ?? null;
-		usernameInput = user?.username ?? '';
-	});
+	onMount(() => field?.focus());
 	/** What the username field's live slot shows: a check in progress, its answer, or a refused save. */
 	type Status =
 		| 'idle'
@@ -49,7 +54,7 @@
 	// value never overwrites the current one. An error response (e.g. a 429) shows nothing.
 	const availabilityCheck = new DebouncedQuery<Status>(
 		async (value, signal) => {
-			const res = await fetch(`/user/profile/availability?username=${encodeURIComponent(value)}`, {
+			const res = await fetch(`/user/settings/availability?username=${encodeURIComponent(value)}`, {
 				signal
 			});
 			if (!res.ok) return 'idle';
@@ -61,7 +66,7 @@
 	);
 
 	function checkAvailability(value: string) {
-		if (!value || value === user?.username || !NEW_USERNAME_RE.test(value)) {
+		if (!value || value === user.username || !NEW_USERNAME_RE.test(value)) {
 			availabilityCheck.cancel();
 			status = 'idle';
 			return;
@@ -82,7 +87,7 @@
 	const USERNAME_RULE = `A new username is ${NEW_USERNAME_MIN}–${USERNAME_MAX} characters: lowercase letters, numbers and single underscores. It starts with a letter and does not end with an underscore.`;
 
 	/** The new-name rule binds a changed name only: a stored name that predates it saves as it is. */
-	const changingUsername = $derived(usernameInput !== (user?.username ?? ''));
+	const changingUsername = $derived(usernameInput !== (user.username ?? ''));
 
 	/** A refusal of the username, shown in the field's live slot. */
 	const USERNAME_ERRORS: Record<string, string> = {
@@ -123,22 +128,28 @@
 		else toasts.warn('Nothing changed: the username and avatar are the ones already saved.');
 	}
 
-	/** Saves the profile: the result is a toast, except a refused username, which its field shows. */
+	/**
+	 * Saves the profile: the result is a toast, except a refused username, which its field shows.
+	 * The action belongs to `/user/settings`, so the result is handled here and never applied to
+	 * the profile page's own data.
+	 */
 	const saveProfile: SubmitFunction = () => {
 		saving = true;
 		shapeChecked = true;
-		const before: Profile = { username: user?.username ?? '', avatarKey: user?.avatarKey ?? null };
-		return async ({ result, update }) => {
-			await update({ reset: false });
+		const before: Profile = { username: user.username ?? '', avatarKey: user.avatarKey };
+		return async ({ result }) => {
 			saving = false;
 			if (result.type === 'success') {
 				status = 'idle';
 				// The account as the server stored it (a username is lowercased), not as typed.
-				const me = result.data?.me as Partial<Profile> | undefined;
+				const me = result.data?.me as PublicUser | undefined;
 				announceSave(before, {
 					username: me?.username ?? before.username,
 					avatarKey: me?.avatarKey ?? before.avatarKey
 				});
+				if (me) onsaved(me);
+			} else if (result.type === 'error') {
+				toasts.error('The profile could not be saved. Try again.');
 			} else if (result.type === 'failure') {
 				const error = result.data?.error;
 				// A refused username replaces the availability state in its field instead of a toast.
@@ -163,129 +174,83 @@
 			}
 		};
 	};
-
-	function roleLabel(role: string) {
-		return { user: 'Member', moderator: 'Moderator', administrator: 'Administrator' }[role] ?? role;
-	}
 </script>
 
-<div class="account-page">
-	<header class="profile-header">
-		<Avatar avatarKey={user?.avatarKey} size={64} />
-		<div class="profile-meta">
-			<h1 class="display">
-				{user?.username ?? 'Account'}
-			</h1>
-			<p class="details">
-				{#if data.email}<span>{data.email}</span>{/if}
-				{#if user?.role}<Badge tone={user.role === 'user' ? 'neutral' : 'brand'}
-						>{roleLabel(user.role)}</Badge
-					>{/if}
+<form
+	method="POST"
+	novalidate
+	action="/user/settings?/updateProfile"
+	use:enhance={saveProfile}
+	class="card editor"
+	aria-busy={saving}
+	aria-labelledby="editor-heading"
+>
+	<h2 id="editor-heading">Edit profile</h2>
+	<input type="hidden" name="avatarKey" value={selectedAvatar ?? ''} />
+
+	<div class="field">
+		<label for="username">Username</label>
+		<input
+			id="username"
+			name="username"
+			type="text"
+			class="input"
+			value={usernameInput}
+			bind:this={field}
+			oninput={onUsernameInput}
+			onblur={() => (shapeChecked = true)}
+			minlength={changingUsername ? NEW_USERNAME_MIN : undefined}
+			maxlength={USERNAME_MAX}
+			pattern={changingUsername ? NEW_USERNAME_PATTERN : undefined}
+			autocomplete="off"
+			spellcheck="false"
+			aria-describedby="username-rule username-status{changingUsername ? ' username-rename' : ''}"
+			aria-invalid={shapeInvalid ||
+			(status !== 'idle' && status !== 'checking' && status !== 'available')
+				? true
+				: undefined}
+		/>
+		<p id="username-rule" class="hint" class:hint--taken={shapeInvalid}>
+			Shown on comments and in the profile's address. {USERNAME_RULE}
+		</p>
+		<p id="username-status" class="hint hint--{status} status" aria-live="polite">{statusText}</p>
+		{#if changingUsername}
+			<p id="username-rename" class="rename">
+				After a rename, links to /u/{user.username} stop working{isStaff(user.role)
+					? '.'
+					: `, and the username cannot change again for ${USERNAME_CHANGE_WAIT_DAYS} days.`}
 			</p>
-		</div>
-	</header>
-
-	<form
-		method="POST"
-		novalidate
-		action="?/updateProfile"
-		use:enhance={saveProfile}
-		class="card profile-form"
-		aria-busy={saving}
-	>
-		<input type="hidden" name="avatarKey" value={selectedAvatar ?? ''} />
-
-		<div class="field">
-			<label for="username">Username</label>
-			<input
-				id="username"
-				name="username"
-				type="text"
-				class="input"
-				value={usernameInput}
-				oninput={onUsernameInput}
-				onblur={() => (shapeChecked = true)}
-				minlength={changingUsername ? NEW_USERNAME_MIN : undefined}
-				maxlength={USERNAME_MAX}
-				pattern={changingUsername ? NEW_USERNAME_PATTERN : undefined}
-				autocomplete="off"
-				spellcheck="false"
-				aria-describedby="username-rule username-status"
-				aria-invalid={shapeInvalid ||
-				(status !== 'idle' && status !== 'checking' && status !== 'available')
-					? true
-					: undefined}
-			/>
-			<p id="username-rule" class="hint" class:hint--taken={shapeInvalid}>
-				Shown on comments. {USERNAME_RULE}
-			</p>
-			<p id="username-status" class="hint hint--{status} status" aria-live="polite">{statusText}</p>
-		</div>
-
-		<fieldset class="field">
-			<legend>Avatar</legend>
-			<AvatarPicker
-				value={selectedAvatar}
-				onselect={(key) => {
-					selectedAvatar = key;
-				}}
-			/>
-		</fieldset>
-
-		<button type="submit" class="btn btn--brand save" aria-busy={saving}> Save profile </button>
-	</form>
-
-	<nav class="card account-nav" aria-label="Account">
-		{#if publicHref}
-			<a href={publicHref}
-				>Public profile <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
-			>
 		{/if}
-		<a href="/user/security"
-			>Sign-in methods <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
-		>
-		<a href="/user/comments"
-			>Comment history <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
-		>
-		<a href="/user/metrics"
-			>MIDB community reports <i class="ri-arrow-right-s-line" aria-hidden="true"></i></a
-		>
-	</nav>
+	</div>
 
-	<p><LogoutButton /></p>
-</div>
+	<fieldset class="field">
+		<legend>Avatar</legend>
+		<AvatarPicker
+			value={selectedAvatar}
+			onselect={(key) => {
+				selectedAvatar = key;
+			}}
+		/>
+	</fieldset>
+
+	<div class="buttons">
+		<button type="submit" class="btn btn--brand" aria-busy={saving}>Save profile</button>
+		<button type="button" class="btn btn--ghost" onclick={oncancel}>Cancel</button>
+	</div>
+</form>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.account-page {
-		@apply flex flex-col mx-auto;
-		max-width: 36rem;
-		gap: var(--spacing-lg);
-		padding-block: var(--spacing-xl);
-	}
-
-	.profile-header {
-		@apply flex items-center gap-md;
-	}
-
-	.profile-meta {
-		@apply flex flex-col gap-xs min-w-0;
-	}
-
-	h1 {
-		@apply truncate;
-		font-size: 1.875rem;
-	}
-
-	.details {
-		@apply flex flex-wrap items-center gap-x-md gap-y-xs text-sm text-ink-muted;
-	}
-
-	.profile-form {
+	.editor {
 		@apply flex flex-col;
 		gap: var(--spacing-lg);
 		padding: 24px;
+	}
+
+	h2 {
+		@apply font-semibold;
+		font-size: 1.125rem;
 	}
 
 	.field {
@@ -328,29 +293,17 @@
 		color: var(--danger);
 	}
 
-	.save {
-		@apply self-start;
+	/* What a rename costs, in the warn plate the moderation consequences use. */
+	.rename {
+		@apply text-sm;
+		padding: var(--spacing-sm) var(--spacing-md);
+		border-radius: 8px;
+		background-color: var(--warn-soft);
+		color: var(--warn);
 	}
 
-	.account-nav {
-		@apply flex flex-col overflow-hidden;
-	}
-
-	.account-nav a {
-		@apply flex items-center justify-between no-underline text-ink font-medium;
-		padding: 14px 20px;
-		transition: color 0.15s ease;
-	}
-
-	.account-nav a + a {
-		border-top: 1px solid var(--border);
-	}
-
-	.account-nav a:hover {
-		color: var(--brand);
-	}
-
-	.account-nav i {
-		@apply text-ink-muted text-lg;
+	.buttons {
+		@apply flex flex-wrap;
+		gap: var(--spacing-sm);
 	}
 </style>

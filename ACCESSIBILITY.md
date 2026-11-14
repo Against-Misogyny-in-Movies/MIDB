@@ -18,7 +18,7 @@ The site should be usable without sight, with low vision, with limited hand move
 ## Known gaps
 
 - **No automated check yet.** No automated accessibility audit runs in CI. The Playwright e2e specs cover layout only.
-- **Sign-in:** `/auth` and `/user/security` are MIDB's own pages. Buttons and fields have text labels, errors, confirmations and a failed load on `/user/security` are announced (`role="alert"` / `role="status"`), and every action works from the keyboard. Opening a rename or confirmation on `/user/security` moves focus into it, and closing it returns focus to the button that opened it, or to the list heading when the row is gone. On a touch screen every button is at least 44px tall. The Cloudflare Turnstile widget on sign-up is Cloudflare's, and its accessibility is theirs.
+- **Sign-in:** `/auth` and `/user/settings` are MIDB's own pages. Buttons and fields have text labels, errors, confirmations and a failed load on `/user/settings` are announced (`role="alert"` / `role="status"`), and every action works from the keyboard. Opening a rename or confirmation on `/user/settings` moves focus into it, and closing it returns focus to the button that opened it, or to the list heading when the row is gone. On a touch screen every button is at least 44px tall. The Cloudflare Turnstile widget on sign-up is Cloudflare's, and its accessibility is theirs.
 
 ## Reporting a barrier
 
