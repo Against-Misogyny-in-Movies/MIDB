@@ -31,12 +31,14 @@ describe('canActOn', () => {
 });
 
 describe('canCloseFlag', () => {
-	it('refuses a moderator their own flag and lets them close anyone else’s', () => {
-		expect(canCloseFlag(mod, 'm')).toBe(false);
-		for (const reporter of ['u', 'm2', 'a']) expect(canCloseFlag(mod, reporter)).toBe(true);
+	it('refuses a moderator their own flag and an administrator’s, and lets them close anyone else’s', () => {
+		expect(canCloseFlag(mod, mod)).toBe(false);
+		expect(canCloseFlag(mod, admin)).toBe(false);
+		for (const reporter of [user, mod2]) expect(canCloseFlag(mod, reporter)).toBe(true);
 	});
 
 	it('lets an administrator close any flag, their own included', () => {
-		for (const reporter of ['u', 'm', 'a', 'a2']) expect(canCloseFlag(admin, reporter)).toBe(true);
+		for (const reporter of [user, mod, admin, admin2])
+			expect(canCloseFlag(admin, reporter)).toBe(true);
 	});
 });

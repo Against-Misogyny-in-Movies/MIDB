@@ -15,10 +15,7 @@ import {
 } from '#lib/server/data/comment-queries.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
 
-function refuse(
-	reason: 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict'
-): never {
-	if (reason === 'forbidden') error(403, 'Only the author can change a comment');
+function refuse(reason: 'not-found' | 'not-editable' | 'parent-not-found' | 'conflict'): never {
 	if (reason === 'conflict') error(409, 'This comment changed. Reload it and try again.');
 	if (reason === 'not-editable') error(409, 'This comment can no longer be edited');
 	error(404, 'Comment not found');

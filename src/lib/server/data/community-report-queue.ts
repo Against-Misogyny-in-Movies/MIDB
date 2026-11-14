@@ -12,7 +12,7 @@ import { titles } from '#db/schema/titles.ts';
 import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/communityReports.ts';
 import { activeMute } from './mute.ts';
 import { QUEUE_LIMIT } from './moderation-queue.ts';
-import { countsFromDate } from './community-reports.ts';
+import { countsFromDate } from './counting-account.ts';
 
 type ReportRow = typeof reports.$inferSelect;
 
@@ -80,8 +80,9 @@ export type FlaggedTitle = {
 		id: string;
 		note: string | null;
 		reporter: string | null;
-		/** The reporter's account, so the page hides the buttons for a moderator's own flag. */
+		/** The reporter's account and role, so the page hides the buttons a moderator may not use (their own flag, an administrator's). */
 		reporterId: string;
+		reporterRole: string;
 		createdAt: string;
 	}[];
 };
@@ -277,7 +278,8 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 				note: titleCountFlags.note,
 				createdAt: titleCountFlags.createdAt,
 				reporter: users.username,
-				reporterId: users.id
+				reporterId: users.id,
+				reporterRole: users.role
 			})
 			.from(titleCountFlags)
 			.innerJoin(users, eq(titleCountFlags.reporterId, users.id))
@@ -289,6 +291,7 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 				note: f.note,
 				reporter: f.reporter,
 				reporterId: f.reporterId,
+				reporterRole: f.reporterRole,
 				createdAt: f.createdAt.toISOString()
 			});
 			flags.set(f.titleId, list);

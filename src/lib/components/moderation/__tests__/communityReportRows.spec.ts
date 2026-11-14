@@ -233,6 +233,7 @@ describe('the open title view', () => {
 				note: 'Too low',
 				reporter: 'bo',
 				reporterId: 'u1',
+				reporterRole: 'user',
 				createdAt: '2026-11-10T10:00:00Z'
 			},
 			{
@@ -240,6 +241,7 @@ describe('the open title view', () => {
 				note: null,
 				reporter: null,
 				reporterId: 'u2',
+				reporterRole: 'user',
 				createdAt: '2026-11-11T10:00:00Z'
 			}
 		]
@@ -304,6 +306,24 @@ describe('the open title view', () => {
 		await waitFor(() =>
 			expect(shown()).toEqual(['success: Marked resolved.', 'success: Dismissed.'])
 		);
+	});
+
+	it('says an administrator closes an administrator’s flag, to a moderator', () => {
+		const theirs = {
+			...flagged.flags[0],
+			id: 'f4',
+			reporterId: 'adm',
+			reporterRole: 'administrator'
+		};
+		render(CommunityReportsPanel, {
+			held: [],
+			openTitle: open,
+			titleId: 't1',
+			flagged: [{ ...flagged, flags: [theirs] }],
+			me
+		});
+		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+		expect(screen.getByText('An administrator closes this flag.')).toBeTruthy();
 	});
 
 	it('hides the buttons of a moderator’s own flag only; an administrator keeps theirs', () => {

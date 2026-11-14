@@ -1,7 +1,6 @@
 import type { Movie } from '#lib/media/types/movie.ts';
 import type { Series } from '#lib/media/types/series.ts';
 import type { DddResult, TriggerTag } from '#lib/media/types/ddd.ts';
-import type { LetterboxdOutcome } from '#lib/media/types/letterboxd.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import { umFlagCount } from './metrics';
 import {
@@ -12,6 +11,7 @@ import {
 	type SafetyVerdict
 } from './verdict';
 import { sourceIndex, type SourceIndexItem } from './sourceIndex';
+import { createTitleSourcesRequest } from './titleSources';
 import { createDddState } from './dddStream.svelte.js';
 import { createLetterboxdState } from './letterboxdStream.svelte.js';
 import { EpisodeFilter } from './episodeFilter.svelte.js';
@@ -22,9 +22,7 @@ export interface TitleViewData<M extends Movie | Series> {
 	bechdel: BechdelLike | null;
 	umEntry: UmEntry | null;
 	umCandidates?: UmEntry[];
-	triggerTags: Promise<DddResult>;
 	/** Film pages only (see `loadTitle`). */
-	letterboxd?: Promise<LetterboxdOutcome>;
 	letterboxdEnabled?: boolean;
 }
 
@@ -32,8 +30,9 @@ type Media<K extends 'movie' | 'tv'> = K extends 'movie' ? Movie : Series;
 
 /**
  * Client page state shared by the movie and TV detail pages, all derived from the load data:
- * the UM entry to show (seeded, auto-picked or user-picked), the streamed DDD result and the
- * two verdicts. Construct it once in the page script (the DDD stream needs component context).
+ * the UM entry to show (seeded, auto-picked or user-picked), the DDD result and Letterboxd rating
+ * (fetched from the sources endpoint after mount) and the two verdicts. Construct it once in the
+ * page script (the source streams need component context).
  */
 export class TitleView<K extends 'movie' | 'tv'> {
 	readonly kind: K;
@@ -49,7 +48,7 @@ export class TitleView<K extends 'movie' | 'tv'> {
 	umData: UmEntry | null;
 	hasUmCandidates: boolean;
 	flagCount: number;
-	/** Null while the DDD lookup is still streaming. */
+	/** Null while the DDD lookup is still loading. */
 	ddd: DddResult | null;
 	/** Tags for the current selection: all tags on movies, the episode filter's on TV. */
 	visibleTags: TriggerTag[];
@@ -74,9 +73,10 @@ export class TitleView<K extends 'movie' | 'tv'> {
 		this.hasUmCandidates = $derived(this.umData === null && this.umCandidates.length > 1);
 		this.flagCount = $derived(umFlagCount(this.umData));
 
-		const stream = createDddState(() => data().triggerTags, isSeries);
+		const sources = createTitleSourcesRequest(() => ({ kind, tmdbId: this.media.tmdbId }));
+		const stream = createDddState(() => sources().then((s) => s.ddd), isSeries);
 		this.ddd = $derived(stream.current);
-		const letterboxd = createLetterboxdState(() => data().letterboxd);
+		const letterboxd = createLetterboxdState(() => sources().then((s) => s.letterboxd));
 		const episodes = isSeries
 			? new EpisodeFilter(
 					() => this.ddd,

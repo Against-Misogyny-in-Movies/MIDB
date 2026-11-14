@@ -2,7 +2,6 @@ import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { passkey } from '@better-auth/passkey';
-import { sql } from 'drizzle-orm';
 import type { Db } from '#db/client.ts';
 import { accounts, passkeys, sessions, users, verifications } from '#db/schema/auth.ts';
 import { isLocalOrigin } from '#lib/server/http/origin.ts';
@@ -11,6 +10,7 @@ import { guardLastMethod } from './last-method.ts';
 import { guardPasskeySignUp } from './turnstile.ts';
 import { createPasskeyUser, resolveNewPasskeyUser } from './passkey-signup.ts';
 import { generateUsername } from './generate-username.ts';
+import { isTakenByOthers } from '#lib/server/data/username-taken.ts';
 
 export type OAuthCredentials = { clientId: string; clientSecret: string };
 
@@ -116,7 +116,7 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 		rateLimit: { enabled: false },
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
-				await guardPasskeySignUp(ctx, turnstileSecret);
+				await guardPasskeySignUp(ctx, turnstileSecret, origin);
 				await guardLastMethod(ctx);
 			})
 		},
@@ -141,13 +141,9 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 					before: async (user) => ({
 						data: {
 							...user,
-							username: await generateUsername(async (candidate) => {
-								const taken = await db.query.users.findFirst({
-									where: sql`lower(${users.username}) = ${candidate}`,
-									columns: { id: true }
-								});
-								return Boolean(taken);
-							})
+							// The same check a rename meets: a look-alike of a name, or of one given up
+							// recently, is taken too.
+							username: await generateUsername((candidate) => isTakenByOthers(db, candidate, null))
 						}
 					})
 				}

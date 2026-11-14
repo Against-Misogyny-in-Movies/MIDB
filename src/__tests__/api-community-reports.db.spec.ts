@@ -18,7 +18,6 @@ import type { ReportCounts, ViewerReportResponse } from '#lib/media/types/commun
 const resolveWriteRef = vi.fn();
 const resolveCommentTitle = vi.fn();
 vi.mock('#lib/server/data/comment-title.ts', async () => {
-	const { error } = await import('@sveltejs/kit');
 	return {
 		resolveWriteRef,
 		resolveCommentTitle,
@@ -31,11 +30,6 @@ vi.mock('#lib/server/data/comment-title.ts', async () => {
 					where: and(eq(titles.kind, kind as 'movie'), eq(titles.tmdbId, Number(tmdbId)))
 				})) ?? null
 			);
-		},
-		parseTitleParams: (kind: string, tmdbId: string) => {
-			if ((kind !== 'movie' && kind !== 'tv') || !/^\d{1,9}$/.test(tmdbId))
-				error(404, 'Title not found');
-			return { kind, tmdbId: String(Number(tmdbId)) };
 		}
 	};
 });
@@ -196,7 +190,9 @@ describe('PUT a report', () => {
 
 	it('answers the hold status when the report is held', async () => {
 		for (let i = 0; i < 4; i++) {
-			await db.insert(users).values(userValues(`o${i}`));
+			await db
+				.insert(users)
+				.values(userValues(`o${i}`, { createdAt: new Date(Date.now() - 30 * 86_400_000) }));
 			await db
 				.insert(communityContentReports)
 				.values({ userId: `o${i}`, titleId: title.id, status: 'counted' });

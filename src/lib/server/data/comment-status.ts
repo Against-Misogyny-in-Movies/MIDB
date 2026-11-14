@@ -28,8 +28,23 @@ export async function runMove(statements: BatchStatement[]): Promise<boolean> {
  * only when a `statusMove` in the same batch will move the comment is guarded with it, since
  * the batch is atomic and the move runs after it.
  */
-export const stillIn = (id: string, status: CommentStatus): SQL =>
-	sql`EXISTS (SELECT 1 FROM comments c WHERE c.id = ${id} AND c.status = ${status})`;
+export const stillIn = (id: string, status: CommentStatus, editedAt?: EditedAt): SQL =>
+	editedAt === undefined
+		? sql`EXISTS (SELECT 1 FROM comments c WHERE c.id = ${id} AND c.status = ${status})`
+		: sql`EXISTS (SELECT 1 FROM comments c WHERE c.id = ${id} AND c.status = ${status} AND c.edited_at IS ${editedAt})`;
+
+/** A comment's `edited_at` in milliseconds as a moderator's view loaded it; null when never edited. */
+export type EditedAt = number | null;
+
+/** Whether the stored `edited_at` differs from the one a moderator's view carried. */
+export const editedSince = (stored: Date | null, viewed: EditedAt): boolean =>
+	(stored?.getTime() ?? null) !== viewed;
+
+/**
+ * A condition (for `statusMove`'s and `logCommentAction`'s `extraWhere`) that holds while the
+ * comment's text is the one the moderator saw: its stored `edited_at` equals `editedAt`.
+ */
+export const unchangedSince = (editedAt: EditedAt): SQL => sql`edited_at IS ${editedAt}`;
 
 /** Fields a status change may set alongside the status itself. */
 export type StatusPatch = Partial<

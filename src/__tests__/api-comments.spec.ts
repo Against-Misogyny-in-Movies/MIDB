@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { error, isHttpError, type RequestEvent } from '@sveltejs/kit';
+import { isHttpError, type RequestEvent } from '@sveltejs/kit';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import {
 	purgeCalls,
@@ -29,13 +29,7 @@ vi.mock('#lib/server/data/comment-votes.ts', () => ({ setVote, removeVote }));
 vi.mock('#lib/server/data/comment-reports.ts', () => ({ reportComment }));
 vi.mock('#lib/server/data/comment-title.ts', () => ({
 	findCommentTitle,
-	resolveCommentTitle,
-	// The real one imports the TMDB client; this keeps its contract.
-	parseTitleParams: (kind: string, tmdbId: string) => {
-		if ((kind !== 'movie' && kind !== 'tv') || !/^\d{1,9}$/.test(tmdbId))
-			error(404, 'Title not found');
-		return { kind, tmdbId: String(Number(tmdbId)) };
-	}
+	resolveCommentTitle
 }));
 
 const list = await import('../routes/api/titles/[kind]/[tmdbId]/comments/+server');
@@ -273,14 +267,14 @@ describe('PATCH and DELETE a comment', () => {
 		).toBe(403);
 	});
 
-	it('edits as the owner, purges the tag, and answers 403 for someone else', async () => {
+	it('edits as the owner, purges the tag, and answers 404 for someone else', async () => {
 		const res = await call(comment.PATCH, { params, method: 'PATCH', body: { body: 'Edited' } });
 		expect(res.status).toBe(200);
 		expect(editComment).toHaveBeenCalledWith('c1', 'u1', 'Edited');
 		await Promise.all(waitUntilPromises);
 		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1'] }]);
 
-		editComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
+		editComment.mockResolvedValue({ ok: false, reason: 'not-found' });
 		expect(
 			await status(
 				call(comment.PATCH, {
@@ -290,7 +284,7 @@ describe('PATCH and DELETE a comment', () => {
 					user: user({ id: 'u2' })
 				})
 			)
-		).toBe(403);
+		).toBe(404);
 	});
 
 	it('answers 409 for a comment that can no longer be edited and 404 for a missing one', async () => {
@@ -335,12 +329,12 @@ describe('PATCH and DELETE a comment', () => {
 		await Promise.all(waitUntilPromises);
 		expect(purgeCalls).toEqual([{ tags: [TAG] }, { tags: ['profile:u1', 'profile:replier'] }]);
 
-		softDeleteComment.mockResolvedValue({ ok: false, reason: 'forbidden' });
+		softDeleteComment.mockResolvedValue({ ok: false, reason: 'not-found' });
 		expect(
 			await status(
 				call(comment.DELETE, { params, method: 'DELETE', body: {}, user: user({ id: 'u2' }) })
 			)
-		).toBe(403);
+		).toBe(404);
 	});
 });
 
@@ -361,7 +355,7 @@ describe('votes', () => {
 	it('sets and removes a vote, and schedules no purge', async () => {
 		const res = await put();
 		await expect(res.json()).resolves.toEqual({ score: 1, vote: 1 });
-		expect(setVote).toHaveBeenCalledWith('c1', 'u1', 1);
+		expect(setVote).toHaveBeenCalledWith('c1', expect.objectContaining({ id: 'u1' }), 1);
 		const removed = await call(vote.DELETE, { params, method: 'DELETE', body: {} });
 		await expect(removed.json()).resolves.toEqual({ score: 0, vote: null });
 		await Promise.all(waitUntilPromises);
@@ -374,6 +368,8 @@ describe('votes', () => {
 		expect(await status(put())).toBe(403);
 		setVote.mockResolvedValue({ ok: false, reason: 'not-found' });
 		expect(await status(put())).toBe(404);
+		setVote.mockResolvedValue({ ok: false, reason: 'account-too-new' });
+		expect(await status(put())).toBe(403);
 		expect(await status(put({ body: { value: 2 } }))).toBe(400);
 		expect(await status(put({ body: { value: 0 } }))).toBe(400);
 		await Promise.all(waitUntilPromises);

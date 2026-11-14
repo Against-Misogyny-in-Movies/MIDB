@@ -1,4 +1,5 @@
 import type { ReportAccount } from '#lib/media/types/moderation.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
 
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
@@ -7,7 +8,7 @@ const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
  * whose header names it already), age, community reports not rejected and comments.
  */
 export function accountLine(account: ReportAccount, withName = true, now = Date.now()): string {
-	const days = Math.max(0, Math.floor((now - Date.parse(account.createdAt)) / 86_400_000));
+	const days = Math.max(0, Math.floor((now - Date.parse(account.createdAt)) / DAY_MS));
 	const facts = [
 		`${plural(days, 'day')} old`,
 		`${plural(account.reportCount, 'community report')} not rejected`,

@@ -10,11 +10,8 @@ import {
 	readBody
 } from '#lib/server/http/comment-request.ts';
 import { createComment, listTitleComments } from '#lib/server/data/comment-queries.ts';
-import {
-	findCommentTitle,
-	parseTitleParams,
-	resolveCommentTitle
-} from '#lib/server/data/comment-title.ts';
+import { findCommentTitle, resolveCommentTitle } from '#lib/server/data/comment-title.ts';
+import { parseTitleParams } from '#lib/server/titles/title-params.ts';
 
 const listQuery = z.object({
 	sort: z.enum(['top', 'new']).default('top'),

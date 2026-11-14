@@ -5,7 +5,7 @@
 
 	interface Props {
 		flags: FlaggedTitle['flags'];
-		/** The acting staff member, whose role decides which flags the buttons offer (a moderator's own gets none). */
+		/** The acting staff member, whose role decides which flags the buttons offer (a moderator gets none of their own or an administrator's). */
 		me: { id: string; role: string };
 	}
 
@@ -14,7 +14,10 @@
 
 <ul class="flags">
 	{#each flags as flag (flag.id)}
-		<CountFlagItem {flag} canAct={canCloseFlag(me, flag.reporterId)} />
+		<CountFlagItem
+			{flag}
+			canAct={canCloseFlag(me, { id: flag.reporterId, role: flag.reporterRole })}
+		/>
 	{/each}
 </ul>
 

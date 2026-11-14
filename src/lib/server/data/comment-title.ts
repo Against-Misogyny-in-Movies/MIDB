@@ -1,4 +1,3 @@
-import { error } from '@sveltejs/kit';
 import { getMovie, getSeries } from '#lib/server/integrations/tmdb/index.ts';
 import {
 	getOrCreateTitleRow,
@@ -7,19 +6,6 @@ import {
 	type TitleRef,
 	type TitleRow
 } from './title-queries.ts';
-
-/**
- * A kind and TMDB id from a title route's path, or a 404. The id is normalised (`0348` is `348`)
- * so a cache tag and the purge of it name the same title whatever the path's padding.
- */
-export function parseTitleParams(
-	kind: string,
-	tmdbId: string
-): { kind: TitleKind; tmdbId: string } {
-	if ((kind !== 'movie' && kind !== 'tv') || !/^\d{1,9}$/.test(tmdbId))
-		error(404, 'Title not found');
-	return { kind, tmdbId: String(Number(tmdbId)) };
-}
 
 /** The minimal reference `getTitleRow` needs to match on the TMDB id. */
 const tmdbRef = (tmdbId: string) => ({ title: '', imdbId: null, tmdbId, releaseDate: '' });

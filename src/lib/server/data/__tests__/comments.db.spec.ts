@@ -1,3 +1,5 @@
+import { DAY_MS } from '#lib/media/utils/time.ts';
+import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.ts';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
@@ -27,12 +29,15 @@ import { listReportedQueue } from '#lib/server/data/moderation-queue.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import type { TitleRow } from '#lib/server/data/title-queries.ts';
 
+/** An account old enough for its reports and votes to count. */
+const OLD = new Date(Date.now() - 30 * 86_400_000);
+
 let title: TitleRow;
 let mod: UserRow;
 
 beforeEach(async () => {
 	for (const id of ['author', 'u1', 'u2', 'u3', 'u4'])
-		await db.insert(users).values(userValues(id));
+		await db.insert(users).values(userValues(id, { createdAt: OLD }));
 	await db.insert(users).values(userValues('mod', { role: 'moderator' }));
 	await db.insert(users).values(userValues('admin', { role: 'administrator' }));
 	[mod] = await db.select().from(users).where(eq(users.id, 'mod'));
@@ -42,6 +47,12 @@ beforeEach(async () => {
 		.returning();
 });
 
+/** Votes as the account `userId`, loading its row as the route's guard would. */
+async function vote(commentId: string, userId: string, value: 1 | -1) {
+	const [user] = await db.select().from(users).where(eq(users.id, userId));
+	return setVote(commentId, user, value);
+}
+
 const row = async (id: string): Promise<CommentRow> =>
 	(await db.select().from(comments).where(eq(comments.id, id)))[0];
 
@@ -50,7 +61,7 @@ async function published(userId: string, body: string, parentId?: string): Promi
 	const result = await createComment({ title, userId, body, parentId });
 	if (!result.ok) throw new Error(result.reason);
 	const id = result.comment.id;
-	await approveComment(mod, id);
+	await approveComment(mod, id, null);
 	return id;
 }
 
@@ -118,7 +129,7 @@ describe('threading and reply counts', () => {
 
 		await hideComment(mod, reply, 'off topic');
 		expect((await row(root)).replyCount).toBe(1);
-		await restoreComment(mod, reply);
+		await restoreComment(mod, reply, null);
 		expect((await row(root)).replyCount).toBe(2);
 	});
 
@@ -149,9 +160,9 @@ describe('threading and reply counts', () => {
 			ids.push(await published('author', `Comment ${i}`));
 			await new Promise((r) => setTimeout(r, 2));
 		}
-		await setVote(ids[1], 'u1', 1);
-		await setVote(ids[1], 'u2', 1);
-		await setVote(ids[3], 'u1', 1);
+		await vote(ids[1], 'u1', 1);
+		await vote(ids[1], 'u2', 1);
+		await vote(ids[3], 'u1', 1);
 
 		const first = await listTitleComments(title.id, { sort: 'new', limit: 2 });
 		expect(first.comments.map((c) => c.body)).toEqual(['Comment 4', 'Comment 3']);
@@ -218,7 +229,12 @@ describe('the public list', () => {
 		await published('author', 'Shown');
 		const before = await db.select().from(comments);
 		await listTitleComments(title.id, { sort: 'top' });
-		await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		await getViewerCommentState(title.id, {
+			id: 'u1',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(await db.select().from(comments)).toEqual(before);
 	});
 });
@@ -242,9 +258,11 @@ describe('soft delete', () => {
 		expect((await listTitleComments(title.id, { sort: 'new' })).comments).toEqual([]);
 	});
 
-	it('is the author only', async () => {
+	it('is the author only, and answers not-found to anyone else whatever the status', async () => {
 		const root = await published('author', 'Root');
-		expect(await softDeleteComment(root, 'u1')).toEqual({ ok: false, reason: 'forbidden' });
+		expect(await softDeleteComment(root, 'u1')).toEqual({ ok: false, reason: 'not-found' });
+		await hideComment(mod, root, null);
+		expect(await softDeleteComment(root, 'u1')).toEqual({ ok: false, reason: 'not-found' });
 		expect(await softDeleteComment('missing', 'u1')).toEqual({ ok: false, reason: 'not-found' });
 	});
 });
@@ -267,8 +285,9 @@ describe('editComment', () => {
 
 	it('is the author only, and refuses a hidden or deleted comment', async () => {
 		const id = await published('author', 'Root');
-		expect(await editComment(id, 'u1', 'Mine now')).toEqual({ ok: false, reason: 'forbidden' });
+		expect(await editComment(id, 'u1', 'Mine now')).toEqual({ ok: false, reason: 'not-found' });
 		await hideComment(mod, id, null);
+		expect(await editComment(id, 'u1', 'Mine now')).toEqual({ ok: false, reason: 'not-found' });
 		expect(await editComment(id, 'author', 'Back')).toEqual({ ok: false, reason: 'not-editable' });
 	});
 
@@ -282,11 +301,11 @@ describe('editComment', () => {
 describe('votes', () => {
 	it('keeps the score equal to the sum of the votes through set, flip, repeat and remove', async () => {
 		const id = await published('author', 'Root');
-		expect(await setVote(id, 'u1', 1)).toMatchObject({ ok: true, score: 1 });
-		expect(await setVote(id, 'u1', 1)).toMatchObject({ score: 1 });
-		expect(await setVote(id, 'u2', 1)).toMatchObject({ score: 2 });
-		expect(await setVote(id, 'u1', -1)).toMatchObject({ score: 0 });
-		expect(await setVote(id, 'u3', -1)).toMatchObject({ score: -1 });
+		expect(await vote(id, 'u1', 1)).toMatchObject({ ok: true, score: 1 });
+		expect(await vote(id, 'u1', 1)).toMatchObject({ score: 1 });
+		expect(await vote(id, 'u2', 1)).toMatchObject({ score: 2 });
+		expect(await vote(id, 'u1', -1)).toMatchObject({ score: 0 });
+		expect(await vote(id, 'u3', -1)).toMatchObject({ score: -1 });
 		expect(await removeVote(id, 'u3')).toMatchObject({ score: 0, vote: null });
 		expect(await removeVote(id, 'u3')).toMatchObject({ score: 0 });
 		const votes = await db.select().from(commentVotes).where(eq(commentVotes.commentId, id));
@@ -297,9 +316,9 @@ describe('votes', () => {
 	it('gives the viewer state the current scores of the comments the reader voted on, on this title only', async () => {
 		const voted = await published('author', 'Voted');
 		const unvoted = await published('author', 'Not voted');
-		await setVote(voted, 'u1', 1);
-		await setVote(voted, 'u2', 1);
-		await setVote(unvoted, 'u2', 1);
+		await vote(voted, 'u1', 1);
+		await vote(voted, 'u2', 1);
+		await vote(unvoted, 'u2', 1);
 		const [other] = await db
 			.insert(titles)
 			.values({ kind: 'movie', title: 'Aliens', cleanTitle: 'aliens', tmdbId: 679 })
@@ -308,35 +327,45 @@ describe('votes', () => {
 			.insert(comments)
 			.values({ titleId: other.id, userId: 'author', body: 'Elsewhere', status: 'published' })
 			.returning();
-		await setVote(elsewhere.id, 'u1', 1);
-		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		await vote(elsewhere.id, 'u1', 1);
+		const state = await getViewerCommentState(title.id, {
+			id: 'u1',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(state.votes).toEqual({ [voted]: 1 });
 		expect(state.scores).toEqual({ [voted]: 2 });
 	});
 
 	it('refuses a vote on your own comment, on a pending one, and on a missing one', async () => {
 		const id = await published('author', 'Root');
-		expect(await setVote(id, 'author', 1)).toEqual({ ok: false, reason: 'own-comment' });
+		expect(await vote(id, 'author', 1)).toEqual({ ok: false, reason: 'own-comment' });
 		const pending = await createComment({ title, userId: 'author', body: 'Waiting' });
 		const pendingId = (pending as { comment: { id: string } }).comment.id;
-		expect(await setVote(pendingId, 'u1', 1)).toEqual({ ok: false, reason: 'not-found' });
+		expect(await vote(pendingId, 'u1', 1)).toEqual({ ok: false, reason: 'not-found' });
 		expect(await removeVote('missing', 'u1')).toEqual({ ok: false, reason: 'not-found' });
 	});
 
 	it('does not touch updated_at', async () => {
 		const id = await published('author', 'Root');
 		const before = (await row(id)).updatedAt;
-		await setVote(id, 'u1', 1);
+		await vote(id, 'u1', 1);
 		expect((await row(id)).updatedAt).toEqual(before);
 	});
 
 	it('reports a reader their votes and pending and rejected comments, newest first', async () => {
 		const shown = await published('author', 'Shown');
-		await setVote(shown, 'u1', -1);
+		await vote(shown, 'u1', -1);
 		const first = await createComment({ title, userId: 'u1', body: 'Waiting' });
 		const second = await published('u1', 'Rejected soon');
 		await rejectComment(mod, second, 'spam');
-		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		const state = await getViewerCommentState(title.id, {
+			id: 'u1',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(state.votes).toEqual({ [shown]: -1 });
 		expect(state.comments.map((c) => c.status).sort()).toEqual(['pending', 'rejected']);
 		expect(state.comments.find((c) => c.status === 'rejected')?.moderationReason).toBe('spam');
@@ -344,15 +373,27 @@ describe('votes', () => {
 			state.comments.some((c) => c.id === (first as { comment: { id: string } }).comment.id)
 		).toBe(true);
 		expect(
-			(await getViewerCommentState(title.id, { id: 'u2', mutedUntil: null })).comments
+			(
+				await getViewerCommentState(title.id, {
+					id: 'u2',
+					mutedUntil: null,
+					role: 'user',
+					createdAt: new Date(0)
+				})
+			).comments
 		).toEqual([]);
 	});
 
 	it('reports a mute only while it lasts', async () => {
 		const later = new Date(Date.now() + 3_600_000);
-		const now = { id: 'u1', mutedUntil: later };
+		const now = { id: 'u1', mutedUntil: later, role: 'user', createdAt: new Date(0) };
 		expect((await getViewerCommentState(title.id, now)).mutedUntil).toBe(later.toISOString());
-		const ended = { id: 'u1', mutedUntil: new Date(Date.now() - 1000) };
+		const ended = {
+			id: 'u1',
+			mutedUntil: new Date(Date.now() - 1000),
+			role: 'user',
+			createdAt: new Date(0)
+		};
 		expect((await getViewerCommentState(title.id, ended)).mutedUntil).toBeNull();
 	});
 });
@@ -403,9 +444,9 @@ describe('reports', () => {
 		const [queued] = await listReportedQueue();
 		expect(queued.reports).toHaveLength(3);
 
-		expect(await dismissReports(mod, id)).toMatchObject({ ok: true });
+		expect(await dismissReports(mod, id, null)).toMatchObject({ ok: true });
 		expect(await row(id)).toMatchObject({ status: 'published', moderationSource: null });
-		expect(await dismissReports(mod, id)).toEqual({ ok: false, reason: 'invalid-state' });
+		expect(await dismissReports(mod, id, null)).toEqual({ ok: false, reason: 'invalid-state' });
 		const statuses = await db.select({ s: commentReports.status }).from(commentReports);
 		expect(statuses.every((r) => r.s === 'dismissed')).toBe(true);
 	});
@@ -438,5 +479,21 @@ describe('getUserComments', () => {
 		expect(rows.find((r) => r.id === ok)?.status).toBe('published');
 		const times = rows.map((r) => r.createdAt.getTime());
 		expect(times).toEqual([...times].sort((a, b) => b - a));
+	});
+
+	it('reports when votes open for an account younger than the counting age, and not for staff', async () => {
+		const created = new Date(Date.now() - DAY_MS);
+		const young = { id: 'u1', mutedUntil: null, role: 'user', createdAt: created };
+		expect((await getViewerCommentState(title.id, young)).votesOpenAt).toBe(
+			new Date(created.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS).toISOString()
+		);
+		expect(
+			(await getViewerCommentState(title.id, { ...young, role: 'moderator' })).votesOpenAt
+		).toBeNull();
+		const old = {
+			...young,
+			createdAt: new Date(Date.now() - REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS)
+		};
+		expect((await getViewerCommentState(title.id, old)).votesOpenAt).toBeNull();
 	});
 });

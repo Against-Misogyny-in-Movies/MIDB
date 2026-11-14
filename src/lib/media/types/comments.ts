@@ -77,6 +77,8 @@ export type ViewerCommentState = {
 	comments: OwnComment[];
 	/** When the reader's mute ends, while it is in the future; otherwise null. */
 	mutedUntil: string | null;
+	/** When the reader's votes start counting, while that is in the future; otherwise null. */
+	votesOpenAt: string | null;
 };
 
 /**

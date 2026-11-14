@@ -26,7 +26,11 @@ import type * as DecideModule from '#lib/server/moderation/decide.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import type { TitleRow } from '#lib/server/data/title-queries.ts';
 
-const race: { during: (() => Promise<unknown>) | null } = { during: null };
+const race: {
+	during: (() => Promise<unknown>) | null;
+	/** A decision `decideStatus` answers instead of running the check. */
+	forced: Awaited<ReturnType<typeof DecideModule.decideStatus>> | null;
+} = { during: null, forced: null };
 
 // `decideStatus` runs between an edit's read and its write; a test sets `race.during` to let
 // another request land in that window.
@@ -38,7 +42,7 @@ vi.mock('#lib/server/moderation/decide.ts', async (importOriginal) => {
 			const during = race.during;
 			race.during = null;
 			await during?.();
-			return original.decideStatus(...args);
+			return race.forced ?? original.decideStatus(...args);
 		}
 	};
 });
@@ -49,6 +53,7 @@ let admin: UserRow;
 
 beforeEach(async () => {
 	race.during = null;
+	race.forced = null;
 	for (const id of ['author', 'u1', 'u2', 'u3', 'u4'])
 		await db.insert(users).values(userValues(id));
 	await db.insert(users).values(userValues('mod', { role: 'moderator' }));
@@ -69,7 +74,7 @@ async function published(userId: string, body: string, parentId?: string): Promi
 	const result = await createComment({ title, userId, body, parentId });
 	if (!result.ok) throw new Error(result.reason);
 	const id = result.comment.id;
-	await approveComment(mod, id);
+	await approveComment(mod, id, null);
 	return id;
 }
 
@@ -83,9 +88,9 @@ describe('moderation actions', () => {
 		const cid = id.comment.id;
 		expect((await listPendingQueue()).map((i) => i.comment.id)).toEqual([cid]);
 
-		expect(await approveComment(mod, cid)).toMatchObject({ ok: true });
+		expect(await approveComment(mod, cid, null)).toMatchObject({ ok: true });
 		expect(await hideComment(mod, cid, 'spoilers')).toMatchObject({ ok: true });
-		expect(await restoreComment(mod, cid)).toMatchObject({ ok: true });
+		expect(await restoreComment(mod, cid, null)).toMatchObject({ ok: true });
 		expect(await rejectComment(mod, cid, 'abuse')).toMatchObject({ ok: true });
 
 		const log = await listRecentActions();
@@ -103,9 +108,9 @@ describe('moderation actions', () => {
 
 	it('logs nothing and changes nothing for an action the status does not allow', async () => {
 		const cid = await published('author', 'Root');
-		expect(await approveComment(mod, cid)).toEqual({ ok: false, reason: 'invalid-state' });
-		expect(await restoreComment(mod, cid)).toEqual({ ok: false, reason: 'invalid-state' });
-		expect(await approveComment(mod, 'missing')).toEqual({ ok: false, reason: 'not-found' });
+		expect(await approveComment(mod, cid, null)).toEqual({ ok: false, reason: 'invalid-state' });
+		expect(await restoreComment(mod, cid, null)).toEqual({ ok: false, reason: 'invalid-state' });
+		expect(await approveComment(mod, 'missing', null)).toEqual({ ok: false, reason: 'not-found' });
 		expect(
 			(await db.select().from(moderationActions)).filter((a) => a.targetCommentId === cid)
 		).toHaveLength(1);
@@ -166,7 +171,7 @@ describe('a lost race', () => {
 		const id = await pendingId();
 		const [deleted, approved] = await Promise.all([
 			softDeleteComment(id, 'author'),
-			approveComment(mod, id)
+			approveComment(mod, id, null)
 		]);
 		expect([deleted.ok, approved.ok].filter(Boolean)).toHaveLength(1);
 		if (deleted.ok) {
@@ -181,17 +186,17 @@ describe('a lost race', () => {
 
 	it('answers conflict to an edit when the status moved under it', async () => {
 		const id = await pendingId();
-		race.during = () => approveComment(mod, id);
+		race.during = () => approveComment(mod, id, null);
 		const result = await editComment(id, 'author', 'Changed');
 		expect(result).toEqual({ ok: false, reason: 'conflict' });
 		expect(await row(id)).toMatchObject({ status: 'published', body: 'Waiting', editedAt: null });
 	});
 
-	it('lets one of two moderators win and logs one action', async () => {
+	it('lets one of two staff win and logs one action', async () => {
 		const id = await pendingId();
 		const [approved, rejected] = await Promise.all([
-			approveComment(mod, id),
-			rejectComment(admin, id, 'no')
+			approveComment(admin, id, null),
+			rejectComment(mod, id, 'no')
 		]);
 		expect([approved.ok, rejected.ok].filter(Boolean)).toHaveLength(1);
 		expect([approved, rejected].find((r) => !r.ok)).toEqual({
@@ -219,7 +224,7 @@ describe('moderator authority over a comment', () => {
 			if (!result.ok) throw new Error(result.reason);
 			const id = result.comment.id;
 			const refused = { ok: false, reason: 'forbidden-target' };
-			expect(await approveComment(mod, id)).toEqual(refused);
+			expect(await approveComment(mod, id, null)).toEqual(refused);
 			expect(await hideComment(mod, id, null)).toEqual(refused);
 			expect((await row(id)).status).toBe('pending');
 		}
@@ -232,7 +237,7 @@ describe('moderator authority over a comment', () => {
 		await db
 			.insert(commentReports)
 			.values({ commentId: result.comment.id, reporterId: 'u1', reason: 'spam' });
-		expect(await dismissReports(mod, result.comment.id)).toEqual({
+		expect(await dismissReports(mod, result.comment.id, null)).toEqual({
 			ok: false,
 			reason: 'forbidden-target'
 		});
@@ -245,7 +250,7 @@ describe('moderator authority over a comment', () => {
 		for (const userId of ['mod', 'admin2', 'admin']) {
 			const result = await createComment({ title, userId, body: `By ${userId}` });
 			if (!result.ok) throw new Error(result.reason);
-			expect(await approveComment(admin, result.comment.id)).toMatchObject({ ok: true });
+			expect(await approveComment(admin, result.comment.id, null)).toMatchObject({ ok: true });
 			expect(await hideComment(admin, result.comment.id, null)).toMatchObject({ ok: true });
 		}
 	});
@@ -256,6 +261,126 @@ describe('moderator authority over a comment', () => {
 		await db
 			.insert(commentReports)
 			.values({ commentId: result.comment.id, reporterId: 'u1', reason: 'spam' });
-		expect(await dismissReports(admin, result.comment.id)).toMatchObject({ ok: true });
+		expect(await dismissReports(admin, result.comment.id, null)).toMatchObject({ ok: true });
+	});
+});
+
+const pendingComment = async (userId = 'author'): Promise<string> => {
+	const result = await createComment({ title, userId, body: 'Waiting' });
+	if (!result.ok) throw new Error(result.reason);
+	return result.comment.id;
+};
+
+describe('an edit after a decision', () => {
+	const clean = { status: 'published', source: 'ai', reason: null, aiVerdict: null } as const;
+
+	it('cannot revive a comment a moderator rejected, but can fix one the check rejected', async () => {
+		const id = await pendingComment();
+		await rejectComment(mod, id, 'abuse');
+		expect(await editComment(id, 'author', 'Fixed')).toEqual({ ok: false, reason: 'not-editable' });
+		expect(await row(id)).toMatchObject({ status: 'rejected', body: 'Waiting' });
+
+		for (const source of ['ai', 'blocklist'] as const) {
+			const other = await pendingComment();
+			await db
+				.update(comments)
+				.set({ status: 'rejected', moderationSource: source, moderationReason: 'No.' })
+				.where(eq(comments.id, other));
+			race.forced = clean;
+			const edit = await editComment(other, 'author', 'Fixed');
+			race.forced = null;
+			expect(edit).toMatchObject({ ok: true });
+			expect(await row(other)).toMatchObject({ status: 'published', body: 'Fixed' });
+		}
+	});
+
+	it('keeps a pending comment that a moderator or the reports held from publishing itself', async () => {
+		for (const source of ['moderator', 'reports'] as const) {
+			const id = await pendingComment();
+			await db
+				.update(comments)
+				.set({ moderationSource: source, moderationReason: 'Held.' })
+				.where(eq(comments.id, id));
+			race.forced = clean;
+			const edit = await editComment(id, 'author', `Edited ${source}`);
+			race.forced = null;
+			expect(edit).toMatchObject({ ok: true });
+			expect(await row(id)).toMatchObject({
+				status: 'pending',
+				moderationSource: source,
+				moderationReason: 'Held.',
+				body: `Edited ${source}`
+			});
+		}
+	});
+
+	describe.each(['moderator', 'reports'] as const)('a comment held by %s', (source) => {
+		const hold = async () => {
+			const id = await pendingComment();
+			await db
+				.update(comments)
+				.set({ moderationSource: source, moderationReason: 'Held.' })
+				.where(eq(comments.id, id));
+			return id;
+		};
+		const heldState = (body: string) => ({
+			status: 'pending',
+			moderationSource: source,
+			moderationReason: 'Held.',
+			body
+		});
+
+		it('stays held through a blocklist reject, and the next clean edit does not publish it', async () => {
+			const id = await hold();
+			expect(await editComment(id, 'author', 'You should kill yourself')).toMatchObject({
+				ok: true
+			});
+			expect(await row(id)).toMatchObject(heldState('You should kill yourself'));
+
+			race.forced = clean;
+			expect(await editComment(id, 'author', 'Cleaner now')).toMatchObject({ ok: true });
+			expect(await row(id)).toMatchObject(heldState('Cleaner now'));
+		});
+
+		it('stays held through an AI review, keeps the verdict, and the next clean edit does not publish it', async () => {
+			const id = await hold();
+			const verdict = JSON.stringify({ severity: 2, categories: ['harassment'] });
+			race.forced = {
+				status: 'pending',
+				source: 'ai',
+				reason: 'Needs a person.',
+				aiVerdict: verdict
+			};
+			expect(await editComment(id, 'author', 'Borderline')).toMatchObject({ ok: true });
+			expect(await row(id)).toMatchObject({ ...heldState('Borderline'), aiVerdict: verdict });
+
+			race.forced = clean;
+			expect(await editComment(id, 'author', 'Clearly fine')).toMatchObject({ ok: true });
+			expect(await row(id)).toMatchObject(heldState('Clearly fine'));
+		});
+
+		it('stays held when the check rejects the edit', async () => {
+			const id = await hold();
+			race.forced = { status: 'rejected', source: 'ai', reason: 'Slur.', aiVerdict: null };
+			expect(await editComment(id, 'author', 'Worse')).toMatchObject({ ok: true });
+			expect(await row(id)).toMatchObject(heldState('Worse'));
+		});
+	});
+
+	it('still publishes an edit of a pending comment held by the check', async () => {
+		const id = await pendingComment();
+		await db.update(comments).set({ moderationSource: 'ai' }).where(eq(comments.id, id));
+		race.forced = clean;
+		await editComment(id, 'author', 'Cleaner');
+		expect((await row(id)).status).toBe('published');
+	});
+
+	it('answers not-found to anyone but the author, whatever the status', async () => {
+		const id = await pendingComment();
+		for (const status of ['pending', 'published', 'hidden', 'rejected', 'deleted'] as const) {
+			await db.update(comments).set({ status }).where(eq(comments.id, id));
+			expect(await editComment(id, 'u1', 'Mine')).toEqual({ ok: false, reason: 'not-found' });
+			expect(await softDeleteComment(id, 'u1')).toEqual({ ok: false, reason: 'not-found' });
+		}
 	});
 });

@@ -10,11 +10,8 @@ import {
 	ReportAnswersError,
 	upsertReport
 } from '#lib/server/data/community-reports.ts';
-import {
-	findCommentTitle,
-	parseTitleParams,
-	resolveWriteRef
-} from '#lib/server/data/comment-title.ts';
+import { findCommentTitle, resolveWriteRef } from '#lib/server/data/comment-title.ts';
+import { parseTitleParams } from '#lib/server/titles/title-params.ts';
 import { COMMUNITY_REPORT_MIN } from '#lib/media/utils/communityReports.ts';
 import type { CommunityReportsResponse } from '#lib/media/types/community-reports.ts';
 

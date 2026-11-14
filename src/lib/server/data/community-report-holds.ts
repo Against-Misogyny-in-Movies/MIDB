@@ -17,7 +17,7 @@ export type HoldFacts = {
 	flags: Partial<Record<ConcernFlagKey, boolean | null>>;
 	/** The title's Unconsenting Media concern flags, or null when it has no UM binding. */
 	um: Record<ConcernFlagKey, boolean> | null;
-	/** Reports on the title from other accounts, not rejected, inside the burst window. */
+	/** Reports on the title from other accounts that pass `countingAccountWhere`, not rejected, inside the burst window. */
 	othersInWindow: number;
 	/** Whether this report was created (now, for an insert) inside the burst window. */
 	createdInWindow: boolean;

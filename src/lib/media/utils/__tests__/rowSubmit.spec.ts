@@ -2,12 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('#lib/media/utils/toasts.svelte.js', () => ({ toasts }));
+const invalidateAll = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('$app/navigation', () => ({ invalidateAll }));
 
 const { rowSubmit, toastActionResult } = await import('../rowSubmit.ts');
 
 afterEach(() => {
 	toasts.success.mockReset();
 	toasts.error.mockReset();
+	invalidateAll.mockClear();
 });
 
 const done = (data: Record<string, unknown>) => toastActionResult({ type: 'success', data });
@@ -43,6 +46,10 @@ describe('toastActionResult', () => {
 		done({ done: 'bulk', applied: 1, refused: 1 });
 		expect(toasts.success).toHaveBeenLastCalledWith(
 			'1 comment changed. 1 comment could not be changed.'
+		);
+		done({ done: 'bulk', applied: 2, refused: 3, edited: 2 });
+		expect(toasts.success).toHaveBeenLastCalledWith(
+			'2 comments changed. 3 comments could not be changed: 2 edited after this page loaded.'
 		);
 	});
 
@@ -90,5 +97,29 @@ describe('rowSubmit focus', () => {
 				['gone', 'card']
 			)
 		).toBe('card');
+	});
+});
+
+describe('rowSubmit refusal', () => {
+	/** Submits a row's form and answers it with `result`. */
+	async function submitWith(result: { type: string; data?: Record<string, unknown> }) {
+		document.body.innerHTML = '<div id="row" tabindex="-1"></div>';
+		const row = document.getElementById('row') as HTMLElement;
+		const handle = rowSubmit(
+			() => row,
+			() => {}
+		)('approve')();
+		await handle({ result, update: async () => {} });
+	}
+
+	it('reloads the page data after a refused action, so the row shows what changed', async () => {
+		await submitWith({ type: 'failure', data: { error: 'Edited.' } });
+		expect(invalidateAll).toHaveBeenCalledOnce();
+		expect(toasts.error).toHaveBeenCalledWith('Edited.');
+	});
+
+	it('leaves the data alone after an action that went through', async () => {
+		await submitWith({ type: 'success', data: { done: 'approve' } });
+		expect(invalidateAll).not.toHaveBeenCalled();
 	});
 });

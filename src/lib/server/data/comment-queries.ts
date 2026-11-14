@@ -16,7 +16,9 @@ import { isStaff } from '#lib/media/utils/staff.ts';
 import { decideStatus } from '#lib/server/moderation/decide.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { activeMute } from './mute.ts';
+import { publicTime } from './public-time.ts';
 import { toPublicUser } from './user-queries.ts';
+import { votesOpenAt } from './counting-account.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
 import {
 	countNewReply,
@@ -68,13 +70,19 @@ export function afterCursor(sort: CommentSort, cursor: CursorParts): SQL | undef
 
 type ListedRow = { comment: CommentRow; author: typeof users.$inferSelect };
 
-/** `open` shows a comment that is not published as it is, for the reader allowed to see it. */
+/**
+ * `open` shows a comment that is not published as it is, for the reader allowed to see it.
+ * `exact` keeps the exact times, for the comment's author and for staff; every other view
+ * carries them rounded down to the minute (`publicTime`).
+ */
 function toView(
 	{ comment, author }: ListedRow,
 	authors: Map<string, ListedRow>,
 	replies: CommentView[] = [],
-	open = false
+	open = false,
+	exact = false
 ): CommentView {
+	const time = (date: Date) => (exact ? date.toISOString() : publicTime(date));
 	const removed = !open && comment.status !== 'published';
 	const parent =
 		comment.parentId && comment.parentId !== comment.rootId ? authors.get(comment.parentId) : null;
@@ -95,8 +103,8 @@ function toView(
 		author: removed ? null : toPublicUser(author),
 		score: removed ? 0 : comment.score,
 		replyCount: comment.replyCount,
-		createdAt: comment.createdAt.toISOString(),
-		editedAt: removed ? null : (comment.editedAt?.toISOString() ?? null),
+		createdAt: time(comment.createdAt),
+		editedAt: removed || !comment.editedAt ? null : time(comment.editedAt),
 		replies
 	};
 }
@@ -201,15 +209,17 @@ export async function getCommentThread(
 	if (!title || title.tmdbId === null) return null;
 
 	const byId = new Map(rows.map((r) => [r.comment.id, r]));
+	const exactFor = (r: ListedRow) =>
+		viewer !== null && (isStaff(viewer.role) || viewer.id === r.comment.userId);
 	const replies = rows
 		.filter(
 			(r) => r.comment.id !== rootId && (r.comment.status === 'published' || r.comment.id === id)
 		)
-		.map((r) => toView(r, byId, [], r.comment.id === id));
+		.map((r) => toView(r, byId, [], r.comment.id === id, exactFor(r)));
 	return {
 		kind: title.kind,
 		tmdbId: title.tmdbId,
-		root: toView(rootRow, byId, replies, rootRow.comment.id === id),
+		root: toView(rootRow, byId, replies, rootRow.comment.id === id, exactFor(rootRow)),
 		review:
 			target.status === 'published'
 				? null
@@ -240,7 +250,7 @@ export function toOwnComment(row: CommentRow): OwnComment {
  */
 export async function getViewerCommentState(
 	titleId: string,
-	user: { id: string; mutedUntil: Date | null }
+	user: { id: string; mutedUntil: Date | null; role: string; createdAt: Date }
 ): Promise<ViewerCommentState> {
 	const userId = user.id;
 	const [votes, own] = await Promise.all([
@@ -269,7 +279,8 @@ export async function getViewerCommentState(
 		votes: Object.fromEntries(votes.map((v) => [v.commentId, v.value === 1 ? 1 : -1])),
 		scores: Object.fromEntries(votes.map((v) => [v.commentId, v.score])),
 		comments: own.map(toOwnComment),
-		mutedUntil: activeMute(user.mutedUntil)
+		mutedUntil: activeMute(user.mutedUntil),
+		votesOpenAt: votesOpenAt(user)
 	};
 }
 
@@ -298,7 +309,7 @@ export async function getCommentWithTitle(id: string): Promise<CommentWithTitle 
 	};
 }
 
-type WriteFailure = 'not-found' | 'forbidden' | 'not-editable' | 'parent-not-found' | 'conflict';
+type WriteFailure = 'not-found' | 'not-editable' | 'parent-not-found' | 'conflict';
 export type CommentWrite =
 	| {
 			ok: true;
@@ -368,16 +379,24 @@ export async function createComment(input: {
 
 /**
  * The author edits a comment: the body changes, `edited_at` is set and moderation runs again,
- * so a published comment goes back through `decideStatus`. A hidden or deleted comment cannot be
- * edited, which keeps an author from reviving what a moderator removed. A comment that left
- * the status the edit read (a moderator acted meanwhile) answers `conflict`.
+ * so a published comment goes back through `decideStatus`. A hidden or deleted comment, and one
+ * a moderator rejected, cannot be edited, which keeps an author from reviving what a moderator
+ * removed (an automatic reject stays editable). A pending comment that a moderator or the
+ * reports sent to review stays pending, with its source and reason, after any edit, whatever the
+ * check decides; the new body and the check's verdict are stored. Anyone but
+ * the author gets `not-found`, whatever the comment's status. A comment that left the status the
+ * edit read (a moderator acted meanwhile) answers `conflict`.
  */
 export async function editComment(id: string, userId: string, body: string): Promise<CommentWrite> {
 	const found = await getCommentWithTitle(id);
 	if (!found) return { ok: false, reason: 'not-found' };
 	const { comment, title } = found;
-	if (comment.userId !== userId) return { ok: false, reason: 'forbidden' };
-	if (comment.status === 'hidden' || comment.status === 'deleted') {
+	if (comment.userId !== userId) return { ok: false, reason: 'not-found' };
+	if (
+		comment.status === 'hidden' ||
+		comment.status === 'deleted' ||
+		(comment.status === 'rejected' && comment.moderationSource === 'moderator')
+	) {
 		return { ok: false, reason: 'not-editable' };
 	}
 	if (body === comment.body) return { ok: true, comment: toOwnComment(comment), title };
@@ -397,13 +416,19 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		kind: title.kind,
 		parentBody
 	});
-	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, decision.status);
+	// A person's or the reports' hold on a pending comment is lifted only by a moderator, so
+	// whatever the check decides, the comment stays pending with its source and reason. A reject
+	// would otherwise make it editable again (an automatic reject is) and the next edit publish it.
+	const held =
+		comment.status === 'pending' &&
+		(comment.moderationSource === 'moderator' || comment.moderationSource === 'reports');
+	const status = held ? 'pending' : decision.status;
+	const replyAuthorIds = await replyAuthorsAffected(comment.id, comment.status, status);
 	const moved = await runMove(
-		statusMove(comment.id, comment.status, decision.status, {
+		statusMove(comment.id, comment.status, status, {
 			body,
 			editedAt: new Date(),
-			moderationSource: decision.source,
-			moderationReason: decision.reason,
+			...(held ? {} : { moderationSource: decision.source, moderationReason: decision.reason }),
 			aiVerdict: decision.aiVerdict
 		})
 	);
@@ -415,7 +440,7 @@ export async function editComment(id: string, userId: string, body: string): Pro
 /**
  * The author deletes a comment. It stays in the table as `deleted`, so replies keep their
  * thread; the public list shows a bodiless placeholder when it has published replies. A
- * comment a moderator moved meanwhile answers `conflict`.
+ * comment a moderator moved meanwhile answers `conflict`. Anyone but the author gets `not-found`.
  */
 export async function softDeleteComment(
 	id: string,
@@ -425,8 +450,9 @@ export async function softDeleteComment(
 	| { ok: false; reason: WriteFailure }
 > {
 	const found = await getCommentWithTitle(id);
-	if (!found || found.comment.status === 'deleted') return { ok: false, reason: 'not-found' };
-	if (found.comment.userId !== userId) return { ok: false, reason: 'forbidden' };
+	if (!found || found.comment.userId !== userId || found.comment.status === 'deleted') {
+		return { ok: false, reason: 'not-found' };
+	}
 	const replyAuthorIds = await replyAuthorsAffected(id, found.comment.status, 'deleted');
 	if (!(await runMove(statusMove(id, found.comment.status, 'deleted')))) {
 		return { ok: false, reason: 'conflict' };

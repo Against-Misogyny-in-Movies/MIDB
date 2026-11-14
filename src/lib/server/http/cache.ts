@@ -73,6 +73,18 @@ export const PUBLIC_COMMENTS = {
 };
 
 /**
+ * PUBLIC_TITLE_SOURCES: a title's Does the Dog Die and Letterboxd answers, the same for everyone.
+ * The browser always revalidates; the edge keeps them for an hour, the shorter of the two
+ * integrations' own cache TTLs, and serves them stale for a minute while it refreshes. Nothing
+ * purges it. Only an answer in which every source replied gets this policy; one that failed is
+ * `PRIVATE_NO_STORE`, so an outage is not kept.
+ */
+export const PUBLIC_TITLE_SOURCES = {
+	'cache-control': 'public, max-age=0',
+	'cdn-cache-control': 'max-age=3600, stale-while-revalidate=60'
+};
+
+/**
  * PUBLIC_COMMUNITY_REPORTS: a title's community-report counts, the same for everyone, on the policy of
  * `PUBLIC_COMMENTS`. The response carries `Cache-Tag: reports:<kind>:<tmdbId>`
  * (`communityReportsHeaders`), and every report write purges that tag (`purgeTitleReports`). A

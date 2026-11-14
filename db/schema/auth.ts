@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import { createdAt, enumCheck, timestamps } from './columns.ts';
+import { foldedUsernameSql } from '../lib/usernameFoldedSql.ts';
 
 export const userRole = ['user', 'moderator', 'administrator'] as const;
 
@@ -31,15 +32,48 @@ export const users = sqliteTable(
 		banReason: text('ban_reason', { length: 500 }),
 		/** While in the future the user cannot write comments. */
 		mutedUntil: integer('muted_until', { mode: 'timestamp_ms' }),
+		/** When the username last changed by a rename; null until the first one. */
+		usernameChangedAt: integer('username_changed_at', { mode: 'timestamp_ms' }),
+		/** The username with look-alikes folded (`foldUsername`); computed by SQLite, so it cannot go stale. */
+		usernameFolded: text('username_folded').generatedAlwaysAs(
+			(): SQL => foldedUsernameSql(users.username),
+			{ mode: 'virtual' }
+		),
 		...timestamps()
 	},
 	(t) => [
 		uniqueIndex('user_username_lower_idx').on(sql`lower(${t.username})`),
+		index('user_username_folded_idx').on(t.usernameFolded),
 		index('user_role_idx').on(t.role),
 		enumCheck('user_role_check', t.role, userRole),
 		check('user_username_length', sql`length(${t.username}) <= 32`),
 		check('user_avatar_key_length', sql`length(${t.avatarKey}) <= 48`),
 		check('user_ban_reason_length', sql`length(${t.banReason}) <= 500`)
+	]
+);
+
+/**
+ * A username its owner gave up, held back from everyone else for a while
+ * (`RETIRED_USERNAME_DAYS` in `#lib/media/utils/username.ts`). `username` is the lowercased
+ * name; `user_id` is the former owner, who may take it back.
+ */
+export const retiredUsernames = sqliteTable(
+	'retired_username',
+	{
+		username: text('username', { length: 32 }).primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		retiredAt: integer('retired_at', { mode: 'timestamp_ms' }).notNull(),
+		/** The name with look-alikes folded (`foldUsername`); computed by SQLite. */
+		usernameFolded: text('username_folded').generatedAlwaysAs(
+			(): SQL => foldedUsernameSql(retiredUsernames.username),
+			{ mode: 'virtual' }
+		)
+	},
+	(t) => [
+		index('retired_username_user_id_idx').on(t.userId),
+		index('retired_username_folded_idx').on(t.usernameFolded)
 	]
 );
 

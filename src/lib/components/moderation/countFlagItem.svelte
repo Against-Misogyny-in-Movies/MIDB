@@ -51,7 +51,11 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="label">Another moderator or an administrator closes this flag.</p>
+		<p class="label">
+			{flag.reporterRole === 'administrator'
+				? 'An administrator closes this flag.'
+				: 'Another moderator or an administrator closes this flag.'}
+		</p>
 	{/if}
 </li>
 

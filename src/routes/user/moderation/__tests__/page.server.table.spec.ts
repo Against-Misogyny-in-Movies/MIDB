@@ -91,8 +91,12 @@ function run(name: 'aiSearch' | 'scan' | 'bulk', fields: [string, string][]) {
 	return actions[name](event as unknown as Parameters<(typeof actions)[typeof name]>[0]);
 }
 
+/** `n` selected rows, each with the `editedAt` its row showed (none edited). */
 const ids = (n: number): [string, string][] =>
-	Array.from({ length: n }, (_, i): [string, string] => ['ids', `c${i + 1}`]);
+	Array.from({ length: n }, (_, i): [string, string][] => [
+		['ids', `c${i + 1}`],
+		[`editedAt.c${i + 1}`, '']
+	]).flat();
 
 beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(STAFF);
@@ -337,8 +341,9 @@ describe('?/bulk', () => {
 		actionsFns.hideComment
 			.mockResolvedValueOnce({ ok: true, title: ALIEN })
 			.mockResolvedValueOnce({ ok: true, title: ALIEN })
-			.mockResolvedValueOnce({ ok: false, reason: 'invalid-state' })
-			.mockResolvedValueOnce({ ok: true, title: DARK });
+			.mockResolvedValueOnce({ ok: false, reason: 'edited' })
+			.mockResolvedValueOnce({ ok: true, title: DARK })
+			.mockResolvedValueOnce({ ok: false, reason: 'invalid-state' });
 		const result = await run('bulk', [
 			['op', 'hide'],
 			['reason', '  Off topic  '],
@@ -346,6 +351,7 @@ describe('?/bulk', () => {
 			['ids', 'c2'],
 			['ids', 'c3'],
 			['ids', 'c4'],
+			['ids', 'c5'],
 			['ids', 'c1']
 		]);
 		expect(rateLimit).not.toHaveBeenCalled();
@@ -353,13 +359,14 @@ describe('?/bulk', () => {
 			['c1', 'Off topic'],
 			['c2', 'Off topic'],
 			['c3', 'Off topic'],
-			['c4', 'Off topic']
+			['c4', 'Off topic'],
+			['c5', 'Off topic']
 		]);
 		expect(actionsFns.hideComment.mock.calls[0][0]).toBe(STAFF);
 		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
 		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
 		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
-		expect(result).toEqual({ id: 'bulk', done: 'bulk', op: 'hide', applied: 3, refused: 1 });
+		expect(result).toMatchObject({ done: 'bulk', op: 'hide', applied: 3, refused: 2, edited: 1 });
 	});
 
 	it.each([
@@ -374,14 +381,57 @@ describe('?/bulk', () => {
 		expect(purgeTitleComments).toHaveBeenCalledExactlyOnceWith(ALIEN);
 	});
 
+	it('passes each row its own editedAt to the operations that publish', async () => {
+		for (const fn of ['approveComment', 'restoreComment', 'dismissReports'] as const) {
+			actionsFns[fn].mockResolvedValue({ ok: true, title: null });
+		}
+		const rows: [string, string][] = [
+			['ids', 'c1'],
+			['editedAt.c1', ''],
+			['ids', 'c2'],
+			['editedAt.c2', '1762077600000']
+		];
+		for (const [op, fn] of [
+			['approve', 'approveComment'],
+			['restore', 'restoreComment'],
+			['dismiss', 'dismissReports']
+		] as const) {
+			await run('bulk', [['op', op], ...rows]);
+			expect(actionsFns[fn].mock.calls.map((c) => [c[1], c[2]])).toEqual([
+				['c1', null],
+				['c2', 1762077600000]
+			]);
+		}
+	});
+
+	it('refuses a row with no editedAt for an operation that publishes, and runs the others', async () => {
+		actionsFns.approveComment.mockResolvedValue({ ok: true, title: null });
+		const result = await run('bulk', [
+			['op', 'approve'],
+			['ids', 'c1'],
+			['ids', 'c2'],
+			['editedAt.c2', '']
+		]);
+		expect(actionsFns.approveComment).toHaveBeenCalledExactlyOnceWith(STAFF, 'c2', null);
+		expect(result).toMatchObject({ applied: 1, refused: 1 });
+	});
+
+	it('needs no editedAt to hide or reject', async () => {
+		actionsFns.hideComment.mockResolvedValue({ ok: true, title: null });
+		await run('bulk', [
+			['op', 'hide'],
+			['ids', 'c1']
+		]);
+		expect(actionsFns.hideComment).toHaveBeenCalledOnce();
+	});
+
 	it('answers 409 with the bulk refusal, and purges nothing, when no comment could change', async () => {
 		actionsFns.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		expect(await run('bulk', [['op', 'approve'], ...ids(2)])).toMatchObject({
 			status: 409,
 			data: {
 				id: 'bulk',
-				error:
-					'None of the selected comments could be changed: none is in a status this action applies to.'
+				error: 'None of the selected comments could be changed.'
 			}
 		});
 		expect(purgeTitleComments).not.toHaveBeenCalled();

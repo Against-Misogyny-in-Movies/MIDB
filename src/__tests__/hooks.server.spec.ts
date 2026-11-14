@@ -234,3 +234,77 @@ describe('handle cache headers', () => {
 		expect(res.headers.get('cache-control')).toBe('private, no-store');
 	});
 });
+
+describe('handle security headers', () => {
+	const EXPECTED = {
+		'strict-transport-security': 'max-age=63072000; includeSubDomains',
+		'x-content-type-options': 'nosniff',
+		'referrer-policy': 'strict-origin-when-cross-origin',
+		'x-frame-options': 'DENY',
+		'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+		'cross-origin-opener-policy': 'same-origin'
+	};
+
+	function expectHeaders(res: Response) {
+		for (const [name, value] of Object.entries(EXPECTED)) expect(res.headers.get(name)).toBe(value);
+	}
+
+	it('sets them on a resolved response and keeps the one the route set', async () => {
+		const res = await handle({
+			event: event('/'),
+			resolve: async () =>
+				new Response('ok', {
+					headers: {
+						'cache-control': 'public, max-age=0',
+						'content-security-policy': "default-src 'self'"
+					}
+				})
+		});
+		expectHeaders(res);
+		expect(res.headers.get('content-security-policy')).toBe("default-src 'self'");
+		expect(res.headers.get('cache-control')).toBe('public, max-age=0');
+	});
+
+	it('sets them on a response with immutable headers', async () => {
+		const res = await handle({
+			event: event('/'),
+			resolve: async () => Response.redirect('http://localhost/y', 302)
+		});
+		expect(res.status).toBe(302);
+		expectHeaders(res);
+	});
+
+	it('sets them on a response that sets a cookie', async () => {
+		const res = await handle({
+			event: event('/api/auth/x'),
+			resolve: async () => new Response('ok', { headers: { 'set-cookie': 'a=b' } })
+		});
+		expectHeaders(res);
+		expect(res.headers.get('set-cookie')).toBe('a=b');
+	});
+
+	it('sets them on the /user cookie gate redirect', async () => {
+		const res = await handle({ event: event('/user/profile'), resolve: vi.fn() });
+		expect(res.status).toBe(303);
+		expectHeaders(res);
+	});
+
+	it('sets them on the /user/moderation redirect and error', async () => {
+		getSession.mockResolvedValue(null);
+		const redirect = await handle({
+			event: event('/user/moderation', SESSION_COOKIE),
+			resolve: vi.fn()
+		});
+		expect(redirect.status).toBe(303);
+		expectHeaders(redirect);
+
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row());
+		const forbidden = await handle({
+			event: event('/user/moderation', SESSION_COOKIE),
+			resolve: vi.fn()
+		});
+		expect(forbidden.status).toBe(403);
+		expectHeaders(forbidden);
+	});
+});

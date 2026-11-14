@@ -108,10 +108,37 @@ describe('the Turnstile check on a passkey registration', () => {
 		expect(res.status).toBe(400);
 	});
 
-	it('is off when no secret is configured', async () => {
+	it('is off with no secret on a local origin', async () => {
 		const open = createAuth({ db, origin: ORIGIN, secret: SECRET });
 		const res = await open.handler(
 			new Request(`${ORIGIN}/api/auth${PASSKEY_REGISTER_PATH}`, { headers: { origin: ORIGIN } })
+		);
+		expect(res.status).toBe(200);
+	});
+
+	it('refuses a sign-up with no secret on a non-local origin, and logs it', async () => {
+		const site = 'https://example.org';
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const open = createAuth({ db, origin: site, secret: SECRET });
+		const res = await open.handler(
+			new Request(`${site}/api/auth${PASSKEY_REGISTER_PATH}`, { headers: { origin: site } })
+		);
+		expect(res.status).toBe(503);
+		expect(await res.json()).toMatchObject({ code: 'SIGN_UP_UNAVAILABLE' });
+		expect(error).toHaveBeenCalledWith(expect.stringContaining('TURNSTILE_SECRET_KEY'));
+		error.mockRestore();
+	});
+
+	it('lets a signed-in reader add a passkey with no secret on a non-local origin', async () => {
+		const site = 'https://example.org';
+		await db.insert(users).values(userValues('user-1'));
+		const open = createAuth({ db, origin: site, secret: SECRET });
+		const { token } = await (await open.$context).internalAdapter.createSession('user-1');
+		const res = await open.handler(
+			new Request(`${site}/api/auth${PASSKEY_REGISTER_PATH}`, {
+				// An https origin makes Better Auth read the `__Secure-` cookie name.
+				headers: { origin: site, cookie: `__Secure-${await sessionCookie(token)}` }
+			})
 		);
 		expect(res.status).toBe(200);
 	});

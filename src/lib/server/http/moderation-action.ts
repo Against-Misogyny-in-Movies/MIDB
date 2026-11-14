@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions } from '@sveltejs/kit';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
+import type { EditedAt } from '#lib/server/data/comment-status.ts';
 import type { ModerationResult } from '#lib/server/data/moderation-actions.ts';
 import type { ReportModerationResult } from '#lib/server/data/community-report-moderation.ts';
 import type { FlagCloseResult } from '#lib/server/data/count-flags.ts';
@@ -16,6 +17,33 @@ export type ActionEvent = Parameters<Actions[string]>[0];
 export function text(data: FormData, name: string): string | null {
 	const value = data.get(name);
 	return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/**
+ * The `editedAt` a moderator's view carried for a comment, in the form field `name`: empty for a
+ * comment never edited, otherwise the time in milliseconds. Undefined when the field is absent
+ * or not that, so the action is refused instead of publishing text nobody saw.
+ */
+export function viewedEditedAt(data: FormData, name = 'editedAt'): EditedAt | undefined {
+	const value = data.get(name);
+	if (typeof value !== 'string') return undefined;
+	if (value === '') return null;
+	return /^\d{1,15}$/.test(value) ? Number(value) : undefined;
+}
+
+/** A publishing action refused for want of the `editedAt` the moderator's view carried. */
+type MissingVersion = { ok: false; reason: 'invalid' };
+
+/**
+ * Runs an action that makes a comment public with the `editedAt` its row showed (`viewedEditedAt`),
+ * or refuses it as `invalid` when the form carries none, so no action publishes text nobody
+ * saw. The single actions and the bulk operations share it.
+ */
+export function withViewedEditedAt(
+	editedAt: EditedAt | undefined,
+	run: (editedAt: EditedAt) => Promise<ModerationResult>
+): Promise<ModerationResult | MissingVersion> {
+	return editedAt === undefined ? Promise.resolve({ ok: false, reason: 'invalid' }) : run(editedAt);
 }
 
 type FlagCloseRefusal = Extract<FlagCloseResult, { ok: false }>['reason'];
@@ -50,15 +78,17 @@ const refusals: Record<Refusal, [number, string]> = {
 	invalid: [400, 'The request was not valid.'],
 	'not-found': [404, 'The comment, report or account no longer exists.'],
 	'invalid-state': [409, 'It is no longer in a state this action applies to.'],
+	edited: [409, 'The comment was edited after this page loaded. Read the new text, then decide.'],
+	'admin-acted': [
+		403,
+		'An administrator acted on this comment last, so only an administrator can approve, restore or dismiss its reports.'
+	],
 	'forbidden-target': [
 		403,
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
-	'own-flag': [403, 'A moderator cannot close their own flag.'],
-	'bulk-unchanged': [
-		409,
-		'None of the selected comments could be changed: none is in a status this action applies to.'
-	],
+	'own-flag': [403, "A moderator cannot close their own flag or an administrator's."],
+	'bulk-unchanged': [409, 'None of the selected comments could be changed.'],
 	'invalid-concern': [400, `The scan text must be 1 to ${SCAN_CONCERN_MAX} characters.`],
 	'ai-unavailable': [503, 'AI search and scan are not set up on this site.'],
 	'ai-rate-limited': [429, 'The AI service is busy; a search or scan can run again in a moment.'],

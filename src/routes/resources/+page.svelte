@@ -18,6 +18,7 @@
 		REPORT_LEVEL_LABELS,
 		SEXUAL_LEVEL_LABELS
 	} from '#lib/media/utils/communityReports.ts';
+	import { REPORT_THRESHOLD } from '#lib/media/utils/comments.ts';
 	import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 	const category = (key: (typeof REPORT_CATEGORIES)[number]['key']) =>
@@ -317,12 +318,14 @@
 
 				<SubBlock label="Outcomes">
 					<p>
-						<strong>Published:</strong> the model allows the comment. It appears at once.
+						<strong>Published:</strong> the model allows the comment with severity 0 and no category.
+						It appears at once.
 					</p>
 					<p>
-						<strong>Awaiting review:</strong> the model asks for a person to look, or finds a clear break
-						below severity 2. The same applies when the check gives no verdict, or when the site has no
-						key for it. Only the author and moderators see the comment until a moderator decides.
+						<strong>Awaiting review:</strong> the model asks for a person to look, allows the comment
+						but notes a category or a severity above 0, or finds a clear break below severity 2. The same
+						applies when the check gives no verdict, or when the site has no key for it. Only the author
+						and moderators see the comment until a moderator decides.
 					</p>
 					<p>
 						<strong>Rejected:</strong> the blocklist matches, or the model finds a clear break of severity
@@ -332,9 +335,12 @@
 
 				<SubBlock label="Reviewed by people">
 					<p>
-						Moderators approve, hide or reject comments from a queue. Three different readers
-						reporting a published comment send it back to review. A moderator can also mute or ban
-						an account.
+						Moderators approve, hide or reject comments from a queue. Reports from {REPORT_THRESHOLD}
+						different accounts send a published comment back to review. Only reports from staff, or from
+						accounts at least {REPORT_ACCOUNT_MIN_AGE_DAYS} days old, count, and none from a muted or
+						banned account; the others are kept for moderators. Votes follow the same age rule. A moderator
+						can also mute or ban an account, and a ban hides the account's published and pending comments
+						and removes its votes.
 					</p>
 				</SubBlock>
 			</MetricArticle>

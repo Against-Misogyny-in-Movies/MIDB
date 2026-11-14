@@ -39,6 +39,14 @@ describe('applyPolicy', () => {
 		});
 	});
 
+	it('holds an allow verdict that carries a severity or a category for a person', () => {
+		const held = { status: 'pending', source: 'ai', reason: null };
+		expect(applyPolicy({ kind: 'verdict', verdict: verdict({ severity: 1 }) })).toEqual(held);
+		expect(
+			applyPolicy({ kind: 'verdict', verdict: verdict({ categories: ['harassment'] }) })
+		).toEqual(held);
+	});
+
 	it('holds a review verdict for a person', () => {
 		expect(
 			applyPolicy({ kind: 'verdict', verdict: verdict({ decision: 'review', severity: 3 }) })

@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { makeModerator, seedTitle } from './support/db.ts';
+import { ageAccount, makeModerator, seedTitle } from './support/db.ts';
 import { hasTmdb, NO_TMDB_REASON } from './support/env.ts';
 import { signUpWithPasskey } from './support/passkeys.ts';
 
@@ -90,6 +90,15 @@ test.describe('through the API, with no TMDB', () => {
 			data: { body: `Reply ${Date.now()}`, parentId: comment.id }
 		});
 		expect(reply.status()).toBe(201);
+		// A fresh account's vote is refused until the account is old enough.
+		const freshVote = await other.page.request.put(`/api/comments/${comment.id}/vote`, {
+			data: { value: 1 }
+		});
+		expect(freshVote.status()).toBe(403);
+		expect(await freshVote.json()).toMatchObject({
+			message: 'Votes open once an account is 7 days old.'
+		});
+		ageAccount(other.username);
 		const vote = await other.page.request.put(`/api/comments/${comment.id}/vote`, {
 			data: { value: 1 }
 		});
@@ -109,7 +118,8 @@ test.describe('through the API, with no TMDB', () => {
 		const foreignEdit = await other.page.request.patch(`/api/comments/${comment.id}`, {
 			data: { body: 'not mine' }
 		});
-		expect(foreignEdit.status()).toBe(403);
+		// Another account's comment is not found, whatever its status.
+		expect(foreignEdit.status()).toBe(404);
 	});
 
 	test('writes need a signed-in reader', async ({ request }) => {
@@ -147,6 +157,8 @@ test.describe('on a film page', () => {
 		await anonymous.close();
 
 		await approve(moderator.page, text);
+
+		ageAccount(other.username);
 
 		// A second reader sees it, votes on it and replies. Their reply is pending too.
 		await other.page.goto(page);

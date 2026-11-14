@@ -7,6 +7,7 @@
 	import TablePager from '#lib/components/moderation/table/tablePager.svelte';
 	import type { ModerationTable as Table } from '#lib/media/types/moderation.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
+	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import type { TableFilters as Filters } from '#lib/media/utils/moderationFilters.ts';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 
@@ -22,6 +23,11 @@
 	let ticked = $state<string[]>([]);
 	/** Only rows still on the page count: a filter or a reload can drop a ticked one. */
 	const selected = $derived(ticked.filter((id) => table.rows.some((row) => row.comment.id === id)));
+	const editedAts = $derived(
+		Object.fromEntries(
+			table.rows.map((row) => [row.comment.id, editedAtValue(row.comment.editedAt)])
+		)
+	);
 	const ids = $derived(table.rows.map((row) => row.comment.id));
 	/** The rows the acting staff member may act on; the others have no checkbox to tick. */
 	const selectable = $derived(
@@ -55,6 +61,7 @@
 	{#if selected.length > 0}
 		<BulkBar
 			ids={selected}
+			{editedAts}
 			onclear={() => (ticked = [])}
 			fallbackIds={[TABLE_FOCUS.selectAll, TABLE_FOCUS.card]}
 		/>

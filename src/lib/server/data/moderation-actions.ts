@@ -5,11 +5,21 @@ import { commentReports, comments, moderationActions } from '#db/schema/communit
 import type { CommentStatus } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
-import { runBatch, runMove, statusMove, stillIn, type BatchStatement } from './comment-status.ts';
-import { targetAllowed } from './moderation-target.ts';
+import {
+	runBatch,
+	runMove,
+	statusMove,
+	stillIn,
+	editedSince,
+	unchangedSince,
+	type BatchStatement,
+	type EditedAt
+} from './comment-status.ts';
+import { lastActionByAdministrator, targetAllowed } from './moderation-target.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
-import { purgeProfile } from '#lib/server/http/purge-title.ts';
+import { purgeProfile, purgeProfiles, purgeTitlesComments } from '#lib/server/http/purge-title.ts';
 import { purgeReportedTitles } from './community-report-moderation.ts';
+import { banReach, banWeightStatements } from './ban-weight.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -23,7 +33,14 @@ export type ModerationResult =
 			/** The authors of its published replies, whose profiles name it, when it entered or left `published`. */
 			replyAuthorIds?: string[];
 	  }
-	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
+	| {
+			ok: false;
+			/**
+			 * `edited`: the text changed after the moderator's view loaded. `admin-acted`: an
+			 * administrator took the latest action, which binds a moderator.
+			 */
+			reason: 'not-found' | 'invalid-state' | 'forbidden-target' | 'edited' | 'admin-acted';
+	  };
 
 /**
  * The log row for an action on a comment, written only if the comment is still in `from` when
@@ -60,14 +77,15 @@ const hasOpenReports = (commentId: string) =>
 
 /**
  * Resolves or dismisses a comment's open reports, only while the comment is still in
- * `expected`, so a batch whose status move is lost resolves nothing. It returns the rows it
- * changed.
+ * `expected` (and, when `editedAt` is given, unedited since the moderator's view), so a batch
+ * whose status move is lost resolves nothing. It returns the rows it changed.
  */
 const resolveOpenReports = (
 	commentId: string,
 	actorId: string,
 	status: 'resolved' | 'dismissed',
-	expected: CommentStatus
+	expected: CommentStatus,
+	editedAt?: EditedAt
 ) =>
 	db
 		.update(commentReports)
@@ -76,16 +94,45 @@ const resolveOpenReports = (
 			and(
 				eq(commentReports.commentId, commentId),
 				eq(commentReports.status, 'open'),
-				stillIn(commentId, expected)
+				stillIn(commentId, expected, editedAt)
 			)
 		)
 		.returning({ id: commentReports.id });
 
 /**
+ * Why a batch that moved nothing lost: the comment's text changed since the moderator's view
+ * (`edited`), or it left the expected status or lost its reports (`invalid-state`).
+ */
+async function lostRace(
+	commentId: string,
+	from: readonly CommentStatus[],
+	editedAt: EditedAt | undefined
+): Promise<'edited' | 'invalid-state'> {
+	const [now] = await db
+		.select({ status: comments.status, editedAt: comments.editedAt })
+		.from(comments)
+		.where(eq(comments.id, commentId));
+	const stale =
+		editedAt !== undefined &&
+		now &&
+		from.includes(now.status) &&
+		editedSince(now.editedAt, editedAt);
+	return stale ? 'edited' : 'invalid-state';
+}
+
+/** A moderator is bound by an administrator's latest action on the comment; an administrator is not. */
+async function heldByAdministrator(actor: UserRow, commentId: string): Promise<boolean> {
+	return actor.role !== 'administrator' && (await lastActionByAdministrator(commentId));
+}
+
+/**
  * One moderator action on a comment, as a single batch: the log row, the status move (with its
  * reply counts) and the resolution of the comment's open reports. The actor must be allowed to
- * act on the comment's author (`targetAllowed`). When the comment left the expected status
- * between the read and the batch, nothing is written and the result is `invalid-state`.
+ * act on the comment's author (`targetAllowed`), and a moderator may not undo an administrator's
+ * latest action when `spec.adminBinds` is set (`admin-acted`). A spec with `editedAt` makes the
+ * comment public only if its stored `editedAt` still equals it, so the moderator publishes the
+ * text they saw; a comment edited since answers `edited`. When the comment left the expected
+ * status between the read and the batch, nothing is written and the result is `invalid-state`.
  */
 async function moveComment(
 	actor: UserRow,
@@ -96,6 +143,10 @@ async function moveComment(
 		to: CommentStatus;
 		reason: string | null;
 		reports: 'resolved' | 'dismissed' | null;
+		/** The `editedAt` the moderator's view showed, for an action that publishes. */
+		editedAt?: EditedAt;
+		/** Whether a moderator may not act on a comment an administrator last acted on. */
+		adminBinds?: boolean;
 	}
 ): Promise<ModerationResult> {
 	const found = await getCommentWithTitle(commentId);
@@ -103,31 +154,46 @@ async function moveComment(
 	const { comment, title } = found;
 	const author = await targetAllowed(actor, comment.userId);
 	if (typeof author === 'string') return { ok: false, reason: author };
+	if (spec.adminBinds && (await heldByAdministrator(actor, commentId))) {
+		return { ok: false, reason: 'admin-acted' };
+	}
 	if (!spec.from.includes(comment.status)) return { ok: false, reason: 'invalid-state' };
+	if (spec.editedAt !== undefined && editedSince(comment.editedAt, spec.editedAt)) {
+		return { ok: false, reason: 'edited' };
+	}
+	const version = spec.editedAt === undefined ? undefined : unchangedSince(spec.editedAt);
 
 	// Read before the move, so a failed read cannot leave a move whose purge is skipped.
 	const replyAuthorIds = await replyAuthorsAffected(commentId, comment.status, spec.to);
 	const moved = await runMove([
-		logCommentAction(actor.id, commentId, action, spec.reason, comment.status),
+		logCommentAction(actor.id, commentId, action, spec.reason, comment.status, version),
 		...(spec.reports
-			? [resolveOpenReports(commentId, actor.id, spec.reports, comment.status)]
+			? [resolveOpenReports(commentId, actor.id, spec.reports, comment.status, spec.editedAt)]
 			: []),
-		...statusMove(commentId, comment.status, spec.to, {
-			moderationSource: 'moderator',
-			moderationReason: spec.reason
-		})
+		...statusMove(
+			commentId,
+			comment.status,
+			spec.to,
+			{ moderationSource: 'moderator', moderationReason: spec.reason },
+			version
+		)
 	]);
-	if (!moved) return { ok: false, reason: 'invalid-state' };
+	if (!moved) return { ok: false, reason: await lostRace(commentId, spec.from, spec.editedAt) };
 	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
 }
 
-/** Publishes a pending comment; its reports, if any, are dismissed. */
-export const approveComment = (actor: UserRow, commentId: string) =>
+/**
+ * Publishes a pending comment; its reports, if any, are dismissed. `editedAt` is the value the
+ * moderator's view showed (milliseconds, null when never edited).
+ */
+export const approveComment = (actor: UserRow, commentId: string, editedAt: EditedAt) =>
 	moveComment(actor, commentId, 'approve', {
 		from: ['pending'],
 		to: 'published',
 		reason: null,
-		reports: 'dismissed'
+		reports: 'dismissed',
+		editedAt,
+		adminBinds: true
 	});
 
 /** Takes a pending or published comment out of view, keeping it for its replies and the author. */
@@ -148,25 +214,33 @@ export const rejectComment = (actor: UserRow, commentId: string, reason: string 
 		reports: 'resolved'
 	});
 
-/** Puts a hidden or rejected comment back in the public list. */
-export const restoreComment = (actor: UserRow, commentId: string) =>
+/** Puts a hidden or rejected comment back in the public list; `editedAt` is as for `approveComment`. */
+export const restoreComment = (actor: UserRow, commentId: string, editedAt: EditedAt) =>
 	moveComment(actor, commentId, 'restore', {
 		from: ['hidden', 'rejected'],
 		to: 'published',
 		reason: null,
-		reports: null
+		reports: null,
+		editedAt,
+		adminBinds: true
 	});
 
 /**
  * Dismisses a comment's open reports. A comment that the reports sent back to review is
- * published again; any other status stays as it is.
+ * published again, only if its stored `editedAt` still equals the moderator's (as for
+ * `approveComment`); any other status stays as it is.
  */
-export async function dismissReports(actor: UserRow, commentId: string): Promise<ModerationResult> {
+export async function dismissReports(
+	actor: UserRow,
+	commentId: string,
+	editedAt: EditedAt
+): Promise<ModerationResult> {
 	const found = await getCommentWithTitle(commentId);
 	if (!found) return { ok: false, reason: 'not-found' };
 	const { comment, title } = found;
 	const author = await targetAllowed(actor, comment.userId);
 	if (typeof author === 'string') return { ok: false, reason: author };
+	if (await heldByAdministrator(actor, commentId)) return { ok: false, reason: 'admin-acted' };
 	const [{ open }] = await db
 		.select({ open: sql<number>`count(*)` })
 		.from(commentReports)
@@ -174,6 +248,8 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 	if (open === 0) return { ok: false, reason: 'invalid-state' };
 
 	const restores = comment.status === 'pending' && comment.moderationSource === 'reports';
+	if (restores && editedSince(comment.editedAt, editedAt)) return { ok: false, reason: 'edited' };
+	const version = restores ? unchangedSince(editedAt) : undefined;
 	const replyAuthorIds = restores
 		? await replyAuthorsAffected(commentId, 'pending', 'published')
 		: [];
@@ -184,19 +260,31 @@ export async function dismissReports(actor: UserRow, commentId: string): Promise
 			'dismiss',
 			null,
 			comment.status,
-			hasOpenReports(commentId)
+			version ? and(hasOpenReports(commentId), version) : hasOpenReports(commentId)
 		),
-		resolveOpenReports(commentId, actor.id, 'dismissed', comment.status),
+		resolveOpenReports(
+			commentId,
+			actor.id,
+			'dismissed',
+			comment.status,
+			restores ? editedAt : undefined
+		),
 		...(restores
-			? statusMove(commentId, 'pending', 'published', {
-					moderationSource: null,
-					moderationReason: null
-				})
+			? statusMove(
+					commentId,
+					'pending',
+					'published',
+					{ moderationSource: null, moderationReason: null },
+					version
+				)
 			: [])
 	]);
 	const resolved = results[1];
 	if (!Array.isArray(resolved) || resolved.length === 0) {
-		return { ok: false, reason: 'invalid-state' };
+		return {
+			ok: false,
+			reason: restores ? await lostRace(commentId, ['pending'], editedAt) : 'invalid-state'
+		};
 	}
 	if (!restores) return { ok: true, title };
 	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
@@ -213,7 +301,8 @@ function logUserAction(
 }
 
 /**
- * Stops a user from commenting for `hours` hours from now; the log row keeps the length. The
+ * Stops a user from commenting for `hours` hours from now; the log row keeps the length. A
+ * moderator's mute never ends before an active one does. The
  * counts of every title the account reported leave it out, and so does its profile's list of
  * counted reports, so their cached counts and the profile are purged.
  */
@@ -225,9 +314,14 @@ export async function muteUser(
 ): Promise<ModerationResult> {
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
-	const until = new Date(Date.now() + hours * 3_600_000);
+	const until = Date.now() + hours * 3_600_000;
+	// A moderator never shortens an active mute; an administrator may set any length.
+	const mutedUntil =
+		actor.role === 'administrator'
+			? new Date(until)
+			: sql<Date>`max(coalesce(${users.mutedUntil}, 0), ${until})`;
 	await runBatch([
-		db.update(users).set({ mutedUntil: until }).where(eq(users.id, targetId)),
+		db.update(users).set({ mutedUntil }).where(eq(users.id, targetId)),
 		logUserAction(actor.id, targetId, 'mute', reason, hours)
 	]);
 	purgeProfile(targetId);
@@ -237,8 +331,13 @@ export async function muteUser(
 
 /**
  * Bans a user and ends their sessions (`banStatements`), with the log row in the same batch.
+ * The same batch takes the account's weight away: its comment votes are deleted and the score
+ * of every comment it voted on is recomputed without them, and its published and pending
+ * comments become `hidden` (source `moderator`, reason "Account banned") with their parents'
+ * reply counts adjusted. The statements select by the account's id, so no id list is bound.
  * The counts of every title the account reported leave it out, so their cached counts are
- * purged, and so is the profile, which is a 404 from now on.
+ * purged, and so is the profile, which is a 404 from now on, with the lists of the titles and
+ * the profiles of the authors that the votes and hidden comments touched.
  */
 export async function banAccount(
 	actor: UserRow,
@@ -247,11 +346,15 @@ export async function banAccount(
 ): Promise<ModerationResult> {
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
+	const reach = await banReach(targetId);
 	await runBatch([
 		...banStatements(targetId, reason),
-		logUserAction(actor.id, targetId, 'ban', reason)
+		logUserAction(actor.id, targetId, 'ban', reason),
+		...banWeightStatements(targetId)
 	]);
 	purgeProfile(targetId);
+	purgeProfiles(reach.profiles);
+	purgeTitlesComments(reach.titles);
 	await purgeReportedTitles(targetId);
 	return { ok: true, title: null };
 }

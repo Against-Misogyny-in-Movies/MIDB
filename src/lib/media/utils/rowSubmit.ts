@@ -1,3 +1,4 @@
+import { invalidateAll } from '$app/navigation';
 import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
@@ -29,8 +30,11 @@ const DONE: Record<string, string | ((data: DoneData) => string)> = {
 	},
 	bulk: (data) => {
 		const refused = count(data.refused);
+		const edited = count(data.edited);
 		const lead = `${comments(count(data.applied))} changed.`;
-		return refused > 0 ? `${lead} ${comments(refused)} could not be changed.` : lead;
+		if (refused === 0) return lead;
+		const unchanged = `${lead} ${comments(refused)} could not be changed`;
+		return edited > 0 ? `${unchanged}: ${edited} edited after this page loaded.` : `${unchanged}.`;
 	}
 };
 
@@ -83,6 +87,8 @@ export function rowSubmit(
 			// `navigate: false` keeps the page's URL: the action's own URL has no query, so the default
 			// would navigate there and drop the table's tab and filters, or a title's reports.
 			await update({ navigate: false });
+			// A refusal leaves the row's data as it was, so a stale `editedAt` would fail again.
+			if (result.type === 'failure') await invalidateAll();
 			setBusy(null);
 			afterUpdate?.();
 			toastActionResult(result);

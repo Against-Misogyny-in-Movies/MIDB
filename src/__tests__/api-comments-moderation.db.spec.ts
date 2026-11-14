@@ -18,8 +18,7 @@ vi.mock('#lib/server/integrations/anthropic.ts', () => ({
 const resolveCommentTitle = vi.fn();
 vi.mock('#lib/server/data/comment-title.ts', () => ({
 	resolveCommentTitle,
-	findCommentTitle: resolveCommentTitle,
-	parseTitleParams: (kind: string, tmdbId: string) => ({ kind, tmdbId })
+	findCommentTitle: resolveCommentTitle
 }));
 
 const { POST } = await import('../routes/api/titles/[kind]/[tmdbId]/comments/+server');
@@ -106,7 +105,12 @@ describe('comment moderation through the endpoint', () => {
 		expect(state.comments).toMatchObject([
 			{ id: comment.id, status: 'rejected', moderationReason: 'Attacks a person.' }
 		]);
-		const other = await getViewerCommentState(title.id, { id: 'someone', mutedUntil: null });
+		const other = await getViewerCommentState(title.id, {
+			id: 'someone',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(other.comments).toEqual([]);
 	});
 

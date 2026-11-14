@@ -65,6 +65,21 @@ describe('findProfileOwner', () => {
 		expect(await findProfileOwner('ANNA')).toMatchObject({ id: 'anna-id' });
 	});
 
+	it('still finds every stored shape: 3 characters, a leading digit, double underscores', async () => {
+		await db
+			.insert(users)
+			.values([
+				userValues('s3-id', { username: 'ab1' }),
+				userValues('s4-id', { username: '9lives' }),
+				userValues('s5-id', { username: 'a__b_' })
+			]);
+		expect(await findProfileOwner('bea')).toMatchObject({ id: 'bea-id' });
+		expect(await findProfileOwner('AB1')).toMatchObject({ id: 's3-id' });
+		expect(await findProfileOwner('9lives')).toMatchObject({ id: 's4-id' });
+		expect(await findProfileOwner('a__b_')).toMatchObject({ id: 's5-id' });
+		expect(await getPublicProfile('bea')).toMatchObject({ username: 'bea' });
+	});
+
 	it('is null for no match, a banned account, an account without a username and a bad address', async () => {
 		await db
 			.insert(users)
@@ -241,5 +256,13 @@ describe('getProfileComments paging', () => {
 		const two = await getProfileComments('anna-id', one.nextCursor, 1);
 		expect([...one.comments, ...two.comments].map((c) => c.id)).toEqual(['tie-b', 'tie-a']);
 		expect(two.nextCursor).toBeNull();
+	});
+});
+
+describe('getProfileComments times', () => {
+	it('rounds a comment time down to the minute', async () => {
+		await comment({ createdAt: new Date('2026-11-01T10:07:42.123Z') });
+		const page = await getProfileComments('anna-id', null);
+		expect(page.comments[0].createdAt).toBe('2026-11-01T10:07:00.000Z');
 	});
 });

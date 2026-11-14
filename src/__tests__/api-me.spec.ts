@@ -33,6 +33,8 @@ describe('GET /api/me', () => {
 			bannedAt: null,
 			banReason: null,
 			mutedUntil: null,
+			usernameChangedAt: null,
+			usernameFolded: null,
 			createdAt: new Date(),
 			updatedAt: new Date()
 		});

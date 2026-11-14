@@ -6,6 +6,7 @@ import { users } from '#db/schema/auth.ts';
 import { commentAiLabels, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { TABLE_PAGE_SIZE, type TableFilters } from '#lib/media/utils/moderationFilters.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
 import {
 	openReportCount,
 	readAiVerdict,
@@ -80,8 +81,6 @@ function hasCategory(categories: string[]): SQL {
 }
 
 const verdictSeverity = sql`json_extract(${comments.aiVerdict}, '$.severity')`;
-
-const DAY_MS = 86_400_000;
 
 function whereClause(f: TableFilters): SQL | undefined {
 	const parts: (SQL | undefined)[] = [

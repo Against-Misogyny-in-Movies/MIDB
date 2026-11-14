@@ -6,7 +6,7 @@ import { accounts, sessions, users } from '#db/schema/auth.ts';
 import { userValues } from '#db/test/users.ts';
 import { db } from '#lib/server/db.ts';
 import { banUser } from '#lib/server/data/user-queries.ts';
-import { USERNAME_RE } from '#lib/media/utils/username.ts';
+import { NEW_USERNAME_RE } from '#lib/media/utils/username.ts';
 import { createAuth } from '../create-auth.ts';
 import { adoptProviderEmail } from '../link-email.ts';
 import { createPasskeyUser, resolveNewPasskeyUser } from '../passkey-signup.ts';
@@ -55,7 +55,7 @@ describe('passkey sign-up', () => {
 		expect(row.email).toBe(`${resolved.id}@users.invalid`);
 		expect(row.emailVerified).toBe(false);
 		expect(row.role).toBe('user');
-		expect(row.username).toMatch(USERNAME_RE);
+		expect(row.username).toMatch(NEW_USERNAME_RE);
 		expect(row.bannedAt).toBeNull();
 	});
 
@@ -80,14 +80,14 @@ describe('generated usernames', () => {
 	it('gives a passkey sign-up a valid username', async () => {
 		const { userId } = await createPasskeyUser(asCtx(), resolveNewPasskeyUser());
 		const [row] = await db.select().from(users).where(eq(users.id, userId));
-		expect(row.username).toMatch(USERNAME_RE);
+		expect(row.username).toMatch(NEW_USERNAME_RE);
 	});
 
 	it.each(['google', 'discord'])('gives a %s sign-up a valid username', async (providerId) => {
 		const result = await oauthSignUp(providerId, `${providerId}@example.com`);
 		expect(result.error).toBeNull();
 		const [row] = await db.select().from(users);
-		expect(row.username).toMatch(USERNAME_RE);
+		expect(row.username).toMatch(NEW_USERNAME_RE);
 	});
 
 	it('gives every account its own username', async () => {

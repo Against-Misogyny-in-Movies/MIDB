@@ -49,6 +49,11 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | S4    | Links to a comment              | completed | 2026-11-13. Not rendered in a browser; `e2e-tests/commentLinks.spec.ts` not run (no TMDB token here).             |
 | S5    | Public user profiles            | completed | 2026-11-13. `/u` rendered on seeded local data; moderation name links reviewed from code only.                    |
 | S6    | Letterboxd score                | completed | 2026-11-13. Never run against the real API: no key exists (Open items).                                           |
+| SH1   | Security: moderation sticks     | completed | 2026-11-14. Reviewed with SH2–SH5 in one round; its findings are fixed.                                           |
+| SH2   | Security: sock puppets          | completed | 2026-11-14. Burst holds are not re-checked after their window (Open items).                                       |
+| SH3   | Security: accounts              | completed | 2026-11-14. Sign-up refuses without `TURNSTILE_SECRET_KEY` off localhost: set it in production.                   |
+| SH4   | Security: platform              | completed | 2026-11-14. Title pages not rendered with the CSP (no TMDB token here); sources load from the browser.            |
+| SH5   | Security: username shape        | completed | 2026-11-14. The vote lock for new accounts is tested in specs, not seen in a browser.                             |
 
 ## Open items
 
@@ -90,6 +95,13 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Comment links and profiles:**
   - Run `e2e-tests/commentLinks.spec.ts` once a TMDB token and the preview environment exist, and render a linked comment and the profile name links in moderation in a browser.
 
+- **Security:**
+  - Render a film and a series page under the CSP once a TMDB token exists, and check the Does the Dog Die and Letterboxd slots fill from `/api/titles/[kind]/[tmdbId]/sources`.
+  - A community report held as a burst is not re-checked once its window passes; a moderator clears it.
+  - Two accounts renaming to look-alike names at the same moment can both succeed: only `lower(username)` has a unique index.
+  - A bulk action where every selected row was edited answers `bulk-unchanged` without the edited count.
+  - `heldByAdministrator` is read before the moderator's batch, so an administrator acting at the same moment can race it.
+
 ## Standing decisions
 
 - **Hosting:**
@@ -121,6 +133,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
   - Public profiles show avatar, name, join date, staff role, comment score total, published comments and counted community reports (user decision, 2026-11-13).
   - Votes do not purge the cached comment list; the reader's private viewer state carries current scores for comments they voted on (user decision, 2026-11-13).
   - Film pages show the Letterboxd average rating from the official API with a secret key, as the only outside rating (user decision, 2026-11-13).
+- **Security hardening:**
+  - Film and series pages load the Does the Dog Die warnings and the Letterboxd rating from the browser, through a public endpoint, so the hash CSP stays strict (user decision, 2026-11-13).
+  - A new username is 4 to 32 characters, starts with a letter, has no `_` at either end or twice in a row, and may not look like another account's name once `1`→`l` and `0`→`o` are folded; stored names are checked only when they change (user decision, 2026-11-13).
 - **Toolchain:**
   - pnpm and Node 22 replace Bun (user decision, 2026-11-12).
   - TypeScript 6.0.3 serves the tooling and TypeScript 7 runs `typecheck`, until svelte-check supports TypeScript 7 (user decision, 2026-11-12).

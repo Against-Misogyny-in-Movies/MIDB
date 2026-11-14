@@ -11,6 +11,7 @@
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
 	import type { ShownComment } from '#lib/media/utils/commentThread.ts';
 	import type { CommentsState } from '#lib/media/utils/commentsState.svelte.js';
+	import { formatDate } from '#lib/media/utils/format.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { commentHref } from '#lib/media/utils/titleHref.ts';
@@ -40,9 +41,14 @@
 	const muted = $derived(comments.mutedUntil !== null);
 	/** Writes wait for the reader's state: until it loads a mute and the existing votes are unknown. */
 	const locked = $derived(muted || comments.viewerPhase !== 'ready');
+	/** Votes from a new account open at a date: until then the vote group is locked like a mute. */
+	const votesOpenAt = $derived(comments.votesOpenAt);
+	const voteLocked = $derived(locked || votesOpenAt !== null);
+	const votesHint = $derived(votesOpenAt ? `Votes open on ${formatDate(votesOpenAt)}.` : undefined);
 	/** Each comment's date is a link to it, so a reader can copy the address. */
 	const href = $derived(commentHref(comments.kind, Number(comments.tmdbId), comment.id));
 	const scoreId = $derived(`score-${comment.id}`);
+	const votesHintId = $derived(`votes-hint-${comment.id}`);
 	const canVote = $derived(signedIn && !own && !comment.removed);
 	const role = $derived(
 		comment.author?.role === 'moderator'
@@ -165,13 +171,20 @@
 		<div class="actions">
 			{#if !comment.review}
 				{#if canVote}
-					<div class="votes" role="group" aria-label="Vote on this comment">
+					<div
+						class="votes"
+						role="group"
+						aria-label="Vote on this comment"
+						aria-describedby={votesHint ? votesHintId : undefined}
+						title={votesHint}
+					>
+						{#if votesHint}<span class="sr-only" id={votesHintId}>{votesHint}</span>{/if}
 						<CommentAction
 							icon
 							label="Upvote"
 							describedby={scoreId}
 							pressed={vote === 1}
-							disabled={locked}
+							disabled={voteLocked}
 							onclick={() => comments.vote(comment.id, 1)}
 						>
 							<i class="ri-arrow-up-line" aria-hidden="true"></i>
@@ -184,7 +197,7 @@
 							label="Downvote"
 							describedby={scoreId}
 							pressed={vote === -1}
-							disabled={locked}
+							disabled={voteLocked}
 							onclick={() => comments.vote(comment.id, -1)}
 						>
 							<i class="ri-arrow-down-line" aria-hidden="true"></i>

@@ -20,7 +20,26 @@ export default defineConfig({
 			preprocess: vitePreprocess({ style: false }),
 
 			// Deployed on Cloudflare Workers, configured by wrangler.jsonc.
-			adapter: adapter()
+			adapter: adapter(),
+
+			// Hashes, not nonces: title pages are edge-cached, so a nonce would be reused.
+			// `docs/architecture.md`, Caching policy, lists the security headers; SECURITY.md says what each source is for.
+			csp: {
+				mode: 'hash',
+				directives: {
+					'default-src': ['self'],
+					'script-src': ['self', 'https://challenges.cloudflare.com'],
+					'frame-src': ['https://challenges.cloudflare.com'],
+					'connect-src': ['self'],
+					'img-src': ['self', 'data:'],
+					'style-src': ['self', 'unsafe-inline'],
+					'font-src': ['self'],
+					'object-src': ['none'],
+					'base-uri': ['self'],
+					'form-action': ['self'],
+					'frame-ancestors': ['none']
+				}
+			}
 		}),
 		svelteTesting()
 	],

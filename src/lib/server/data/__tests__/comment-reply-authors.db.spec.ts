@@ -27,7 +27,9 @@ beforeEach(async () => {
 			userValues('author'),
 			userValues('bea'),
 			userValues('carl'),
-			...Array.from({ length: REPORT_THRESHOLD }, (_, i) => userValues(`rep${i}`)),
+			...Array.from({ length: REPORT_THRESHOLD }, (_, i) =>
+				userValues(`rep${i}`, { createdAt: new Date(Date.now() - 30 * 86_400_000) })
+			),
 			userValues('mod', { role: 'moderator' })
 		]);
 	[mod] = await db.select().from(users).where(eq(users.id, 'mod'));
@@ -93,9 +95,9 @@ describe('a comment leaving published names the authors of its published replies
 
 	it('restore and approve name them too, since "In reply to" returns', async () => {
 		const hidden = await thread('hidden');
-		expect(await restoreComment(mod, hidden)).toMatchObject({ replyAuthorIds: ['bea'] });
+		expect(await restoreComment(mod, hidden, null)).toMatchObject({ replyAuthorIds: ['bea'] });
 		const pending = await thread('pending');
-		expect(await approveComment(mod, pending)).toMatchObject({ replyAuthorIds: ['bea'] });
+		expect(await approveComment(mod, pending, null)).toMatchObject({ replyAuthorIds: ['bea'] });
 	});
 
 	it('the author’s delete', async () => {

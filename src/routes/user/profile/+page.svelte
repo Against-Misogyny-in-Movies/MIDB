@@ -4,6 +4,14 @@
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import AvatarPicker from '#lib/components/user/avatars/AvatarPicker.svelte';
+	import {
+		NEW_USERNAME_MIN,
+		NEW_USERNAME_PATTERN,
+		NEW_USERNAME_RE,
+		RETIRED_USERNAME_DAYS,
+		USERNAME_CHANGE_WAIT_DAYS,
+		USERNAME_MAX
+	} from '#lib/media/utils/username.ts';
 	import { profileHref } from '#lib/media/utils/profileHref.ts';
 	import { DebouncedQuery } from '#lib/media/utils/debouncedQuery.svelte.js';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
@@ -21,47 +29,85 @@
 		selectedAvatar = user?.avatarKey ?? null;
 		usernameInput = user?.username ?? '';
 	});
-	type Availability = 'idle' | 'checking' | 'available' | 'taken';
-	let availability: Availability = $state('idle');
+	/** What the username field's live slot shows: a check in progress, its answer, or a refused save. */
+	type Status =
+		| 'idle'
+		| 'checking'
+		| 'available'
+		| 'taken'
+		| 'reserved'
+		| 'blocked'
+		| 'format'
+		| 'too-soon';
+	let status = $state<Status>('idle');
+
+	/** A refusal the form or the availability check gives, by the reason it names. */
+	const REFUSALS = ['taken', 'reserved', 'blocked', 'format', 'too-soon'] as const;
+	const refusalOf = (reason: unknown): Status | undefined => REFUSALS.find((r) => r === reason);
 
 	// A newer keystroke aborts the in-flight check, so a slow answer for an older
 	// value never overwrites the current one. An error response (e.g. a 429) shows nothing.
-	const availabilityCheck = new DebouncedQuery<Availability>(
+	const availabilityCheck = new DebouncedQuery<Status>(
 		async (value, signal) => {
 			const res = await fetch(`/user/profile/availability?username=${encodeURIComponent(value)}`, {
 				signal
 			});
 			if (!res.ok) return 'idle';
-			const { available } = (await res.json()) as { available: boolean };
-			return available ? 'available' : 'taken';
+			const { available, reason } = (await res.json()) as { available: boolean; reason?: string };
+			return available ? 'available' : (refusalOf(reason) ?? 'taken');
 		},
-		(result) => (availability = result),
+		(result) => (status = result),
 		{ empty: 'idle', delayMs: 400 }
 	);
 
 	function checkAvailability(value: string) {
-		if (!value || value === user?.username) {
+		if (!value || value === user?.username || !NEW_USERNAME_RE.test(value)) {
 			availabilityCheck.cancel();
-			availability = 'idle';
+			status = 'idle';
 			return;
 		}
-		availability = 'checking';
+		status = 'checking';
 		availabilityCheck.push(value);
 	}
 
-	/** A refusal of the username, shown under its field. */
+	/** The field holds a name as the site stores it: no spaces, lowercase. */
+	function onUsernameInput(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const value = input.value.trim().toLowerCase();
+		if (input.value !== value) input.value = value;
+		usernameInput = value;
+		checkAvailability(value);
+	}
+
+	const USERNAME_RULE = `A new username is ${NEW_USERNAME_MIN}–${USERNAME_MAX} characters: lowercase letters, numbers and single underscores. It starts with a letter and does not end with an underscore.`;
+
+	/** The new-name rule binds a changed name only: a stored name that predates it saves as it is. */
+	const changingUsername = $derived(usernameInput !== (user?.username ?? ''));
+
+	/** A refusal of the username, shown in the field's live slot. */
 	const USERNAME_ERRORS: Record<string, string> = {
-		'username-taken': 'That username is already taken.',
-		'username-format': 'A username is 3–32 characters: lowercase letters, numbers and underscores.',
-		'username-reserved': 'That username is reserved.'
+		taken: `That username, or one that looks like it, belongs to another account or was given up in the last ${RETIRED_USERNAME_DAYS} days.`,
+		reserved: 'That username is reserved.',
+		blocked: 'That username is not allowed.',
+		'too-soon': `A username can change once every ${USERNAME_CHANGE_WAIT_DAYS} days.`
 	};
 	let saving = $state(false);
-	/** The username the last save sent: its refusal shows only while the field still holds it. */
-	let submittedUsername = $state<string | null>(null);
-	const usernameError = $derived(
-		typeof form?.error === 'string' && usernameInput === submittedUsername
-			? USERNAME_ERRORS[form.error]
-			: undefined
+	/** Whether the field was left or saved, so a shape error does not show while the reader is still typing. */
+	let shapeChecked = $state(false);
+	/** The name breaks the shape rule: the rule line shows in the field's error state. */
+	const shapeInvalid = $derived(
+		status === 'format' ||
+			(shapeChecked &&
+				changingUsername &&
+				usernameInput !== '' &&
+				!NEW_USERNAME_RE.test(usernameInput))
+	);
+	const statusText = $derived(
+		status === 'checking'
+			? 'Checking…'
+			: status === 'available'
+				? 'Available'
+				: (USERNAME_ERRORS[status] ?? '')
 	);
 
 	type Profile = { username: string; avatarKey: string | null };
@@ -78,14 +124,15 @@
 	}
 
 	/** Saves the profile: the result is a toast, except a refused username, which its field shows. */
-	const saveProfile: SubmitFunction = ({ formData }) => {
+	const saveProfile: SubmitFunction = () => {
 		saving = true;
-		submittedUsername = String(formData.get('username') ?? '');
+		shapeChecked = true;
 		const before: Profile = { username: user?.username ?? '', avatarKey: user?.avatarKey ?? null };
 		return async ({ result, update }) => {
-			await update();
+			await update({ reset: false });
 			saving = false;
 			if (result.type === 'success') {
+				status = 'idle';
 				// The account as the server stored it (a username is lowercased), not as typed.
 				const me = result.data?.me as Partial<Profile> | undefined;
 				announceSave(before, {
@@ -94,13 +141,24 @@
 				});
 			} else if (result.type === 'failure') {
 				const error = result.data?.error;
-				if (typeof error === 'string' && USERNAME_ERRORS[error]) return;
+				// A refused username replaces the availability state in its field instead of a toast.
+				const refusal =
+					typeof error === 'string' && error.startsWith('username-')
+						? refusalOf(error.slice('username-'.length))
+						: undefined;
+				if (refusal) {
+					availabilityCheck.cancel();
+					status = refusal;
+					return;
+				}
 				toasts.error(
 					error === 'avatar-invalid'
 						? 'That avatar is not available. Choose another.'
 						: error === 'no-changes'
 							? 'Nothing to save: enter a username or choose an avatar.'
-							: 'The profile could not be saved. Try again.'
+							: error === 'muted'
+								? 'The profile cannot change while the account is muted.'
+								: 'The profile could not be saved. Try again.'
 				);
 			}
 		};
@@ -129,6 +187,7 @@
 
 	<form
 		method="POST"
+		novalidate
 		action="?/updateProfile"
 		use:enhance={saveProfile}
 		class="card profile-form"
@@ -144,28 +203,23 @@
 				type="text"
 				class="input"
 				value={usernameInput}
-				oninput={(e) => {
-					usernameInput = (e.target as HTMLInputElement).value;
-					checkAvailability(usernameInput);
-				}}
-				maxlength="32"
+				oninput={onUsernameInput}
+				onblur={() => (shapeChecked = true)}
+				minlength={changingUsername ? NEW_USERNAME_MIN : undefined}
+				maxlength={USERNAME_MAX}
+				pattern={changingUsername ? NEW_USERNAME_PATTERN : undefined}
 				autocomplete="off"
 				spellcheck="false"
-				aria-describedby="username-hint"
-				aria-invalid={usernameError && availability === 'idle' ? true : undefined}
+				aria-describedby="username-rule username-status"
+				aria-invalid={shapeInvalid ||
+				(status !== 'idle' && status !== 'checking' && status !== 'available')
+					? true
+					: undefined}
 			/>
-			<p
-				id="username-hint"
-				class="hint hint--{usernameError && availability === 'idle' ? 'taken' : availability}"
-				aria-live="polite"
-			>
-				{#if usernameError && availability === 'idle'}{usernameError}
-				{:else if availability === 'checking'}Checking…
-				{:else if availability === 'available'}Available
-				{:else if availability === 'taken'}Already taken
-				{:else}Shown on comments. Change it here: lowercase letters, numbers and underscores.
-				{/if}
+			<p id="username-rule" class="hint" class:hint--taken={shapeInvalid}>
+				Shown on comments. {USERNAME_RULE}
 			</p>
+			<p id="username-status" class="hint hint--{status} status" aria-live="polite">{statusText}</p>
 		</div>
 
 		<fieldset class="field">
@@ -253,6 +307,24 @@
 	}
 
 	.hint--taken {
+		color: var(--danger);
+	}
+
+	/* One slot for the longest line (the taken text: three lines on a phone, two from 40rem), so a state change moves nothing below the field. */
+	.status {
+		min-height: 3.75rem;
+	}
+
+	@media (min-width: 40rem) {
+		.status {
+			min-height: 2.5rem;
+		}
+	}
+
+	.hint--format,
+	.hint--reserved,
+	.hint--blocked,
+	.hint--too-soon {
 		color: var(--danger);
 	}
 

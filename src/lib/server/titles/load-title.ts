@@ -1,11 +1,9 @@
 import type { Movie } from '#lib/media/types/movie.ts';
 import type { Series } from '#lib/media/types/series.ts';
-import type { DddResult } from '#lib/media/types/ddd.ts';
-import type { LetterboxdOutcome } from '#lib/media/types/letterboxd.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import { getMovie, getSeries } from '#lib/server/integrations/tmdb/index.ts';
-import { getTriggerTagsForSeries, getTriggerTagsLive } from '#lib/server/integrations/ddd.ts';
-import { getLetterboxdRating, letterboxdConfigured } from '#lib/server/integrations/letterboxd.ts';
+import { letterboxdConfigured } from '#lib/server/integrations/letterboxd.ts';
+import { parseTitleParams } from '#lib/server/titles/title-params.ts';
 import { getTitleRow, type TitleKind } from '#lib/server/data/title-queries.ts';
 import { getBechdel, getUmEntry, type BechdelData } from '#lib/server/data/sources.ts';
 import { getUnconsentingCandidates } from '#lib/server/data/um-candidates.ts';
@@ -22,20 +20,19 @@ export interface TitlePageData<M extends Movie | Series> {
 	umCandidates: UmEntry[];
 	/** When the daily sync last succeeded per source; shown beside each "Source:" link. */
 	syncedAt: SourceSyncDates;
-	/** Un-awaited, so SvelteKit streams it after first paint. */
-	triggerTags: Promise<DddResult>;
-	/** Un-awaited like `triggerTags`; resolves null for a series or without keys, and 'failed' on an error. */
-	letterboxd: Promise<LetterboxdOutcome>;
-	/** Both Letterboxd keys are set and the title is a film: the page renders the slot. */
+	/** Both Letterboxd keys are set and the title is a film: the page renders the slot, filled from the sources endpoint. */
 	letterboxdEnabled: boolean;
 }
 
 /**
  * The detail-page data for a movie or a series: TMDB, then the `titles` row (read-only, a page
- * visit never writes), then the seeded sources, then UM candidates when nothing is bound, plus
- * the streamed DDD lookup and, for a film, the streamed Letterboxd rating. User-agnostic, so `PUBLIC_PAGE` caching is safe.
+ * visit never writes), then the seeded sources, then UM candidates when nothing is bound.
+ * Does the Dog Die and Letterboxd are not here: the page fetches them after it loads
+ * (`GET /api/titles/[kind]/[tmdbId]/sources`). User-agnostic, so `PUBLIC_PAGE` caching is safe.
  *
- * @throws SvelteKit `error()` when TMDB rejects the id.
+ * @throws SvelteKit `error()` 404 for an id that is not 1–9 digits, before any request goes out
+ * (the id is part of the TMDB path, so `..%2F` would otherwise reach another endpoint), and
+ * when TMDB rejects the id.
  */
 export function loadTitle(kind: 'movie', tmdbId: string): Promise<TitlePageData<Movie>>;
 export function loadTitle(kind: 'tv', tmdbId: string): Promise<TitlePageData<Series>>;
@@ -43,15 +40,15 @@ export async function loadTitle(
 	kind: TitleKind,
 	tmdbId: string
 ): Promise<TitlePageData<Movie | Series>> {
+	const { tmdbId: id } = parseTitleParams(kind, tmdbId);
 	return kind === 'movie'
-		? withSources('movie', await getMovie(tmdbId), (movie) => getTriggerTagsLive(movie.imdbId))
-		: withSources('tv', await getSeries(tmdbId), getTriggerTagsForSeries);
+		? withSources('movie', await getMovie(id))
+		: withSources('tv', await getSeries(id));
 }
 
 async function withSources<M extends Movie | Series>(
 	kind: TitleKind,
-	media: M,
-	streamTriggerTags: (media: M) => Promise<DddResult>
+	media: M
 ): Promise<TitlePageData<M>> {
 	const row = await getTitleRow(kind, media);
 
@@ -72,8 +69,6 @@ async function withSources<M extends Movie | Series>(
 		umEntry,
 		umCandidates,
 		syncedAt,
-		triggerTags: streamTriggerTags(media),
-		letterboxd: isFilm ? getLetterboxdRating(media.tmdbId) : Promise.resolve(null),
 		letterboxdEnabled: isFilm && letterboxdConfigured()
 	};
 }

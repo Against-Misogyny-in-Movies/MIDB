@@ -1,28 +1,21 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
-import { sessions, users } from '#db/schema/auth.ts';
+import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import { AVATAR_KEYS } from '#lib/media/utils/avatars.ts';
-import { USERNAME_RE } from '#lib/media/utils/username.ts';
+import { USERNAME_CHANGE_WAIT_DAYS, NEW_USERNAME_RE } from '#lib/media/utils/username.ts';
+import { isStaff } from '#lib/media/utils/staff.ts';
+import { DAY_MS } from '#lib/media/utils/time.ts';
+import { isTakenByOthers } from './username-taken.ts';
+import { usernameRefusal } from '#lib/server/moderation/username-check.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
-import { countsFromDate } from './community-reports.ts';
+import { countsFromDate } from './counting-account.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
-
-const RESERVED = new Set([
-	'admin',
-	'administrator',
-	'moderator',
-	'mod',
-	'midb',
-	'support',
-	'staff',
-	'root'
-]);
 
 /** The name shown for an account: its username, or "Account" for a row with none. */
 export function displayNameOf(username: string | null | undefined): string {
@@ -70,17 +63,40 @@ type ProfileUpdate = { username?: string; avatarKey?: string };
 type ProfileResult = { ok: true; user: UserRow } | { ok: false; reason: string };
 
 /**
- * Update display profile. Validates format, blocklist, and avatar registry.
+ * Update display profile. Refuses a muted account, then validates the avatar registry and, only
+ * when the username changes, its format, the reserved names and the comment blocklist (a stored
+ * name is never checked again). A rename waits `USERNAME_CHANGE_WAIT_DAYS`
+ * after the last one (staff and the first rename are exempt) and cannot take a name, or a
+ * look-alike of one, that another account holds or retired in the last `RETIRED_USERNAME_DAYS`;
+ * the old name is retired in the same batch.
  * Catches unique-index violation on lower(username) as the race-condition backstop.
  */
 export async function updateProfile(id: string, data: ProfileUpdate): Promise<ProfileResult> {
+	const current = await getUserById(id);
+	if (!current) return { ok: false, reason: 'no-account' };
+	if (activeMute(current.mutedUntil)) return { ok: false, reason: 'muted' };
+
 	const patch: ProfileUpdate = {};
+	let renamed = false;
 
 	if (data.username !== undefined) {
 		const normalized = data.username.toLowerCase();
-		if (!USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
-		if (RESERVED.has(normalized)) return { ok: false, reason: 'username-reserved' };
-		patch.username = normalized;
+		renamed = normalized !== current.username?.toLowerCase();
+		// A name already stored is not checked again: only a rename meets the shape, reserved and
+		// blocklist rules, so an account with an older name still saves its avatar.
+		if (renamed) {
+			if (!NEW_USERNAME_RE.test(normalized)) return { ok: false, reason: 'username-format' };
+			const refusal = usernameRefusal(normalized);
+			if (refusal) return { ok: false, reason: `username-${refusal}` };
+			const waitEnds = current.usernameChangedAt
+				? current.usernameChangedAt.getTime() + USERNAME_CHANGE_WAIT_DAYS * DAY_MS
+				: 0;
+			if (!isStaff(current.role) && waitEnds > Date.now()) {
+				return { ok: false, reason: 'username-too-soon' };
+			}
+			if (await isTakenByOthers(db, normalized, id)) return { ok: false, reason: 'username-taken' };
+			patch.username = normalized;
+		}
 	}
 
 	if (data.avatarKey !== undefined) {
@@ -89,7 +105,24 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 	}
 
 	try {
-		const [row] = await db.update(users).set(patch).where(eq(users.id, id)).returning();
+		const now = new Date();
+		const update = db
+			.update(users)
+			.set(renamed ? { ...patch, usernameChangedAt: now } : patch)
+			.where(eq(users.id, id))
+			.returning();
+		if (!renamed || !current.username) {
+			const [row] = await update;
+			return { ok: true, user: row };
+		}
+		const retire = db
+			.insert(retiredUsernames)
+			.values({ username: current.username.toLowerCase(), userId: id, retiredAt: now })
+			.onConflictDoUpdate({
+				target: retiredUsernames.username,
+				set: { userId: id, retiredAt: now }
+			});
+		const [[row]] = await db.batch([update, retire]);
 		return { ok: true, user: row };
 	} catch (e: unknown) {
 		if (isUniqueViolation(e)) return { ok: false, reason: 'username-taken' };
@@ -97,15 +130,24 @@ export async function updateProfile(id: string, data: ProfileUpdate): Promise<Pr
 	}
 }
 
+/** Whether a username can be chosen, or the first rule it breaks. */
+export type UsernameAvailability = 'available' | 'taken' | 'reserved' | 'blocked' | 'format';
+
 /**
- * Check username availability (case-insensitive), excluding the requesting user.
- * Used for debounced inline availability check on the profile edit form.
+ * Whether `username` could be chosen by the account `excludingId`: `updateProfile`'s own checks
+ * of shape, reserved names, the blocklist and names held by other accounts (including
+ * look-alikes and names they retired), in that order. The wait after a rename and a mute are
+ * not part of it. Used for the debounced inline check on the profile edit form.
  */
-export async function isUsernameAvailable(username: string, excludingId: string): Promise<boolean> {
-	const row = await db.query.users.findFirst({
-		where: sql`lower(${users.username}) = lower(${username}) AND ${users.id} != ${excludingId}`
-	});
-	return !row;
+export async function usernameAvailability(
+	username: string,
+	excludingId: string
+): Promise<UsernameAvailability> {
+	const normalized = username.toLowerCase();
+	if (!NEW_USERNAME_RE.test(normalized)) return 'format';
+	const refusal = usernameRefusal(normalized);
+	if (refusal) return refusal;
+	return (await isTakenByOthers(db, normalized, excludingId)) ? 'taken' : 'available';
 }
 
 /** The title fields a history row needs to link back to its detail page. */
