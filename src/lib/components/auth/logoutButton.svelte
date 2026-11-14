@@ -30,11 +30,7 @@
 	};
 </script>
 
-<button
-	class={variant === 'button' ? 'btn btn--ghost' : 'logout'}
-	role={variant === 'menu' ? 'menuitem' : undefined}
-	onclick={logout}
->
+<button class={variant === 'button' ? 'btn btn--ghost' : 'logout'} onclick={logout}>
 	Sign out
 </button>
 

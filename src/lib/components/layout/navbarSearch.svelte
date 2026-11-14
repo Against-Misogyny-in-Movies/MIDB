@@ -82,7 +82,7 @@
 				onfocus={() => search.reopen()}
 				role="combobox"
 				aria-autocomplete="list"
-				aria-expanded={search.results.length > 0}
+				aria-expanded={search.expanded}
 				aria-controls={listboxId}
 				aria-activedescendant={search.activeId}
 				autocomplete="off"

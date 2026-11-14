@@ -81,7 +81,8 @@
 					Try again
 				</button>
 			{:else if reports.phase === 'loading'}
-				<div class="skeleton" aria-label="Loading community reports">
+				<div class="skeleton" role="status">
+					<span class="sr-only">Loading community reports</span>
 					{#each { length: 6 } as _, i (i)}
 						<div class="skeleton-row"></div>
 					{/each}

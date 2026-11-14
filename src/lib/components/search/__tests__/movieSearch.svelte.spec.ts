@@ -158,6 +158,17 @@ describe('MovieSearchState', () => {
 		expect(fetchMock).toHaveBeenCalledOnce();
 	});
 
+	it('is expanded only while the results listbox is shown', async () => {
+		const s = connected();
+		s.search('matrix');
+		expect(s.expanded).toBe(false);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(s.expanded).toBe(true);
+		s.close();
+		expect(s.results).toHaveLength(2);
+		expect(s.expanded).toBe(false);
+	});
+
 	it('moves the highlight with wrap-around and exposes the active option id', async () => {
 		const s = connected();
 		s.search('matrix');

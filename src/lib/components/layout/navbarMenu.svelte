@@ -5,7 +5,8 @@
 	import { profileHref } from '#lib/media/utils/profileHref.ts';
 
 	// Below md the bar keeps only search, the account slot and the theme toggle; this menu
-	// carries the rest. Closes on outside pointerdown and Escape. Account links read the client
+	// carries the rest as a disclosure of plain links (no ARIA menu roles, so Tab moves through
+	// them). Closes on outside pointerdown and Escape. Account links read the client
 	// session (the navbar starts it); the Moderation link is a convenience only, authorization
 	// stays server-side.
 	const canModerate = $derived(
@@ -48,7 +49,6 @@
 		onclick={toggle}
 		aria-label="Menu"
 		title="Menu"
-		aria-haspopup="menu"
 		aria-expanded={open}
 		aria-controls={menuId}
 	>
@@ -56,26 +56,23 @@
 	</button>
 
 	{#if open}
-		<div class="panel" id={menuId} role="menu">
-			<a bind:this={firstLink} href="/resources" class="item" role="menuitem" onclick={close}>
-				Methodology
-			</a>
+		<div class="panel" id={menuId}>
+			<a bind:this={firstLink} href="/resources" class="item" onclick={close}>Methodology</a>
 			{#if canModerate}
-				<a href="/user/moderation" class="item" role="menuitem" onclick={close}>Moderation</a>
+				<a href="/user/moderation" class="item" onclick={close}>Moderation</a>
 			{/if}
 			{#if session.likelyUser}
 				<a
 					href={profileHref(session.user?.username) ?? '/user/profile'}
 					class="item"
-					role="menuitem"
 					onclick={close}>Profile</a
 				>
-				<a href="/user/settings" class="item" role="menuitem" onclick={close}>Settings</a>
+				<a href="/user/settings" class="item" onclick={close}>Settings</a>
 				{#if session.status === 'user'}
 					<LogoutButton variant="menu" />
 				{/if}
 			{:else}
-				<a href="/auth" class="item" role="menuitem" onclick={close}>Sign in</a>
+				<a href="/auth" class="item" onclick={close}>Sign in</a>
 			{/if}
 		</div>
 	{/if}
