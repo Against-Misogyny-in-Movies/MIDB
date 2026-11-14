@@ -5,7 +5,7 @@ try {
 		document.documentElement.dataset.hint = 'user';
 	}
 } catch {
-	// Storage unavailable: the page follows the system theme.
+	// Cookies unreadable: no hint, and the comment section reserves no composer height.
 }
 try {
 	var t = localStorage.getItem('theme');

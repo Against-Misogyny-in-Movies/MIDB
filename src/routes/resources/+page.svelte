@@ -18,6 +18,7 @@
 		REPORT_LEVEL_LABELS,
 		SEXUAL_LEVEL_LABELS
 	} from '#lib/media/utils/communityReports.ts';
+	import { REPORT_THRESHOLD } from '#lib/media/utils/comments.ts';
 	import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 	const category = (key: (typeof REPORT_CATEGORIES)[number]['key']) =>
@@ -334,12 +335,12 @@
 
 				<SubBlock label="Reviewed by people">
 					<p>
-						Moderators approve, hide or reject comments from a queue. Reports from three different
-						accounts send a published comment back to review, counting only accounts that are
-						{REPORT_ACCOUNT_MIN_AGE_DAYS} days old and neither muted nor banned; other reports are kept
-						for moderators. Voting on comments opens at the same account age. A moderator can also mute
-						or ban an account, and a ban hides the account's published and pending comments and removes
-						its votes.
+						Moderators approve, hide or reject comments from a queue. Reports from {REPORT_THRESHOLD}
+						different accounts send a published comment back to review. Only reports from staff, or from
+						accounts at least {REPORT_ACCOUNT_MIN_AGE_DAYS} days old, count, and none from a muted or
+						banned account; the others are kept for moderators. Votes follow the same age rule. A moderator
+						can also mute or ban an account, and a ban hides the account's published and pending comments
+						and removes its votes.
 					</p>
 				</SubBlock>
 			</MetricArticle>

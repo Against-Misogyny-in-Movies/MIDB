@@ -18,6 +18,7 @@ import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import { activeMute } from './mute.ts';
 import { publicTime } from './public-time.ts';
 import { toPublicUser } from './user-queries.ts';
+import { votesOpenAt } from './counting-account.ts';
 import type { TitleKind, TitleRow } from './title-queries.ts';
 import {
 	countNewReply,
@@ -249,7 +250,7 @@ export function toOwnComment(row: CommentRow): OwnComment {
  */
 export async function getViewerCommentState(
 	titleId: string,
-	user: { id: string; mutedUntil: Date | null }
+	user: { id: string; mutedUntil: Date | null; role: string; createdAt: Date }
 ): Promise<ViewerCommentState> {
 	const userId = user.id;
 	const [votes, own] = await Promise.all([
@@ -278,7 +279,8 @@ export async function getViewerCommentState(
 		votes: Object.fromEntries(votes.map((v) => [v.commentId, v.value === 1 ? 1 : -1])),
 		scores: Object.fromEntries(votes.map((v) => [v.commentId, v.score])),
 		comments: own.map(toOwnComment),
-		mutedUntil: activeMute(user.mutedUntil)
+		mutedUntil: activeMute(user.mutedUntil),
+		votesOpenAt: votesOpenAt(user)
 	};
 }
 

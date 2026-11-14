@@ -30,3 +30,12 @@ export function accountOldEnough(
 ): boolean {
 	return countsFromDate(user.createdAt, user.role).getTime() <= now;
 }
+
+/** When a vote from the account starts counting, while that is in the future; otherwise null. */
+export function votesOpenAt(
+	user: { role: string; createdAt: Date },
+	now: number = Date.now()
+): string | null {
+	const from = countsFromDate(user.createdAt, user.role);
+	return from.getTime() > now ? from.toISOString() : null;
+}

@@ -177,7 +177,7 @@ export class CommentsState {
 	}
 
 	#ensureViewer(): ViewerCommentState {
-		this.viewer ??= { votes: {}, scores: {}, comments: [], mutedUntil: null };
+		this.viewer ??= { votes: {}, scores: {}, comments: [], mutedUntil: null, votesOpenAt: null };
 		return this.viewer;
 	}
 
@@ -451,6 +451,12 @@ export class CommentsState {
 	get mutedUntil(): string | null {
 		const until = this.viewer?.mutedUntil ?? null;
 		return until && Date.parse(until) > Date.now() ? until : null;
+	}
+
+	/** When the reader's votes start counting, while that is still ahead; otherwise null. */
+	get votesOpenAt(): string | null {
+		const at = this.viewer?.votesOpenAt ?? null;
+		return at && Date.parse(at) > Date.now() ? at : null;
 	}
 
 	/** The reader's vote on a comment: 1, -1 or null. */

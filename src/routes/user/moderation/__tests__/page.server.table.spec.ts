@@ -431,8 +431,7 @@ describe('?/bulk', () => {
 			status: 409,
 			data: {
 				id: 'bulk',
-				error:
-					'None of the selected comments could be changed: none is in a status this action applies to.'
+				error: 'None of the selected comments could be changed.'
 			}
 		});
 		expect(purgeTitleComments).not.toHaveBeenCalled();

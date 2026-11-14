@@ -88,10 +88,7 @@ const refusals: Record<Refusal, [number, string]> = {
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
 	'own-flag': [403, "A moderator cannot close their own flag or an administrator's."],
-	'bulk-unchanged': [
-		409,
-		'None of the selected comments could be changed: none is in a status this action applies to.'
-	],
+	'bulk-unchanged': [409, 'None of the selected comments could be changed.'],
 	'invalid-concern': [400, `The scan text must be 1 to ${SCAN_CONCERN_MAX} characters.`],
 	'ai-unavailable': [503, 'AI search and scan are not set up on this site.'],
 	'ai-rate-limited': [429, 'The AI service is busy; a search or scan can run again in a moment.'],

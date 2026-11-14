@@ -105,7 +105,12 @@ describe('comment moderation through the endpoint', () => {
 		expect(state.comments).toMatchObject([
 			{ id: comment.id, status: 'rejected', moderationReason: 'Attacks a person.' }
 		]);
-		const other = await getViewerCommentState(title.id, { id: 'someone', mutedUntil: null });
+		const other = await getViewerCommentState(title.id, {
+			id: 'someone',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(other.comments).toEqual([]);
 	});
 

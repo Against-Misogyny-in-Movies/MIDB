@@ -308,6 +308,24 @@ describe('the open title view', () => {
 		);
 	});
 
+	it('says an administrator closes an administrator’s flag, to a moderator', () => {
+		const theirs = {
+			...flagged.flags[0],
+			id: 'f4',
+			reporterId: 'adm',
+			reporterRole: 'administrator'
+		};
+		render(CommunityReportsPanel, {
+			held: [],
+			openTitle: open,
+			titleId: 't1',
+			flagged: [{ ...flagged, flags: [theirs] }],
+			me
+		});
+		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+		expect(screen.getByText('An administrator closes this flag.')).toBeTruthy();
+	});
+
 	it('hides the buttons of a moderator’s own flag only; an administrator keeps theirs', () => {
 		const own = { ...flagged.flags[0], id: 'f3', reporterId: 'mod' };
 		const props = { held: [], openTitle: open, titleId: 't1' };

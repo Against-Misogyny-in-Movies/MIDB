@@ -238,7 +238,8 @@ describe('CommentsState', () => {
 				votes: from === null ? {} : { a: from },
 				scores: {},
 				comments: [],
-				mutedUntil: null
+				mutedUntil: null,
+				votesOpenAt: null
 			};
 			state.list[0].score = 1;
 			const pending = state.vote('a', press);
@@ -250,7 +251,13 @@ describe('CommentsState', () => {
 
 		it('sends DELETE for a repeated press', async () => {
 			const { state, gates, requests } = await setup();
-			state.viewer = { votes: { a: 1 }, scores: {}, comments: [], mutedUntil: null };
+			state.viewer = {
+				votes: { a: 1 },
+				scores: {},
+				comments: [],
+				mutedUntil: null,
+				votesOpenAt: null
+			};
 			const pending = state.vote('a', 1);
 			expect(requests()).toEqual(['DELETE']);
 			gates[0](json({ score: 0, vote: null }));

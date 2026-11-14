@@ -1,3 +1,5 @@
+import { DAY_MS } from '#lib/media/utils/time.ts';
+import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.ts';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
@@ -227,7 +229,12 @@ describe('the public list', () => {
 		await published('author', 'Shown');
 		const before = await db.select().from(comments);
 		await listTitleComments(title.id, { sort: 'top' });
-		await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		await getViewerCommentState(title.id, {
+			id: 'u1',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(await db.select().from(comments)).toEqual(before);
 	});
 });
@@ -321,7 +328,12 @@ describe('votes', () => {
 			.values({ titleId: other.id, userId: 'author', body: 'Elsewhere', status: 'published' })
 			.returning();
 		await vote(elsewhere.id, 'u1', 1);
-		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		const state = await getViewerCommentState(title.id, {
+			id: 'u1',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(state.votes).toEqual({ [voted]: 1 });
 		expect(state.scores).toEqual({ [voted]: 2 });
 	});
@@ -348,7 +360,12 @@ describe('votes', () => {
 		const first = await createComment({ title, userId: 'u1', body: 'Waiting' });
 		const second = await published('u1', 'Rejected soon');
 		await rejectComment(mod, second, 'spam');
-		const state = await getViewerCommentState(title.id, { id: 'u1', mutedUntil: null });
+		const state = await getViewerCommentState(title.id, {
+			id: 'u1',
+			mutedUntil: null,
+			role: 'user',
+			createdAt: new Date(0)
+		});
 		expect(state.votes).toEqual({ [shown]: -1 });
 		expect(state.comments.map((c) => c.status).sort()).toEqual(['pending', 'rejected']);
 		expect(state.comments.find((c) => c.status === 'rejected')?.moderationReason).toBe('spam');
@@ -356,15 +373,27 @@ describe('votes', () => {
 			state.comments.some((c) => c.id === (first as { comment: { id: string } }).comment.id)
 		).toBe(true);
 		expect(
-			(await getViewerCommentState(title.id, { id: 'u2', mutedUntil: null })).comments
+			(
+				await getViewerCommentState(title.id, {
+					id: 'u2',
+					mutedUntil: null,
+					role: 'user',
+					createdAt: new Date(0)
+				})
+			).comments
 		).toEqual([]);
 	});
 
 	it('reports a mute only while it lasts', async () => {
 		const later = new Date(Date.now() + 3_600_000);
-		const now = { id: 'u1', mutedUntil: later };
+		const now = { id: 'u1', mutedUntil: later, role: 'user', createdAt: new Date(0) };
 		expect((await getViewerCommentState(title.id, now)).mutedUntil).toBe(later.toISOString());
-		const ended = { id: 'u1', mutedUntil: new Date(Date.now() - 1000) };
+		const ended = {
+			id: 'u1',
+			mutedUntil: new Date(Date.now() - 1000),
+			role: 'user',
+			createdAt: new Date(0)
+		};
 		expect((await getViewerCommentState(title.id, ended)).mutedUntil).toBeNull();
 	});
 });
@@ -450,5 +479,21 @@ describe('getUserComments', () => {
 		expect(rows.find((r) => r.id === ok)?.status).toBe('published');
 		const times = rows.map((r) => r.createdAt.getTime());
 		expect(times).toEqual([...times].sort((a, b) => b - a));
+	});
+
+	it('reports when votes open for an account younger than the counting age, and not for staff', async () => {
+		const created = new Date(Date.now() - DAY_MS);
+		const young = { id: 'u1', mutedUntil: null, role: 'user', createdAt: created };
+		expect((await getViewerCommentState(title.id, young)).votesOpenAt).toBe(
+			new Date(created.getTime() + REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS).toISOString()
+		);
+		expect(
+			(await getViewerCommentState(title.id, { ...young, role: 'moderator' })).votesOpenAt
+		).toBeNull();
+		const old = {
+			...young,
+			createdAt: new Date(Date.now() - REPORT_ACCOUNT_MIN_AGE_DAYS * DAY_MS)
+		};
+		expect((await getViewerCommentState(title.id, old)).votesOpenAt).toBeNull();
 	});
 });

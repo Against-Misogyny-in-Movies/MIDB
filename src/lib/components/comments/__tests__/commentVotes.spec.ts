@@ -49,7 +49,8 @@ function mount(viewer: () => Response | Promise<Response>, put?: () => Response)
 	return render(CommentsSection, { kind: 'movie', tmdbId: '603', fetcher });
 }
 
-const empty = () => json({ votes: {}, scores: {}, comments: [], mutedUntil: null });
+const empty = () =>
+	json({ votes: {}, scores: {}, comments: [], mutedUntil: null, votesOpenAt: null });
 
 beforeEach(() => {
 	document.cookie = 'midb_hint=; max-age=0; path=/';
@@ -103,6 +104,29 @@ describe('Comment votes', () => {
 			expect(toasts.items.map((t) => t.text)).toEqual([
 				'The vote on anna’s comment was not saved. Try again in a moment.'
 			])
+		);
+	});
+
+	it('locks the votes of a new account until they open, and says when', async () => {
+		const at = new Date(Date.now() + 3 * 86_400_000).toISOString();
+		mount(() => json({ votes: {}, scores: {}, comments: [], mutedUntil: null, votesOpenAt: at }));
+		const up = await screen.findByRole('button', { name: 'Upvote' });
+		const group = screen.getByRole('group', { name: 'Vote on this comment' });
+		await waitFor(() => expect(group.getAttribute('title')).toMatch(/^Votes open on .+\.$/));
+		expect((up as HTMLButtonElement).disabled).toBe(true);
+		expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Downvote' }).disabled).toBe(true);
+		expect(document.getElementById(group.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+			group.getAttribute('title')
+		);
+	});
+
+	it('leaves the votes open once the date has passed', async () => {
+		const at = new Date(Date.now() - 1000).toISOString();
+		mount(() => json({ votes: {}, scores: {}, comments: [], mutedUntil: null, votesOpenAt: at }));
+		const up = await screen.findByRole('button', { name: 'Upvote' });
+		await waitFor(() => expect((up as HTMLButtonElement).disabled).toBe(false));
+		expect(screen.getByRole('group', { name: 'Vote on this comment' }).hasAttribute('title')).toBe(
+			false
 		);
 	});
 });

@@ -73,11 +73,72 @@ describe('the username field', () => {
 		expect(field.getAttribute('maxlength')).toBe('32');
 		expect(field.hasAttribute('pattern')).toBe(false);
 		expect(field.hasAttribute('minlength')).toBe(false);
-		expect(document.getElementById('username-hint')?.textContent).toMatch(/4–32 characters/);
+		expect(document.getElementById('username-rule')?.textContent).toMatch(
+			/A new username is 4–32 characters: lowercase letters, numbers and single underscores\. It starts with a letter and does not end with an underscore\./
+		);
+		expect(document.getElementById('username-status')?.textContent).toBe('');
+		expect(field.closest('form')?.hasAttribute('novalidate')).toBe(true);
+		expect(field.hasAttribute('title')).toBe(false);
 
 		await fireEvent.input(field, { target: { value: 'ab' } });
 		expect(field.getAttribute('minlength')).toBe('4');
 		expect(field.getAttribute('pattern')).toBe('[a-z][a-z0-9]*(_[a-z0-9]+)*');
+	});
+});
+
+describe('the username field as the reader types', () => {
+	it('trims and lowercases the value, and checks the lowercased name', async () => {
+		const fetcher = vi.fn(async () => Response.json({ available: true, reason: 'available' }));
+		vi.stubGlobal('fetch', fetcher);
+		try {
+			mount();
+			const field = screen.getByRole('textbox', { name: 'Username' }) as HTMLInputElement;
+			await fireEvent.input(field, { target: { value: ' Alicezz ' } });
+			expect(field.value).toBe('alicezz');
+			await waitFor(() =>
+				expect(document.getElementById('username-status')?.textContent).toBe('Available')
+			);
+			expect(fetcher).toHaveBeenCalledWith(
+				'/user/profile/availability?username=alicezz',
+				expect.anything()
+			);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('shows each availability reason as its own text in the live slot', async () => {
+		const reasons: Record<string, RegExp> = {
+			taken:
+				/or one that looks like it, belongs to another account or was given up in the last \d+ days\.$/,
+			reserved: /^That username is reserved\.$/,
+			blocked: /^That username is not allowed\.$/
+		};
+		for (const [reason, text] of Object.entries(reasons)) {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () => Response.json({ available: false, reason }))
+			);
+			const view = mount();
+			const field = screen.getByRole('textbox', { name: 'Username' });
+			await fireEvent.input(field, { target: { value: 'someone' } });
+			await waitFor(() =>
+				expect(document.getElementById('username-status')?.textContent).toMatch(text)
+			);
+			expect(field.getAttribute('aria-invalid')).toBe('true');
+			view.unmount();
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('marks a name that breaks the shape invalid once the field is left, with the rule line', async () => {
+		mount();
+		const field = screen.getByRole('textbox', { name: 'Username' });
+		await fireEvent.input(field, { target: { value: 'bad-name' } });
+		expect(field.getAttribute('aria-invalid')).toBeNull();
+		await fireEvent.blur(field);
+		expect(field.getAttribute('aria-invalid')).toBe('true');
+		expect(document.getElementById('username-rule')?.classList.contains('hint--taken')).toBe(true);
 	});
 });
 
@@ -109,14 +170,40 @@ describe('saving the profile', () => {
 		};
 		await fireEvent.submit(field.closest('form')!);
 		await waitFor(() =>
-			expect(document.getElementById('username-hint')?.textContent).toMatch(/reserved/)
+			expect(document.getElementById('username-status')?.textContent).toMatch(/reserved/)
 		);
 		expect(field.getAttribute('aria-invalid')).toBe('true');
 		expect(toasts.items).toEqual([]);
 
 		await fireEvent.input(field, { target: { value: 'mary' } });
-		expect(document.getElementById('username-hint')?.textContent).not.toMatch(/reserved/);
+		expect(document.getElementById('username-status')?.textContent).not.toMatch(/reserved/);
 		expect(field.getAttribute('aria-invalid')).toBeNull();
+	});
+
+	it('shows a refused rename in place of Available, with no toast', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => Response.json({ available: true, reason: 'available' }))
+		);
+		try {
+			mount();
+			const field = screen.getByRole('textbox', { name: 'Username' });
+			await fireEvent.input(field, { target: { value: 'maria' } });
+			await waitFor(() =>
+				expect(document.getElementById('username-status')?.textContent).toBe('Available')
+			);
+			form.result = { type: 'failure', data: { error: 'username-too-soon' } };
+			await fireEvent.submit(field.closest('form')!);
+			await waitFor(() =>
+				expect(document.getElementById('username-status')?.textContent).toMatch(
+					/once every \d+ days/
+				)
+			);
+			expect(toasts.items).toEqual([]);
+			expect(field.getAttribute('aria-invalid')).toBe('true');
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it('says what a save changed, as the server stored it', async () => {
