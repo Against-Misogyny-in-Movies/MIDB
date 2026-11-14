@@ -64,6 +64,7 @@
 			{/if}
 			{#if session.likelyUser}
 				<a href="/user/profile" class="item" role="menuitem" onclick={close}>Profile</a>
+				<a href="/user/settings" class="item" role="menuitem" onclick={close}>Settings</a>
 				{#if session.status === 'user'}
 					<LogoutButton variant="menu" />
 				{/if}

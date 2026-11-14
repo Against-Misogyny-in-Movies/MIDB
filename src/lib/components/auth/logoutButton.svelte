@@ -5,7 +5,7 @@
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 	interface Props {
-		/** `button` is a ghost button (the profile page); `menu` fills a row of the mobile menu. */
+		/** `button` is a ghost button (the settings page); `menu` fills a row of the mobile menu. */
 		variant?: 'button' | 'menu';
 	}
 

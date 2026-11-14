@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Badge from '#lib/components/ui/badge.svelte';
+	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentDate from './commentDate.svelte';
@@ -9,7 +10,7 @@
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
 	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
-	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
+	import { commentHref } from '#lib/media/utils/titleHref.ts';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
@@ -31,7 +32,6 @@
 	/** A hidden or deleted comment cannot be edited (the endpoint answers 409). */
 	const editable = $derived(comment.status !== 'hidden' && comment.status !== 'deleted');
 	const deletable = $derived(comment.status !== 'deleted');
-	const href = $derived(titleHref(comment.kind, comment.tmdbId));
 	const permalink = $derived(commentHref(comment.kind, comment.tmdbId, comment.id));
 
 	function toggle(next: 'edit' | 'delete') {
@@ -87,13 +87,14 @@
 
 <li class="row" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
 	<div class="meta">
-		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
+		<ProfileTitleLink kind={comment.kind} tmdbId={comment.tmdbId} name={comment.title} />
 		<CommentDate class="label" href={permalink} createdAt={comment.createdAt} />
+		{#if comment.parentId}<span class="label">Reply</span>{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
-		<span class="label">
-			{comment.parentId ? 'Reply on' : 'On'}
-			{#if href}<a class="link" {href}>{comment.title}</a>{:else}{comment.title}{/if}
-		</span>
+		{#if comment.status !== 'published'}
+			<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge
+			>
+		{/if}
 	</div>
 
 	{#if mode === 'edit'}
@@ -158,11 +159,11 @@
 	.row {
 		@apply flex flex-col;
 		gap: var(--spacing-xs);
-		padding: 14px 20px;
+		padding: var(--spacing-md) 20px;
 	}
 
 	.meta {
-		@apply flex flex-wrap items-center;
+		@apply flex flex-wrap items-center text-sm;
 		gap: var(--spacing-xs) var(--spacing-sm);
 	}
 

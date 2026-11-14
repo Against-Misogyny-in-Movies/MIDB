@@ -44,7 +44,7 @@ async function focusOn(id: string) {
 }
 
 /**
- * State and actions of `/user/security`: the linked accounts and passkeys, the one open
+ * State and actions of the sign-in methods on `/user/settings`: the linked accounts and passkeys, the one open
  * confirm or rename plate, and the action running. A result is a toast. Each list has its own
  * load, so a change refetches only what it touched: every call counts against the auth rate
  * limit.
@@ -194,8 +194,8 @@ export class SignInMethods {
 		this.running = `link:${provider.id}`;
 		const { error } = await authClient.linkSocial({
 			provider: provider.id,
-			callbackURL: `/user/security?linked=${provider.id}`,
-			errorCallbackURL: '/user/security'
+			callbackURL: `/user/settings?linked=${provider.id}`,
+			errorCallbackURL: '/user/settings'
 		});
 		if (error) {
 			this.running = null;

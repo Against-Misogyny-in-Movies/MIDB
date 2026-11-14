@@ -17,7 +17,7 @@ import { actions } from '../+page.server';
 import { clearCache } from '#lib/server/cache/index.ts';
 
 function run(form: FormData) {
-	const request = new Request('http://localhost/user/profile', { method: 'POST', body: form });
+	const request = new Request('http://localhost/user/settings', { method: 'POST', body: form });
 	// The action only reads `request` and `locals`.
 	return actions.updateProfile({ request, locals: {} } as Parameters<
 		typeof actions.updateProfile

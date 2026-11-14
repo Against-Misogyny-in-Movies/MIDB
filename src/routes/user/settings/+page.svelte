@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { AUTH_PROVIDERS, providerIcon, providerLabel } from '#lib/media/utils/auth-providers.ts';
 	import { HEADING_ID, passkeyName, SignInMethods } from '#lib/signInMethods.svelte.ts';
@@ -44,7 +45,7 @@
 </script>
 
 <svelte:head>
-	<title>Sign-in methods | MIDB</title>
+	<title>Settings · MIDB</title>
 </svelte:head>
 
 <svelte:window onpageshow={(event) => event.persisted && methods.restored()} />
@@ -54,8 +55,18 @@
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
-		<h1 class="display">Sign-in methods</h1>
+		<h1 class="display">Settings</h1>
 	</header>
+
+	<section class="card plain" aria-labelledby="email-heading">
+		<h2 id="email-heading">Email</h2>
+		{#if data.email}
+			<p class="email">{data.email}</p>
+			<p class="hint">Not shown on the profile or on comments.</p>
+		{:else}
+			<p class="hint">This account has no email: it signs in with a passkey.</p>
+		{/if}
+	</section>
 
 	<section
 		class="card methods"
@@ -252,6 +263,8 @@
 			</div>
 		{/if}
 	</section>
+
+	<p><LogoutButton /></p>
 </div>
 
 <style lang="postcss">
@@ -280,6 +293,16 @@
 	h2 {
 		@apply font-semibold;
 		font-size: 1.125rem;
+	}
+
+	.plain {
+		@apply flex flex-col;
+		gap: var(--spacing-sm);
+		padding: 24px;
+	}
+
+	.email {
+		overflow-wrap: anywhere;
 	}
 
 	.methods {

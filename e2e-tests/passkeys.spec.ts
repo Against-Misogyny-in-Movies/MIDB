@@ -5,10 +5,10 @@ test('a passkey creates an account, signs out and signs back in', async ({ page 
 	const username = await signUpWithPasskey(page);
 	expect(username).toMatch(/^[a-z_]+_\d{4}$/);
 
-	// The account page is the reader's own, so it is never stored.
-	const profile = await page.goto('/user/profile');
-	expect(profile?.headers()['cache-control']).toBe('private, no-store');
-	await expect(page.getByLabel('Username')).toHaveValue(username);
+	// The settings page is the reader's own, so it is never stored.
+	const settings = await page.goto('/user/settings');
+	expect(settings?.headers()['cache-control']).toBe('private, no-store');
+	await expect(page.getByRole('heading', { name: 'Email' })).toBeVisible();
 
 	await page.getByRole('button', { name: 'Sign out' }).click();
 	await page.waitForURL('**/auth');
@@ -17,7 +17,8 @@ test('a passkey creates an account, signs out and signs back in', async ({ page 
 	// The virtual authenticator kept the passkey, so signing in needs no account name. It also
 	// answers the page's autofill request at once, which can sign in before the button is
 	// clicked: both are a passkey sign-in, so the click is a try and the profile page is the check.
-	const profileOpened = page.waitForURL('**/user/profile');
+	// The default return path, `/user/profile`, leads to the reader's own profile.
+	const profileOpened = page.waitForURL(`**/u/${username}`);
 	await page
 		.getByRole('button', { name: 'Sign in with a passkey' })
 		.click({ timeout: 3000 })

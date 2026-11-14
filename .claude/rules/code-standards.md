@@ -10,7 +10,7 @@ Every agent that changes code follows these. `docs/architecture.md` says why and
 - `data/` = D1/Drizzle modules. `integrations/` = external HTTP clients.
 - **Never return a `UserRow` from a load; pages using `PUBLIC_PAGE` must not depend on the request's user.**
   - The client gets `PublicUser` (`toPublicUser`) only, via `/api/me` or the `/user` layout. It carries the opaque Better Auth `id`, never the email, and its `displayName` (the username, which every account has from creation) reaches only the account holder's own responses.
-  - The real email reaches the client on `/user/profile` and in the account holder's own `/api/auth/*` responses, which are `private, no-store`. A `@users.invalid` placeholder is never shown (`realEmail`).
+  - The real email reaches the client on `/user/settings` and in the account holder's own `/api/auth/*` responses, which are `private, no-store`. A `@users.invalid` placeholder is never shown (`realEmail`).
   - Public pages (`PUBLIC_PAGE` from `#lib/server/http/cache.ts`) are CDN-cached with a cookie-blind key, so their loads never call `locals.getUser()`.
   - The navbar reads the client session (`session.svelte.js`).
 - **Authorize with the guards.** Every load, action and endpoint that needs a user calls `requireUser` / `requireRole` from `#lib/server/auth/guards.ts` (redirect for pages, 401/403 otherwise). The hook's `/user` gate only checks that the session cookie exists and does not cover form actions on public pages.

@@ -20,7 +20,7 @@ export async function addVirtualAuthenticator(page: Page): Promise<void> {
 }
 
 /** Creates an account with a passkey alone and returns its generated username. */
-export async function signUpWithPasskey(page: Page, next = '/user/profile'): Promise<string> {
+export async function signUpWithPasskey(page: Page, next = '/user/settings'): Promise<string> {
 	await addVirtualAuthenticator(page);
 	await page.goto(`/auth?next=${encodeURIComponent(next)}`);
 	await page.getByRole('button', { name: 'Create an account with a passkey' }).click();

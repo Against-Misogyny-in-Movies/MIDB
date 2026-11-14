@@ -37,7 +37,6 @@ function mount(comment: UserCommentRow) {
 describe('CommentHistoryRow', () => {
 	it.each([
 		['pending', 'Awaiting review'],
-		['published', 'Published'],
 		['hidden', 'Hidden'],
 		['rejected', 'Rejected'],
 		['deleted', 'Deleted']
@@ -46,10 +45,15 @@ describe('CommentHistoryRow', () => {
 		expect(screen.getByText(label)).toBeTruthy();
 	});
 
+	it('has no status badge on a published comment', () => {
+		mount(row({ status: 'published' }));
+		expect(screen.queryByText('Published')).toBeNull();
+	});
+
 	it('links the title and says which comment is a reply', () => {
 		mount(row({ parentId: 'p' }));
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
-		expect(screen.getByText(/Reply on/)).toBeTruthy();
+		expect(screen.getByText('Reply')).toBeTruthy();
 	});
 
 	it('links the date to the comment on its title page, or shows it plain with no TMDB id', () => {
@@ -136,6 +140,7 @@ describe('CommentHistoryRow', () => {
 				expect.stringMatching(/^error: .*muted/)
 			])
 		);
-		expect(screen.getByText('Published')).toBeTruthy();
+		expect(screen.queryByText('Deleted')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
 	});
 });
