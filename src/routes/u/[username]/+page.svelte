@@ -138,7 +138,7 @@
 	{/if}
 	{#if isOwner && own.phase === 'error'}
 		<Notice tone="error">
-			Comments waiting for review and community reports that do not count yet could not be loaded.
+			Comments that are not published and community reports that do not count could not be loaded.
 			Reload the page to try again.
 		</Notice>
 	{/if}

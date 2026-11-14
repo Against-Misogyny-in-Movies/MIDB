@@ -64,7 +64,7 @@
 			<p class="email">{data.email}</p>
 			<p class="hint">Not shown on the profile or on comments.</p>
 		{:else}
-			<p class="hint">This account has no email: it signs in with a passkey.</p>
+			<p class="hint">This account has no email.</p>
 		{/if}
 	</section>
 

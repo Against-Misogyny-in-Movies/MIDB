@@ -14,7 +14,9 @@
 </script>
 
 {#if reports.length === 0}
-	<p class="empty">No community reports yet. Reports are added from a film or series page.</p>
+	<p class="empty">
+		No community reports yet. A community report is added from a film or series page.
+	</p>
 {:else}
 	<ul class="rows">
 		{#each reports as report (`${report.kind}:${report.tmdbId}:${report.title}`)}
