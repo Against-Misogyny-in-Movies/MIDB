@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { umSource } from '#db/schema/sources.ts';
 import { normalizeTitle, stripTrailingYear } from '#db/lib/normalizeTitle.ts';
+import { isNearYear } from '#db/lib/sources/um-match.ts';
 import type { UmEntry } from '#lib/media/types/um.ts';
 import type { TitleRef } from './title-queries';
 import { toUmEntry } from './sources';
@@ -11,7 +12,8 @@ import { toUmEntry } from './sources';
  *
  * Year is the disambiguator:
  *  - exact-year match → return it alone (rendered directly, no picker).
- *  - year known but no candidate shares it → return the unknown-year entries, else [].
+ *  - no exact match → return the entries a year either side (`isNearYear`), else the
+ *    unknown-year entries, else [].
  *  - year unknown → genuinely ambiguous; return all candidates for the user to pick from.
  *
  * Nothing is persisted; a user's pick lives only for the current page view.
@@ -37,6 +39,8 @@ export async function getUnconsentingCandidates(media: TitleRef): Promise<UmEntr
 	if (!Number.isNaN(mediaYear)) {
 		const exact = rows.find((r) => r.year === mediaYear);
 		if (exact) return [toUmEntry(exact)];
+		const near = rows.filter((r) => r.year !== null && isNearYear(r.year, mediaYear));
+		if (near.length > 0) return near.slice(0, 5).map(toUmEntry);
 		const unknownYear = rows.filter((r) => r.year === null);
 		if (unknownYear.length > 0) return unknownYear.slice(0, 5).map(toUmEntry);
 		return [];
