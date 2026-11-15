@@ -93,9 +93,7 @@ describe('links to a comment from the moderation views', () => {
 		expect(posted.textContent?.trim()).toBe('01/11/2026');
 		const actions = document.querySelector('td.actions') as HTMLElement;
 		expect(
-			within(actions)
-				.getByRole('link', { name: 'View the comment by anna on its title page' })
-				.getAttribute('href')
+			within(actions).getByRole('link', { name: 'View the comment by anna' }).getAttribute('href')
 		).toBe(HREF);
 	});
 
@@ -121,13 +119,12 @@ describe('links to a comment from the moderation views', () => {
 			expect(screen.getByRole('link', { name: 'View comment' }).getAttribute('href')).toBe(HREF);
 		});
 
-		it('puts the link after the "Edited since" note', () => {
-			inList(RecentActionRow, {
-				entry: entry({ commentEditedAt: '2026-11-04T10:00:00.000Z' })
-			});
-			const note = screen.getByText('Edited since');
+		it('puts the link icon right after the date', () => {
+			inList(RecentActionRow, { entry: entry() });
 			const link = screen.getByRole('link', { name: 'View comment' });
-			expect(note.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+			expect(link.previousElementSibling?.tagName).toBe('TIME');
+			expect(link.textContent?.trim()).toBe('');
+			expect(link.querySelector('i.ri-link')).toBeTruthy();
 		});
 
 		it('adds none when the action names no comment, such as a mute', () => {

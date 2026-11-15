@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import { enhance } from '$app/forms';
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
@@ -74,6 +75,7 @@
 			<span class="label">Muted until {formatDate(item.authorMutedUntil)}</span>
 		{/if}
 		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{#if permalink}<CommentLink href={permalink} />{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
 		{#if heldBy}<span class="label">{heldBy}</span>{/if}
@@ -84,7 +86,6 @@
 		{#if href}<a class="link" {href}>{item.title.name}</a>{:else}{item.title.name}{/if}
 	</p>
 	<p class="body">{comment.body}</p>
-	{#if permalink}<a class="chip view" href={permalink}>View comment</a>{/if}
 
 	{#if item.aiCategories.length > 0}
 		<ul class="tags" aria-label="Categories from the automatic check">
@@ -214,10 +215,6 @@
 	.body {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
-	}
-
-	.view {
-		align-self: flex-start;
 	}
 
 	.tags,

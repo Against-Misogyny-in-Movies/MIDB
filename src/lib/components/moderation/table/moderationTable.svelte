@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
@@ -162,12 +163,10 @@
 							<td class="actions">
 								<div class="row-actions">
 									{#if permalink}
-										<a
-											class="chip"
+										<CommentLink
 											href={permalink}
-											aria-label="View the comment by {row.author.displayName} on its title page"
-											>View comment</a
-										>
+											label="View the comment by {row.author.displayName}"
+										/>
 									{/if}
 									<button
 										class="chip"

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import ProfileRows from '#lib/components/user/profileRows.svelte';
 	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
@@ -67,6 +68,7 @@
 				name={comment.title.name}
 			/>
 			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+			{#if permalink}<CommentLink href={permalink} />{/if}
 			{#if comment.edited}<span class="label">Edited</span>{/if}
 			<span class="label num">Score {comment.score}</span>
 		</p>
@@ -79,7 +81,6 @@
 			</p>
 		{/if}
 		<p class="body">{comment.body}</p>
-		{#if permalink}<a class="chip view" href={permalink}>View comment</a>{/if}
 	{/snippet}
 </ProfileRows>
 {#if shown.length > 0 && nextCursor}
@@ -112,10 +113,6 @@
 		@apply text-base;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
-	}
-
-	.view {
-		align-self: flex-start;
 	}
 
 	.more {

@@ -4,6 +4,7 @@
 	import CommentAction from './commentAction.svelte';
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
+	import CommentLink from './commentLink.svelte';
 	import { commentResult, unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
 	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
@@ -89,6 +90,7 @@
 	<div class="meta">
 		<ProfileTitleLink kind={comment.kind} tmdbId={comment.tmdbId} name={comment.title} />
 		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+		{#if permalink}<CommentLink href={permalink} />{/if}
 		{#if comment.parentId}<span class="label">Reply</span>{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		{#if comment.status === 'published'}<span class="label num">Score {comment.score}</span>{/if}
@@ -124,8 +126,6 @@
 				: ''}
 		</p>
 	{/if}
-
-	{#if permalink}<a class="chip view" href={permalink}>View comment</a>{/if}
 
 	{#if editable || deletable}
 		<div class="actions">
@@ -178,10 +178,6 @@
 	.body {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
-	}
-
-	.view {
-		align-self: flex-start;
 	}
 
 	.actions {

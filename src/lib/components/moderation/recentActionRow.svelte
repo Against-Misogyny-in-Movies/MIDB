@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
@@ -94,6 +95,7 @@
 				/></span
 			>{/if}{#if inline && entry.title}{@render titleLink(entry.title.name)}{/if}{muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
+		{#if commentLink}<CommentLink href={commentLink} />{/if}
 	</p>
 	{#if entry.title && !inline}
 		<p class="label">On {@render titleLink(entry.title.name)}</p>
@@ -103,9 +105,6 @@
 	{/if}
 	{#if editedSince}
 		<p class="label">Edited since</p>
-	{/if}
-	{#if commentLink}
-		<a class="chip" href={commentLink}>View comment</a>
 	{/if}
 	{#if entry.reason}
 		<p class="label">Reason: {entry.reason}</p>
