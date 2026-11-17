@@ -78,7 +78,13 @@ describe('the settings page', () => {
 		mount({ email: 'ada@example.org' });
 		const nav = screen.getByRole('navigation', { name: 'On this page' });
 		const hrefs = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
-		expect(hrefs).toEqual(['#email', '#sign-in-methods', '#sessions', '#appearance']);
+		expect(hrefs).toEqual([
+			'#email',
+			'#sign-in-methods',
+			'#sessions',
+			'#appearance',
+			'#account-data'
+		]);
 		for (const href of hrefs) expect(document.querySelector(href!)).toBeTruthy();
 	});
 
