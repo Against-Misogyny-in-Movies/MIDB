@@ -102,7 +102,7 @@ STATUS.md, then the live plan section for the active phase.
 
 Read when a task names the plan.
 
-- `docs/plans/plan-moderation.md` — Plan: moderation section (~3.4K tok)
+- `docs/plans/plan-moderation.md` — Plan: moderation section (~3.5K tok)
   - 14–17 Job and audience (~90)
   - 18–30 What the research says (~560)
   - 31–57 Findings in the current section (~550)
@@ -118,7 +118,7 @@ Read when a task names the plan.
   - 96–104 Schema (~160)
   - 105–110 Scope and boundaries (~110)
   - 111–128 Phases (~810)
-  - 129–135 Open decisions (~130)
+  - 129–137 Decisions (~170)
 
 ## Policies
 

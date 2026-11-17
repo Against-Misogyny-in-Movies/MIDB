@@ -126,9 +126,11 @@ Additive first (`.claude/rules/code-standards.md`, Database).
 | MR12  | Staff roles page.                                                                                                                                                                                         |
 | MR13  | Docs and copy.                                                                                                                                                                                            |
 
-## Open decisions
+## Decisions
 
-1. **The rule list.** It should match rules the site publishes. If there is no rules page, the plan needs one line per rule and a place to publish them.
-2. **Lifting a ban and its hidden comments.** Recommended: the comments stay hidden; a moderator restores them one by one or in bulk.
-3. **Account notes in the data download.** Recommended: left out, and `PRIVACY.md` says so.
-4. **Who may lift a ban.** Recommended: administrators only; a moderator may end a mute a moderator set.
+Settled by the user (2026-11-17).
+
+1. **The rule list** is the report reasons (hate, harassment, threat, sexual content, spam) plus the classifier's extra categories (violence, disparagement, trolling) and Other, one line each, published as a "Comment rules" section on `/resources` (Methodology).
+2. **Lifting a ban** restores sign-in only. The comments the ban hid stay hidden; a moderator restores them one by one or in bulk.
+3. **Who reverses:** only administrators lift a ban. A moderator may end a mute a moderator set; an administrator may end any mute.
+4. **Account notes** are left out of the account's data download, and `PRIVACY.md` says so.
