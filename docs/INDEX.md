@@ -19,7 +19,7 @@ Read whole.
   - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
   - 108–120 Making a change (~440) ← 3
-  - 121–137 Checking a change (~230) ← 6
+  - 121–137 Checking a change (~230) ← 7
 - `.claude/rules/commit-standards.md` — Commit standards (~900 tok)
 - `.claude/rules/copy-standards.md` — Copy standards (~530 tok)
 - `.claude/rules/deploy-standards.md` — Deploy standards (~560 tok)
@@ -95,8 +95,27 @@ STATUS.md, then the live plan section for the active phase.
 - `docs/phases/STATUS.md` — Phase status (~4.5K tok)
   - 5–16 Rules (~260)
   - 17–60 Phases (~1.8K)
-  - 61–110 Open items (~1.2K) ← 1
+  - 61–110 Open items (~1.2K) ← 2
   - 111–159 Standing decisions (~1.2K)
+
+## Live plans
+
+Read when a task names the plan.
+
+- `docs/plans/plan-profile-settings.md` — Plan: profile and settings (~3.9K tok)
+  - 12–15 Job and audience (~100)
+  - 16–27 What the research says (~490)
+  - 28–50 Findings in the current pages (~460)
+    - 32–43 Settings (`src/routes/user/settings/`) (~300)
+    - 44–50 Profile (`src/routes/u/[username]/`) (~130)
+  - 51–134 Selected direction (~1.5K)
+    - 55–98 Settings: one page, six sections, every action immediate (~680)
+    - 99–116 What deleting an account does (~480)
+    - 117–134 Profile: stats in the header, owner extras added in place (~350)
+  - 135–140 Scope and boundaries (~150)
+  - 141–146 States (~180)
+  - 147–164 Phases (~600)
+  - 165–172 Open decisions (~300)
 
 ## Policies
 
@@ -109,7 +128,7 @@ Read before a change that touches what they describe.
   - 35–40 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~3.5K tok)
   - 5–15 Reading the site (~630)
-  - 16–32 Signing in (~790)
+  - 16–32 Signing in (~790) ← 1
   - 33–46 Ratings and comments (~2.0K)
   - 47–50 Contact (~40)
 - `ACCESSIBILITY.md` — Accessibility (~660 tok)
