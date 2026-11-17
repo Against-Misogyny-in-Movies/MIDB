@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ne, not } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
@@ -13,6 +13,7 @@ import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
 import { countsFromDate } from './counting-account.ts';
+import { countedReportsWhere } from './community-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -154,10 +155,10 @@ export async function usernameAvailability(
 const titleRef = { kind: titles.kind, tmdbId: titles.tmdbId, title: titles.title };
 
 /**
- * A reader's comments for the history page, newest first, in every status (the page badges
- * each one), with the title joined.
+ * A reader's comments, newest first, in every status (the page badges each one), with the title
+ * joined. `notPublic` keeps the ones a public profile does not list: every status but published.
  */
-export async function getUserComments(userId: string) {
+export async function getUserComments(userId: string, { notPublic = false } = {}) {
 	return db
 		.select({
 			id: comments.id,
@@ -173,7 +174,9 @@ export async function getUserComments(userId: string) {
 		})
 		.from(comments)
 		.innerJoin(titles, eq(comments.titleId, titles.id))
-		.where(eq(comments.userId, userId))
+		.where(
+			and(eq(comments.userId, userId), notPublic ? ne(comments.status, 'published') : undefined)
+		)
 		.orderBy(desc(comments.createdAt), desc(comments.id));
 }
 
@@ -190,8 +193,15 @@ export type UserRating = {
 	restricted: 'banned' | 'muted' | null;
 };
 
-/** A reader's community reports, newest first, in every status, with the title joined. */
-export async function getUserRatings(userId: string): Promise<UserRating[]> {
+/**
+ * A reader's community reports, newest first, in every status, with the title joined.
+ * `notCounted` keeps the ones a public profile does not list: the negation of
+ * `countedReportsWhere` (held, rejected, too new an account, muted).
+ */
+export async function getUserRatings(
+	userId: string,
+	{ notCounted = false } = {}
+): Promise<UserRating[]> {
 	const rows = await db
 		.select({
 			status: communityContentReports.status,
@@ -206,7 +216,12 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 		.from(communityContentReports)
 		.innerJoin(titles, eq(communityContentReports.titleId, titles.id))
 		.innerJoin(users, eq(communityContentReports.userId, users.id))
-		.where(eq(communityContentReports.userId, userId))
+		.where(
+			and(
+				eq(communityContentReports.userId, userId),
+				notCounted ? not(countedReportsWhere()) : undefined
+			)
+		)
 		.orderBy(desc(communityContentReports.updatedAt), desc(communityContentReports.titleId));
 	return rows.map(({ accountCreatedAt, role, bannedAt, mutedUntil, ...row }) => ({
 		...row,
