@@ -5,15 +5,20 @@ import { configuredProviders } from '#lib/server/auth/providers.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
 import { purgeProfile } from '#lib/server/http/purge-title.ts';
+import { getSignInMethodCounts } from '#lib/server/data/sign-in-methods.ts';
 import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// The sign-in methods card lists and edits the methods through `authClient`, in the browser.
 // The one page allowed to send the email to the client; everything else uses PublicUser.
 export const load: PageServerLoad = async ({ locals }) => {
 	// The /user layout already makes the response private.
 	const user = await requireUser(locals, { page: true });
-	return { providers: configuredProviders(), email: realEmail(user) };
+	return {
+		providers: configuredProviders(),
+		email: realEmail(user),
+		// How many rows the sign-in methods card reserves while its lists load in the browser.
+		methods: await getSignInMethodCounts(user.id)
+	};
 };
 
 export const actions: Actions = {

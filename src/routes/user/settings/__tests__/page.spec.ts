@@ -24,9 +24,14 @@ const ME = {
 	displayName: 'ada_1234'
 };
 
-function mount(data: { email: string | null }) {
+const METHODS = { linked: ['google'], passkeys: 1 };
+
+function mount(
+	data: { email: string | null },
+	providers: { google: boolean; discord: boolean } = { google: true, discord: false }
+) {
 	return render(Page, {
-		data: { me: ME, providers: { google: true, discord: false }, ...data }
+		data: { me: ME, providers, methods: METHODS, ...data }
 	} as Parameters<typeof render<typeof Page>>[1]);
 }
 
@@ -56,15 +61,35 @@ describe('the settings page', () => {
 		for (const href of hrefs) expect(document.querySelector(href!)).toBeTruthy();
 	});
 
-	it('says where the email comes from and that it is not shown', () => {
+	it('says where the email comes from, from the providers this deployment offers', () => {
 		mount({ email: 'ada@example.org' });
 		expect(screen.getByText('ada@example.org')).toBeTruthy();
-		expect(screen.getByText(/Taken from a linked Google or Discord account/)).toBeTruthy();
-		expect(screen.getByText(/Not shown on the profile or on comments\./)).toBeTruthy();
+		expect(
+			screen.getByText(
+				'Taken from the first Google account used with it, and fixed after that. Not shown on the profile or on comments.'
+			)
+		).toBeTruthy();
 	});
 
-	it('says so when the account has no email', () => {
+	it('names both providers when both are offered', () => {
+		mount({ email: 'ada@example.org' }, { google: true, discord: true });
+		expect(screen.getByText(/the first Google or Discord account used with it/)).toBeTruthy();
+	});
+
+	it('drops the provider sentence when none is offered', () => {
+		mount({ email: 'ada@example.org' }, { google: false, discord: false });
+		expect(screen.getByText('Not shown on the profile or on comments.')).toBeTruthy();
+	});
+
+	it('says so when the account has no email, naming the offered providers', () => {
 		mount({ email: null });
-		expect(screen.getByText(/This account has no email\./)).toBeTruthy();
+		expect(
+			screen.getByText('This account has no email. Linking a Google account can add one.')
+		).toBeTruthy();
+	});
+
+	it('says only that the account has no email when no provider is offered', () => {
+		mount({ email: null }, { google: false, discord: false });
+		expect(screen.getByText('This account has no email.')).toBeTruthy();
 	});
 });

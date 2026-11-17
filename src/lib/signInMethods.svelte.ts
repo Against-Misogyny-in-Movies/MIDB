@@ -20,8 +20,8 @@ export interface PasskeyRow {
 	id: string;
 	name?: string | null;
 	createdAt?: Date | string | null;
-	/** Whether the passkey is synced between devices (the authenticator's backup state). */
-	backedUp?: boolean | null;
+	/** `multiDevice` when the credential can sync between devices; fixed when the passkey is made. */
+	deviceType?: string | null;
 }
 
 interface Change {
@@ -37,7 +37,17 @@ interface Change {
 
 export const HEADING_ID = 'methods-heading';
 
+/** What the server counted for the first paint: the linked providers and the number of passkeys. */
+export interface InitialMethods {
+	linked: string[];
+	passkeys: number;
+}
+
 export const passkeyName = (p: PasskeyRow) => p.name || DEFAULT_PASSKEY_NAME;
+
+/** Whether a passkey can sync between devices, from the type its authenticator reported at registration. */
+export const passkeyKind = (p: PasskeyRow) =>
+	p.deviceType === 'multiDevice' ? 'Can sync between devices' : 'This device only';
 
 /** Moves focus to an element by id, or to the list heading when that element is gone. */
 async function focusOn(id: string) {
@@ -49,9 +59,12 @@ async function focusOn(id: string) {
  * State and actions of the sign-in methods on `/user/settings`: the linked accounts and passkeys, the one open
  * confirm or rename plate, and the action running. A result is a toast. Each list has its own
  * load, so a change refetches only what it touched: every call counts against the auth rate
- * limit.
+ * limit. `initial` is what the page's load counted, which stands in for the lists until they
+ * arrive, so the first paint already has their rows, the sole-method notice and the right
+ * link buttons.
  */
 export class SignInMethods {
+	#initial = $state<InitialMethods>({ linked: [], passkeys: 0 });
 	accounts = $state<LinkedAccount[]>([]);
 	passkeys = $state<PasskeyRow[]>([]);
 	loading = $state(true);
@@ -64,8 +77,23 @@ export class SignInMethods {
 	confirming = $state<string | null>(null);
 	renaming = $state<string | null>(null);
 	nameDraft = $state('');
+	#accountsLoaded = $state(false);
 
-	readonly onlyMethod = $derived(this.accounts.length + this.passkeys.length <= 1);
+	constructor(initial: InitialMethods) {
+		this.#initial = initial;
+	}
+
+	/** The linked providers: the list once it has loaded, the page's count before. */
+	readonly linkedProviders = $derived(
+		this.#accountsLoaded ? this.accounts.map((a) => a.providerId) : this.#initial.linked
+	);
+	/** The rows the list has, or will have: the page's count until the lists have loaded. */
+	readonly rowCount = $derived(
+		this.loading
+			? this.#initial.linked.length + this.#initial.passkeys
+			: this.accounts.length + this.passkeys.length
+	);
+	readonly onlyMethod = $derived(this.rowCount <= 1);
 	/** Passkey names used more than once: those rows show the time as well as the date. */
 	readonly duplicateNames = $derived(
 		this.passkeys.map(passkeyName).filter((name, i, names) => names.indexOf(name) !== i)
@@ -74,7 +102,10 @@ export class SignInMethods {
 	async #loadAccounts() {
 		const { data: rows, error } = await authClient.listAccounts();
 		if (error) this.loadFailed = true;
-		else this.accounts = rows ?? [];
+		else {
+			this.accounts = rows ?? [];
+			this.#accountsLoaded = true;
+		}
 	}
 
 	async #loadPasskeys() {
