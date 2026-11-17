@@ -66,8 +66,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | B1    | Profile: stats data              | completed   | 2026-11-17.                                                                                                       |
 | B2    | Profile: stats page              | completed   | 2026-11-17. Measured on seeded local data; title links not followed (no TMDB token).                              |
 | D1    | Profile and settings: docs       | completed   | 2026-11-17. A2 to D1 were reviewed in one round; the fixes were not reviewed again.                               |
-| MR1   | Moderation: server structure     | active      | 2026-11-17. `docs/plans/plan-moderation.md`.                                                                      |
-| MR2   | Moderation: tabs, counts, paging | not started | `docs/plans/plan-moderation.md`.                                                                                  |
+| MR1   | Moderation: server structure     | completed   | 2026-11-17. Review waits for the plan's one final round.                                                          |
+| MR2   | Moderation: tabs, counts, paging | active      | 2026-11-17. `docs/plans/plan-moderation.md`.                                                                      |
 | MR3   | Moderation: rule fixes           | not started | `docs/plans/plan-moderation.md`.                                                                                  |
 | MR4   | Moderation: priority order       | not started | `docs/plans/plan-moderation.md`.                                                                                  |
 | MR5   | Moderation: schema               | not started | `docs/plans/plan-moderation.md`.                                                                                  |
@@ -172,6 +172,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 - **Profile and settings:**
   - Account deletion is immediate and scrubs the `user` row instead of deleting it; a deleted account's comments with another account's comment below them lose their text and stay (user decision, 2026-11-17).
   - The sessions list shows browser and day, not the IP address; the data download carries it (user decision, 2026-11-17).
+- **Moderation** (`docs/plans/plan-moderation.md`, Decisions):
+  - Moderation reasons are a rule from a fixed list, published on `/resources`; lifting a ban restores sign-in only; only administrators lift bans (user decision, 2026-11-17).
+  - Staff notes on an account are left out of its data download (user decision, 2026-11-17).
 - **Community polish:**
   - Administrators act on any account and comment, their own and other administrators' included, except muting or banning themselves (user decision, 2026-11-13).
   - Staff are not rate-limited, except on the AI moderation calls (user decision, 2026-11-13).
