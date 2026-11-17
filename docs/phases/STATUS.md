@@ -57,8 +57,8 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | P1    | Profile: data                   | completed   | 2026-11-14.                                                                                                       |
 | P2    | Profile: page                   | completed   | 2026-11-14. Rendered on seeded local data; dark theme not seen.                                                   |
 | P3    | Profile: settings and docs      | completed   | 2026-11-14. The passkey e2e specs time out on sign-up in the cloud container, before this change too.             |
-| A1    | Settings: structure             | active      | 2026-11-17. `docs/plans/plan-profile-settings.md`.                                                                |
-| A2    | Settings: sessions              | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
+| A1    | Settings: structure             | completed   | 2026-11-17. Rendered on seeded local sessions; the Link buttons seen only with dummy provider credentials.        |
+| A2    | Settings: sessions              | active      | 2026-11-17. `docs/plans/plan-profile-settings.md`.                                                                |
 | A3    | Settings: appearance            | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
 | A4    | Settings: account data          | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
 | A5    | Delete account: data            | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
@@ -104,6 +104,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 
 - **Letterboxd:**
   - Test the client against the real API once keys exist; the assumptions are listed in `src/lib/server/integrations/letterboxd.ts`.
+- **Settings:**
+  - `ui/skeletonRows` serves the sign-in methods card only; the comments, community reports, Does the Dog Die and moderation skeletons still carry their own copy of the stylesheet.
+  - At 320px a passkey row clips its kind ("Can sync between devices") to keep the row height fixed.
 - **Profile:**
   - The owner's view loads after the cached page paints: the list swaps to the owner's rows (with edit and delete, and the unpublished ones) and the tab counts change, which moves the rows below.
   - Run `e2e-tests/passkeys.spec.ts` where passkey sign-up works; it times out in the cloud container.
