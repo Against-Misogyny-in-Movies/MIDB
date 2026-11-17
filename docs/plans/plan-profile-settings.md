@@ -1,6 +1,6 @@
 # Plan: profile and settings
 
-A proposal, not yet approved. No phase is in `docs/phases/STATUS.md` until the user approves it.
+Approved by the user (2026-11-17). Its phases are rows in `docs/phases/STATUS.md`.
 
 Scope set by the user (2026-11-17):
 
@@ -162,10 +162,12 @@ Each phase ends green on the verification baseline (`.claude/rules/code-standard
 
 A and B are independent. A5 ships a deploy before A6, so the Worker that knows `deleted_at` is live before any account can be deleted.
 
-## Open decisions
+## Decisions
 
-1. **Deletion is immediate.** Recommended: yes, with no grace period. A passkey-only account has no email to send a reminder to, and D1 Time Travel already keeps the database recoverable for its window. The alternative is a cancellable wait of some days, during which the account is hidden and signing in cancels.
-2. **Erasing the text of comments that have replies.** Recommended: erase, as in the table. The alternative keeps the text under "Deleted account", which is less than a reader asking to leave expects.
-3. **A session ends at once.** Better Auth's cookie cache lets a signed-out session read as valid for its cache time (`create-auth.ts`). Recommended: the sessions card says so in one line. The alternative shortens or drops the cache, which costs a database read per request.
-4. **The export's contents.** Recommended: profile fields, email, sign-in method labels and dates (no keys), sessions, comments in every status with the reason for a rejection, community reports with their answers, votes, and reports the account made. Not included: which moderator acted.
-5. **Sessions show the IP address.** Recommended: no, browser and day only; the export carries it.
+Settled by the user (2026-11-17).
+
+1. **Deletion is immediate,** with no grace period. A passkey-only account has no email to send a reminder to, and D1 Time Travel keeps the database recoverable for its window.
+2. **A deleted account's comments that have replies lose their text;** the placeholder with no text and no author keeps the thread.
+3. **The sessions card says in one line that a signed-out session can stay valid for the cookie cache time** (`create-auth.ts`). The cache is not shortened.
+4. **The export holds** profile fields, email, sign-in method labels and dates (no keys), sessions with their IP address and browser, comments in every status with the reason for a rejection, community reports with their answers, votes, and reports the account made. It does not name the moderator who acted.
+5. **The sessions list shows the browser and the day, not the IP address.**
