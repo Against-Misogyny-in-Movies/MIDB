@@ -57,7 +57,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | P1    | Profile: data                   | completed   | 2026-11-14.                                                                                                       |
 | P2    | Profile: page                   | completed   | 2026-11-14. Rendered on seeded local data; dark theme not seen.                                                   |
 | P3    | Profile: settings and docs      | completed   | 2026-11-14. The passkey e2e specs time out on sign-up in the cloud container, before this change too.             |
-| A1    | Settings: structure             | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
+| A1    | Settings: structure             | active      | 2026-11-17. `docs/plans/plan-profile-settings.md`.                                                                |
 | A2    | Settings: sessions              | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
 | A3    | Settings: appearance            | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
 | A4    | Settings: account data          | not started | `docs/plans/plan-profile-settings.md`.                                                                            |
