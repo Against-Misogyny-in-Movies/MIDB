@@ -8,9 +8,7 @@ import { purgeProfile } from '#lib/server/http/purge-title.ts';
 import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// The page lists and edits the reader's methods through `authClient`, in the browser.
-export const ssr = false;
-
+// The sign-in methods card lists and edits the methods through `authClient`, in the browser.
 // The one page allowed to send the email to the client; everything else uses PublicUser.
 export const load: PageServerLoad = async ({ locals }) => {
 	// The /user layout already makes the response private.

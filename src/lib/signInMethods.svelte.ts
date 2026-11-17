@@ -20,6 +20,8 @@ export interface PasskeyRow {
 	id: string;
 	name?: string | null;
 	createdAt?: Date | string | null;
+	/** Whether the passkey is synced between devices (the authenticator's backup state). */
+	backedUp?: boolean | null;
 }
 
 interface Change {
