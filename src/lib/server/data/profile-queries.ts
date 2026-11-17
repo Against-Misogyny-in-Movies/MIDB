@@ -23,7 +23,7 @@ type ProfileOwner = Pick<typeof users.$inferSelect, 'id' | 'avatarKey' | 'role' 
 
 /**
  * The account behind a public profile address: matched case-insensitively on the username. An
- * address that is not a possible username, no match, and a banned account are all null, as is an
+ * address that is not a possible username, no match, and a banned or deleted account are all null, as is an
  * account without a username (it has no address).
  */
 export async function findProfileOwner(username: string): Promise<ProfileOwner | null> {
@@ -38,7 +38,12 @@ export async function findProfileOwner(username: string): Promise<ProfileOwner |
 			createdAt: users.createdAt
 		})
 		.from(users)
-		.where(and(eq(sql`lower(${users.username})`, lower), sql`${users.bannedAt} IS NULL`))
+		.where(
+			and(
+				eq(sql`lower(${users.username})`, lower),
+				sql`${users.bannedAt} IS NULL AND ${users.deletedAt} IS NULL`
+			)
+		)
 		.limit(1);
 	return row && row.username !== null ? { ...row, username: row.username } : null;
 }
@@ -135,7 +140,7 @@ async function getCommentStats(userId: string): Promise<{ count: number; scoreTo
 
 /**
  * An account's public profile, found by username (case-insensitive); null for an address with
- * no account, a banned account or an account without a username. Read-only.
+ * no account, a banned or deleted account or an account without a username. Read-only.
  */
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
 	const owner = await findProfileOwner(username);

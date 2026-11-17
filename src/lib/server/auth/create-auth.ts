@@ -127,10 +127,13 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 					before: async (session) => {
 						const user = await db.query.users.findFirst({
 							where: (u, { eq }) => eq(u.id, session.userId),
-							columns: { bannedAt: true }
+							columns: { bannedAt: true, deletedAt: true }
 						});
 						if (user?.bannedAt) {
 							throw new APIError('FORBIDDEN', { message: 'This account is banned.' });
+						}
+						if (user?.deletedAt) {
+							throw new APIError('FORBIDDEN', { message: 'This account was deleted.' });
 						}
 					}
 				}

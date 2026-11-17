@@ -42,7 +42,7 @@ function finish(response: Response): Response {
 }
 
 /**
- * The signed-in user, or null. The session comes from Better Auth (its cookie cache answers
+ * The signed-in user, or null (a banned or a deleted account reads as signed out). The session comes from Better Auth (its cookie cache answers
  * without a query for a few minutes); the row is then read fresh, so a ban, a role change or a
  * deleted account applies on the next request, not when the cached cookie expires.
  */
@@ -50,7 +50,7 @@ async function resolveUser(request: Request): Promise<UserRow | null> {
 	const session = await getAuth().api.getSession({ headers: request.headers });
 	if (!session) return null;
 	const user = await getUserById(session.user.id);
-	return user && !user.bannedAt ? user : null;
+	return user && !user.bannedAt && !user.deletedAt ? user : null;
 }
 
 export const handle: Handle = async ({ event, resolve }) => {

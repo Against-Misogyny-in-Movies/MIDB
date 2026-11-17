@@ -16,7 +16,7 @@ export async function targetAllowed(
 	action: TargetAction = 'moderate'
 ): Promise<UserRow | 'not-found' | 'forbidden-target'> {
 	const [target] = await db.select().from(users).where(eq(users.id, targetId));
-	if (!target) return 'not-found';
+	if (!target || target.deletedAt) return 'not-found';
 	return canActOn(actor, target, action) ? target : 'forbidden-target';
 }
 

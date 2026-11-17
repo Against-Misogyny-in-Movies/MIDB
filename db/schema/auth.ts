@@ -12,8 +12,9 @@ export const userRole = ['user', 'moderator', 'administrator'] as const;
  * table by its model (`user`, `session`, …).
  *
  * `user` adds MIDB's own columns: `role`, `username` and `avatar_key` (declared to Better Auth
- * as non-input `additionalFields`) and the moderation state `banned_at`, `ban_reason` and
- * `muted_until`, which only the moderation code writes. A passkey-only account has no real
+ * as non-input `additionalFields`), the moderation state `banned_at`, `ban_reason` and
+ * `muted_until`, which only the moderation code writes, and `deleted_at`, which only the
+ * account scrub writes. A passkey-only account has no real
  * email, so its `email` is a `<id>@users.invalid` placeholder (`#lib/server/auth/placeholder-email.ts`).
  */
 export const users = sqliteTable(
@@ -32,6 +33,11 @@ export const users = sqliteTable(
 		banReason: text('ban_reason', { length: 500 }),
 		/** While in the future the user cannot write comments. */
 		mutedUntil: integer('muted_until', { mode: 'timestamp_ms' }),
+		/**
+		 * Set when the account is deleted (`#lib/server/data/account-scrub.ts`). The row stays,
+		 * scrubbed of personal data, because deleting it would cascade to other readers' replies.
+		 */
+		deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
 		/** When the username last changed by a rename; null until the first one. */
 		usernameChangedAt: integer('username_changed_at', { mode: 'timestamp_ms' }),
 		/** The username with look-alikes folded (`foldUsername`); computed by SQLite, so it cannot go stale. */

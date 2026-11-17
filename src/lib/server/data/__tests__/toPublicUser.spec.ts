@@ -19,6 +19,7 @@ function row(overrides: Partial<UserRow> = {}): UserRow {
 		bannedAt: null,
 		banReason: null,
 		mutedUntil: null,
+		deletedAt: null,
 		usernameChangedAt: null,
 		usernameFolded: null,
 		createdAt: new Date(),

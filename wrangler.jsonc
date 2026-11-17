@@ -47,7 +47,8 @@
 		{ "name": "RL_PROFILE", "namespace_id": "1011", "simple": { "limit": 10, "period": 60 } },
 		{ "name": "RL_TITLE_SOURCES", "namespace_id": "1012", "simple": { "limit": 60, "period": 60 } },
 		{ "name": "RL_SESSIONS", "namespace_id": "1013", "simple": { "limit": 30, "period": 60 } },
-		{ "name": "RL_EXPORT", "namespace_id": "1014", "simple": { "limit": 3, "period": 60 } }
+		{ "name": "RL_EXPORT", "namespace_id": "1014", "simple": { "limit": 3, "period": 60 } },
+		{ "name": "RL_DELETE_ACCOUNT", "namespace_id": "1015", "simple": { "limit": 3, "period": 60 } }
 	],
 
 	"vars": {
@@ -106,7 +107,12 @@
 					"simple": { "limit": 60, "period": 60 }
 				},
 				{ "name": "RL_SESSIONS", "namespace_id": "2013", "simple": { "limit": 30, "period": 60 } },
-				{ "name": "RL_EXPORT", "namespace_id": "2014", "simple": { "limit": 3, "period": 60 } }
+				{ "name": "RL_EXPORT", "namespace_id": "2014", "simple": { "limit": 3, "period": 60 } },
+				{
+					"name": "RL_DELETE_ACCOUNT",
+					"namespace_id": "2015",
+					"simple": { "limit": 3, "period": 60 }
+				}
 			],
 			"vars": {
 				"PUBLIC_ORIGIN": "https://preview.againstmisogyny.org",

@@ -43,6 +43,13 @@
       "when": 1794611720165,
       "tag": "0005_username_lookalikes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794934563208,
+      "tag": "0006_user_deleted_at",
+      "breakpoints": true
     }
   ]
 }
