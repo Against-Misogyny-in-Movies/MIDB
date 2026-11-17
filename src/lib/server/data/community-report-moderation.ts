@@ -3,22 +3,23 @@ import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { communityContentReports as reports, moderationActions } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
-import {
-	purgeProfile,
-	purgeTitleReports,
-	purgeTitlesReports
-} from '#lib/server/http/purge-title.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { runBatch, type BatchStatement } from './comment-status.ts';
+import { logRow } from './moderation-log.ts';
 import { targetAllowed } from './moderation-target.ts';
 import { titleSelect, type ReportedTitle } from './community-report-queue.ts';
+import type { PurgePlan } from '#lib/server/moderation/purge.ts';
 import type { UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
 type ReportRow = typeof reports.$inferSelect;
 
 export type ReportModerationResult =
-	| { ok: true; titles: ReportedTitle[] }
+	| {
+			ok: true;
+			/** What the action changed in the caches (`purgeOutcome`). */
+			purge: PurgePlan;
+	  }
 	| { ok: false; reason: 'not-found' | 'invalid-state' | 'forbidden-target' };
 
 /**
@@ -35,17 +36,7 @@ function logReportAction(
 ): BatchStatement {
 	return db.insert(moderationActions).select(
 		db
-			.select({
-				id: sql<string>`${crypto.randomUUID()}`.as('id'),
-				actorId: sql<string>`${actorId}`.as('actorId'),
-				targetCommentId: sql<string | null>`NULL`.as('targetCommentId'),
-				targetUserId: reports.userId,
-				targetTitleId: title,
-				action: sql<Action>`${action}`.as('action'),
-				reason: sql<string | null>`NULL`.as('reason'),
-				muteHours: sql<number | null>`NULL`.as('muteHours'),
-				createdAt: sql<number>`${Date.now()}`.as('createdAt')
-			})
+			.select(logRow(actorId, action, { userId: reports.userId, titleId: title }))
 			.from(reports)
 			.where(where)
 			.limit(1)
@@ -53,9 +44,8 @@ function logReportAction(
 }
 
 /**
- * Moves one report between statuses, logging it, in one batch; the purge of the title's counts
- * and the account's profile follows. The actor
- * must be allowed to act on the report's account (`targetAllowed`).
+ * Moves one report between statuses, logging it, in one batch; the result's `purge` names the
+ * title's counts and the account's profile. The actor must be allowed to act on the report's account (`targetAllowed`).
  */
 async function moveReport(
 	actor: UserRow,
@@ -89,9 +79,7 @@ async function moveReport(
 	]);
 	const moved = results[1];
 	if (!Array.isArray(moved) || moved.length === 0) return { ok: false, reason: 'invalid-state' };
-	purgeTitleReports(found.title);
-	purgeProfile(userId);
-	return { ok: true, titles: [found.title] };
+	return { ok: true, purge: { reportTitles: [found.title], profiles: [userId] } };
 }
 
 /** Counts a held or rejected report: it joins the title's counts, and its hold reason is cleared. */
@@ -109,7 +97,7 @@ export const rejectReport = (actor: UserRow, userId: string, titleId: string) =>
 	});
 
 /** The titles with the ids given. */
-async function titlesById(ids: string[]): Promise<ReportedTitle[]> {
+export async function titlesById(ids: string[]): Promise<ReportedTitle[]> {
 	const found: ReportedTitle[] = [];
 	for (const chunk of chunkForD1(ids, 1)) {
 		found.push(...(await db.select(titleSelect).from(titles).where(inArray(titles.id, chunk))));
@@ -117,21 +105,19 @@ async function titlesById(ids: string[]): Promise<ReportedTitle[]> {
 	return found;
 }
 
-/** Purges the counts of every title the account reported (a mute or a ban takes the account out of them). */
-export async function purgeReportedTitles(userId: string): Promise<void> {
-	const reported = await db
+/** Every title the account reported, whose counts a mute or a ban takes the account out of. */
+export async function reportedTitlesOf(userId: string): Promise<ReportedTitle[]> {
+	return db
 		.select(titleSelect)
 		.from(reports)
 		.innerJoin(titles, eq(reports.titleId, titles.id))
 		.where(eq(reports.userId, userId));
-	purgeTitlesReports(reported);
 }
 
 /**
  * Rejects every report of an account that is not rejected already, on every title, with one
- * log row for the account. The counts of the titles the update changed and the account's profile
- * are purged. The actor
- * must be allowed to act on the account (`targetAllowed`).
+ * log row for the account. The result's `purge` names the account's profile and the ids of the
+ * titles the update changed. The actor must be allowed to act on the account (`targetAllowed`).
  */
 export async function rejectAccountReports(
 	actor: UserRow,
@@ -156,8 +142,8 @@ export async function rejectAccountReports(
 	]);
 	const moved = results[1];
 	if (!Array.isArray(moved) || moved.length === 0) return { ok: false, reason: 'invalid-state' };
-	purgeProfile(userId);
-	const affected = await titlesById(moved.map((r: { titleId: string }) => r.titleId));
-	purgeTitlesReports(affected);
-	return { ok: true, titles: affected };
+	return {
+		ok: true,
+		purge: { profiles: [userId], reportTitleIds: moved.map((r: { titleId: string }) => r.titleId) }
+	};
 }

@@ -3,6 +3,7 @@ import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { moderationActions, titleCountFlags } from '#db/schema/community.ts';
 import { canCloseFlag } from '#lib/media/utils/canActOn.ts';
+import { logRow } from './moderation-log.ts';
 import { runBatch } from './comment-status.ts';
 import type { UserRow } from './user-queries.ts';
 
@@ -49,17 +50,7 @@ async function closeFlag(
 	const results = await runBatch([
 		db.insert(moderationActions).select(
 			db
-				.select({
-					id: sql<string>`${crypto.randomUUID()}`.as('id'),
-					actorId: sql<string>`${actorId}`.as('actorId'),
-					targetCommentId: sql<string | null>`NULL`.as('targetCommentId'),
-					targetUserId: sql<string | null>`NULL`.as('targetUserId'),
-					targetTitleId: titleCountFlags.titleId,
-					action: sql<typeof action>`${action}`.as('action'),
-					reason: sql<string | null>`NULL`.as('reason'),
-					muteHours: sql<number | null>`NULL`.as('muteHours'),
-					createdAt: sql<number>`${Date.now()}`.as('createdAt')
-				})
+				.select(logRow(actorId, action, { titleId: titleCountFlags.titleId }))
 				.from(titleCountFlags)
 				.where(open)
 		),

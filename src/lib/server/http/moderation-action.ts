@@ -102,16 +102,15 @@ const refusals: Record<Refusal, [number, string]> = {
 /**
  * One moderator action: the guard (403 for anyone else), the AI rate limit when `bucket` is given, then `run`
  * over the form. `key` reads the action's target, and a form without one is refused; `after`
- * runs on success (a comment action purges its title's list there, so the change is public at
- * once). The community-report data functions purge their own counts. Staff are not
- * rate-limited; only the AI calls, which cost money, pass `bucket` (`RL_MODERATE_AI`).
+ * runs on success and awaits (the data actions purge the edge caches there, `purgeOutcome`, so
+ * the change is public at once). Staff are not rate-limited; only the AI calls, which cost money, pass `bucket` (`RL_MODERATE_AI`).
  */
 export async function act(
 	event: ActionEvent,
 	name: string,
 	key: (data: FormData) => string | null,
 	run: (staff: UserRow, data: FormData) => Promise<Outcome> | Outcome,
-	after?: (result: Extract<Outcome, { ok: true }>) => void,
+	after?: (result: Extract<Outcome, { ok: true }>) => void | Promise<void>,
 	bucket?: 'RL_MODERATE_AI'
 ) {
 	const staff = await requireRole(event.locals, STAFF_ROLES);
@@ -125,6 +124,6 @@ export async function act(
 		const [status, message] = refusals[result.reason];
 		return fail(status, { id: target, error: message });
 	}
-	after?.(result);
+	await after?.(result);
 	return { id: target, done: name, ...('extra' in result ? result.extra : {}) };
 }

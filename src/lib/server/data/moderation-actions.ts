@@ -17,10 +17,10 @@ import {
 } from './comment-status.ts';
 import { lastActionByAdministrator, targetAllowed } from './moderation-target.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
-import { purgeProfile, purgeProfiles, purgeTitlesComments } from '#lib/server/http/purge-title.ts';
-import { purgeReportedTitles } from './community-report-moderation.ts';
+import type { PurgePlan } from '#lib/server/moderation/purge.ts';
 import { banReach, banWeightStatements } from './ban-weight.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
+import { logRow } from './moderation-log.ts';
 
 type Action = (typeof moderationAction)[number];
 
@@ -32,6 +32,8 @@ export type ModerationResult =
 			authorId?: string;
 			/** The authors of its published replies, whose profiles name it, when it entered or left `published`. */
 			replyAuthorIds?: string[];
+			/** What a mute or a ban changed in the caches (`purgeOutcome`); a comment action has none. */
+			purge?: PurgePlan;
 	  }
 	| {
 			ok: false;
@@ -56,17 +58,7 @@ function logCommentAction(
 ): BatchStatement {
 	return db.insert(moderationActions).select(
 		db
-			.select({
-				id: sql<string>`${crypto.randomUUID()}`.as('id'),
-				actorId: sql<string>`${actorId}`.as('actorId'),
-				targetCommentId: comments.id,
-				targetUserId: sql<string | null>`NULL`.as('targetUserId'),
-				targetTitleId: sql<string | null>`NULL`.as('targetTitleId'),
-				action: sql<Action>`${action}`.as('action'),
-				reason: sql<string | null>`${reason}`.as('reason'),
-				muteHours: sql<number | null>`NULL`.as('muteHours'),
-				createdAt: sql<number>`${Date.now()}`.as('createdAt')
-			})
+			.select(logRow(actorId, action, { commentId: comments.id, reason }))
 			.from(comments)
 			.where(and(eq(comments.id, commentId), eq(comments.status, from), extraWhere))
 	);
@@ -324,9 +316,7 @@ export async function muteUser(
 		db.update(users).set({ mutedUntil }).where(eq(users.id, targetId)),
 		logUserAction(actor.id, targetId, 'mute', reason, hours)
 	]);
-	purgeProfile(targetId);
-	await purgeReportedTitles(targetId);
-	return { ok: true, title: null };
+	return { ok: true, title: null, purge: { profiles: [targetId], reportedBy: targetId } };
 }
 
 /**
@@ -335,9 +325,9 @@ export async function muteUser(
  * of every comment it voted on is recomputed without them, and its published and pending
  * comments become `hidden` (source `moderator`, reason "Account banned") with their parents'
  * reply counts adjusted. The statements select by the account's id, so no id list is bound.
- * The counts of every title the account reported leave it out, so their cached counts are
- * purged, and so is the profile, which is a 404 from now on, with the lists of the titles and
- * the profiles of the authors that the votes and hidden comments touched.
+ * The counts of every title the account reported leave it out, so the result's `purge` names
+ * their counts, the profile, which is a 404 from now on, the lists of the titles and the
+ * profiles of the authors that the votes and hidden comments touched.
  */
 export async function banAccount(
 	actor: UserRow,
@@ -352,9 +342,13 @@ export async function banAccount(
 		logUserAction(actor.id, targetId, 'ban', reason),
 		...banWeightStatements(targetId)
 	]);
-	purgeProfile(targetId);
-	purgeProfiles(reach.profiles);
-	purgeTitlesComments(reach.titles);
-	await purgeReportedTitles(targetId);
-	return { ok: true, title: null };
+	return {
+		ok: true,
+		title: null,
+		purge: {
+			commentTitles: reach.titles,
+			profiles: [targetId, ...reach.profiles],
+			reportedBy: targetId
+		}
+	};
 }

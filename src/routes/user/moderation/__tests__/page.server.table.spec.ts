@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
-const purgeTitleComments = vi.fn();
+const purgeTitlesComments = vi.fn();
 const purgeProfiles = vi.fn();
 const actionsFns = {
 	approveComment: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
+	purgeTitlesComments: (...args: unknown[]) => purgeTitlesComments(...args),
 	purgeProfile: vi.fn(),
 	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
 }));
@@ -101,7 +101,7 @@ const ids = (n: number): [string, string][] =>
 beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(STAFF);
 	rateLimit.mockReset().mockResolvedValue(undefined);
-	purgeTitleComments.mockReset();
+	purgeTitlesComments.mockReset();
 	purgeProfiles.mockReset();
 	for (const fn of Object.values(actionsFns)) fn.mockReset();
 	for (const fn of Object.values(queue)) fn.mockReset().mockResolvedValue([]);
@@ -363,9 +363,7 @@ describe('?/bulk', () => {
 			['c5', 'Off topic']
 		]);
 		expect(actionsFns.hideComment.mock.calls[0][0]).toBe(STAFF);
-		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
-		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
-		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
+		expect(purgeTitlesComments).toHaveBeenCalledExactlyOnceWith([ALIEN, DARK]);
 		expect(result).toMatchObject({ done: 'bulk', op: 'hide', applied: 3, refused: 2, edited: 1 });
 	});
 
@@ -378,7 +376,7 @@ describe('?/bulk', () => {
 		actionsFns[fn].mockResolvedValue({ ok: true, title: ALIEN });
 		await run('bulk', [['op', op], ...ids(2)]);
 		expect(actionsFns[fn]).toHaveBeenCalledTimes(2);
-		expect(purgeTitleComments).toHaveBeenCalledExactlyOnceWith(ALIEN);
+		expect(purgeTitlesComments).toHaveBeenCalledExactlyOnceWith([ALIEN]);
 	});
 
 	it('passes each row its own editedAt to the operations that publish', async () => {
@@ -434,7 +432,7 @@ describe('?/bulk', () => {
 				error: 'None of the selected comments could be changed.'
 			}
 		});
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 	});
 
 	it('purges the titles already changed when a later write throws, and the error reaches the caller', async () => {
@@ -444,9 +442,7 @@ describe('?/bulk', () => {
 			.mockRejectedValueOnce(new Error('D1 down'));
 		await expect(run('bulk', [['op', 'hide'], ...ids(4)])).rejects.toThrow('D1 down');
 		expect(actionsFns.hideComment).toHaveBeenCalledTimes(3);
-		expect(purgeTitleComments).toHaveBeenCalledTimes(2);
-		expect(purgeTitleComments).toHaveBeenCalledWith(ALIEN);
-		expect(purgeTitleComments).toHaveBeenCalledWith(DARK);
+		expect(purgeTitlesComments).toHaveBeenCalledExactlyOnceWith([ALIEN, DARK]);
 	});
 
 	it('purges each author’s profile once, also when a later write throws', async () => {
@@ -457,7 +453,7 @@ describe('?/bulk', () => {
 			.mockRejectedValueOnce(new Error('D1 down'));
 		await expect(run('bulk', [['op', 'hide'], ...ids(4)])).rejects.toThrow('D1 down');
 		expect(purgeProfiles).toHaveBeenCalledOnce();
-		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'a2']);
+		expect(purgeProfiles.mock.calls[0][0] as string[]).toEqual(['a1', 'a2']);
 	});
 
 	it('also purges the profiles of the authors of the published replies', async () => {
@@ -470,13 +466,13 @@ describe('?/bulk', () => {
 				replyAuthorIds: ['r1', 'r2']
 			});
 		await run('bulk', [['op', 'hide'], ...ids(2)]);
-		expect([...(purgeProfiles.mock.calls[0][0] as Set<string>)]).toEqual(['a1', 'r1', 'a2', 'r2']);
+		expect(purgeProfiles.mock.calls[0][0] as string[]).toEqual(['a1', 'r1', 'a2', 'r2']);
 	});
 
 	it('purges no title for a comment with none', async () => {
 		actionsFns.dismissReports.mockResolvedValue({ ok: true, title: null });
 		await run('bulk', [['op', 'dismiss'], ...ids(1)]);
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 	});
 
 	it('refuses an unknown operation, no ids and more than a page before changing anything', async () => {
@@ -491,6 +487,6 @@ describe('?/bulk', () => {
 		actionsFns.approveComment.mockResolvedValue({ ok: true, title: ALIEN });
 		const result = await run('bulk', [['op', 'approve'], ...ids(50)]);
 		expect(result).toMatchObject({ applied: 50, refused: 0 });
-		expect(purgeTitleComments).toHaveBeenCalledOnce();
+		expect(purgeTitlesComments).toHaveBeenCalledOnce();
 	});
 });

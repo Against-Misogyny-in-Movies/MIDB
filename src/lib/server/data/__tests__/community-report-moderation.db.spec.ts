@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
@@ -14,7 +14,8 @@ import { userValues } from '#db/test/users.ts';
 import {
 	approveReport,
 	rejectAccountReports,
-	rejectReport
+	rejectReport,
+	reportedTitlesOf
 } from '#lib/server/data/community-report-moderation.ts';
 import {
 	getOpenTitle,
@@ -28,24 +29,12 @@ import { listRecentActions } from '#lib/server/data/moderation-queue.ts';
 import { getReportCounts } from '#lib/server/data/community-reports.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 
-const purged = vi.hoisted(() => vi.fn());
-const purgedMany = vi.hoisted(() => vi.fn());
-vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleReports: purged,
-	purgeTitlesReports: purgedMany,
-	purgeProfile: vi.fn(),
-	purgeProfiles: vi.fn(),
-	purgeTitlesComments: vi.fn()
-}));
-
 const DAY = 86_400_000;
 let mod: UserRow;
 let a: string;
 let b: string;
 
 beforeEach(async () => {
-	purged.mockClear();
-	purgedMany.mockClear();
 	const old = new Date(Date.now() - 100 * DAY);
 	await db
 		.insert(users)
@@ -83,47 +72,50 @@ const onScreen = async (titleId: string) =>
 	(await getReportCounts(titleId)).categories.partner.on_screen;
 
 describe('approveReport and rejectReport', () => {
-	it('counts a held report, clears its reason, logs it and purges the title', async () => {
+	it('counts a held report, clears its reason, logs it and names the title for the purge', async () => {
 		await report('r1', a, 'held', 'busy_new_account');
 		expect(await onScreen(a)).toBe(0);
 		const result = await approveReport(mod, 'r1', a);
-		expect(result).toMatchObject({ ok: true, titles: [{ kind: 'movie', tmdbId: 348 }] });
+		expect(result).toMatchObject({
+			ok: true,
+			purge: { reportTitles: [{ kind: 'movie', tmdbId: 348 }], profiles: ['r1'] }
+		});
 		const row = await statusOf('r1', a);
 		expect(row).toMatchObject({ status: 'counted', holdReason: null });
 		expect(await onScreen(a)).toBe(1);
 		expect(await log()).toMatchObject([
 			{ action: 'approve_report', actorId: 'mod', targetUserId: 'r1', targetTitleId: a }
 		]);
-		expect(purged).toHaveBeenCalledTimes(1);
-		expect(purged).toHaveBeenCalledWith(expect.objectContaining({ kind: 'movie', tmdbId: 348 }));
 	});
 
 	it('rejects a counted report out of the counts', async () => {
 		await report('r1', a);
 		expect(await onScreen(a)).toBe(1);
-		expect((await rejectReport(mod, 'r1', a)).ok).toBe(true);
+		expect(await rejectReport(mod, 'r1', a)).toMatchObject({
+			ok: true,
+			purge: { reportTitles: [{ kind: 'movie', tmdbId: 348 }], profiles: ['r1'] }
+		});
 		expect((await statusOf('r1', a)).status).toBe('rejected');
 		expect(await onScreen(a)).toBe(0);
 		expect(await log()).toMatchObject([{ action: 'reject_report', targetTitleId: a }]);
-		expect(purged).toHaveBeenCalledTimes(1);
 	});
 
-	it('refuses a report in the wrong state or missing, with no log row and no purge', async () => {
+	it('refuses a report in the wrong state or missing, with no log row', async () => {
 		await report('r1', a, 'rejected');
 		expect(await rejectReport(mod, 'r1', a)).toEqual({ ok: false, reason: 'invalid-state' });
 		expect(await approveReport(mod, 'r2', a)).toEqual({ ok: false, reason: 'not-found' });
 		expect(await log()).toHaveLength(0);
-		expect(purged).not.toHaveBeenCalled();
 	});
 });
 
 describe('rejectAccountReports', () => {
-	it('rejects every report of the account on every title, logging once and purging each', async () => {
+	it('rejects every report of the account on every title, logging once and naming each title', async () => {
 		await report('r1', a);
 		await report('r1', b, 'held', 'busy_new_account');
 		await report('r2', a);
 		const result = await rejectAccountReports(mod, 'r1');
-		expect(result.ok && result.titles).toHaveLength(2);
+		expect(result).toMatchObject({ ok: true, purge: { profiles: ['r1'] } });
+		expect(result.ok && result.purge.reportTitleIds).toHaveLength(2);
 		expect((await statusOf('r1', a)).status).toBe('rejected');
 		expect((await statusOf('r1', b)).status).toBe('rejected');
 		expect((await statusOf('r2', a)).status).toBe('counted');
@@ -132,8 +124,6 @@ describe('rejectAccountReports', () => {
 			{ action: 'reject_account_reports', targetUserId: 'r1', targetTitleId: null }
 		]);
 		expect(rows).toHaveLength(1);
-		expect(purgedMany).toHaveBeenCalledTimes(1);
-		expect(purgedMany.mock.calls[0][0]).toHaveLength(2);
 		expect(await onScreen(a)).toBe(1);
 	});
 
@@ -160,8 +150,6 @@ describe('who may be acted on', () => {
 		}
 		expect((await statusOf('mod', a)).status).toBe('counted');
 		expect(await log()).toHaveLength(0);
-		expect(purged).not.toHaveBeenCalled();
-		expect(purgedMany).not.toHaveBeenCalled();
 	});
 
 	it('lets only an administrator act on a moderator’s reports', async () => {
@@ -188,32 +176,35 @@ describe('who may be acted on', () => {
 	});
 });
 
-describe('mute and ban purge the counts of every reported title', () => {
-	it('purges both titles on a mute, and the counts drop the account', async () => {
+describe('mute and ban name the counts of every reported title for the purge', () => {
+	it('names the account on a mute, and the counts drop the account', async () => {
 		await report('r1', a);
 		await report('r1', b, 'held', 'busy_new_account');
-		await muteUser(mod, 'r1', 24, null);
-		expect(purgedMany).toHaveBeenCalledTimes(1);
-		expect(purgedMany.mock.calls[0][0]).toHaveLength(2);
+		expect(await muteUser(mod, 'r1', 24, null)).toMatchObject({
+			ok: true,
+			purge: { profiles: ['r1'], reportedBy: 'r1' }
+		});
 		expect(await onScreen(a)).toBe(0);
+		expect(await reportedTitlesOf('r1')).toHaveLength(2);
 	});
 
-	it('purges both titles on a ban', async () => {
+	it('names the account on a ban', async () => {
 		await report('r1', a);
 		await report('r1', b);
-		await banAccount(mod, 'r1', null);
-		expect(purgedMany.mock.calls[0][0]).toHaveLength(2);
+		expect(await banAccount(mod, 'r1', null)).toMatchObject({
+			ok: true,
+			purge: { reportedBy: 'r1' }
+		});
 	});
 
-	it('purges nothing for an account with no reports', async () => {
+	it('reads no title for an account with no reports', async () => {
 		await muteUser(mod, 'r2', 24, null);
-		expect(purged).not.toHaveBeenCalled();
-		expect(purgedMany.mock.calls.flatMap((c) => c[0])).toHaveLength(0);
+		expect(await reportedTitlesOf('r2')).toHaveLength(0);
 	});
 });
 
 describe('count flag actions', () => {
-	it('log resolve and dismiss with the title, and purge nothing', async () => {
+	it('log resolve and dismiss with the title, and leave the counts alone', async () => {
 		const [f1] = await db
 			.insert(titleCountFlags)
 			.values({ titleId: a, reporterId: 'r1' })
@@ -230,7 +221,6 @@ describe('count flag actions', () => {
 			['dismiss_count_flag', b, 'mod'],
 			['resolve_count_flag', a, 'mod']
 		]);
-		expect(purged).not.toHaveBeenCalled();
 	});
 
 	it('writes no log row for a missing flag', async () => {

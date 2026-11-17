@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
-const purgeTitleComments = vi.fn();
+const purgeTitlesComments = vi.fn();
 const purgeProfiles = vi.fn();
+const purgeTitlesReports = vi.fn();
 const queries = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -35,8 +36,9 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
-	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
+	purgeTitlesComments: (...args: unknown[]) => purgeTitlesComments(...args),
+	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args),
+	purgeTitlesReports: (...args: unknown[]) => purgeTitlesReports(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
@@ -97,8 +99,9 @@ function run(
 beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(MOD);
 	rateLimit.mockReset().mockResolvedValue(undefined);
-	purgeTitleComments.mockReset();
+	purgeTitlesComments.mockReset();
 	purgeProfiles.mockReset();
+	purgeTitlesReports.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	for (const fn of Object.values(reports))
@@ -149,7 +152,7 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 		requireRole.mockImplementation(async () => error(403, 'Forbidden'));
 		await expect(run(name)).rejects.toMatchObject({ status: 403 });
 		for (const fn of allFns()) expect(fn).not.toHaveBeenCalled();
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 	});
 
 	it('answers 401 to a signed-out reader', async () => {
@@ -197,7 +200,7 @@ describe('community-report actions', () => {
 		expect(reports.approveReport).toHaveBeenCalledWith(MOD, 'u1', 't1');
 		await run('rejectReport', REPORT_FIELDS);
 		expect(reports.rejectReport).toHaveBeenCalledWith(MOD, 'u1', 't1');
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 	});
 
 	it('reject all calls the data function with the account', async () => {
@@ -242,7 +245,7 @@ describe('purging', () => {
 		async (name) => {
 			const result = await run(name);
 			expect(result).toEqual({ id: 'c1', done: name });
-			expect(purgeTitleComments).toHaveBeenCalledExactlyOnceWith(TITLE);
+			expect(purgeTitlesComments).toHaveBeenCalledExactlyOnceWith([TITLE]);
 		}
 	);
 
@@ -285,7 +288,7 @@ describe('purging', () => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		const result = await run('approve');
 		expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 
@@ -299,12 +302,35 @@ describe('purging', () => {
 		expect((result as { data: { error: string } }).data.error).toMatch(message);
 	});
 
-	it('mute and ban touch no list', async () => {
-		queries.muteUser.mockResolvedValue({ ok: true, title: null });
-		queries.banAccount.mockResolvedValue({ ok: true, title: null });
+	it('mute and ban touch no list and purge the profile their result names', async () => {
+		queries.muteUser.mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
+		queries.banAccount.mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
 		expect(await run('mute')).toEqual({ id: 'c1', done: 'mute' });
 		expect(await run('ban')).toEqual({ id: 'c1', done: 'ban' });
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
+		expect(purgeProfiles).toHaveBeenCalledTimes(2);
+		expect(purgeProfiles).toHaveBeenCalledWith(['u1']);
+	});
+
+	it.each(['countReport', 'rejectReport'] as const)(
+		'%s purges the title counts and the profile its result names',
+		async (name) => {
+			reports[name === 'countReport' ? 'approveReport' : 'rejectReport'].mockResolvedValue({
+				ok: true,
+				purge: { reportTitles: [TITLE], profiles: ['u1'] }
+			});
+			expect(await run(name, REPORT_FIELDS)).toEqual({ id: 'u1:t1', done: name });
+			expect(purgeTitlesReports).toHaveBeenCalledExactlyOnceWith([TITLE]);
+			expect(purgeProfiles).toHaveBeenCalledExactlyOnceWith(['u1']);
+		}
+	);
+
+	it('a flag action and a refused report action purge nothing', async () => {
+		await run('resolveFlag', REPORT_FIELDS);
+		reports.rejectReport.mockResolvedValue({ ok: false, reason: 'invalid-state' });
+		await run('rejectReport', REPORT_FIELDS);
+		expect(purgeTitlesReports).not.toHaveBeenCalled();
+		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 });
 

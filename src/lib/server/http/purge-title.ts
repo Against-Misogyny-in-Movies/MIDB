@@ -1,7 +1,7 @@
 import { cache, waitUntil } from 'cloudflare:workers';
 import { commentsTag, communityReportsTag, profileTag } from './cache.ts';
 
-type PurgeTitle = { kind: string; tmdbId: number | string | null };
+export type PurgeTitle = { kind: string; tmdbId: number | string | null };
 
 /** The tags one purge request carries; a longer list goes in several requests. */
 export const PURGE_TAGS_PER_REQUEST = 30;

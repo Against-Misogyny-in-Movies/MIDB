@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
-import { users } from '#db/schema/auth.ts';
+import { sessions, users } from '#db/schema/auth.ts';
 import { titles } from '#db/schema/titles.ts';
 import { commentReports, comments, moderationActions } from '#db/schema/community.ts';
 import { userValues } from '#db/test/users.ts';
@@ -134,6 +134,21 @@ describe('moderation actions', () => {
 		expect(log.find((l) => l.action === 'ban')?.targetUserId).toBeNull();
 		expect(log.find((l) => l.action === 'mute')?.muteHours).toBe(168);
 		expect(log.find((l) => l.action === 'ban')?.muteHours).toBeNull();
+	});
+
+	it('a ban ends every session of that account only', async () => {
+		const base = { expiresAt: new Date(Date.now() + 60_000), ipAddress: null, userAgent: null };
+		await db.insert(sessions).values([
+			{ id: 's1', token: 't1', userId: 'u2', ...base },
+			{ id: 's2', token: 't2', userId: 'u2', ...base },
+			{ id: 's3', token: 't3', userId: 'u3', ...base }
+		]);
+		expect(await banAccount(mod, 'u2', 'spam')).toMatchObject({ ok: true });
+		const banned = (await db.select().from(users).where(eq(users.id, 'u2')))[0];
+		expect(banned.bannedAt).toBeInstanceOf(Date);
+		expect(banned.banReason).toBe('spam');
+		expect((await db.select().from(users).where(eq(users.id, 'u3')))[0].bannedAt).toBeNull();
+		expect(await db.select({ id: sessions.id }).from(sessions)).toEqual([{ id: 's3' }]);
 	});
 
 	it('refuses a moderator on themselves, an administrator or a moderator, and an administrator on themselves', async () => {

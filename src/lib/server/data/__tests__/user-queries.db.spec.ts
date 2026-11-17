@@ -1,16 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll } from 'vitest';
-import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
+import { retiredUsernames, users } from '#db/schema/auth.ts';
 import { db } from '#lib/server/db.ts';
 import { trackWrites, writes } from '#db/test/writes.ts';
 import { userValues } from '#db/test/users.ts';
 import { foldUsername } from '#lib/media/utils/username.ts';
-import {
-	banUser,
-	getUserById,
-	usernameAvailability,
-	updateProfile
-} from '#lib/server/data/user-queries.ts';
+import { getUserById, usernameAvailability, updateProfile } from '#lib/server/data/user-queries.ts';
 
 const isUsernameAvailable = async (name: string, id: string) =>
 	(await usernameAvailability(name, id)) === 'available';
@@ -34,28 +29,6 @@ describe('getUserById', () => {
 		expect((await getUserById('sub-1'))?.id).toBe('sub-1');
 		expect(await getUserById('nobody')).toBeNull();
 		expect(await writes()).toBe(before);
-	});
-});
-
-describe('banUser', () => {
-	it('sets the ban and ends every session of that user only', async () => {
-		await insertUser(userValues('sub-1'));
-		await insertUser(userValues('sub-2'));
-		const base = { expiresAt: new Date(Date.now() + 60_000), ipAddress: null, userAgent: null };
-		await db.insert(sessions).values([
-			{ id: 's1', token: 't1', userId: 'sub-1', ...base },
-			{ id: 's2', token: 't2', userId: 'sub-1', ...base },
-			{ id: 's3', token: 't3', userId: 'sub-2', ...base }
-		]);
-
-		await banUser('sub-1', 'spam');
-
-		const banned = await getUserById('sub-1');
-		expect(banned?.bannedAt).toBeInstanceOf(Date);
-		expect(banned?.banReason).toBe('spam');
-		expect((await getUserById('sub-2'))?.bannedAt).toBeNull();
-		const left = await db.select({ id: sessions.id }).from(sessions);
-		expect(left).toEqual([{ id: 's3' }]);
 	});
 });
 

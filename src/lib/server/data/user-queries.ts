@@ -43,21 +43,17 @@ export async function getUserById(id: string): Promise<UserRow | null> {
 	return (await db.query.users.findFirst({ where: eq(users.id, id) })) ?? null;
 }
 
-/** The two statements of a ban, for a batch that also logs it (`moderation-actions.ts`). */
+/**
+ * The two statements of a ban, for the batch of `banAccount` that also logs it: the ban and the
+ * end of every session the account holds. The session cookie cache lets a session read as valid
+ * for a few minutes, so `locals.getUser` also re-reads `banned_at`; the `session.create` hook
+ * (`create-auth.ts`) refuses a new session.
+ */
 export function banStatements(id: string, reason: string | null) {
 	return [
 		db.update(users).set({ bannedAt: new Date(), banReason: reason }).where(eq(users.id, id)),
 		db.delete(sessions).where(eq(sessions.userId, id))
 	] as const;
-}
-
-/**
- * Bans a user and ends every session they hold, in one batch. The session cookie cache lets a
- * session read as valid for a few minutes, so `locals.getUser` also re-reads `banned_at`; the
- * `session.create` hook (`create-auth.ts`) refuses a new session.
- */
-export async function banUser(id: string, reason: string | null): Promise<void> {
-	await db.batch(banStatements(id, reason));
 }
 
 type ProfileUpdate = { username?: string; avatarKey?: string };

@@ -6,7 +6,8 @@ import { accounts, sessions, users } from '#db/schema/auth.ts';
 import { userValues } from '#db/test/users.ts';
 import { db } from '#lib/server/db.ts';
 import { scrubAccount } from '#lib/server/data/account-scrub.ts';
-import { banUser } from '#lib/server/data/user-queries.ts';
+import { banAccount } from '#lib/server/data/moderation-actions.ts';
+import { getUserById } from '#lib/server/data/user-queries.ts';
 import { NEW_USERNAME_RE } from '#lib/media/utils/username.ts';
 import { createAuth } from '../create-auth.ts';
 import { adoptProviderEmail } from '../link-email.ts';
@@ -125,12 +126,16 @@ describe('session.create hook', () => {
 	});
 
 	it('refuses a new session after a ban, and the ban ended the old ones', async () => {
-		await db.insert(users).values(userValues('user-1'));
+		await db
+			.insert(users)
+			.values([userValues('user-1'), userValues('staff', { role: 'moderator' })]);
 		await internalAdapter.createSession('user-1');
 		await internalAdapter.createSession('user-1');
 		expect(await db.select().from(sessions)).toHaveLength(2);
 
-		await banUser('user-1', 'spam');
+		const staff = await getUserById('staff');
+		if (!staff) throw new Error('the moderator was not inserted');
+		await banAccount(staff, 'user-1', 'spam');
 
 		expect(await db.select().from(sessions)).toHaveLength(0);
 		await expect(internalAdapter.createSession('user-1')).rejects.toMatchObject({

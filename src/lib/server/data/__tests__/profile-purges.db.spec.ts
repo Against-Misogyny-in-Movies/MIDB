@@ -11,6 +11,8 @@ import {
 	waitUntilPromises
 } from '#test/cloudflare-workers.stub.ts';
 import { REPORT_THRESHOLD } from '#lib/media/utils/comments.ts';
+import type { ModerationResult } from '#lib/server/data/moderation-actions.ts';
+import type { ReportModerationResult } from '#lib/server/data/community-report-moderation.ts';
 import { reportComment } from '#lib/server/data/comment-reports.ts';
 import {
 	approveComment,
@@ -27,9 +29,19 @@ import {
 	rejectReport
 } from '#lib/server/data/community-report-moderation.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
+import { purgeOutcome } from '#lib/server/moderation/purge.ts';
 
 let mod: UserRow;
 let titleId: string;
+
+/** What the route does after a moderation action: purge what its result names. */
+const settle = async (
+	pending: Promise<ModerationResult | ReportModerationResult>
+): Promise<ModerationResult | ReportModerationResult> => {
+	const result = await pending;
+	if (result.ok) await purgeOutcome(result);
+	return result;
+};
 
 /** The profile tags purged so far, after the `waitUntil` work has run. */
 async function profilePurges(): Promise<string[]> {
@@ -105,28 +117,28 @@ describe('a moderator action on a comment names the author for the profile purge
 
 describe('purging the profile', () => {
 	it('a ban purges it, a mute too (its reports stop counting)', async () => {
-		await banAccount(mod, 'author', null);
+		await settle(banAccount(mod, 'author', null));
 		expect(await profilePurges()).toEqual(['profile:author']);
 		resetCloudflareStub();
 		await db.update(users).set({ bannedAt: null }).where(eq(users.id, 'author'));
-		await muteUser(mod, 'author', 24, null);
+		await settle(muteUser(mod, 'author', 24, null));
 		expect(await profilePurges()).toEqual(['profile:author']);
 	});
 
 	it('a refused ban purges nothing', async () => {
-		await banAccount(mod, 'mod', null);
+		await settle(banAccount(mod, 'mod', null));
 		expect(await profilePurges()).toEqual([]);
 	});
 
 	it('moving a community report purges the reporter’s profile, a refused move does not', async () => {
 		await db.insert(communityContentReports).values({ userId: 'author', titleId, status: 'held' });
-		expect(await approveReport(mod, 'author', titleId)).toMatchObject({ ok: true });
+		expect(await settle(approveReport(mod, 'author', titleId))).toMatchObject({ ok: true });
 		expect(await profilePurges()).toEqual(['profile:author']);
 		resetCloudflareStub();
-		expect(await rejectReport(mod, 'author', titleId)).toMatchObject({ ok: true });
+		expect(await settle(rejectReport(mod, 'author', titleId))).toMatchObject({ ok: true });
 		expect(await profilePurges()).toEqual(['profile:author']);
 		resetCloudflareStub();
-		expect(await rejectReport(mod, 'author', titleId)).toMatchObject({ ok: false });
+		expect(await settle(rejectReport(mod, 'author', titleId))).toMatchObject({ ok: false });
 		expect(await profilePurges()).toEqual([]);
 	});
 
@@ -134,7 +146,7 @@ describe('purging the profile', () => {
 		await db
 			.insert(communityContentReports)
 			.values({ userId: 'author', titleId, status: 'counted' });
-		expect(await rejectAccountReports(mod, 'author')).toMatchObject({ ok: true });
+		expect(await settle(rejectAccountReports(mod, 'author'))).toMatchObject({ ok: true });
 		expect(await profilePurges()).toEqual(['profile:author']);
 	});
 });
