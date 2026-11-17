@@ -122,8 +122,8 @@ Read when a task names the plan.
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~6.3K tok)
-  - 5–26 Network (~5.6K)
+- `SECURITY.md` — Security (~6.4K tok)
+  - 5–26 Network (~5.7K)
   - 27–37 Supply chain (~570)
   - 38–43 Reporting a vulnerability (~90)
 - `PRIVACY.md` — Privacy (~4.7K tok)
