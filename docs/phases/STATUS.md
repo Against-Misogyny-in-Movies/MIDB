@@ -66,7 +66,7 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | B1    | Profile: stats data              | completed   | 2026-11-17.                                                                                                       |
 | B2    | Profile: stats page              | completed   | 2026-11-17. Measured on seeded local data; title links not followed (no TMDB token).                              |
 | D1    | Profile and settings: docs       | completed   | 2026-11-17. A2 to D1 were reviewed in one round; the fixes were not reviewed again.                               |
-| MR1   | Moderation: server structure     | not started | `docs/plans/plan-moderation.md`.                                                                                  |
+| MR1   | Moderation: server structure     | active      | 2026-11-17. `docs/plans/plan-moderation.md`.                                                                      |
 | MR2   | Moderation: tabs, counts, paging | not started | `docs/plans/plan-moderation.md`.                                                                                  |
 | MR3   | Moderation: rule fixes           | not started | `docs/plans/plan-moderation.md`.                                                                                  |
 | MR4   | Moderation: priority order       | not started | `docs/plans/plan-moderation.md`.                                                                                  |
