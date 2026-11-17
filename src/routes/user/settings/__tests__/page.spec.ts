@@ -40,6 +40,10 @@ beforeEach(() => {
 		'fetch',
 		vi.fn(() => new Promise(() => {}))
 	);
+	vi.stubGlobal(
+		'matchMedia',
+		vi.fn(() => ({ matches: false, addEventListener: vi.fn() }))
+	);
 });
 
 afterEach(() => {
@@ -74,7 +78,7 @@ describe('the settings page', () => {
 		mount({ email: 'ada@example.org' });
 		const nav = screen.getByRole('navigation', { name: 'On this page' });
 		const hrefs = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
-		expect(hrefs).toEqual(['#email', '#sign-in-methods', '#sessions']);
+		expect(hrefs).toEqual(['#email', '#sign-in-methods', '#sessions', '#appearance']);
 		for (const href of hrefs) expect(document.querySelector(href!)).toBeTruthy();
 	});
 
