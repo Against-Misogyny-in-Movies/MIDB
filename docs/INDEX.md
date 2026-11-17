@@ -42,17 +42,17 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
 - `PRODUCT.md` — Product (~700 tok)
-- `DESIGN.md` — Design (~6.9K tok)
+- `DESIGN.md` — Design (~7.1K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–65 Components (~3.6K) ← 1
-  - 66–73 Pages (~1.8K)
+  - 66–73 Pages (~2.0K)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~79.3K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~84.4K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
@@ -60,7 +60,7 @@ Read the sections your task touches.
     - 298–307 File-organisation conventions (~450)
   - 308–321 Styling & theming (~1.1K)
   - 322–334 Copy & voice (~540) ← 1
-  - 335–371 Routes (~19.6K)
+  - 335–371 Routes (~24.4K)
   - 372–416 User & roles (~3.9K)
     - 409–416 Migrations (~330)
   - 417–446 Source sync (~1.9K) ← 3
@@ -72,7 +72,7 @@ Read the sections your task touches.
   - 594–604 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
   - 605–617 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.1K)
   - 618–629 Shared marker pattern (metric row markers) (~410) ← 5
-  - 630–672 Component library (`src/lib/components/`) (~13.8K)
+  - 630–672 Component library (`src/lib/components/`) (~14.1K)
   - 673–683 Live search (`src/lib/components/search/`) (~710)
   - 684–697 Server cache (`src/lib/server/cache/`) (~700)
   - 698–713 TMDB integration (~810)
