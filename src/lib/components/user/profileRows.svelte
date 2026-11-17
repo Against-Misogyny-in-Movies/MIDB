@@ -6,7 +6,7 @@
 		/** A stable key for an item. */
 		key: (item: T) => string;
 		/** The row's id, so a list that grows in place can move the focus to a new row. */
-		rowId?: (item: T) => string;
+		rowId?: (item: T, index: number) => string;
 		/** What the card says when there are no items. */
 		empty: string;
 		row: Snippet<[T]>;
@@ -19,8 +19,8 @@
 	<p class="empty">{empty}</p>
 {:else}
 	<ul class="rows">
-		{#each items as item (key(item))}
-			<li id={rowId?.(item)} tabindex="-1">
+		{#each items as item, index (key(item))}
+			<li id={rowId?.(item, index)} tabindex="-1">
 				{@render row(item)}
 			</li>
 		{/each}
@@ -34,8 +34,9 @@
 		@apply flex flex-col list-none m-0 p-0;
 	}
 
+	/* Positioned, so a row's menu sits in its corner without taking any height. */
 	.rows li {
-		@apply flex flex-col;
+		@apply relative flex flex-col;
 		gap: var(--spacing-xs);
 		padding: var(--spacing-md) 20px;
 		border-top: 1px solid var(--border);

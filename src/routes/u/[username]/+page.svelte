@@ -3,11 +3,10 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import Notice from '#lib/components/ui/notice.svelte';
-	import OwnComments from '#lib/components/user/ownComments.svelte';
-	import OwnReports from '#lib/components/user/ownReports.svelte';
 	import ProfileComments from '#lib/components/user/profileComments.svelte';
 	import ProfileEditor from '#lib/components/user/profileEditor.svelte';
 	import ProfileHeader from '#lib/components/user/profileHeader.svelte';
+	import ProfileNotPublic from '#lib/components/user/profileNotPublic.svelte';
 	import ProfileReports from '#lib/components/user/profileReports.svelte';
 	import type { PublicUser } from '#lib/media/types/user.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
@@ -34,19 +33,19 @@
 	const avatarKey = $derived(saved?.id === profile.id ? saved.avatarKey : profile.avatarKey);
 	let editing = $state(false);
 
-	type Tab = 'comments' | 'reports';
+	type Tab = 'comments' | 'reports' | 'notPublic';
 	let tab = $state<Tab>('comments');
+	/**
+	 * The owner's third tab: what the public lists leave out. It exists only once the owner's view
+	 * has loaded and holds something, so a visitor and an owner with nothing unpublished see two.
+	 */
+	const hasNotPublic = $derived(
+		!!owned && owned.notPublic.comments.length + owned.notPublic.reports.length > 0
+	);
 	const TABS = $derived([
-		{
-			id: 'comments' as const,
-			label: 'Comments',
-			count: owned ? owned.comments.length : profile.commentCount
-		},
-		{
-			id: 'reports' as const,
-			label: 'Community reports',
-			count: owned ? owned.reports.length : profile.reports.length
-		}
+		{ id: 'comments' as const, label: 'Comments' },
+		{ id: 'reports' as const, label: 'Community reports' },
+		...(hasNotPublic ? [{ id: 'notPublic' as const, label: 'Not public' }] : [])
 	]);
 
 	/** `#reports` opens the reports tab (a link from a title page, or `/user/metrics`). */
@@ -64,18 +63,18 @@
 		if (isOwner && untrack(() => own.phase) === 'idle') void own.load();
 	});
 
-	/** The tab keyboard pattern: the arrow keys move between the two tabs, and the focused one is selected. */
+	/** The tab keyboard pattern: the arrow keys move between the tabs (and wrap), and the focused one is selected. */
 	function onTabKeydown(event: KeyboardEvent) {
 		if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
 		event.preventDefault();
-		tab =
+		const at = TABS.findIndex((t) => t.id === tab);
+		const next =
 			event.key === 'Home'
-				? 'comments'
+				? 0
 				: event.key === 'End'
-					? 'reports'
-					: tab === 'comments'
-						? 'reports'
-						: 'comments';
+					? TABS.length - 1
+					: (at + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length;
+		tab = TABS[next].id;
 		void focusAfterUpdate(() => document.getElementById(`tab-${tab}`));
 	}
 
@@ -112,6 +111,9 @@
 		staffRole={profile.staffRole}
 		joinedAt={profile.joinedAt}
 		scoreTotal={profile.scoreTotal}
+		commentCount={profile.commentCount}
+		reportCount={profile.reportCount}
+		titleCount={profile.titleCount}
 	>
 		{#snippet actions()}
 			{#if isOwner}
@@ -165,30 +167,26 @@
 				onclick={() => (tab = t.id)}
 				onkeydown={onTabKeydown}
 			>
-				{t.label} <span class="count">{t.count}</span>
+				{t.label}
 			</button>
 		{/each}
 	</div>
 
-	<div
-		class="card"
-		id="panel-{tab}"
-		role="tabpanel"
-		aria-labelledby="tab-{tab}"
-		aria-busy={isOwner && own.phase === 'loading'}
-	>
+	<div class="card" id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
 		{#if tab === 'comments'}
-			{#if owned}
-				<OwnComments comments={owned.comments} />
-			{:else}
-				{#key profile.id}
-					<ProfileComments username={profile.username} first={profile.comments} />
-				{/key}
-			{/if}
+			{#key profile.id}
+				<ProfileComments
+					username={profile.username}
+					first={profile.comments}
+					own={owned ? { replyCounts: owned.replyCounts } : null}
+				/>
+			{/key}
+		{:else if tab === 'reports'}
+			{#key profile.id}
+				<ProfileReports username={profile.username} first={profile.reports} />
+			{/key}
 		{:else if owned}
-			<OwnReports reports={owned.reports} />
-		{:else}
-			<ProfileReports reports={profile.reports} />
+			<ProfileNotPublic items={owned.notPublic} />
 		{/if}
 	</div>
 </div>
@@ -203,11 +201,22 @@
 		padding-block: var(--spacing-xl);
 	}
 
+	/*
+	 * One row at every width, so the height is the chips' own: the third tab's arrival changes
+	 * nothing below it. A phone too narrow for three scrolls the row sideways. The padding and
+	 * the opposite margin keep the focus ring inside the scroller without moving the row.
+	 */
 	.tabs {
-		@apply flex flex-wrap;
+		@apply flex overflow-x-auto;
 		gap: var(--spacing-sm);
+		padding: 3px;
 		/* The tabs label the card below them. */
-		margin-bottom: calc(var(--spacing-md) - var(--spacing-lg));
+		margin: -3px -3px calc(var(--spacing-md) - var(--spacing-lg) - 3px);
+		scrollbar-width: thin;
+	}
+
+	.tabs .chip {
+		flex: none;
 	}
 
 	.chip[aria-selected='true'] {
@@ -215,18 +224,10 @@
 		color: var(--brand);
 	}
 
-	.count {
-		font-variant-numeric: tabular-nums;
-	}
-
 	@media (pointer: coarse) {
 		.chip {
 			height: 2.75rem;
 		}
-	}
-
-	.card {
-		@apply overflow-hidden;
 	}
 
 	/* The first row of a panel needs no hairline above it. */

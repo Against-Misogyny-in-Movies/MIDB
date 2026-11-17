@@ -5,14 +5,12 @@
 	import CommentConfirm from './commentConfirm.svelte';
 	import CommentComposer from './commentComposer.svelte';
 	import CommentLink from './commentLink.svelte';
-	import { commentResult, unpublishedNote } from '#lib/media/utils/comments.ts';
-	import type { OwnComment, UserCommentRow } from '#lib/media/types/comments.ts';
-	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
-	import { COMMENT_STATUS_LABELS } from '#lib/media/utils/comments.ts';
+	import { COMMENT_STATUS_LABELS, unpublishedNote } from '#lib/media/utils/comments.ts';
+	import type { UserCommentRow } from '#lib/media/types/comments.ts';
+	import { OwnCommentEditing } from '#lib/media/utils/ownCommentEditing.svelte.js';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { commentHref } from '#lib/media/utils/titleHref.ts';
-	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { commentStatusTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
@@ -24,66 +22,18 @@
 	// The row keeps its own copy: an edit or a delete changes it from the response.
 	// svelte-ignore state_referenced_locally
 	let comment = $state<UserCommentRow>(initial);
-	let mode = $state<'edit' | 'delete' | null>(null);
 	let root: HTMLElement | undefined = $state();
-	let busy = $state(false);
-	/** The server refused the edited text (a 400): shown under the field. Other failures are toasts. */
-	let error = $state<string | undefined>();
+	const editing = new OwnCommentEditing({
+		id: () => comment.id,
+		edited: (saved) => (comment = { ...comment, ...saved }),
+		deleted: () => (comment = { ...comment, status: 'deleted' }),
+		settled: () => focusAfterUpdate(() => root)
+	});
 
 	/** A hidden or deleted comment cannot be edited (the endpoint answers 409). */
 	const editable = $derived(comment.status !== 'hidden' && comment.status !== 'deleted');
 	const deletable = $derived(comment.status !== 'deleted');
 	const permalink = $derived(commentHref(comment.kind, comment.tmdbId, comment.id));
-
-	function toggle(next: 'edit' | 'delete') {
-		mode = mode === next ? null : next;
-		error = undefined;
-	}
-
-	async function save(body: string): Promise<boolean> {
-		busy = true;
-		error = undefined;
-		const reply = await requestJson<{ comment: OwnComment }>(
-			fetch,
-			'PATCH',
-			`/api/comments/${comment.id}`,
-			{ body }
-		);
-		busy = false;
-		if (!reply.ok) {
-			const message = describeFailure('edit', reply.status, reply.message);
-			if (reply.status === 400) error = message;
-			else toasts.error(message);
-			return false;
-		}
-		const saved = reply.data.comment;
-		const result = commentResult('edit', saved);
-		toasts.show(result.tone, result.text);
-		comment = {
-			...comment,
-			body: saved.body,
-			status: saved.status,
-			moderationReason: saved.moderationReason,
-			editedAt: saved.editedAt
-		};
-		mode = null;
-		await focusAfterUpdate(() => root);
-		return true;
-	}
-
-	async function remove() {
-		busy = true;
-		const reply = await requestJson<{ ok: true }>(fetch, 'DELETE', `/api/comments/${comment.id}`);
-		busy = false;
-		if (!reply.ok) {
-			toasts.error(describeFailure('delete', reply.status, reply.message));
-			return;
-		}
-		comment = { ...comment, status: 'deleted' };
-		toasts.success('Comment deleted.');
-		mode = null;
-		await focusAfterUpdate(() => root);
-	}
 </script>
 
 <li class="row" id="comment-{comment.id}" tabindex="-1" bind:this={root}>
@@ -100,18 +50,18 @@
 		{/if}
 	</div>
 
-	{#if mode === 'edit'}
+	{#if editing.mode === 'edit'}
 		<CommentComposer
 			label="Edit comment"
 			submitLabel="Save"
 			initial={comment.body}
-			{busy}
-			{error}
+			busy={editing.busy}
+			error={editing.error}
 			hint="Saving runs moderation again."
 			nested
 			autofocus
-			onsubmit={save}
-			oncancel={() => ((mode = null), (error = undefined))}
+			onsubmit={(body) => editing.save(body)}
+			oncancel={() => editing.cancel()}
 		/>
 	{:else}
 		<p class="body">{comment.body}</p>
@@ -130,18 +80,22 @@
 	{#if editable || deletable}
 		<div class="actions">
 			{#if editable}
-				<CommentAction expanded={mode === 'edit'} onclick={() => toggle('edit')}>Edit</CommentAction
+				<CommentAction expanded={editing.mode === 'edit'} onclick={() => editing.toggle('edit')}
+					>Edit</CommentAction
 				>
 			{/if}
 			{#if deletable}
-				<CommentAction expanded={mode === 'delete'} onclick={() => toggle('delete')}>
+				<CommentAction
+					expanded={editing.mode === 'delete'}
+					onclick={() => editing.toggle('delete')}
+				>
 					Delete
 				</CommentAction>
 			{/if}
 		</div>
 	{/if}
 
-	{#if mode === 'delete'}
+	{#if editing.mode === 'delete'}
 		<CommentConfirm
 			message="Delete this comment? Other readers no longer see its text. It stays here, marked as deleted.{comment.replyCount >
 			0
@@ -149,9 +103,9 @@
 				: ''}"
 			confirmLabel="Delete comment"
 			cancelLabel="Keep comment"
-			{busy}
-			onconfirm={remove}
-			oncancel={() => (mode = null)}
+			busy={editing.busy}
+			onconfirm={() => editing.remove()}
+			oncancel={() => editing.cancel()}
 		/>
 	{/if}
 </li>

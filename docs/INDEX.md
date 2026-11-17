@@ -41,22 +41,22 @@ Each agent reads its own file.
 Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
-- `PRODUCT.md` — Product (~700 tok)
-- `DESIGN.md` — Design (~7.1K tok)
+- `PRODUCT.md` — Product (~740 tok)
+- `DESIGN.md` — Design (~7.4K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–65 Components (~3.6K) ← 1
-  - 66–73 Pages (~2.0K)
+  - 66–73 Pages (~2.3K)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~85.8K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~87.4K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
-  - 68–308 Directory layout (~11.4K)
+  - 68–308 Directory layout (~11.5K)
     - 299–308 File-organisation conventions (~450)
   - 309–322 Styling & theming (~1.1K)
   - 323–335 Copy & voice (~540) ← 1
@@ -65,14 +65,14 @@ Read the sections your task touches.
     - 411–418 Migrations (~330)
   - 419–448 Source sync (~1.9K) ← 3
   - 449–521 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
-  - 522–557 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.3K) ← 2
+  - 522–557 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.4K) ← 2
   - 558–577 UM Disambiguation (~830)
   - 578–586 UM flag rendering (~250)
   - 587–595 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
   - 596–606 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 607–620 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.3K)
+  - 607–620 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K)
   - 621–632 Shared marker pattern (metric row markers) (~410) ← 5
-  - 633–675 Component library (`src/lib/components/`) (~14.1K)
+  - 633–675 Component library (`src/lib/components/`) (~15.3K)
   - 676–686 Live search (`src/lib/components/search/`) (~710)
   - 687–700 Server cache (`src/lib/server/cache/`) (~700)
   - 701–716 TMDB integration (~810)

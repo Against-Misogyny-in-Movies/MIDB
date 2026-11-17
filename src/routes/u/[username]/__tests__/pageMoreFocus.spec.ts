@@ -23,8 +23,10 @@ const PROFILE: PublicProfile = {
 	joinedAt: '2026-01-15',
 	scoreTotal: 0,
 	commentCount: 0,
+	reportCount: 0,
+	titleCount: 0,
 	comments: { comments: [entry('c1')], nextCursor: '99.c1' },
-	reports: []
+	reports: { reports: [], nextCursor: null }
 };
 
 let fetcher: ReturnType<typeof vi.fn>;
