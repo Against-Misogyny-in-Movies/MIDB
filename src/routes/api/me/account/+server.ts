@@ -12,10 +12,7 @@ import {
 	purgeTitlesReports
 } from '#lib/server/http/purge-title.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
-import {
-	DELETE_SESSION_MAX_AGE_MINUTES,
-	type AccountDeleteRefusal
-} from '#lib/media/utils/accountDeletion.ts';
+import { isRecentSession, type AccountDeleteRefusal } from '#lib/media/utils/accountDeletion.ts';
 import type { RequestHandler } from './$types';
 
 const bodySchema = z.object({ username: z.string().max(100) });
@@ -63,9 +60,7 @@ export const DELETE: RequestHandler = async (event) => {
 
 	const session = await currentSession(event.request, user.id);
 	if (!session) error(401, 'Unauthorized');
-	if (Date.now() - session.startedAt.getTime() > DELETE_SESSION_MAX_AGE_MINUTES * 60_000) {
-		return refuse('session-stale');
-	}
+	if (!isRecentSession(session.startedAt)) return refuse('session-stale');
 	if (username.trim().toLowerCase() !== (user.username ?? '').toLowerCase()) {
 		return refuse('username-mismatch');
 	}

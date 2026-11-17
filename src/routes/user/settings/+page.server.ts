@@ -1,8 +1,10 @@
 import { fail } from '@sveltejs/kit';
+import { currentSession } from '#lib/server/auth/current-session.ts';
 import { requireUser } from '#lib/server/auth/guards.ts';
 import { realEmail } from '#lib/server/auth/placeholder-email.ts';
 import { configuredProviders } from '#lib/server/auth/providers.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
+import { isRecentSession } from '#lib/media/utils/accountDeletion.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
 import { purgeProfile } from '#lib/server/http/purge-title.ts';
 import { countLiveSessions } from '#lib/server/data/sessions.ts';
@@ -11,16 +13,19 @@ import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // The one page allowed to send the email to the client; everything else uses PublicUser.
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, request }) => {
 	// The /user layout already makes the response private.
 	const user = await requireUser(locals, { page: true });
+	const session = await currentSession(request, user.id);
 	return {
 		providers: configuredProviders(),
 		email: realEmail(user),
 		// How many rows the sign-in methods card reserves while its lists load in the browser.
 		methods: await getSignInMethodCounts(user.id),
 		// How many rows the sessions card reserves, and whether it has a "Sign out everywhere else".
-		sessions: await countLiveSessions(user.id)
+		sessions: await countLiveSessions(user.id),
+		// Whether the asking session is recent enough to delete the account (`DELETE /api/me/account`); a start time or a token never reaches the client.
+		sessionRecent: session !== null && isRecentSession(session.startedAt)
 	};
 };
 

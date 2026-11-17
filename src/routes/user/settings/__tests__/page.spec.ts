@@ -8,6 +8,7 @@ vi.mock('#lib/auth-client.ts', () => ({
 		signOut: vi.fn()
 	}
 }));
+vi.mock('#lib/server/auth/current-session.ts', () => ({ currentSession: vi.fn() }));
 vi.mock('$app/navigation', () => ({ replaceState: vi.fn(), goto: vi.fn() }));
 vi.mock('$app/state', () => ({
 	page: { url: new URL('http://localhost/user/settings'), state: {} }
@@ -31,7 +32,7 @@ function mount(
 	providers: { google: boolean; discord: boolean } = { google: true, discord: false }
 ) {
 	return render(Page, {
-		data: { me: ME, providers, methods: METHODS, sessions: 2, ...data }
+		data: { me: ME, providers, methods: METHODS, sessions: 2, sessionRecent: true, ...data }
 	} as Parameters<typeof render<typeof Page>>[1]);
 }
 
@@ -83,9 +84,19 @@ describe('the settings page', () => {
 			'#sign-in-methods',
 			'#sessions',
 			'#appearance',
-			'#account-data'
+			'#account-data',
+			'#delete-account'
 		]);
 		for (const href of hrefs) expect(document.querySelector(href!)).toBeTruthy();
+	});
+
+	it('puts the Delete account card last, after Account data, with a trigger and no open plate', () => {
+		const { container } = mount({ email: 'ada@example.org' });
+		const card = container.querySelector('#delete-account');
+		expect(card?.previousElementSibling?.id).toBe('account-data');
+		expect(card?.nextElementSibling).toBeNull();
+		expect(card?.querySelector('input')).toBeNull();
+		expect(card?.querySelector('button')?.textContent?.trim()).toBe('Delete account');
 	});
 
 	it('says where the email comes from, from the providers this deployment offers', () => {

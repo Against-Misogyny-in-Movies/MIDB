@@ -2,6 +2,7 @@
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import OnThisPageLayout from '#lib/components/resources/onThisPageLayout.svelte';
 	import AccountDataCard from '#lib/components/user/accountDataCard.svelte';
+	import DeleteAccountCard from '#lib/components/user/deleteAccountCard.svelte';
 	import AppearanceCard from '#lib/components/user/appearanceCard.svelte';
 	import SessionsCard from '#lib/components/user/sessionsCard.svelte';
 	import SignInMethodsCard from '#lib/components/user/signInMethodsCard.svelte';
@@ -22,7 +23,8 @@
 		{ id: 'sign-in-methods', label: 'Sign-in methods' },
 		{ id: 'sessions', label: 'Sessions' },
 		{ id: 'appearance', label: 'Appearance' },
-		{ id: 'account-data', label: 'Account data' }
+		{ id: 'account-data', label: 'Account data' },
+		{ id: 'delete-account', label: 'Delete account' }
 	];
 
 	// The providers this deployment offers: the email can only come from one of them.
@@ -78,6 +80,7 @@
 			<SessionsCard initialCount={data.sessions} />
 			<AppearanceCard />
 			<AccountDataCard />
+			<DeleteAccountCard username={data.me.username ?? ''} sessionRecent={data.sessionRecent} />
 		</div>
 	</OnThisPageLayout>
 </div>
