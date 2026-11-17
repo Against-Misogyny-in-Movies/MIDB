@@ -160,7 +160,7 @@ Each phase ends green on the verification baseline (`.claude/rules/code-standard
 | B2    | Profile page: the stat row, the additive owner view, the third tab.                                                                                                           |
 | D1    | Docs and copy: `PRIVACY.md`, `SECURITY.md`, `DESIGN.md`, `PRODUCT.md`, `docs/architecture.md`, the open items this closes.                                                    |
 
-A and B are independent. A5 and A6 can ship in one deploy: a scrubbed row has no username, no sign-in method and no session, so a Worker version that does not read `deleted_at` (after a rollback) treats it as an account nobody can use and no page shows.
+A and B are independent. A5 and A6 can ship in one deploy: a scrubbed row has no username, no sign-in method and no session, so a Worker version that does not read `deleted_at` (after a rollback) treats it as an account nobody can use and no page shows. The one exception is a session cookie issued before the deletion, which such a Worker accepts for the cookie cache time.
 
 ## Decisions
 
