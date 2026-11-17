@@ -49,10 +49,7 @@ export type ScrubResult =
 const threadsOf = (userId: string) =>
 	sql`SELECT coalesce(t.root_id, t.id) FROM comments t WHERE t.user_id = ${userId}`;
 
-/**
- * Whether another administrator can still act: not deleted and not banned. The scrub's guard and
- * its pre-check share it.
- */
+/** Whether another administrator can still act: not deleted and not banned. */
 const otherAdministrator = (userId: string) =>
 	sql`EXISTS (SELECT 1 FROM "user" o WHERE o.role = 'administrator' AND o.deleted_at IS NULL AND o.banned_at IS NULL AND o.id != ${userId})`;
 
@@ -213,10 +210,12 @@ function scrubStatements(userId: string, username: string | null, now: Date): Ba
  * as a transaction: the scrub is whole or not applied. Nothing here is chunked: every statement
  * binds the account id and a few constants, far under `D1_MAX_PARAMS`.
  *
- * What the purges need is read first and returned for the caller (`DELETE /api/me`) to purge
- * once the batch has committed. The username to retire is read there too, so a rename that
- * lands between that read and the batch retires the earlier name. A write that lands between that read and the batch leaves one
- * cached entry for its short edge TTL (`docs/architecture.md`, Caching policy).
+ * What the purges need is read first and returned for the caller (`DELETE /api/me/account`)
+ * to purge once the batch has committed. The username to retire is read there too, so a rename
+ * that lands between that read and the batch retires the earlier name.
+ *
+ * A write that lands between the purge-target read and the batch leaves one cached entry for
+ * its short edge TTL (`docs/architecture.md`, Caching policy).
  *
  * Refuses the last administrator (`last-administrator`), checked inside the batch.
  */

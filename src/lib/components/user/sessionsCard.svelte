@@ -7,8 +7,15 @@
 	import SettingsPlate from '#lib/components/user/settingsPlate.svelte';
 	import SettingsList from '#lib/components/user/settingsList.svelte';
 	import SettingsRow from '#lib/components/user/settingsRow.svelte';
+	import type { AccountSession } from '#lib/media/types/sessions.ts';
+	import { UNKNOWN_DEVICE } from '#lib/media/utils/userAgent.ts';
+	import { formatDate, formatTime } from '#lib/media/utils/format.ts';
 	import { SESSION_COOKIE_CACHE_SECONDS } from '#lib/media/utils/sessionCache.ts';
-	import { AccountSessions, OTHERS, SESSIONS_HEADING_ID } from '#lib/sessions.svelte.ts';
+	import {
+		AccountSessions,
+		OTHERS,
+		SESSIONS_HEADING_ID
+	} from '#lib/media/utils/sessions.svelte.js';
 
 	interface Props {
 		/** What the page's load counted: the card reserves that many rows while its list loads. */
@@ -24,13 +31,15 @@
 	const cacheMinutes = SESSION_COOKIE_CACHE_SECONDS / 60;
 	const cacheLine = `A session that was signed out can keep working for up to ${cacheMinutes} ${cacheMinutes === 1 ? 'minute' : 'minutes'}.`;
 
+	/** The start day in UTC like every date on the site, with the time when two rows share a name. */
+	/** A phone, a computer, or a neutral device when the user agent could not be read. */
+	function deviceIcon(session: AccountSession) {
+		if (session.mobile) return 'ri-smartphone-line';
+		return session.label === UNKNOWN_DEVICE ? 'ri-device-line' : 'ri-computer-line';
+	}
+
 	function since(value: string, withTime: boolean) {
-		// The reader's own time zone, in the site's `dd/mm/yyyy` date format.
-		const when = new Date(value).toLocaleString('en-GB', {
-			dateStyle: 'short',
-			...(withTime && { timeStyle: 'short' })
-		});
-		return `Since ${when}`;
+		return `Since ${formatDate(value)}${withTime ? `, ${formatTime(value)}` : ''}`;
 	}
 
 	onMount(() => {
@@ -47,12 +56,18 @@
 	{#if sessions.loadFailed}
 		<Notice tone="error">The sessions could not be loaded. Reload the page to try again.</Notice>
 	{:else if sessions.loading}
-		<SkeletonRows rows={sessions.rowCount} label="Loading sessions" height="var(--row-height)" />
+		<!-- The current session is first and has no action, so it is one line at every width. -->
+		<SkeletonRows
+			rows={sessions.rowCount}
+			label="Loading sessions"
+			height="var(--row-height)"
+			firstHeight="var(--row-line-height)"
+		/>
 	{:else}
 		<SettingsList>
 			{#each sessions.sessions as session (session.id)}
 				<SettingsRow
-					icon={session.mobile ? 'ri-smartphone-line' : 'ri-computer-line'}
+					icon={deviceIcon(session)}
 					name={session.label}
 					detail={since(session.startedAt, sessions.duplicateLabels.includes(session.label))}
 					plateOpen={sessions.confirming === session.id}
@@ -80,6 +95,7 @@
 						<p id="confirm-session-{session.id}" tabindex="-1">
 							Sign out {session.label}? It needs to sign in again.
 						</p>
+						<p>{cacheLine}</p>
 						<div class="flex flex-wrap gap-sm">
 							<button
 								type="button"
@@ -118,6 +134,7 @@
 					<p id="confirm-session-{OTHERS}" tabindex="-1">
 						Sign out every other session? Each needs to sign in again.
 					</p>
+					<p>{cacheLine}</p>
 					<div class="flex flex-wrap gap-sm">
 						<button
 							type="button"
@@ -134,7 +151,6 @@
 					</div>
 				</SettingsPlate>
 			{/if}
-			<p class="label">{cacheLine}</p>
 		</div>
 	{/if}
 </SettingsCard>

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authClient } from '#lib/auth-client.ts';
 	import Notice from '#lib/components/ui/notice.svelte';
@@ -10,6 +9,7 @@
 		DELETE_SESSION_MAX_AGE_MINUTES,
 		type AccountDeleteRefusal
 	} from '#lib/media/utils/accountDeletion.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { session } from '#lib/media/utils/session.svelte.js';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 	import { RETIRED_USERNAME_DAYS } from '#lib/media/utils/username.ts';
@@ -25,6 +25,7 @@
 
 	const TRIGGER_ID = 'delete-account-trigger';
 	const PLATE_TEXT_ID = 'delete-account-plate';
+	const NOTICE_ID = 'delete-account-notice';
 	const ERROR_ID = 'delete-username-error';
 	const SIGN_IN_AGAIN = `/auth?next=${encodeURIComponent('/user/settings#delete-account')}`;
 
@@ -38,14 +39,16 @@
 	let lastAdministrator = $state(false);
 
 	/** Moves focus to an element by id once it is rendered. */
-	async function focusOn(id: string) {
-		await tick();
-		document.getElementById(id)?.focus();
+	function focusOn(id: string) {
+		return focusAfterUpdate(() => document.getElementById(id));
 	}
+
+	/** A notice that replaces the form takes the focus; otherwise the plate's first line does. */
+	const entryId = () => (stale || lastAdministrator ? NOTICE_ID : PLATE_TEXT_ID);
 
 	function openPlate() {
 		open = true;
-		void focusOn(PLATE_TEXT_ID);
+		void focusOn(entryId());
 	}
 
 	function closePlate() {
@@ -89,11 +92,11 @@
 		signingOut = false;
 	}
 
-	/** The form is replaced by a notice; focus goes to the plate's first line, which stays. */
+	/** The form is replaced by a notice; focus goes to the notice's text. */
 	function blockWith(reason: 'stale' | 'last-administrator') {
 		if (reason === 'stale') stale = true;
 		else lastAdministrator = true;
-		void focusOn(PLATE_TEXT_ID);
+		void focusOn(NOTICE_ID);
 	}
 
 	async function refusalOf(response: Response): Promise<AccountDeleteRefusal | null> {
@@ -151,16 +154,23 @@
 	busy={running}
 >
 	<p>Deleting the account takes effect at once and cannot be undone.</p>
+	<p class="group-label">Removed:</p>
 	<ul class="effects">
-		<li>Removed: the email, sign-in methods and sessions.</li>
+		<li>The email, sign-in methods and sessions.</li>
 		<li>
-			Removed: the username and avatar. The profile address stops working, and the username stays
-			unavailable to others for {RETIRED_USERNAME_DAYS} days.
+			The username and avatar. The profile address stops working, and other accounts cannot take the
+			username for {RETIRED_USERNAME_DAYS} days.
 		</li>
-		<li>Removed: comments with no replies, community reports, votes and reports of comments.</li>
 		<li>
-			Kept: a comment with replies stays as a placeholder with no text and no author, so the replies
-			keep their thread.
+			Comments that no other account has replied below, community reports, votes and reports of
+			comments.
+		</li>
+	</ul>
+	<p class="group-label">Kept:</p>
+	<ul class="effects">
+		<li>
+			A comment that another account replied to, directly or further down the thread, stays with no
+			text and no author, so those replies keep their thread.
 		</li>
 	</ul>
 	<div>
@@ -179,11 +189,13 @@
 	{#if open}
 		<div id="delete-account-plate-slot">
 			<SettingsPlate>
-				<p id={PLATE_TEXT_ID} tabindex="-1">
-					<a href="#account-data" class="link">Download the account's data</a> first if a copy is needed.
-				</p>
+				{#if !lastAdministrator}
+					<p id={PLATE_TEXT_ID} tabindex="-1">
+						<a href="#account-data" class="link">Download the account's data</a> first if a copy is needed.
+					</p>
+				{/if}
 				{#if stale}
-					<Notice tone="warn">
+					<Notice tone="warn" id={NOTICE_ID} focusable>
 						Deleting the account needs a sign-in from the last {DELETE_SESSION_MAX_AGE_MINUTES} minutes.
 						Sign out, then sign in again to come back here.
 					</Notice>
@@ -196,7 +208,10 @@
 						</button>
 					</div>
 				{:else if lastAdministrator}
-					<Notice tone="warn">The only administrator cannot delete the account.</Notice>
+					<Notice tone="warn" id={NOTICE_ID} focusable>
+						The only administrator cannot delete the account. Another administrator has to exist
+						first.
+					</Notice>
 					<div class="buttons">
 						<button type="button" class="btn btn--ghost" onclick={closePlate}>
 							Keep the account
@@ -223,7 +238,7 @@
 						</div>
 						<div class="buttons">
 							<button type="submit" class="btn btn--ink" aria-busy={running}>
-								Delete account
+								Delete account permanently
 							</button>
 							<button type="button" class="btn btn--ghost" disabled={running} onclick={closePlate}>
 								Keep the account
@@ -238,6 +253,11 @@
 
 <style lang="postcss">
 	@reference "../../../app.css";
+
+	.group-label {
+		@apply text-sm font-medium;
+		margin-bottom: calc(-1 * var(--spacing-sm));
+	}
 
 	.effects {
 		@apply flex flex-col text-sm;

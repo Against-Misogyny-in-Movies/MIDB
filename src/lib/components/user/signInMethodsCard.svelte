@@ -7,6 +7,7 @@
 	import SettingsCard from '#lib/components/user/settingsCard.svelte';
 	import SettingsList from '#lib/components/user/settingsList.svelte';
 	import SettingsRow from '#lib/components/user/settingsRow.svelte';
+	import { formatDate, formatTime } from '#lib/media/utils/format.ts';
 	import {
 		AUTH_PROVIDERS,
 		providerIcon,
@@ -19,7 +20,7 @@
 		passkeyName,
 		SignInMethods,
 		type InitialMethods
-	} from '#lib/signInMethods.svelte.ts';
+	} from '#lib/media/utils/signInMethods.svelte.js';
 
 	interface Props {
 		providers: ConfiguredProviders;
@@ -38,14 +39,11 @@
 		AUTH_PROVIDERS.filter((p) => providers[p.id] && !methods.linkedProviders.includes(p.id))
 	);
 
+	/** The day in UTC like every date on the site, with the time when two rows share a name. */
 	function added(value?: Date | string | null, withTime = false) {
 		if (!value) return '';
-		// The reader's own time zone, in the site's `dd/mm/yyyy` date format.
-		const when = new Date(value).toLocaleString('en-GB', {
-			dateStyle: 'short',
-			...(withTime && { timeStyle: 'short' })
-		});
-		return `Added ${when}`;
+		const iso = new Date(value).toISOString();
+		return `Added ${formatDate(iso)}${withTime ? `, ${formatTime(iso)}` : ''}`;
 	}
 
 	onMount(() => {

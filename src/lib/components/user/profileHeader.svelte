@@ -36,12 +36,12 @@
 		{ name: 'Comment score', value: scoreTotal },
 		{ name: 'Comments', value: commentCount },
 		{ name: 'Community reports', value: reportCount },
-		{ name: 'Titles', value: titleCount }
+		{ name: 'Films and series', value: titleCount }
 	]);
 </script>
 
 <header class="profile-header">
-	<Avatar {avatarKey} size={64} />
+	<div class="portrait"><Avatar {avatarKey} size={64} /></div>
 	<div class="meta">
 		<h1 class="display">{username}</h1>
 		<dl class="facts">
@@ -76,18 +76,41 @@
 	@reference "../../../app.css";
 
 	/*
-	 * Avatar, name and the owner's actions share one row at every width, so the actions arriving
-	 * after the session loads change no height: on a phone they are icon buttons.
+	 * Below 40rem the avatar and the owner's actions share the first row, which is the 64px
+	 * avatar's height with or without the 44px buttons, and the name and facts take the full width
+	 * beneath, so the actions arriving after the session loads change no height and re-wrap
+	 * nothing. From 40rem it is one row with a fixed-width actions column reserved for everyone,
+	 * wide enough for both buttons, so the name column is the same width before and after.
 	 */
 	.profile-header {
 		@apply grid items-center;
-		grid-template-columns: auto minmax(0, 1fr) auto;
+		--actions-width: 14rem;
+		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-areas:
+			'portrait actions'
+			'meta meta'
+			'stats stats';
 		gap: var(--spacing-md);
+	}
+
+	.portrait {
+		@apply flex;
+		grid-area: portrait;
 	}
 
 	.meta {
 		@apply flex flex-col min-w-0;
+		grid-area: meta;
 		gap: var(--spacing-xs);
+	}
+
+	@media (min-width: 40rem) {
+		.profile-header {
+			grid-template-columns: auto minmax(0, 1fr) var(--actions-width);
+			grid-template-areas:
+				'portrait meta actions'
+				'stats stats stats';
+		}
 	}
 
 	@media (max-width: 40rem) {
@@ -133,7 +156,7 @@
 	 */
 	.stats {
 		@apply grid m-0;
-		grid-column: 1 / -1;
+		grid-area: stats;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: var(--spacing-md);
 		padding-top: var(--spacing-md);
@@ -163,11 +186,8 @@
 	}
 
 	.actions {
-		@apply flex flex-wrap;
+		@apply flex justify-end;
+		grid-area: actions;
 		gap: var(--spacing-sm);
-	}
-
-	.actions:empty {
-		display: none;
 	}
 </style>

@@ -2,6 +2,9 @@
 	import SettingsCard from '#lib/components/user/settingsCard.svelte';
 	import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
+	/** How long the download's object URL stays valid after the click. */
+	const REVOKE_AFTER_MS = 10_000;
+
 	let running = $state(false);
 
 	/** The file name the endpoint chose (`Content-Disposition`), or a plain one. */
@@ -29,7 +32,8 @@
 			link.href = url;
 			link.download = filename;
 			link.click();
-			URL.revokeObjectURL(url);
+			// The browser starts the download after the click returns, so the URL is released later.
+			setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS);
 			toasts.success(`Downloaded ${filename}.`);
 		} catch {
 			toasts.error('The data could not be downloaded. Try again.');

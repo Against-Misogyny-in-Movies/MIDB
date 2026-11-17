@@ -2,9 +2,9 @@
 	import Badge from '#lib/components/ui/badge.svelte';
 	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
 	import CommentAction from './commentAction.svelte';
-	import CommentConfirm from './commentConfirm.svelte';
-	import CommentComposer from './commentComposer.svelte';
 	import CommentLink from './commentLink.svelte';
+	import OwnCommentDelete from './ownCommentDelete.svelte';
+	import OwnCommentEdit from './ownCommentEdit.svelte';
 	import { COMMENT_STATUS_LABELS, unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { UserCommentRow } from '#lib/media/types/comments.ts';
 	import { OwnCommentEditing } from '#lib/media/utils/ownCommentEditing.svelte.js';
@@ -51,18 +51,7 @@
 	</div>
 
 	{#if editing.mode === 'edit'}
-		<CommentComposer
-			label="Edit comment"
-			submitLabel="Save"
-			initial={comment.body}
-			busy={editing.busy}
-			error={editing.error}
-			hint="Saving runs moderation again."
-			nested
-			autofocus
-			onsubmit={(body) => editing.save(body)}
-			oncancel={() => editing.cancel()}
-		/>
+		<OwnCommentEdit {editing} body={comment.body} oncancel={() => editing.cancel()} />
 	{:else}
 		<p class="body">{comment.body}</p>
 	{/if}
@@ -96,17 +85,7 @@
 	{/if}
 
 	{#if editing.mode === 'delete'}
-		<CommentConfirm
-			message="Delete this comment? Other readers no longer see its text. It stays here, marked as deleted.{comment.replyCount >
-			0
-				? ' Replies stay under a placeholder.'
-				: ''}"
-			confirmLabel="Delete comment"
-			cancelLabel="Keep comment"
-			busy={editing.busy}
-			onconfirm={() => editing.remove()}
-			oncancel={() => editing.cancel()}
-		/>
+		<OwnCommentDelete {editing} replyCount={comment.replyCount} oncancel={() => editing.cancel()} />
 	{/if}
 </li>
 

@@ -77,8 +77,14 @@ describe('the settings page', () => {
 
 	it('lists its sections in "On this page" and gives each an id', () => {
 		mount({ email: 'ada@example.org' });
-		const nav = screen.getByRole('navigation', { name: 'On this page' });
-		const hrefs = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+		// The side list and the phone list (CSS shows one of them) carry the same links.
+		const navs = screen.getAllByRole('navigation', { name: 'On this page' });
+		expect(navs).toHaveLength(2);
+		const [side, phone] = navs.map((nav) =>
+			[...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'))
+		);
+		expect(phone).toEqual(side);
+		const hrefs = side;
 		expect(hrefs).toEqual([
 			'#email',
 			'#sign-in-methods',
@@ -93,8 +99,9 @@ describe('the settings page', () => {
 	it('puts the Delete account card last, after Account data, with a trigger and no open plate', () => {
 		const { container } = mount({ email: 'ada@example.org' });
 		const card = container.querySelector('#delete-account');
-		expect(card?.previousElementSibling?.id).toBe('account-data');
-		expect(card?.nextElementSibling).toBeNull();
+		// The card sits in its own wrapper, which sets it apart from Account data.
+		expect(card?.parentElement?.previousElementSibling?.id).toBe('account-data');
+		expect(card?.parentElement?.nextElementSibling).toBeNull();
 		expect(card?.querySelector('input')).toBeNull();
 		expect(card?.querySelector('button')?.textContent?.trim()).toBe('Delete account');
 	});

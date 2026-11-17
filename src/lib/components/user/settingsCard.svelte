@@ -28,6 +28,7 @@
 
 	.settings-card {
 		@apply flex flex-col;
+		--row-line-height: calc(2.75rem + 2 * var(--spacing-sm));
 		--row-height: calc(2 * 2.75rem + 3 * var(--spacing-sm));
 		gap: var(--spacing-md);
 		padding: 24px;
@@ -36,7 +37,7 @@
 
 	@media (min-width: 30rem) {
 		.settings-card {
-			--row-height: calc(2.75rem + 2 * var(--spacing-sm));
+			--row-height: var(--row-line-height);
 		}
 	}
 

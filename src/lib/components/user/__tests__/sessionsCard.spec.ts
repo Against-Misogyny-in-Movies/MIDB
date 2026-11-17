@@ -83,10 +83,16 @@ describe('the loaded list', () => {
 		expect(container.querySelector('section')?.getAttribute('aria-busy')).toBe('false');
 	});
 
-	it('says how long a signed-out session can keep working, from the cookie cache time', async () => {
+	it('says how long a signed-out session can keep working in each confirmation, from the cookie cache time', async () => {
 		fetchMock.mockResolvedValue(json([here, phone]));
 		mount(2);
 		await screen.findByText('Safari on iOS');
+		expect(screen.queryByText(/can keep working/)).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: 'Sign out Safari on iOS' }));
+		expect(screen.getByText(/can keep working for up to/).textContent).toContain(
+			`${SESSION_COOKIE_CACHE_SECONDS / 60} minutes`
+		);
+		await fireEvent.click(screen.getByRole('button', { name: 'Sign out everywhere else' }));
 		expect(screen.getByText(/can keep working for up to/).textContent).toContain(
 			`${SESSION_COOKIE_CACHE_SECONDS / 60} minutes`
 		);
@@ -99,13 +105,24 @@ describe('the loaded list', () => {
 		expect(screen.queryByText(/can keep working/)).toBeNull();
 	});
 
+	it('draws a phone, a computer or, for an unreadable agent, a neutral device', async () => {
+		const unknown = { ...laptop, id: 's-unknown', label: 'Unknown device' };
+		fetchMock.mockResolvedValue(json([here, phone, unknown]));
+		const { container } = mount(3);
+		await screen.findByText('Safari on iOS');
+		const icons = [...container.querySelectorAll('li .icon')].map((i) => i.className);
+		expect(icons[0]).toContain('ri-computer-line');
+		expect(icons[1]).toContain('ri-smartphone-line');
+		expect(icons[2]).toContain('ri-device-line');
+	});
+
 	it('adds the time to sessions with the same label', async () => {
 		const twin = { ...laptop, id: 's-twin', label: 'Safari on iOS' };
 		fetchMock.mockResolvedValue(json([here, phone, twin]));
 		const { container } = mount(3);
 		await screen.findAllByText('Safari on iOS');
 		expect(container.querySelectorAll('li')[1].textContent).toMatch(
-			/Since 03\/11\/2026, \d\d:\d\d/
+			/Since 03\/11\/2026, \d\d:\d\d UTC/
 		);
 	});
 });

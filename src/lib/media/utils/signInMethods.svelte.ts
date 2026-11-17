@@ -7,6 +7,7 @@ import {
 	type AuthClientError
 } from '#lib/auth-errors.ts';
 import { AUTH_PROVIDERS, providerLabel, type Provider } from '#lib/media/utils/auth-providers.ts';
+import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 import { currentDeviceName, DEFAULT_PASSKEY_NAME } from '#lib/media/utils/deviceName.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
@@ -50,9 +51,8 @@ export const passkeyKind = (p: PasskeyRow) =>
 	p.deviceType === 'multiDevice' ? 'Can sync between devices' : 'This device only';
 
 /** Moves focus to an element by id, or to the list heading when that element is gone. */
-async function focusOn(id: string) {
-	await tick();
-	(document.getElementById(id) ?? document.getElementById(HEADING_ID))?.focus();
+function focusOn(id: string) {
+	return focusAfterUpdate(() => document.getElementById(id) ?? document.getElementById(HEADING_ID));
 }
 
 /**

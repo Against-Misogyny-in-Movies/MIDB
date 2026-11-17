@@ -10,7 +10,7 @@
 		detail: string;
 		/** Sits after the name, such as a `Badge`. */
 		badge?: Snippet;
-		/** The row's buttons. The slot is kept when empty, so rows are one height. */
+		/** The row's buttons. An empty slot takes no line, so a row without actions is one line at every width. */
 		actions?: Snippet;
 		/** The confirmation or form that opens under the row, in a `--surface-sunken` plate. */
 		plate?: Snippet;
@@ -94,6 +94,10 @@
 		@apply flex items-center gap-sm;
 		grid-column: 1 / -1;
 		min-height: 2.75rem;
+	}
+
+	.row-actions:empty {
+		display: none;
 	}
 
 	@media (min-width: 30rem) {

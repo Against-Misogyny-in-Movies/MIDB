@@ -48,7 +48,7 @@ async function signOutCookies(request: Request): Promise<string[]> {
  * (401), `RL_DELETE_ACCOUNT` per user for every role (429), a JSON body `{ username }` (400),
  * the asking session read from the database (401 when it has ended) and started within
  * `DELETE_SESSION_MAX_AGE_MINUTES` (403 `session-stale`), the typed username equal to the
- * account's own (422 `username-mismatch`), and not the last administrator (409
+ * account's own (422 `username-mismatch`, also when the account has no username or nothing was typed), and not the last administrator (409
  * `last-administrator`). A muted account may delete itself. The answer is `{ ok: true }` with
  * the cleared session cookies; the page clears the `midb_hint` cookie. Private and never
  * cached.
@@ -61,7 +61,8 @@ export const DELETE: RequestHandler = async (event) => {
 	const session = await currentSession(event.request, user.id);
 	if (!session) error(401, 'Unauthorized');
 	if (!isRecentSession(session.startedAt)) return refuse('session-stale');
-	if (username.trim().toLowerCase() !== (user.username ?? '').toLowerCase()) {
+	const typed = username.trim().toLowerCase();
+	if (!user.username || typed === '' || typed !== user.username.toLowerCase()) {
 		return refuse('username-mismatch');
 	}
 

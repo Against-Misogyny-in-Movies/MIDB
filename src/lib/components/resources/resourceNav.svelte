@@ -6,9 +6,11 @@
 
 	interface Props {
 		items: Item[];
+		/** Always the plain wrapped list of the phone layout, whatever the width (a page that shows the list in its column, not beside it). */
+		wrapped?: boolean;
 	}
 
-	let { items }: Props = $props();
+	let { items, wrapped = false }: Props = $props();
 
 	// Seeded to the first section; the scroll handler below keeps it in sync.
 	let active = $state('');
@@ -50,7 +52,7 @@
 	});
 </script>
 
-<nav class="resource-nav" aria-label="On this page">
+<nav class="resource-nav" class:wrapped aria-label="On this page">
 	<p class="label heading">On this page</p>
 	<ul>
 		{#each items as item (item.id)}
@@ -111,7 +113,7 @@
 		}
 	}
 
-	/* Phones: a plain list of the four sections under the intro; nothing pins. */
+	/* Phones, and any width with `wrapped`: a plain wrapped list under the intro; nothing pins. */
 	@media (max-width: 767px) {
 		ul {
 			@apply flex-row flex-wrap gap-x-md;
@@ -125,5 +127,22 @@
 			color: var(--ink-muted);
 			background-color: transparent;
 		}
+	}
+
+	.wrapped .heading {
+		padding-inline: 0;
+	}
+
+	.wrapped ul {
+		@apply flex-row flex-wrap gap-x-md;
+	}
+
+	.wrapped a {
+		padding-inline: 0;
+	}
+
+	.wrapped a.active {
+		color: var(--ink-muted);
+		background-color: transparent;
 	}
 </style>

@@ -6,12 +6,19 @@
 		label: string;
 		/** A row's height, as a CSS length, so the loaded row takes its place without a shift. */
 		height?: string;
+		/** The first row's height when it differs from the others, as a CSS length. */
+		firstHeight?: string;
 	}
 
-	let { rows, label, height = '2.375rem' }: Props = $props();
+	let { rows, label, height = '2.375rem', firstHeight }: Props = $props();
 </script>
 
-<div class="skeleton" role="status" style:--skeleton-row-height={height}>
+<div
+	class="skeleton"
+	role="status"
+	style:--skeleton-row-height={height}
+	style:--skeleton-first-height={firstHeight ?? height}
+>
 	<span class="sr-only">{label}</span>
 	{#each { length: rows } as _, i (i)}
 		<div class="skeleton-row"></div>
@@ -31,6 +38,10 @@
 		box-sizing: content-box;
 		height: var(--skeleton-row-height);
 		animation: pulse 1.6s ease-in-out infinite;
+	}
+
+	.skeleton-row:first-of-type {
+		height: var(--skeleton-first-height);
 	}
 
 	.skeleton-row + .skeleton-row {

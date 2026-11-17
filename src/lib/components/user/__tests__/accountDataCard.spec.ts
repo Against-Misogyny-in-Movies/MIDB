@@ -55,6 +55,8 @@ describe('the account data card', () => {
 		expect(fetchMock).toHaveBeenCalledWith('/api/me/export', { cache: 'no-store' });
 		expect(clicked[0].download).toBe('midb-data-anna-2026-11-17.json');
 		expect(clicked[0].href).toBe('blob:export');
+		// Released later, once the browser has started the download.
+		expect(revokeObjectURL).not.toHaveBeenCalled();
 		expect(toasts.items[0]).toMatchObject({
 			tone: 'success',
 			text: 'Downloaded midb-data-anna-2026-11-17.json.'

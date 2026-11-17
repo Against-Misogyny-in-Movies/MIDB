@@ -91,6 +91,26 @@ export function formatDate(iso: string): string {
 	return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
 }
 
+const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+	hour: '2-digit',
+	minute: '2-digit',
+	hourCycle: 'h23',
+	timeZone: 'UTC'
+});
+
+/**
+ * Formats the time of day as `14:05 UTC`, to tell apart two things that share a `formatDate`
+ * day. Read in UTC like `formatDate`. Returns an em-dash for an empty or unparseable value.
+ *
+ * @param iso - An ISO date-time string, or `''`.
+ * @returns The time as `HH:mm UTC`, or `"—"`.
+ */
+export function formatTime(iso: string): string {
+	if (!iso) return '—';
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? '—' : `${timeFormatter.format(date)} UTC`;
+}
+
 /**
  * Moves a trailing English article to the front. The Bechdel Test year pages (the synced
  * titles) and TMDB give titles in reading order (`"The Matrix"`), which pass through

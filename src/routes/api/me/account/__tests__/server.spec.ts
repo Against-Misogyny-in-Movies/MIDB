@@ -130,6 +130,13 @@ describe('DELETE /api/me/account', () => {
 		expect(mocks.scrub).not.toHaveBeenCalled();
 	});
 
+	it('refuses an account with no username, even with nothing typed', async () => {
+		const nameless = { ...anna, username: null };
+		expect((await DELETE(event(nameless, { username: '' }))).status).toBe(422);
+		expect((await DELETE(event(nameless, { username: '  ' }))).status).toBe(422);
+		expect(mocks.scrub).not.toHaveBeenCalled();
+	});
+
 	it('compares the username without case or surrounding space', async () => {
 		expect((await DELETE(event(anna, { username: '  ANNA_1234 ' }))).status).toBe(200);
 	});

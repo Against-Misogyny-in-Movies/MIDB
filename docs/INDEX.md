@@ -42,51 +42,51 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
 - `PRODUCT.md` — Product (~740 tok)
-- `DESIGN.md` — Design (~7.4K tok)
+- `DESIGN.md` — Design (~7.7K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
   - 37–65 Components (~3.6K) ← 1
-  - 66–73 Pages (~2.3K)
+  - 66–73 Pages (~2.5K)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~87.4K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~89.2K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
-  - 68–308 Directory layout (~11.5K)
-    - 299–308 File-organisation conventions (~450)
-  - 309–322 Styling & theming (~1.1K)
-  - 323–335 Copy & voice (~540) ← 1
-  - 336–373 Routes (~25.5K)
-  - 374–418 User & roles (~3.9K)
-    - 411–418 Migrations (~330)
-  - 419–448 Source sync (~1.9K) ← 3
-  - 449–521 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
-  - 522–557 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.4K) ← 2
-  - 558–577 UM Disambiguation (~830)
-  - 578–586 UM flag rendering (~250)
-  - 587–595 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 596–606 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 607–620 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K)
-  - 621–632 Shared marker pattern (metric row markers) (~410) ← 5
-  - 633–675 Component library (`src/lib/components/`) (~15.3K)
-  - 676–686 Live search (`src/lib/components/search/`) (~710)
-  - 687–700 Server cache (`src/lib/server/cache/`) (~700)
-  - 701–716 TMDB integration (~810)
-  - 717–735 Auth flow (Better Auth) (~2.0K)
-  - 736–758 Caching policy (~2.1K) ← 9
-  - 759–816 Configuration & environment (~4.0K)
-    - 776–788 Local run sequence (~130)
-    - 789–792 npm scripts (~200)
-    - 793–803 CI (`.github/workflows/tests.yml`) (~490)
-    - 804–816 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 817–833 Testing (~1.2K)
-    - 828–833 Verification baseline (~80)
-  - 834–842 Known gaps / TODO (~180) ← 1
-  - 843–851 Related docs (~140)
+  - 68–306 Directory layout (~11.5K)
+    - 297–306 File-organisation conventions (~450)
+  - 307–320 Styling & theming (~1.1K)
+  - 321–333 Copy & voice (~540) ← 1
+  - 334–371 Routes (~26.5K)
+  - 372–416 User & roles (~3.9K)
+    - 409–416 Migrations (~330)
+  - 417–446 Source sync (~1.9K) ← 3
+  - 447–519 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
+  - 520–555 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.4K) ← 2
+  - 556–575 UM Disambiguation (~830)
+  - 576–584 UM flag rendering (~250)
+  - 585–593 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 594–604 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 605–618 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K)
+  - 619–630 Shared marker pattern (metric row markers) (~410) ← 5
+  - 631–673 Component library (`src/lib/components/`) (~15.9K)
+  - 674–684 Live search (`src/lib/components/search/`) (~710)
+  - 685–698 Server cache (`src/lib/server/cache/`) (~700)
+  - 699–714 TMDB integration (~810)
+  - 715–733 Auth flow (Better Auth) (~2.0K)
+  - 734–756 Caching policy (~2.1K) ← 9
+  - 757–814 Configuration & environment (~4.0K)
+    - 774–786 Local run sequence (~130)
+    - 787–790 npm scripts (~200)
+    - 791–801 CI (`.github/workflows/tests.yml`) (~490)
+    - 802–814 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 815–831 Testing (~1.2K)
+    - 826–831 Verification baseline (~80)
+  - 832–840 Known gaps / TODO (~180) ← 1
+  - 841–849 Related docs (~140)
 
 ## Phases
 
@@ -126,9 +126,9 @@ Read before a change that touches what they describe.
   - 5–26 Network (~5.6K)
   - 27–37 Supply chain (~570)
   - 38–43 Reporting a vulnerability (~90)
-- `PRIVACY.md` — Privacy (~4.4K tok)
-  - 5–15 Reading the site (~660)
-  - 16–35 Signing in (~1.6K) ← 1
+- `PRIVACY.md` — Privacy (~4.7K tok)
+  - 5–15 Reading the site (~720)
+  - 16–35 Signing in (~1.7K) ← 1
   - 36–49 Ratings and comments (~2.1K)
   - 50–53 Contact (~40)
 - `ACCESSIBILITY.md` — Accessibility (~660 tok)

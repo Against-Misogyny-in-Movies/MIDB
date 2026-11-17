@@ -50,7 +50,7 @@ describe('the public profile page', () => {
 
 	it('shows four figures in the header, each named once, and a zero as 0', () => {
 		mount();
-		const figures = ['Comment score', 'Comments', 'Community reports', 'Titles'].map(
+		const figures = ['Comment score', 'Comments', 'Community reports', 'Films and series'].map(
 			(name) => screen.getAllByText(name).find((el) => el.tagName === 'DT')!
 		);
 		expect(figures.map((dt) => dt.nextElementSibling?.textContent)).toEqual(['42', '2', '1', '2']);

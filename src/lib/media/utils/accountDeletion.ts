@@ -10,7 +10,7 @@ export function isRecentSession(startedAt: Date, now: number = Date.now()): bool
 	return now - startedAt.getTime() <= DELETE_SESSION_MAX_AGE_MINUTES * 60_000;
 }
 
-/** Why `DELETE /api/me` refused to delete the account, for the settings page to put in words. */
+/** Why `DELETE /api/me/account` refused to delete the account, for the settings page to put in words. */
 export const ACCOUNT_DELETE_REFUSALS = [
 	'username-mismatch',
 	'session-stale',

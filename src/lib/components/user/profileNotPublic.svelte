@@ -28,7 +28,9 @@
 		{#each items.reports as report (report.titleId)}
 			{@const standing = readerStandingLabel(effectiveStanding(report))}
 			<li>
-				<ProfileTitleLink kind={report.kind} tmdbId={report.tmdbId} name={report.title} />
+				<span class="title-line">
+					<ProfileTitleLink kind={report.kind} tmdbId={report.tmdbId} name={report.title} />
+				</span>
 				<span class="meta">
 					<Badge tone={standing.tone}>{standing.label}</Badge>
 					<time class="label" datetime={report.updatedAt}
@@ -60,6 +62,11 @@
 		@apply flex flex-col;
 		gap: var(--spacing-xs);
 		padding: var(--spacing-md) 20px;
+	}
+
+	/* The title is the size a comment row gives it. */
+	.title-line {
+		@apply text-sm;
 	}
 
 	.meta {

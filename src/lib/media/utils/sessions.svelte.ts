@@ -1,5 +1,5 @@
-import { tick } from 'svelte';
 import type { AccountSession } from '#lib/media/types/sessions.ts';
+import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 export const SESSIONS_HEADING_ID = 'sessions-heading';
@@ -8,9 +8,10 @@ export const SESSIONS_HEADING_ID = 'sessions-heading';
 export const OTHERS = 'others';
 
 /** Moves focus to an element by id, or to the card's heading when that element is gone. */
-async function focusOn(id: string) {
-	await tick();
-	(document.getElementById(id) ?? document.getElementById(SESSIONS_HEADING_ID))?.focus();
+function focusOn(id: string) {
+	return focusAfterUpdate(
+		() => document.getElementById(id) ?? document.getElementById(SESSIONS_HEADING_ID)
+	);
 }
 
 /**

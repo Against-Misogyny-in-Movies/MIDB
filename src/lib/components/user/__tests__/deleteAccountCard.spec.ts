@@ -25,7 +25,7 @@ const typeName = async (value: string) => {
 	await fireEvent.input(screen.getByLabelText(/Type the username/), { target: { value } });
 };
 const submit = async () => {
-	await fireEvent.click(screen.getAllByRole('button', { name: 'Delete account' }).at(-1)!);
+	await fireEvent.click(screen.getByRole('button', { name: 'Delete account permanently' }));
 };
 const answer = (status: number, body: unknown = {}) =>
 	fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status }));
@@ -48,11 +48,14 @@ describe('the closed card', () => {
 	it('states what is removed and what stays, with the retired-name wait from the code', () => {
 		const { container } = mount();
 		expect(screen.getByRole('heading', { name: 'Delete account' })).toBeTruthy();
-		const text = container.textContent ?? '';
+		const text = (container.textContent ?? '').replace(/\s+/g, ' ');
 		expect(text).toContain('takes effect at once and cannot be undone');
-		expect(text).toContain('Removed: the email, sign-in methods and sessions.');
-		expect(text).toContain(`unavailable to others for ${RETIRED_USERNAME_DAYS} days`);
-		expect(text).toContain('Kept: a comment with replies stays as a placeholder');
+		expect(text).toContain('Removed:');
+		expect(text).toContain('The email, sign-in methods and sessions.');
+		expect(text).toContain(`cannot take the username for ${RETIRED_USERNAME_DAYS} days`);
+		expect(text).toContain('Comments that no other account has replied below');
+		expect(text).toContain('Kept:');
+		expect(text).toContain('A comment that another account replied to, directly or further down');
 		expect(container.querySelectorAll('li')).toHaveLength(4);
 	});
 
@@ -77,7 +80,9 @@ describe('the open plate', () => {
 		const input = screen.getByLabelText('Type the username Ada_1234 to confirm');
 		expect(input.getAttribute('autocomplete')).toBe('off');
 		expect(input.getAttribute('spellcheck')).toBe('false');
-		expect(container.querySelector('.btn--ink')?.textContent).toContain('Delete account');
+		expect(container.querySelector('.btn--ink')?.textContent).toContain(
+			'Delete account permanently'
+		);
 	});
 
 	it('closes on Keep the account, clears the field and returns focus to the trigger', async () => {
@@ -151,7 +156,7 @@ describe('deleting', () => {
 		await open();
 		await typeName('ada_1234');
 		await submit();
-		const button = screen.getAllByRole('button', { name: 'Delete account' }).at(-1)!;
+		const button = screen.getByRole('button', { name: 'Delete account permanently' });
 		await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'));
 		expect(button).toHaveProperty('disabled', false);
 		await submit();
@@ -185,6 +190,7 @@ describe('deleting', () => {
 		await screen.findByText(new RegExp(`last ${DELETE_SESSION_MAX_AGE_MINUTES} minutes`));
 		expect(screen.queryByLabelText(/Type the username/)).toBeNull();
 		expect(screen.getByRole('button', { name: 'Sign out and sign in again' })).toBeTruthy();
+		await waitFor(() => expect(document.activeElement?.id).toBe('delete-account-notice'));
 	});
 
 	it('replaces the form with the administrator notice on a last-administrator answer', async () => {
@@ -193,8 +199,11 @@ describe('deleting', () => {
 		await open();
 		await typeName('ada_1234');
 		await submit();
-		await screen.findByText('The only administrator cannot delete the account.');
+		await screen.findByText(/The only administrator cannot delete the account/);
+		expect(screen.getByText(/Another administrator has to exist first/)).toBeTruthy();
 		expect(screen.queryByLabelText(/Type the username/)).toBeNull();
+		expect(screen.queryByRole('link', { name: "Download the account's data" })).toBeNull();
+		await waitFor(() => expect(document.activeElement?.id).toBe('delete-account-notice'));
 		expect(screen.queryByRole('button', { name: 'Delete account', expanded: true })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Keep the account' })).toBeTruthy();
 	});

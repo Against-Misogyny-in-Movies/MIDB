@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import OnThisPageLayout from '#lib/components/resources/onThisPageLayout.svelte';
+	import ResourceNav from '#lib/components/resources/resourceNav.svelte';
 	import AccountDataCard from '#lib/components/user/accountDataCard.svelte';
 	import DeleteAccountCard from '#lib/components/user/deleteAccountCard.svelte';
 	import AppearanceCard from '#lib/components/user/appearanceCard.svelte';
@@ -66,6 +67,11 @@
 				</div>
 			</header>
 
+			<!-- Beside the column from 56rem (`OnThisPageLayout`); below it the same list sits here. -->
+			<div class="section-nav">
+				<ResourceNav items={sections} wrapped />
+			</div>
+
 			<section id="email" class="card plain" aria-labelledby="email-heading">
 				<h2 id="email-heading">Email</h2>
 				{#if data.email}
@@ -80,7 +86,9 @@
 			<SessionsCard initialCount={data.sessions} />
 			<AppearanceCard />
 			<AccountDataCard />
-			<DeleteAccountCard username={data.me.username ?? ''} sessionRecent={data.sessionRecent} />
+			<div class="apart">
+				<DeleteAccountCard username={data.me.username ?? ''} sessionRecent={data.sessionRecent} />
+			</div>
 		</div>
 	</OnThisPageLayout>
 </div>
@@ -138,6 +146,17 @@
 			@apply inline-flex items-center;
 			min-height: 2.75rem;
 		}
+	}
+
+	@media (min-width: 56rem) {
+		.section-nav {
+			@apply hidden;
+		}
+	}
+
+	/* Delete account sits a step further from Account data than the other cards sit apart. */
+	.apart {
+		margin-top: var(--spacing-lg);
 	}
 
 	h2 {

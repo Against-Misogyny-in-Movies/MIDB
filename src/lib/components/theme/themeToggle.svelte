@@ -23,4 +23,16 @@
 	button:hover {
 		@apply text-ink;
 	}
+
+	/* A 2.75rem touch target around the 1.125rem icon. The negative margin gives the extra back,
+	   so the icon sits where it did and the header neither grows nor widens. */
+	@media (pointer: coarse) {
+		button {
+			@apply items-center justify-center;
+			box-sizing: border-box;
+			width: 2.75rem;
+			height: 2.75rem;
+			margin-inline: calc((1.125rem - 2.75rem) / 2);
+		}
+	}
 </style>

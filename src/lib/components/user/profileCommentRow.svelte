@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Badge from '#lib/components/ui/badge.svelte';
-	import CommentComposer from '#lib/components/comments/commentComposer.svelte';
-	import CommentConfirm from '#lib/components/comments/commentConfirm.svelte';
 	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import CommentMenu from '#lib/components/comments/commentMenu.svelte';
+	import OwnCommentDelete from '#lib/components/comments/ownCommentDelete.svelte';
+	import OwnCommentEdit from '#lib/components/comments/ownCommentEdit.svelte';
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
 	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
 	import type { ProfileComment } from '#lib/media/types/profile.ts';
@@ -94,18 +94,7 @@
 	</p>
 {/if}
 {#if editing.mode === 'edit'}
-	<CommentComposer
-		label="Edit comment"
-		submitLabel="Save"
-		initial={body}
-		busy={editing.busy}
-		error={editing.error}
-		hint="Saving runs moderation again."
-		nested
-		autofocus
-		onsubmit={(text) => editing.save(text)}
-		oncancel={cancel}
-	/>
+	<OwnCommentEdit {editing} {body} oncancel={cancel} />
 {:else}
 	<p class="body">{body}</p>
 {/if}
@@ -118,17 +107,7 @@
 	</span>
 {/if}
 {#if own && editing.mode === 'delete'}
-	<CommentConfirm
-		message="Delete this comment? Other readers no longer see its text. It stays here, marked as deleted.{own.replyCount >
-		0
-			? ' Replies stay under a placeholder.'
-			: ''}"
-		confirmLabel="Delete comment"
-		cancelLabel="Keep comment"
-		busy={editing.busy}
-		onconfirm={() => editing.remove()}
-		oncancel={cancel}
-	/>
+	<OwnCommentDelete {editing} replyCount={own.replyCount} oncancel={cancel} />
 {/if}
 
 <style lang="postcss">
