@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
 	import OnThisPageLayout from '#lib/components/resources/onThisPageLayout.svelte';
+	import SessionsCard from '#lib/components/user/sessionsCard.svelte';
 	import SignInMethodsCard from '#lib/components/user/signInMethodsCard.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import { AUTH_PROVIDERS } from '#lib/media/utils/auth-providers.ts';
@@ -16,7 +17,8 @@
 	// One entry per section on the page, in order.
 	const sections = [
 		{ id: 'email', label: 'Email' },
-		{ id: 'sign-in-methods', label: 'Sign-in methods' }
+		{ id: 'sign-in-methods', label: 'Sign-in methods' },
+		{ id: 'sessions', label: 'Sessions' }
 	];
 
 	// The providers this deployment offers: the email can only come from one of them.
@@ -69,6 +71,7 @@
 			</section>
 
 			<SignInMethodsCard providers={data.providers} initial={data.methods} />
+			<SessionsCard initialCount={data.sessions} />
 		</div>
 	</OnThisPageLayout>
 </div>

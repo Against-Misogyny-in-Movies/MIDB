@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('#lib/auth-client.ts', () => ({
 	authClient: {
@@ -31,11 +31,21 @@ function mount(
 	providers: { google: boolean; discord: boolean } = { google: true, discord: false }
 ) {
 	return render(Page, {
-		data: { me: ME, providers, methods: METHODS, ...data }
+		data: { me: ME, providers, methods: METHODS, sessions: 2, ...data }
 	} as Parameters<typeof render<typeof Page>>[1]);
 }
 
-afterEach(cleanup);
+beforeEach(() => {
+	vi.stubGlobal(
+		'fetch',
+		vi.fn(() => new Promise(() => {}))
+	);
+});
+
+afterEach(() => {
+	cleanup();
+	vi.unstubAllGlobals();
+});
 
 describe('the settings route', () => {
 	it('renders on the server: its load does not turn SSR off', () => {
@@ -44,6 +54,13 @@ describe('the settings route', () => {
 });
 
 describe('the settings page', () => {
+	it('reserves a skeleton row per session the load counted, below the methods card', () => {
+		const { container } = mount({ email: 'ada@example.org' });
+		const card = container.querySelector('#sessions');
+		expect(card?.querySelectorAll('.skeleton-row')).toHaveLength(2);
+		expect(card?.previousElementSibling?.id).toBe('sign-in-methods');
+	});
+
 	it('names whose settings these are and links to the public profile', () => {
 		mount({ email: 'ada@example.org' });
 		expect(screen.getByText('ada_1234')).toBeTruthy();
@@ -57,7 +74,7 @@ describe('the settings page', () => {
 		mount({ email: 'ada@example.org' });
 		const nav = screen.getByRole('navigation', { name: 'On this page' });
 		const hrefs = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
-		expect(hrefs).toEqual(['#email', '#sign-in-methods']);
+		expect(hrefs).toEqual(['#email', '#sign-in-methods', '#sessions']);
 		for (const href of hrefs) expect(document.querySelector(href!)).toBeTruthy();
 	});
 

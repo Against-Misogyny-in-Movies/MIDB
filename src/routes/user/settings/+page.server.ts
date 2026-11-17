@@ -5,6 +5,7 @@ import { configuredProviders } from '#lib/server/auth/providers.ts';
 import { rateLimit } from '#lib/server/http/rate-limit.ts';
 import { isStaff } from '#lib/media/utils/staff.ts';
 import { purgeProfile } from '#lib/server/http/purge-title.ts';
+import { countLiveSessions } from '#lib/server/data/sessions.ts';
 import { getSignInMethodCounts } from '#lib/server/data/sign-in-methods.ts';
 import { toPublicUser, updateProfile } from '#lib/server/data/user-queries.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -17,7 +18,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		providers: configuredProviders(),
 		email: realEmail(user),
 		// How many rows the sign-in methods card reserves while its lists load in the browser.
-		methods: await getSignInMethodCounts(user.id)
+		methods: await getSignInMethodCounts(user.id),
+		// How many rows the sessions card reserves, and whether it has a "Sign out everywhere else".
+		sessions: await countLiveSessions(user.id)
 	};
 };
 

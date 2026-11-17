@@ -4,6 +4,9 @@
 	import { page } from '$app/state';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import SkeletonRows from '#lib/components/ui/skeletonRows.svelte';
+	import SettingsCard from '#lib/components/user/settingsCard.svelte';
+	import SettingsList from '#lib/components/user/settingsList.svelte';
+	import SettingsRow from '#lib/components/user/settingsRow.svelte';
 	import {
 		AUTH_PROVIDERS,
 		providerIcon,
@@ -60,14 +63,12 @@
 
 <svelte:window onpageshow={(event) => event.persisted && methods.restored()} />
 
-<section
+<SettingsCard
 	id="sign-in-methods"
-	class="card methods"
-	aria-busy={methods.loading || methods.busy}
-	aria-labelledby={HEADING_ID}
+	headingId={HEADING_ID}
+	title="Sign-in methods"
+	busy={methods.loading || methods.busy}
 >
-	<h2 id={HEADING_ID} tabindex="-1">Sign-in methods</h2>
-
 	{#if methods.onlyMethod && !methods.loadFailed}
 		<Notice tone="warn" id="last-method-hint">
 			This account has one sign-in method, so it cannot be removed. MIDB sends no recovery email:
@@ -86,130 +87,124 @@
 			height="var(--row-height)"
 		/>
 	{:else}
-		<ul>
+		<SettingsList>
 			{#each methods.accounts as account (account.id)}
 				{@const key = `account:${account.id}`}
-				<li>
-					<div class="row">
-						<i class="{providerIcon(account.providerId)} icon" aria-hidden="true"></i>
-						<div class="meta">
-							<span class="name">{providerLabel(account.providerId)}</span>
-							<span class="label detail">{added(account.createdAt)}</span>
-						</div>
-						<div class="row-actions">
+				<SettingsRow
+					icon={providerIcon(account.providerId)}
+					name={providerLabel(account.providerId)}
+					detail={added(account.createdAt)}
+					plateOpen={methods.confirming === key}
+				>
+					{#snippet actions()}
+						<button
+							type="button"
+							id="remove-account-{account.id}"
+							class="btn btn--ghost"
+							disabled={methods.onlyMethod || methods.busy}
+							aria-describedby={methods.onlyMethod ? 'last-method-hint' : undefined}
+							onclick={() => methods.openConfirm(key)}
+						>
+							Remove
+						</button>
+					{/snippet}
+					{#snippet plate()}
+						<p id="confirm-{key}" tabindex="-1">
+							Remove {providerLabel(account.providerId)}? The account can no longer sign in with it.
+						</p>
+						<div class="flex flex-wrap gap-sm">
 							<button
 								type="button"
-								id="remove-account-{account.id}"
-								class="btn btn--ghost"
-								disabled={methods.onlyMethod || methods.busy}
-								aria-describedby={methods.onlyMethod ? 'last-method-hint' : undefined}
-								onclick={() => methods.openConfirm(key)}
+								class="btn btn--ink"
+								aria-busy={methods.running === `unlink:${account.id}`}
+								disabled={methods.busy && methods.running !== `unlink:${account.id}`}
+								onclick={() => methods.unlink(account)}
+								>Remove {providerLabel(account.providerId)}</button
 							>
-								Remove
-							</button>
+							<button
+								type="button"
+								class="btn btn--ghost"
+								onclick={() => methods.closePlate(`remove-account-${account.id}`)}>Keep it</button
+							>
 						</div>
-					</div>
-					{#if methods.confirming === key}
-						<div class="confirm">
-							<p id="confirm-{key}" tabindex="-1">
-								Remove {providerLabel(account.providerId)}? The account can no longer sign in with
-								it.
-							</p>
-							<div class="actions">
-								<button
-									type="button"
-									class="btn btn--ink"
-									aria-busy={methods.running === `unlink:${account.id}`}
-									disabled={methods.busy && methods.running !== `unlink:${account.id}`}
-									onclick={() => methods.unlink(account)}
-									>Remove {providerLabel(account.providerId)}</button
-								>
-								<button
-									type="button"
-									class="btn btn--ghost"
-									onclick={() => methods.closePlate(`remove-account-${account.id}`)}>Keep it</button
-								>
-							</div>
-						</div>
-					{/if}
-				</li>
+					{/snippet}
+				</SettingsRow>
 			{/each}
 
 			{#each methods.passkeys as passkey (passkey.id)}
 				{@const key = `passkey:${passkey.id}`}
-				<li>
-					<div class="row">
-						<i class="ri-fingerprint-line icon" aria-hidden="true"></i>
-						<div class="meta">
-							<span class="name">{passkeyName(passkey)}</span>
-							<span class="label detail"
-								>{added(passkey.createdAt, methods.duplicateNames.includes(passkeyName(passkey)))} · {passkeyKind(
-									passkey
-								)}</span
-							>
-						</div>
-						<div class="row-actions">
-							<button
-								type="button"
-								id="rename-passkey-{passkey.id}"
-								class="btn btn--ghost"
-								disabled={methods.busy}
-								onclick={() => methods.openRename(passkey)}
-							>
-								Rename
-							</button>
-							<button
-								type="button"
-								id="delete-passkey-{passkey.id}"
-								class="btn btn--ghost"
-								disabled={methods.onlyMethod || methods.busy}
-								aria-describedby={methods.onlyMethod ? 'last-method-hint' : undefined}
-								onclick={() => methods.openConfirm(key)}
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-					{#if methods.renaming === passkey.id}
-						<form
-							class="confirm"
-							onsubmit={(e) => {
-								e.preventDefault();
-								void methods.renamePasskey(passkey);
-							}}
+				<SettingsRow
+					icon="ri-fingerprint-line"
+					name={passkeyName(passkey)}
+					detail="{added(
+						passkey.createdAt,
+						methods.duplicateNames.includes(passkeyName(passkey))
+					)} · {passkeyKind(passkey)}"
+					plateOpen={methods.renaming === passkey.id || methods.confirming === key}
+				>
+					{#snippet actions()}
+						<button
+							type="button"
+							id="rename-passkey-{passkey.id}"
+							class="btn btn--ghost"
+							disabled={methods.busy}
+							onclick={() => methods.openRename(passkey)}
 						>
-							<label for="rename-{passkey.id}" class="label">Passkey name</label>
-							<input
-								id="rename-{passkey.id}"
-								class="input"
-								type="text"
-								bind:value={methods.nameDraft}
-								maxlength="64"
-								autocomplete="off"
-								required
-							/>
-							<div class="actions">
-								<button
-									type="submit"
-									class="btn btn--ink"
-									aria-busy={methods.running === `rename:${passkey.id}`}
-									disabled={!methods.nameDraft.trim() ||
-										(methods.busy && methods.running !== `rename:${passkey.id}`)}>Save name</button
-								>
-								<button
-									type="button"
-									class="btn btn--ghost"
-									onclick={() => methods.closePlate(`rename-passkey-${passkey.id}`)}>Cancel</button
-								>
-							</div>
-						</form>
-					{:else if methods.confirming === key}
-						<div class="confirm">
+							Rename
+						</button>
+						<button
+							type="button"
+							id="delete-passkey-{passkey.id}"
+							class="btn btn--ghost"
+							disabled={methods.onlyMethod || methods.busy}
+							aria-describedby={methods.onlyMethod ? 'last-method-hint' : undefined}
+							onclick={() => methods.openConfirm(key)}
+						>
+							Delete
+						</button>
+					{/snippet}
+					{#snippet plate()}
+						{#if methods.renaming === passkey.id}
+							<form
+								class="flex flex-col gap-sm"
+								onsubmit={(e) => {
+									e.preventDefault();
+									void methods.renamePasskey(passkey);
+								}}
+							>
+								<label for="rename-{passkey.id}" class="label">Passkey name</label>
+								<input
+									id="rename-{passkey.id}"
+									class="input"
+									type="text"
+									bind:value={methods.nameDraft}
+									maxlength="64"
+									autocomplete="off"
+									required
+								/>
+								<div class="flex flex-wrap gap-sm">
+									<button
+										type="submit"
+										class="btn btn--ink"
+										aria-busy={methods.running === `rename:${passkey.id}`}
+										disabled={!methods.nameDraft.trim() ||
+											(methods.busy && methods.running !== `rename:${passkey.id}`)}
+										>Save name</button
+									>
+									<button
+										type="button"
+										class="btn btn--ghost"
+										onclick={() => methods.closePlate(`rename-passkey-${passkey.id}`)}
+										>Cancel</button
+									>
+								</div>
+							</form>
+						{:else}
 							<p id="confirm-{key}" tabindex="-1">
 								Delete “{passkeyName(passkey)}”? It can no longer sign in to MIDB. The copy on the
 								device stays until it is deleted in the device's passkey settings.
 							</p>
-							<div class="actions">
+							<div class="flex flex-wrap gap-sm">
 								<button
 									type="button"
 									class="btn btn--ink"
@@ -223,11 +218,11 @@
 									onclick={() => methods.closePlate(`delete-passkey-${passkey.id}`)}>Keep it</button
 								>
 							</div>
-						</div>
-					{/if}
-				</li>
+						{/if}
+					{/snippet}
+				</SettingsRow>
 			{/each}
-		</ul>
+		</SettingsList>
 	{/if}
 
 	<div class="add">
@@ -256,97 +251,10 @@
 			{/each}
 		</div>
 	</div>
-</section>
+</SettingsCard>
 
 <style lang="postcss">
 	@reference "../../../app.css";
-
-	/* A row is one line from 30rem up and two below it, whatever its content, so the skeleton's
-	   rows (`--row-height`) are as tall as the loaded ones and nothing below them moves. Every
-	   line is 2.75rem, the touch target. */
-	.methods {
-		@apply flex flex-col;
-		--row-height: calc(2 * 2.75rem + 3 * var(--spacing-sm));
-		gap: var(--spacing-md);
-		padding: 24px;
-		scroll-margin-top: 5rem;
-	}
-
-	@media (min-width: 30rem) {
-		.methods {
-			--row-height: calc(2.75rem + 2 * var(--spacing-sm));
-		}
-	}
-
-	h2 {
-		@apply font-semibold;
-		font-size: 1.125rem;
-	}
-
-	ul {
-		@apply m-0 p-0 list-none;
-	}
-
-	li + li {
-		border-top: 1px solid var(--border);
-	}
-
-	.row {
-		@apply grid items-center;
-		grid-template-columns: auto minmax(0, 1fr);
-		gap: var(--spacing-sm);
-		padding-block: var(--spacing-sm);
-	}
-
-	@media (min-width: 30rem) {
-		.row {
-			grid-template-columns: auto minmax(0, 1fr) auto;
-		}
-	}
-
-	.icon {
-		@apply text-xl text-ink-muted;
-	}
-
-	.meta {
-		@apply flex flex-col justify-center min-w-0;
-		height: 2.75rem;
-	}
-
-	.name {
-		@apply font-medium truncate;
-		line-height: 1.5rem;
-	}
-
-	/* One line that the date leads, so a narrow row clips the passkey's kind and never the date. */
-	.detail {
-		@apply truncate;
-		line-height: 1.25rem;
-	}
-
-	.row-actions {
-		@apply flex items-center gap-sm;
-		grid-column: 1 / -1;
-		min-height: 2.75rem;
-	}
-
-	@media (min-width: 30rem) {
-		.row-actions {
-			grid-column: auto;
-		}
-	}
-
-	.confirm {
-		@apply flex flex-col gap-sm text-sm;
-		padding: var(--spacing-md);
-		margin-bottom: var(--spacing-sm);
-		border-radius: 12px;
-		background-color: var(--surface-sunken);
-	}
-
-	.actions {
-		@apply flex flex-wrap gap-sm;
-	}
 
 	.add {
 		@apply flex flex-col gap-sm;
@@ -359,10 +267,5 @@
 
 	.add .btn {
 		@apply gap-sm;
-	}
-
-	h2:focus-visible,
-	.confirm p:focus-visible {
-		outline-offset: 2px;
 	}
 </style>
