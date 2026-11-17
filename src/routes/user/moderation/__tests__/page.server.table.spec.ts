@@ -54,6 +54,9 @@ vi.mock('#lib/server/data/count-flags.ts', () => ({
 	resolveCountFlag: vi.fn(),
 	dismissCountFlag: vi.fn()
 }));
+vi.mock('#lib/server/data/moderation-counts.ts', () => ({
+	getModerationCounts: async () => ({ pending: 0, reported: 0, held: 0, flagged: 0 })
+}));
 vi.mock('#lib/server/data/source-sync.ts', () => ({ getSourceSyncDates: async () => ({}) }));
 vi.mock('#lib/server/data/moderation-table.ts', () => ({
 	listModerationTable: (...args: unknown[]) => listModerationTable(...args)
@@ -104,9 +107,10 @@ beforeEach(() => {
 	purgeTitlesComments.mockReset();
 	purgeProfiles.mockReset();
 	for (const fn of Object.values(actionsFns)) fn.mockReset();
-	for (const fn of Object.values(queue)) fn.mockReset().mockResolvedValue([]);
-	reports.listHeldReports.mockReset().mockResolvedValue([]);
-	reports.listFlaggedTitles.mockReset().mockResolvedValue([]);
+	for (const fn of Object.values(queue))
+		fn.mockReset().mockResolvedValue({ items: [], nextCursor: null });
+	reports.listHeldReports.mockReset().mockResolvedValue({ items: [], nextCursor: null });
+	reports.listFlaggedTitles.mockReset().mockResolvedValue({ items: [], nextCursor: null });
 	reports.getOpenTitle.mockReset().mockResolvedValue(null);
 	listModerationTable.mockReset().mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 50 });
 	saveScanLabels.mockReset().mockResolvedValue(undefined);
@@ -137,7 +141,7 @@ describe('load with ?tab=table', () => {
 		expect(data.table).toBe(table);
 		expect(data.filters).toMatchObject({ q: 'troll', page: 2 });
 		expect(data.aiAvailable).toBe(true);
-		expect(queue.listPendingQueue).toHaveBeenCalled();
+		expect(queue.listPendingQueue).not.toHaveBeenCalled();
 	});
 
 	it('says only whether a key exists, never the key', async () => {

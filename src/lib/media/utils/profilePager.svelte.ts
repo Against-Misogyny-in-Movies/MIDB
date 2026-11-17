@@ -12,24 +12,41 @@ type Options<T, Page> = {
 	key: (item: T) => string;
 	/** The toast for a failed load, from the status and the server's message. */
 	failure: (status: number, message: string) => string;
+	/**
+	 * Drops the later pages when the first page is replaced (the page reloaded after an action), so
+	 * a row an action removed does not stay on a later page. Off for the public profile lists.
+	 */
+	resetOnReload?: boolean;
 };
 
 /**
- * A profile list that grows in place: the cached first page, then "Show more" pages from a public
+ * A list that grows in place: the first page from the page load, then "Show more" pages from an
  * endpoint. A failed load is a toast and leaves the list and its cursor as they were.
  */
 export class ProfilePager<T, Page> {
 	readonly #o: Options<T, Page>;
 
-	/** Pages after the first. */
-	more = $state<T[]>([]);
-	/** The cursor after the last loaded page; undefined until a page has loaded. */
-	cursor = $state<string | null | undefined>(undefined);
+	/** Pages after the first, as loaded; `more` is what still applies. */
+	#loaded = $state.raw<T[]>([]);
+	/** The first page the later pages were loaded after. */
+	#loadedAfter = $state.raw<unknown>(undefined);
+	#cursor = $state<string | null | undefined>(undefined);
 	busy = $state(false);
 
 	constructor(options: Options<T, Page>) {
 		this.#o = options;
 	}
+
+	/** True while the later pages belong to the first page now shown. */
+	#current = $derived.by(
+		() => !this.#o.resetOnReload || this.#loadedAfter === this.#o.first().items
+	);
+
+	/** Pages after the first. */
+	more = $derived.by(() => (this.#current ? this.#loaded : []));
+
+	/** The cursor after the last loaded page; undefined until a page has loaded. */
+	cursor = $derived.by(() => (this.#current ? this.#cursor : undefined));
 
 	/** The first page and the later ones, with a row that repeats shown once. */
 	shown = $derived.by(() => {
@@ -62,8 +79,9 @@ export class ProfilePager<T, Page> {
 		}
 		const before = this.shown.length;
 		const page = this.#o.read(reply.data);
-		this.more = [...this.more, ...page.items];
-		this.cursor = page.nextCursor;
+		this.#loaded = [...this.more, ...page.items];
+		this.#loadedAfter = this.#o.first().items;
+		this.#cursor = page.nextCursor;
 		return this.shown.length > before ? before : null;
 	}
 }

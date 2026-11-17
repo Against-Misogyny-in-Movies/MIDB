@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
 import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
@@ -10,6 +10,7 @@ import type { CommentStatus, OwnComment, ReportReason } from '#lib/media/types/c
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
 import { activeMute } from './mute.ts';
+import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -139,27 +140,81 @@ export const withContext = <Query extends SQLiteSelect>(query: Query) =>
 
 const commentRows = () =>
 	withContext(
-		db.select({ comment: comments, author: users, title: titles }).from(comments).$dynamic()
+		db
+			.select({
+				comment: comments,
+				author: users,
+				title: titles,
+				reportCount: sql<number>`${openReportCount}`
+			})
+			.from(comments)
+			.$dynamic()
 	);
 
-/** Comments waiting for a moderator, oldest first. */
-export async function listPendingQueue(): Promise<ModerationItem[]> {
-	return toModerationItems(
-		await commentRows()
-			.where(eq(comments.status, 'pending'))
-			.orderBy(comments.createdAt)
-			.limit(QUEUE_LIMIT)
-	);
+/**
+ * Comments waiting for a moderator, oldest first (then id, so the order is total and a cursor
+ * resumes exactly). A cursor this module did not make reads as the first page.
+ */
+export async function listPendingQueue(
+	cursor?: string | null,
+	limit = QUEUE_LIMIT
+): Promise<QueuePage<ModerationItem>> {
+	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.pending);
+	const rows = await commentRows()
+		.where(
+			and(
+				eq(comments.status, 'pending'),
+				after
+					? or(
+							gt(comments.createdAt, new Date(after[0])),
+							and(eq(comments.createdAt, new Date(after[0])), gt(comments.id, after[1]))
+						)
+					: undefined
+			)
+		)
+		.orderBy(comments.createdAt, comments.id)
+		.limit(limit + 1);
+	const page = toQueuePage(rows, limit, (r) => [r.comment.createdAt.getTime(), r.comment.id]);
+	return { ...page, items: await toModerationItems(page.items) };
 }
 
-/** Pending and published comments with open reports, most reported first. */
-export async function listReportedQueue(): Promise<ModerationItem[]> {
-	return toModerationItems(
-		await commentRows()
-			.where(and(inArray(comments.status, ['pending', 'published']), sql`${openReportCount} > 0`))
-			.orderBy(sql`${openReportCount} DESC`, comments.createdAt)
-			.limit(QUEUE_LIMIT)
-	);
+/**
+ * Pending and published comments with open reports, most reported first, then oldest (then id).
+ * A page resumes after the last row's count, so a report that lands between two pages can move a
+ * row across the boundary; the row still shows once on the page that holds it.
+ */
+export async function listReportedQueue(
+	cursor?: string | null,
+	limit = QUEUE_LIMIT
+): Promise<QueuePage<ModerationItem>> {
+	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.reported);
+	const rows = await commentRows()
+		.where(
+			and(
+				inArray(comments.status, ['pending', 'published']),
+				sql`${openReportCount} > 0`,
+				after
+					? or(
+							sql`${openReportCount} < ${after[0]}`,
+							and(
+								sql`${openReportCount} = ${after[0]}`,
+								or(
+									gt(comments.createdAt, new Date(after[1])),
+									and(eq(comments.createdAt, new Date(after[1])), gt(comments.id, after[2]))
+								)
+							)
+						)
+					: undefined
+			)
+		)
+		.orderBy(sql`${openReportCount} DESC`, comments.createdAt, comments.id)
+		.limit(limit + 1);
+	const page = toQueuePage(rows, limit, (r) => [
+		r.reportCount,
+		r.comment.createdAt.getTime(),
+		r.comment.id
+	]);
+	return { ...page, items: await toModerationItems(page.items) };
 }
 
 export type RecentAction = {
@@ -187,9 +242,13 @@ export type RecentAction = {
 	} | null;
 };
 
-/** The latest moderation actions, newest first. */
-export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentAction[]> {
-	const rows = await db
+/** A page of the moderation log, newest first (then id). A cursor this module did not make reads as the first page. */
+export async function listRecentActions(
+	cursor?: string | null,
+	limit = QUEUE_LIMIT
+): Promise<QueuePage<RecentAction>> {
+	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.log);
+	const found = await db
 		.select({
 			action: moderationActions,
 			targetBody: comments.body,
@@ -203,8 +262,23 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 			titles,
 			eq(titles.id, sql`coalesce(${comments.titleId}, ${moderationActions.targetTitleId})`)
 		)
+		.where(
+			after
+				? or(
+						lt(moderationActions.createdAt, new Date(after[0])),
+						and(
+							eq(moderationActions.createdAt, new Date(after[0])),
+							lt(moderationActions.id, after[1])
+						)
+					)
+				: undefined
+		)
 		.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id))
-		.limit(limit);
+		.limit(limit + 1);
+	const { items: rows, nextCursor } = toQueuePage(found, limit, (r) => [
+		r.action.createdAt.getTime(),
+		r.action.id
+	]);
 	const userIds = [
 		...new Set(
 			rows
@@ -218,18 +292,21 @@ export async function listRecentActions(limit = QUEUE_LIMIT): Promise<RecentActi
 			people.set(row.id, toPublicUser(row));
 		}
 	}
-	return rows.map(({ action, targetBody, targetStatus, targetEditedAt, title }) => ({
-		id: action.id,
-		action: action.action,
-		reason: action.reason,
-		createdAt: action.createdAt.toISOString(),
-		actor: (action.actorId && people.get(action.actorId)) || null,
-		targetUser: (action.targetUserId && people.get(action.targetUserId)) || null,
-		muteHours: action.muteHours,
-		commentBody: targetBody,
-		commentId: action.targetCommentId,
-		commentStatus: targetStatus,
-		commentEditedAt: targetEditedAt?.toISOString() ?? null,
-		title: title && title.name !== null ? title : null
-	}));
+	const items: RecentAction[] = rows.map(
+		({ action, targetBody, targetStatus, targetEditedAt, title }) => ({
+			id: action.id,
+			action: action.action,
+			reason: action.reason,
+			createdAt: action.createdAt.toISOString(),
+			actor: (action.actorId && people.get(action.actorId)) || null,
+			targetUser: (action.targetUserId && people.get(action.targetUserId)) || null,
+			muteHours: action.muteHours,
+			commentBody: targetBody,
+			commentId: action.targetCommentId,
+			commentStatus: targetStatus,
+			commentEditedAt: targetEditedAt?.toISOString() ?? null,
+			title: title && title.name !== null ? title : null
+		})
+	);
+	return { items, nextCursor };
 }

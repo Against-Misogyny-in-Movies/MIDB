@@ -86,14 +86,14 @@ describe('moderation actions', () => {
 			comment: { id: string };
 		};
 		const cid = id.comment.id;
-		expect((await listPendingQueue()).map((i) => i.comment.id)).toEqual([cid]);
+		expect((await listPendingQueue()).items.map((i) => i.comment.id)).toEqual([cid]);
 
 		expect(await approveComment(mod, cid, null)).toMatchObject({ ok: true });
 		expect(await hideComment(mod, cid, 'spoilers')).toMatchObject({ ok: true });
 		expect(await restoreComment(mod, cid, null)).toMatchObject({ ok: true });
 		expect(await rejectComment(mod, cid, 'abuse')).toMatchObject({ ok: true });
 
-		const log = await listRecentActions();
+		const log = (await listRecentActions()).items;
 		expect(log.map((a) => a.action).sort()).toEqual(['approve', 'hide', 'reject', 'restore']);
 		expect(log.every((a) => a.commentBody === 'Waiting' && a.actor?.id === 'mod')).toBe(true);
 		// The log says which comment each action concerned and where it stands now, so a hide or a

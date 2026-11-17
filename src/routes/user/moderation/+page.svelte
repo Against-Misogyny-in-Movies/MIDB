@@ -2,51 +2,44 @@
 	import { goto } from '$app/navigation';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
+	import PagedList from '#lib/components/moderation/pagedList.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { tabHref, type ModerationTab } from '#lib/media/utils/moderationTabs.ts';
 
 	let { data } = $props();
 
-	type Tab = 'pending' | 'reported' | 'reports' | 'recent' | 'table';
-	/**
-	 * `?tab=reports` and `?title=` open the community-reports tab, `?tab=table` the table of every
-	 * comment, every other URL opens Pending. A click on a tab overrides it until the URL changes
-	 * (a title's reports, back to the list).
-	 */
-	let tab = $derived<Tab>(
-		data.titleId || data.tab === 'reports' ? 'reports' : data.tab === 'table' ? 'table' : 'pending'
-	);
+	/** The URL is the one source of the open tab: the load parses `?tab=` and `?title=`. */
+	const tab = $derived(data.tab);
 
+	/**
+	 * Each count is a total from the database, not the length of the page shown: Pending is the
+	 * comments awaiting a decision, Reported those with an open report, and the community reports
+	 * tab the held reports plus the titles with open flags.
+	 */
 	const TABS = $derived([
-		{ id: 'pending' as const, label: 'Pending', count: data.pending.length },
-		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
+		{ id: 'pending' as const, label: 'Pending', count: data.counts.pending },
+		{ id: 'reported' as const, label: 'Reported', count: data.counts.reported },
 		{ id: 'table' as const, label: 'All comments', count: null },
 		{
 			id: 'reports' as const,
 			label: 'MIDB community reports',
-			count: data.held.length
+			count: data.counts.held + data.counts.flagged
 		},
-		{ id: 'recent' as const, label: 'Recent actions', count: null }
+		{ id: 'log' as const, label: 'Recent actions', count: null }
 	]);
 
 	/**
-	 * The table loads from the server with its filters, so choosing it goes to its URL. Leaving it
-	 * drops `tab=table` from the URL: a later action's `update()` reloads the page from the URL, and
-	 * a URL that still named the table would bring it back and run its query again. The navigation
-	 * keeps the focus (`reset: false`), and the chosen tab is set again once it is done, because the
-	 * new data derives Pending or the reports tab from the URL.
+	 * Choosing a tab goes to its URL, which the load reads. The tab buttons stay mounted, so the
+	 * focus stays on the chosen one and the page keeps its scroll position (`reset: false`).
 	 */
-	async function select(next: Tab) {
-		tab = next;
-		if (next === 'table') {
-			if (data.tab !== 'table') void goto('?tab=table', { reset: false });
-		} else if (data.tab === 'table') {
-			await goto(next === 'reports' ? '?tab=reports' : '?', { reset: false });
-			tab = next;
+	function select(next: ModerationTab) {
+		if (next !== tab || data.titleId) {
+			void goto(tabHref(next), { reset: false });
 		}
 	}
 
@@ -72,11 +65,9 @@
 							: null;
 		if (target === null) return;
 		event.preventDefault();
-		void select(TABS[target].id);
+		select(TABS[target].id);
 		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
 	}
-
-	const items = $derived(tab === 'reported' ? data.reported : data.pending);
 </script>
 
 <svelte:head>
@@ -113,7 +104,7 @@
 				aria-selected={tab === t.id}
 				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
 				tabindex={tab === t.id ? 0 : -1}
-				onclick={() => void select(t.id)}
+				onclick={() => select(t.id)}
 				onkeydown={(event) => onTabKeydown(event, i)}
 			>
 				{t.label}{#if t.count !== null}
@@ -138,36 +129,51 @@
 					{/each}
 				</div>
 			{/if}
-		{:else if tab === 'recent'}
-			{#if data.recent.length === 0}
-				<p class="empty" id="moderation-empty" tabindex="-1">No moderation actions yet.</p>
-			{:else}
-				<ul class="card list">
-					{#each data.recent as entry (entry.id)}
-						<RecentActionRow {entry} />
-					{/each}
-				</ul>
-			{/if}
+		{:else if tab === 'log' && data.recent}
+			<PagedList
+				page={data.recent}
+				queue="log"
+				key={(entry) => entry.id}
+				empty="No moderation actions yet."
+				noun="actions"
+			>
+				{#snippet row(entry)}
+					<RecentActionRow {entry} />
+				{/snippet}
+			</PagedList>
 		{:else if tab === 'reports'}
 			<CommunityReportsPanel
 				held={data.held}
 				flagged={data.flagged}
+				flaggedCount={data.counts.flagged}
 				openTitle={data.openTitle}
 				titleId={data.titleId}
 				me={data.me}
 			/>
-		{:else if items.length === 0}
-			<p class="empty" id="moderation-empty" tabindex="-1">
-				{tab === 'pending'
-					? 'No comments are waiting for review.'
-					: 'No comments have open reports.'}
-			</p>
-		{:else}
-			<ul class="card list">
-				{#each items as item (item.comment.id)}
+		{:else if tab === 'pending' && data.pending}
+			<PagedList
+				page={data.pending}
+				queue="pending"
+				key={(item) => item.comment.id}
+				empty="No comments are waiting for review."
+				noun="comments"
+			>
+				{#snippet row(item)}
 					<ModerationItemRow {item} me={data.me} />
-				{/each}
-			</ul>
+				{/snippet}
+			</PagedList>
+		{:else if tab === 'reported' && data.reported}
+			<PagedList
+				page={data.reported}
+				queue="reported"
+				key={(item) => item.comment.id}
+				empty="No comments have open reports."
+				noun="comments"
+			>
+				{#snippet row(item)}
+					<ModerationItemRow {item} me={data.me} />
+				{/snippet}
+			</PagedList>
 		{/if}
 	</div>
 </div>
@@ -229,18 +235,6 @@
 
 	.count {
 		font-variant-numeric: tabular-nums;
-	}
-
-	.empty {
-		@apply text-ink-muted;
-	}
-
-	.list {
-		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
-	}
-
-	.list > :global(li + li) {
-		border-top: 1px solid var(--border);
 	}
 
 	/* Room for the filters and the first rows, so the table replaces it without moving what is below. */

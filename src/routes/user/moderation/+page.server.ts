@@ -31,6 +31,7 @@ import {
 	listFlaggedTitles,
 	listHeldReports
 } from '#lib/server/data/community-report-queue.ts';
+import { getModerationCounts } from '#lib/server/data/moderation-counts.ts';
 import { listModerationTable } from '#lib/server/data/moderation-table.ts';
 import { queryToFilters } from '#lib/server/moderation/search-filters.ts';
 import {
@@ -50,34 +51,40 @@ import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { AI_QUERY_MAX } from '#lib/media/utils/comments.ts';
 import { filtersToParams, parseFilters } from '#lib/media/utils/moderationFilters.ts';
 import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
+import { parseModerationTab } from '#lib/media/utils/moderationTabs.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 /**
- * The page and both of its views. `?tab=reports` opens the community-reports tab, and
- * `?title=<id>` opens one title's community reports in it; without a title the tab lists the held
- * reports and the flagged titles. `?tab=table` also loads the table of every comment, whose
- * filters live in the same query (its `title` filter is a name, so it opens no title's reports).
+ * The page. `?tab=` names the open tab (`parseModerationTab`; Pending without one), and the load
+ * runs only that tab's list, plus the counts every badge shows and the sync dates the stale-source
+ * notice reads. `?title=<id>` opens one title's community reports in the reports tab, in place of
+ * its held and flagged lists. `?tab=table` takes the table's filters from the same query (its
+ * `title` filter is a name, so it opens no title's reports).
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
 	await requireRole(locals, STAFF_ROLES, { page: true });
-	const isTable = url.searchParams.get('tab') === 'table';
-	const titleId = isTable ? null : url.searchParams.get('title')?.trim() || null;
-	const filters = isTable ? parseFilters(url.searchParams) : null;
-	const [pending, reported, recent, held, flagged, openTitle, syncDates, table] = await Promise.all(
-		[
-			listPendingQueue(),
-			listReportedQueue(),
-			listRecentActions(),
-			listHeldReports(),
-			listFlaggedTitles(),
-			titleId ? getOpenTitle(titleId) : null,
+	const params = url.searchParams;
+	const tab = parseModerationTab(params.get('tab'), !!params.get('title')?.trim());
+	const titleId = tab === 'reports' ? params.get('title')?.trim() || null : null;
+	const filters = tab === 'table' ? parseFilters(params) : null;
+	const openList = tab === 'reports' && !titleId;
+	const [counts, syncDates, pending, reported, recent, held, flagged, openTitle, table] =
+		await Promise.all([
+			getModerationCounts(),
 			getSourceSyncDates(),
+			tab === 'pending' ? listPendingQueue() : null,
+			tab === 'reported' ? listReportedQueue() : null,
+			tab === 'log' ? listRecentActions() : null,
+			openList ? listHeldReports() : null,
+			openList ? listFlaggedTitles() : null,
+			titleId ? getOpenTitle(titleId) : null,
 			filters ? listModerationTable(filters) : null
-		]
-	);
+		]);
 	return {
-		tab: url.searchParams.get('tab'),
+		tab,
 		titleId,
+		counts,
+		// Only the open tab's list is read; the rest are null.
 		pending,
 		reported,
 		recent,
@@ -88,7 +95,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		table,
 		filters,
 		// Whether the AI controls work; never the key itself.
-		aiAvailable: isTable && !!env.ANTHROPIC_API_KEY
+		aiAvailable: tab === 'table' && !!env.ANTHROPIC_API_KEY
 	};
 };
 

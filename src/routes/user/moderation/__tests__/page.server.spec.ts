@@ -28,6 +28,7 @@ const reports = {
 };
 const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn() };
 const getSourceSyncDates = vi.fn();
+const getModerationCounts = vi.fn();
 
 vi.mock('#lib/server/auth/guards.ts', () => ({
 	requireRole: (...args: unknown[]) => requireRole(...args)
@@ -45,6 +46,9 @@ vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
+vi.mock('#lib/server/data/moderation-counts.ts', () => ({
+	getModerationCounts: () => getModerationCounts()
+}));
 vi.mock('#lib/server/data/source-sync.ts', () => ({
 	getSourceSyncDates: () => getSourceSyncDates()
 }));
@@ -107,17 +111,21 @@ beforeEach(() => {
 	for (const fn of Object.values(reports))
 		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
 	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue({ ok: true });
-	reports.listHeldReports.mockResolvedValue([]);
-	reports.listFlaggedTitles.mockResolvedValue([]);
+	const empty = { items: [], nextCursor: null };
+	reports.listHeldReports.mockResolvedValue(empty);
+	reports.listFlaggedTitles.mockResolvedValue(empty);
+	queries.listPendingQueue.mockResolvedValue(empty);
+	queries.listReportedQueue.mockResolvedValue(empty);
+	queries.listRecentActions.mockResolvedValue(empty);
 	reports.getOpenTitle.mockResolvedValue(null);
 	getSourceSyncDates.mockReset().mockResolvedValue({});
+	getModerationCounts
+		.mockReset()
+		.mockResolvedValue({ pending: 0, reported: 0, held: 0, flagged: 0 });
 });
 
 describe('load', () => {
 	it('requires a moderator or administrator, as a page', async () => {
-		queries.listPendingQueue.mockResolvedValue([]);
-		queries.listReportedQueue.mockResolvedValue([]);
-		queries.listRecentActions.mockResolvedValue([]);
 		await load(loadEvent());
 		expect(requireRole).toHaveBeenCalledWith({}, ['moderator', 'administrator'], { page: true });
 	});
@@ -130,20 +138,66 @@ describe('load', () => {
 		expect(queries.listPendingQueue).not.toHaveBeenCalled();
 	});
 
-	it('returns the queues and the daily sources that went stale', async () => {
-		queries.listPendingQueue.mockResolvedValue([{ id: 'p' }]);
-		queries.listReportedQueue.mockResolvedValue([{ id: 'r' }]);
-		queries.listRecentActions.mockResolvedValue([{ id: 'a' }]);
+	it('returns the open list, the counts and the daily sources that went stale', async () => {
+		queries.listPendingQueue.mockResolvedValue({ items: [{ id: 'p' }], nextCursor: 'next' });
+		getModerationCounts.mockResolvedValue({ pending: 73, reported: 4, held: 2, flagged: 3 });
 		getSourceSyncDates.mockResolvedValue({
 			um: new Date(Date.now() - 49 * 3_600_000).toISOString(),
 			bechdel: new Date().toISOString()
 		});
 		const data = (await load(loadEvent())) as {
-			pending: unknown[];
+			tab: string;
+			pending: unknown;
+			counts: unknown;
 			staleSources: { source: string }[];
 		};
-		expect(data.pending).toEqual([{ id: 'p' }]);
+		expect(data.tab).toBe('pending');
+		expect(data.pending).toEqual({ items: [{ id: 'p' }], nextCursor: 'next' });
+		expect(data.counts).toEqual({ pending: 73, reported: 4, held: 2, flagged: 3 });
 		expect(data.staleSources.map((s) => s.source)).toEqual(['um']);
+	});
+});
+
+describe('the open tab, from the URL', () => {
+	const readers = {
+		pending: [queries.listPendingQueue],
+		reported: [queries.listReportedQueue],
+		log: [queries.listRecentActions],
+		reports: [reports.listHeldReports, reports.listFlaggedTitles]
+	};
+	const every = Object.values(readers).flat();
+
+	it.each(Object.entries(readers))('?tab=%s reads only that tab’s lists', async (tab, fns) => {
+		await load(loadEvent(`?tab=${tab}`));
+		for (const fn of fns) expect(fn).toHaveBeenCalledOnce();
+		for (const fn of every.filter((f) => !fns.includes(f))) expect(fn).not.toHaveBeenCalled();
+		expect(getModerationCounts).toHaveBeenCalledOnce();
+		expect(getSourceSyncDates).toHaveBeenCalledOnce();
+		const data = (await load(loadEvent(`?tab=${tab}`))) as { tab: string };
+		expect(data.tab).toBe(tab);
+	});
+
+	it('opens Pending without a tab, and for a tab it does not know', async () => {
+		for (const search of ['', '?tab=nonsense']) {
+			queries.listPendingQueue.mockClear();
+			expect(((await load(loadEvent(search))) as { tab: string }).tab).toBe('pending');
+			expect(queries.listPendingQueue).toHaveBeenCalledOnce();
+		}
+	});
+
+	it('opens the community reports for ?title=, and reads only that title', async () => {
+		reports.getOpenTitle.mockResolvedValue({ id: 't9', reports: [], flags: [] });
+		const data = (await load(loadEvent('?title=t9'))) as {
+			tab: string;
+			held: unknown;
+			flagged: unknown;
+		};
+		expect(data.tab).toBe('reports');
+		expect(data.held).toBeNull();
+		expect(data.flagged).toBeNull();
+		expect(reports.listHeldReports).not.toHaveBeenCalled();
+		expect(reports.listFlaggedTitles).not.toHaveBeenCalled();
+		expect(queries.listPendingQueue).not.toHaveBeenCalled();
 	});
 });
 
@@ -170,11 +224,13 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 
 describe('the community-reports view', () => {
 	it('returns the held reports, the flagged titles and no open title without ?title=', async () => {
-		reports.listHeldReports.mockResolvedValue([{ titleId: 't1' }]);
-		reports.listFlaggedTitles.mockResolvedValue([{ titleId: 't2' }]);
-		const data = (await load(loadEvent())) as Record<string, unknown>;
-		expect(data.held).toEqual([{ titleId: 't1' }]);
-		expect(data.flagged).toEqual([{ titleId: 't2' }]);
+		const held = { items: [{ titleId: 't1' }], nextCursor: null };
+		const flagged = { items: [{ titleId: 't2' }], nextCursor: null };
+		reports.listHeldReports.mockResolvedValue(held);
+		reports.listFlaggedTitles.mockResolvedValue(flagged);
+		const data = (await load(loadEvent('?tab=reports'))) as Record<string, unknown>;
+		expect(data.held).toEqual(held);
+		expect(data.flagged).toEqual(flagged);
 		expect(data.openTitle).toBeNull();
 		expect(reports.getOpenTitle).not.toHaveBeenCalled();
 	});

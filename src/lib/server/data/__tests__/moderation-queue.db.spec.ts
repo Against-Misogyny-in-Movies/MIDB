@@ -31,7 +31,7 @@ describe('listReportedQueue reporters', () => {
 			{ commentId, reporterId: 'named', reason: 'spam' },
 			{ commentId, reporterId: 'nameless', reason: 'hate' }
 		]);
-		const [item] = await listReportedQueue();
+		const [item] = (await listReportedQueue()).items;
 		expect(item.reports).toHaveLength(2);
 		expect(item.reports.map((r) => [r.reason, r.reporter]).sort()).toEqual([
 			['hate', null],
@@ -43,6 +43,6 @@ describe('listReportedQueue reporters', () => {
 		await db
 			.insert(commentReports)
 			.values({ commentId, reporterId: 'named', reason: 'spam', status: 'dismissed' });
-		expect((await listReportedQueue()).flatMap((i) => i.reports)).toEqual([]);
+		expect((await listReportedQueue()).items.flatMap((i) => i.reports)).toEqual([]);
 	});
 });

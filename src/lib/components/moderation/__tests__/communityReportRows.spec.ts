@@ -246,14 +246,22 @@ describe('the open title view', () => {
 			}
 		]
 	};
-	const open = { id: 't1', kind: 'movie' as const, tmdbId: 348, name: 'Alien', reports: [] };
+	const open = {
+		id: 't1',
+		kind: 'movie' as const,
+		tmdbId: 348,
+		name: 'Alien',
+		reports: [],
+		flags: []
+	};
 	const me = { id: 'mod', role: 'moderator' };
 
 	function mountPanel(flags: FlaggedTitle[] = [flagged]) {
 		return render(CommunityReportsPanel, {
-			held: [],
-			flagged: flags,
-			openTitle: open,
+			held: null,
+			flagged: null,
+			flaggedCount: flags.length,
+			openTitle: { ...open, flags: flags[0]?.flags ?? [] },
 			titleId: 't1',
 			me
 		});
@@ -316,10 +324,11 @@ describe('the open title view', () => {
 			reporterRole: 'administrator'
 		};
 		render(CommunityReportsPanel, {
-			held: [],
-			openTitle: open,
+			held: null,
+			flagged: null,
+			flaggedCount: 1,
+			openTitle: { ...open, flags: [theirs] },
 			titleId: 't1',
-			flagged: [{ ...flagged, flags: [theirs] }],
 			me
 		});
 		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
@@ -328,10 +337,10 @@ describe('the open title view', () => {
 
 	it('hides the buttons of a moderator’s own flag only; an administrator keeps theirs', () => {
 		const own = { ...flagged.flags[0], id: 'f3', reporterId: 'mod' };
-		const props = { held: [], openTitle: open, titleId: 't1' };
+		const props = { held: null, flagged: null, flaggedCount: 1, titleId: 't1' };
 		const { unmount } = render(CommunityReportsPanel, {
 			...props,
-			flagged: [{ ...flagged, flags: [own] }],
+			openTitle: { ...open, flags: [own] },
 			me
 		});
 		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
@@ -342,7 +351,7 @@ describe('the open title view', () => {
 		unmount();
 		render(CommunityReportsPanel, {
 			...props,
-			flagged: [{ ...flagged, flags: [own, flagged.flags[1]] }],
+			openTitle: { ...open, flags: [own, flagged.flags[1]] },
 			me: { id: 'mod', role: 'administrator' }
 		});
 		expect(screen.getAllByRole('button', { name: 'Resolve' })).toHaveLength(2);
@@ -351,8 +360,9 @@ describe('the open title view', () => {
 	it('shows no actions for a report of an administrator', () => {
 		const admin = titleReport({ account: account({ role: 'administrator' }) });
 		render(CommunityReportsPanel, {
-			held: [],
-			flagged: [],
+			held: null,
+			flagged: null,
+			flaggedCount: 0,
 			openTitle: { ...open, reports: [admin] },
 			titleId: 't1',
 			me

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, ne, or, sql } from 'drizzle-orm';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
@@ -13,6 +13,7 @@ import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/communityRe
 import { activeMute } from './mute.ts';
 import { QUEUE_LIMIT } from './moderation-queue.ts';
 import { countsFromDate } from './counting-account.ts';
+import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
 
 type ReportRow = typeof reports.$inferSelect;
 
@@ -176,9 +177,16 @@ async function umFlagsOf(
 	return um;
 }
 
-/** Reports waiting for a moderator, oldest first, at most `QUEUE_LIMIT`. */
-export async function listHeldReports(): Promise<HeldReport[]> {
-	const rows = await db
+/**
+ * A page of the reports waiting for a moderator, oldest first (then account and title, the
+ * report's key, so the order is total). A cursor this module did not make reads as the first page.
+ */
+export async function listHeldReports(
+	cursor?: string | null,
+	limit = QUEUE_LIMIT
+): Promise<QueuePage<HeldReport>> {
+	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.held);
+	const found = await db
 		.select({
 			titleId: reports.titleId,
 			holdReason: reports.holdReason,
@@ -190,23 +198,44 @@ export async function listHeldReports(): Promise<HeldReport[]> {
 		.from(reports)
 		.innerJoin(users, eq(reports.userId, users.id))
 		.innerJoin(titles, eq(reports.titleId, titles.id))
-		.where(eq(reports.status, 'held'))
-		.orderBy(asc(reports.createdAt))
-		.limit(QUEUE_LIMIT);
+		.where(
+			and(
+				eq(reports.status, 'held'),
+				after
+					? or(
+							gt(reports.createdAt, new Date(after[0])),
+							and(
+								eq(reports.createdAt, new Date(after[0])),
+								or(
+									gt(reports.userId, after[1]),
+									and(eq(reports.userId, after[1]), gt(reports.titleId, after[2]))
+								)
+							)
+						)
+					: undefined
+			)
+		)
+		.orderBy(asc(reports.createdAt), asc(reports.userId), asc(reports.titleId))
+		.limit(limit + 1);
+	const page = toQueuePage(found, limit, (r) => [r.createdAt.getTime(), r.userId, r.titleId]);
+	const rows = page.items;
 
 	const accounts = await accountsOf(rows);
 	const um = await umFlagsOf(
 		rows.filter((r) => r.holdReason === 'contradicts_source').map((r) => r.titleId)
 	);
-	return rows.map((r) => ({
-		titleId: r.titleId,
-		title: r.title,
-		account: accounts.get(r.userId)!,
-		holdReason: r.holdReason,
-		createdAt: r.createdAt.toISOString(),
-		answers: pickAnswers(r),
-		um: r.holdReason === 'contradicts_source' ? (um.get(r.titleId) ?? null) : null
-	}));
+	return {
+		nextCursor: page.nextCursor,
+		items: rows.map((r) => ({
+			titleId: r.titleId,
+			title: r.title,
+			account: accounts.get(r.userId)!,
+			holdReason: r.holdReason,
+			createdAt: r.createdAt.toISOString(),
+			answers: pickAnswers(r),
+			um: r.holdReason === 'contradicts_source' ? (um.get(r.titleId) ?? null) : null
+		}))
+	};
 }
 
 const pickAnswers = (row: ReportAnswerColumns): ReportAnswerColumns => ({
@@ -250,27 +279,12 @@ export async function listTitleReports(titleId: string): Promise<TitleReport[]> 
 	}));
 }
 
-/** Titles with open "counts look wrong" flags, most flagged first, at most `QUEUE_LIMIT`. */
-export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
-	const open = eq(titleCountFlags.status, 'open');
-	const flagged = await db
-		.select({
-			titleId: titleCountFlags.titleId,
-			title: titleSelect
-		})
-		.from(titleCountFlags)
-		.innerJoin(titles, eq(titleCountFlags.titleId, titles.id))
-		.where(open)
-		.groupBy(titleCountFlags.titleId)
-		.orderBy(desc(sql`count(*)`), asc(sql`min(${titleCountFlags.createdAt})`))
-		.limit(QUEUE_LIMIT);
+type TitleFlags = FlaggedTitle['flags'];
 
-	const flags = new Map<string, FlaggedTitle['flags']>();
-	for (const chunk of chunkForD1(
-		flagged.map((f) => f.titleId),
-		1,
-		1
-	)) {
+/** The open flags on the titles in `titleIds`, oldest first, by title id. */
+async function openFlagsOf(titleIds: string[]): Promise<Map<string, TitleFlags>> {
+	const flags = new Map<string, TitleFlags>();
+	for (const chunk of chunkForD1(titleIds, 1, 1)) {
 		for (const f of await db
 			.select({
 				id: titleCountFlags.id,
@@ -283,7 +297,7 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 			})
 			.from(titleCountFlags)
 			.innerJoin(users, eq(titleCountFlags.reporterId, users.id))
-			.where(and(inArray(titleCountFlags.titleId, chunk), open))
+			.where(and(inArray(titleCountFlags.titleId, chunk), eq(titleCountFlags.status, 'open')))
 			.orderBy(asc(titleCountFlags.createdAt))) {
 			const list = flags.get(f.titleId) ?? [];
 			list.push({
@@ -297,15 +311,66 @@ export async function listFlaggedTitles(): Promise<FlaggedTitle[]> {
 			flags.set(f.titleId, list);
 		}
 	}
-	return flagged.map((f) => ({
-		titleId: f.titleId,
-		title: f.title,
-		flags: flags.get(f.titleId) ?? []
-	}));
+	return flags;
+}
+
+/**
+ * A page of the titles with open "counts look wrong" flags: most flagged first, then the oldest
+ * flag, then title id. A cursor this module did not make reads as the first page.
+ */
+export async function listFlaggedTitles(
+	cursor?: string | null,
+	limit = QUEUE_LIMIT
+): Promise<QueuePage<FlaggedTitle>> {
+	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.flagged);
+	const flagCount = sql<number>`count(*)`;
+	const oldest = sql<number>`min(${titleCountFlags.createdAt})`;
+	const found = await db
+		.select({
+			titleId: titleCountFlags.titleId,
+			title: titleSelect,
+			flagCount,
+			oldest
+		})
+		.from(titleCountFlags)
+		.innerJoin(titles, eq(titleCountFlags.titleId, titles.id))
+		.where(eq(titleCountFlags.status, 'open'))
+		.groupBy(titleCountFlags.titleId)
+		.having(
+			after
+				? or(
+						sql`${flagCount} < ${after[0]}`,
+						and(
+							sql`${flagCount} = ${after[0]}`,
+							or(
+								sql`${oldest} > ${after[1]}`,
+								and(sql`${oldest} = ${after[1]}`, gt(titleCountFlags.titleId, after[2]))
+							)
+						)
+					)
+				: undefined
+		)
+		.orderBy(desc(flagCount), asc(oldest), asc(titleCountFlags.titleId))
+		.limit(limit + 1);
+	const page = toQueuePage(found, limit, (f) => [f.flagCount, f.oldest, f.titleId]);
+	const flags = await openFlagsOf(page.items.map((f) => f.titleId));
+	return {
+		nextCursor: page.nextCursor,
+		items: page.items.map((f) => ({
+			titleId: f.titleId,
+			title: f.title,
+			flags: flags.get(f.titleId) ?? []
+		}))
+	};
 }
 
 /** A title a moderator opened from the flagged list, with every report on it. */
-export type OpenTitle = ReportedTitle & { id: string; reports: TitleReport[] };
+export type OpenTitle = ReportedTitle & {
+	id: string;
+	reports: TitleReport[];
+	/** The title's open "counts look wrong" flags, whichever page of the flagged list it is on. */
+	flags: TitleFlags;
+};
 
 /** The title with its reports, or null when no title has that id. */
 export async function getOpenTitle(titleId: string): Promise<OpenTitle | null> {
@@ -314,5 +379,9 @@ export async function getOpenTitle(titleId: string): Promise<OpenTitle | null> {
 		.from(titles)
 		.where(eq(titles.id, titleId));
 	if (!row) return null;
-	return { ...row, reports: await listTitleReports(titleId) };
+	const [reportList, flags] = await Promise.all([
+		listTitleReports(titleId),
+		openFlagsOf([titleId])
+	]);
+	return { ...row, reports: reportList, flags: flags.get(titleId) ?? [] };
 }

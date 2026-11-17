@@ -240,7 +240,7 @@ describe('the action log', () => {
 		await rejectReport(mod, 'r1', a);
 		await resolveCountFlag(flag.id, mod);
 		await rejectAccountReports(mod, 'r1');
-		const byAction = new Map((await listRecentActions()).map((e) => [e.action, e.title]));
+		const byAction = new Map((await listRecentActions()).items.map((e) => [e.action, e.title]));
 		expect(byAction.get('reject_report')).toMatchObject({ id: a, name: 'Alien' });
 		expect(byAction.get('resolve_count_flag')).toMatchObject({ id: b, name: 'Dark' });
 		expect(byAction.get('reject_account_reports')).toBeNull();
@@ -267,7 +267,7 @@ describe('queues', () => {
 		await report('r1', a, 'held', 'contradicts_source');
 		await report('r1', b, 'held', 'busy_new_account');
 		await report('r2', a);
-		const held = await listHeldReports();
+		const held = (await listHeldReports()).items;
 		expect(held).toHaveLength(2);
 		const first = held.find((h) => h.titleId === a)!;
 		expect(first).toMatchObject({
@@ -297,11 +297,11 @@ describe('queues', () => {
 			{ titleId: a, reporterId: 'r2' },
 			{ titleId: b, reporterId: 'r1' }
 		]);
-		const flagged = await listFlaggedTitles();
+		const flagged = (await listFlaggedTitles()).items;
 		expect(flagged.map((f) => f.titleId)).toEqual([a, b]);
 		expect(flagged[0].flags.map((f) => f.note)).toEqual(expect.arrayContaining([null, 'Too low']));
 		await resolveCountFlag(flagged[1].flags[0].id, mod);
-		expect((await listFlaggedTitles()).map((f) => f.titleId)).toEqual([a]);
+		expect((await listFlaggedTitles()).items.map((f) => f.titleId)).toEqual([a]);
 	});
 });
 
