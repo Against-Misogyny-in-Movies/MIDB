@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ResourceNav from '#lib/components/resources/resourceNav.svelte';
+	import OnThisPageLayout from '#lib/components/resources/onThisPageLayout.svelte';
 	import MetricArticle from '#lib/components/resources/metricArticle.svelte';
 	import SubBlock from '#lib/components/resources/subBlock.svelte';
 	import BechdelLadderExample from '#lib/components/resources/bechdelLadderExample.svelte';
@@ -54,11 +54,7 @@
 		</p>
 	</header>
 
-	<div class="layout">
-		<aside class="nav-col">
-			<ResourceNav items={navItems} />
-		</aside>
-
+	<OnThisPageLayout items={navItems} columnWidth="42rem" breakpoint="md">
 		<div class="content">
 			<MetricArticle id="verdict" title="Verdicts" icon="ri-scales-3-fill" hue="var(--brand)">
 				<p>
@@ -345,7 +341,7 @@
 				</SubBlock>
 			</MetricArticle>
 		</div>
-	</div>
+	</OnThisPageLayout>
 </div>
 
 <style lang="postcss">
@@ -382,24 +378,6 @@
 	.lede {
 		@apply text-lg text-ink-muted;
 		margin-top: var(--spacing-md);
-	}
-
-	.layout {
-		@apply grid gap-lg items-start;
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	@media (min-width: 768px) {
-		.layout {
-			grid-template-columns: 12rem minmax(0, 42rem);
-			gap: var(--spacing-xl);
-		}
-
-		/* The grid cell is only as tall as the nav (items: start), so the cell itself pins. */
-		.nav-col {
-			@apply sticky;
-			top: 5rem;
-		}
 	}
 
 	.content {

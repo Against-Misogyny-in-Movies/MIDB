@@ -23,9 +23,11 @@
 		if (sections.length === 0) return;
 
 		function update() {
-			// At the bottom, the last section can't reach the line: pin it active.
-			const atBottom =
-				window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+			// At the bottom, the last section can't reach the line: pin it active. A page that does
+			// not scroll is at its bottom from the start, so it keeps the first section.
+			const { scrollHeight } = document.documentElement;
+			const scrolls = scrollHeight > window.innerHeight;
+			const atBottom = scrolls && window.innerHeight + window.scrollY >= scrollHeight - 2;
 			if (atBottom) {
 				active = sections[sections.length - 1].id;
 				return;
