@@ -9,11 +9,13 @@
 		canAct: boolean;
 		/** False for an account they cannot mute or ban (`canActOn` with `restrict`). */
 		canRestrict: boolean;
+		/** The acting staff member's role: an administrator lifts any ban and ends any mute, a moderator only a mute a moderator set. */
+		staffRole: string;
 	}
 
-	let { account, canAct, canRestrict }: Props = $props();
+	let { account, canAct, canRestrict, staffRole }: Props = $props();
 
-	type Panel = 'mute' | 'ban' | 'rejectAll';
+	type Panel = 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
 	let panel = $state<Panel | null>(null);
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -24,6 +26,8 @@
 	);
 
 	const name = $derived(account.username ?? 'this account');
+	const canEndMute = $derived(staffRole === 'administrator' || account.mutedByModerator);
+	const canLiftBan = $derived(staffRole === 'administrator');
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 </script>
 
@@ -40,18 +44,40 @@
 				>
 			{/if}
 			{#if canRestrict}
-				<button
-					class="btn btn--ghost"
-					type="button"
-					aria-expanded={panel === 'mute'}
-					onclick={() => toggle('mute')}>Mute account</button
-				>
-				<button
-					class="btn btn--ghost"
-					type="button"
-					aria-expanded={panel === 'ban'}
-					onclick={() => toggle('ban')}>Ban account</button
-				>
+				{#if account.restricted === 'banned'}
+					{#if canLiftBan}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'unban'}
+							onclick={() => toggle('unban')}>Lift ban</button
+						>
+					{/if}
+				{:else}
+					{#if account.restricted === 'muted'}
+						{#if canEndMute}
+							<button
+								class="btn btn--ghost"
+								type="button"
+								aria-expanded={panel === 'unmute'}
+								onclick={() => toggle('unmute')}>End mute</button
+							>
+						{/if}
+					{:else}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'mute'}
+							onclick={() => toggle('mute')}>Mute account</button
+						>
+					{/if}
+					<button
+						class="btn btn--ghost"
+						type="button"
+						aria-expanded={panel === 'ban'}
+						onclick={() => toggle('ban')}>Ban account</button
+					>
+				{/if}
 			{/if}
 		</div>
 

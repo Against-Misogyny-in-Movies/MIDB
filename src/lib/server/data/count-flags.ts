@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { moderationActions, titleCountFlags } from '#db/schema/community.ts';
@@ -28,7 +28,8 @@ export async function flagCounts(
 
 /**
  * Moves an open flag to `status` and logs it in the same batch, the log row only while the flag
- * is still open. `canCloseFlag` decides who may: a moderator cannot close their own flag or an
+ * is still open. The log row names the flag's reporter as its target account, so the log can
+ * offer to re-open that flag (`reopenCountFlag`). `canCloseFlag` decides who may: a moderator cannot close their own flag or an
  * administrator's, and gets `own-flag`. `invalid-state` when the flag is not open, `not-found` when it does not
  * exist. Counts do not change, so nothing is purged.
  */
@@ -50,7 +51,12 @@ async function closeFlag(
 	const results = await runBatch([
 		db.insert(moderationActions).select(
 			db
-				.select(logRow(actorId, action, { titleId: titleCountFlags.titleId }))
+				.select(
+					logRow(actorId, action, {
+						titleId: titleCountFlags.titleId,
+						userId: titleCountFlags.reporterId
+					})
+				)
 				.from(titleCountFlags)
 				.where(open)
 		),
@@ -62,6 +68,44 @@ async function closeFlag(
 	]);
 	const closed = results[1];
 	return Array.isArray(closed) && closed.length > 0
+		? { ok: true }
+		: { ok: false, reason: 'invalid-state' };
+}
+
+/**
+ * Re-opens a resolved or dismissed flag and logs it in the same batch, with the authority of
+ * `canCloseFlag` (`own-flag` otherwise). `invalid-state` when the flag is already open, and
+ * `not-found` when it does not exist. Counts do not change, so nothing is purged.
+ */
+export async function reopenCountFlag(flagId: string, actor: UserRow): Promise<FlagCloseResult> {
+	const [flag] = await db
+		.select({ id: users.id, role: users.role })
+		.from(titleCountFlags)
+		.innerJoin(users, eq(titleCountFlags.reporterId, users.id))
+		.where(eq(titleCountFlags.id, flagId));
+	if (!flag) return { ok: false, reason: 'not-found' };
+	if (!canCloseFlag(actor, flag)) return { ok: false, reason: 'own-flag' };
+	const closed = and(eq(titleCountFlags.id, flagId), ne(titleCountFlags.status, 'open'));
+	const results = await runBatch([
+		db.insert(moderationActions).select(
+			db
+				.select(
+					logRow(actor.id, 'reopen_flag', {
+						titleId: titleCountFlags.titleId,
+						userId: titleCountFlags.reporterId
+					})
+				)
+				.from(titleCountFlags)
+				.where(closed)
+		),
+		db
+			.update(titleCountFlags)
+			.set({ status: 'open', resolvedBy: null })
+			.where(closed)
+			.returning({ id: titleCountFlags.id })
+	]);
+	const opened = results[1];
+	return Array.isArray(opened) && opened.length > 0
 		? { ok: true }
 		: { ok: false, reason: 'invalid-state' };
 }

@@ -138,7 +138,7 @@
 				noun="actions"
 			>
 				{#snippet row(entry)}
-					<RecentActionRow {entry} />
+					<RecentActionRow {entry} me={data.me} />
 				{/snippet}
 			</PagedList>
 		{:else if tab === 'reports'}

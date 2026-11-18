@@ -81,8 +81,11 @@ const refusals: Record<Refusal, [number, string]> = {
 	edited: [409, 'The comment was edited after this page loaded. Read the new text, then decide.'],
 	'admin-acted': [
 		403,
-		'An administrator acted on this comment last, so only an administrator can approve, hide, reject or restore it or dismiss its reports.'
+		'An administrator acted on this last, so only an administrator can act on it again.'
 	],
+	'not-muted': [409, 'This account is not muted.'],
+	'not-banned': [409, 'This account is not banned.'],
+	'admin-only': [403, 'Only an administrator can lift a ban.'],
 	'already-banned': [409, 'This account is already banned, so it cannot be banned or muted again.'],
 	'forbidden-target': [
 		403,

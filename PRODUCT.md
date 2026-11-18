@@ -15,7 +15,7 @@ People deciding whether to watch something, often right before watching, often o
 - Comments on `/movie/[id]` and `/tv/[id]`: readers discuss a title. A comment is reviewed before others see it; its author sees its status. (Operate.)
 - `/u/[username]`: an account's profile: avatar, name, join date, staff role, four counts (comment score, comments, community reports, films and series), published comments and counted community reports. Names in comments and moderation link to it. Its owner sees the same page with Edit profile, Settings, Edit and Delete on their comments, and a Not public tab for their comments awaiting review, rejected, hidden or deleted and their community reports that do not count. (Read / Operate.)
 - `/user/settings`: an account's email, sign-in methods, sessions, appearance, a data download, account deletion and Sign out. (Operate.)
-- `/user/moderation`: moderators and administrators review pending and reported comments, community reports held for review and titles whose counts readers flagged, mute or ban an account, and read the action log. (Operate.)
+- `/user/moderation`: moderators and administrators review pending and reported comments, community reports held for review and titles whose counts readers flagged, mute or ban an account and end a mute or a ban, and read the action log. (Operate.)
 - `/auth`, `/user/*`: account. Readers sign in with a passkey, Google or Discord; there are no passwords. (Operate.)
 - Source freshness: a metric section shows when its source last synced ("Updated <date>"). A daily job refreshes the Bechdel Test, Unconsenting Media and TMDB popularity data, and moderators see a warning when a source is stale. (Read.)
 

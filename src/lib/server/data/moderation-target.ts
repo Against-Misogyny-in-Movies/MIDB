@@ -1,4 +1,5 @@
-import { desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { moderationActions } from '#db/schema/community.ts';
@@ -63,4 +64,50 @@ export function notBoundByAdministrator(commentId: string, ownLogId: string): SQ
 					AND (n.created_at > a.created_at OR (n.created_at = a.created_at AND n.id > a.id))
 			)
 	)`;
+}
+
+/**
+ * Whether a moderator set the latest mute logged on the account (its `mute` row's actor is a
+ * moderator now). A moderator may end only such a mute; an administrator may end any. A mute
+ * with no `mute` row, or one an administrator, a deleted account or a former staff member wrote,
+ * is not a moderator's.
+ */
+export const muteSetByModerator = (userId: string): SQL => sql`(
+	SELECT u.role FROM ${moderationActions} AS a LEFT JOIN ${users} AS u ON u.id = a.actor_id
+	WHERE a.target_user_id = ${userId} AND a.action = 'mute'
+	ORDER BY a.created_at DESC, a.id DESC LIMIT 1
+) = 'moderator'`;
+
+/** The latest logged `action` row on each of the accounts in `ids`, with its actor's role now. */
+export async function latestActionRows(
+	action: 'mute' | 'ban',
+	ids: readonly string[]
+): Promise<Map<string, { id: string; actorRole: string | null }>> {
+	const latest = new Map<string, { id: string; actorRole: string | null }>();
+	for (const chunk of chunkForD1(ids, 1, 1)) {
+		const rows = await db
+			.select({
+				id: moderationActions.id,
+				userId: moderationActions.targetUserId,
+				role: users.role
+			})
+			.from(moderationActions)
+			.leftJoin(users, eq(moderationActions.actorId, users.id))
+			.where(
+				and(inArray(moderationActions.targetUserId, chunk), eq(moderationActions.action, action))
+			)
+			.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id));
+		for (const row of rows) {
+			if (row.userId !== null && !latest.has(row.userId)) {
+				latest.set(row.userId, { id: row.id, actorRole: row.role });
+			}
+		}
+	}
+	return latest;
+}
+
+/** The accounts among `ids` whose latest logged mute a moderator set (`muteSetByModerator`). */
+export async function accountsMutedByModerator(ids: readonly string[]): Promise<Set<string>> {
+	const latest = await latestActionRows('mute', ids);
+	return new Set([...latest].filter(([, row]) => row.actorRole === 'moderator').map(([id]) => id));
 }

@@ -30,7 +30,7 @@
 
 	let { item, me, ranked = true, fallbackId = 'moderation-empty' }: Props = $props();
 
-	type Panel = 'hide' | 'reject' | 'mute' | 'ban';
+	type Panel = 'hide' | 'reject' | 'mute' | 'ban' | 'unmute' | 'unban';
 	let panel = $state<Panel | null>(null);
 	/** The action whose form is in flight, so its button reads as busy and the others wait. */
 	let busy = $state<string | null>(null);
@@ -39,6 +39,12 @@
 	const { comment, author } = $derived(item);
 	const canModerate = $derived(canActOn(me, author));
 	const canRestrict = $derived(canActOn(me, author, 'restrict'));
+	/** A hidden or rejected comment offers Restore; a pending or published one offers Hide and Reject. */
+	const restorable = $derived(comment.status === 'hidden' || comment.status === 'rejected');
+	const removable = $derived(comment.status === 'pending' || comment.status === 'published');
+	/** A moderator ends only a mute a moderator set; an administrator ends any, and only they lift a ban. */
+	const canEndMute = $derived(me.role === 'administrator' || item.authorMutedByModerator);
+	const canLiftBan = $derived(me.role === 'administrator');
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
 	const permalink = $derived(commentHref(item.title.kind, item.title.tmdbId, comment.id));
 	const SOURCES: Record<string, string> = {
@@ -73,7 +79,9 @@
 			{item.authorCommentCount}
 			{item.authorCommentCount === 1 ? 'comment' : 'comments'} in all
 		</span>
-		{#if item.authorMutedUntil}
+		{#if item.authorBanned}
+			<span class="label">Banned</span>
+		{:else if item.authorMutedUntil}
 			<span class="label">Muted until {formatDate(item.authorMutedUntil)}</span>
 		{/if}
 		<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
@@ -154,7 +162,20 @@
 					</button>
 				</form>
 			{/if}
-			{#if canModerate}
+			{#if canModerate && restorable}
+				<form method="POST" action="?/restore" use:enhance={submit('restore')}>
+					<input type="hidden" name="id" value={comment.id} />
+					<input type="hidden" name="editedAt" value={editedAtValue(comment.editedAt)} />
+					<button
+						class="btn btn--ink"
+						aria-busy={busy === 'restore'}
+						disabled={busy !== null && busy !== 'restore'}
+					>
+						Restore comment
+					</button>
+				</form>
+			{/if}
+			{#if canModerate && removable}
 				<button
 					class="btn btn--ghost"
 					type="button"
@@ -169,20 +190,38 @@
 				>
 			{/if}
 			{#if canRestrict}
-				{#if !item.authorMutedUntil}
+				{#if item.authorBanned}
+					{#if canLiftBan}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'unban'}
+							onclick={() => toggle('unban')}>Lift ban</button
+						>
+					{/if}
+				{:else}
+					{#if !item.authorMutedUntil}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'mute'}
+							onclick={() => toggle('mute')}>Mute account</button
+						>
+					{:else if canEndMute}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'unmute'}
+							onclick={() => toggle('unmute')}>End mute</button
+						>
+					{/if}
 					<button
 						class="btn btn--ghost"
 						type="button"
-						aria-expanded={panel === 'mute'}
-						onclick={() => toggle('mute')}>Mute author</button
+						aria-expanded={panel === 'ban'}
+						onclick={() => toggle('ban')}>Ban account</button
 					>
 				{/if}
-				<button
-					class="btn btn--ghost"
-					type="button"
-					aria-expanded={panel === 'ban'}
-					onclick={() => toggle('ban')}>Ban author</button
-				>
 			{/if}
 		</div>
 	{/if}

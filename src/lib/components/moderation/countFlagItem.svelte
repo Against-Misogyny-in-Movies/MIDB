@@ -35,7 +35,23 @@
 		<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 		{#if flag.note}<span class="note">{flag.note}</span>{/if}
 	</p>
-	{#if canAct}
+	{#if flag.status !== 'open'}
+		<p class="label">{flag.status === 'resolved' ? 'Resolved' : 'Dismissed'}</p>
+		{#if canAct}
+			<div class="actions">
+				<form method="POST" action="?/reopenFlag" use:enhance={submit('reopenFlag')}>
+					<input type="hidden" name="id" value={flag.id} />
+					<button
+						class="btn btn--ghost"
+						aria-busy={busy === 'reopenFlag'}
+						disabled={busy !== null && busy !== 'reopenFlag'}
+					>
+						Re-open
+					</button>
+				</form>
+			</div>
+		{/if}
+	{:else if canAct}
 		<div class="actions">
 			{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
 				<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>

@@ -44,7 +44,8 @@ export type ModerationResult =
 			/**
 			 * `edited`: the text changed after the moderator's view loaded. `admin-acted`: an
 			 * administrator took the latest action, which binds a moderator. `already-banned`: a ban or
-			 * a mute of an account that is banned.
+			 * a mute of an account that is banned. `not-muted` and `not-banned`: the account has no mute or
+			 * ban to end. `admin-only`: only an administrator lifts a ban.
 			 */
 			reason:
 				| 'not-found'
@@ -52,7 +53,10 @@ export type ModerationResult =
 				| 'forbidden-target'
 				| 'edited'
 				| 'admin-acted'
-				| 'already-banned';
+				| 'already-banned'
+				| 'not-muted'
+				| 'not-banned'
+				| 'admin-only';
 	  };
 
 /**

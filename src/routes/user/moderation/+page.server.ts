@@ -31,6 +31,7 @@ import {
 	listFlaggedTitles,
 	listHeldReports
 } from '#lib/server/data/community-report-queue.ts';
+import { unbanAccount, unmuteUser } from '#lib/server/data/moderation-reversals.ts';
 import { getModerationCounts } from '#lib/server/data/moderation-counts.ts';
 import { listModerationTable } from '#lib/server/data/moderation-table.ts';
 import { queryToFilters } from '#lib/server/moderation/search-filters.ts';
@@ -46,7 +47,11 @@ import {
 import { runBulk } from '#lib/server/moderation/bulk.ts';
 import { purgeOutcome } from '#lib/server/moderation/purge.ts';
 import { runScan } from '#lib/server/moderation/run-scan.ts';
-import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
+import {
+	dismissCountFlag,
+	reopenCountFlag,
+	resolveCountFlag
+} from '#lib/server/data/count-flags.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { AI_QUERY_MAX } from '#lib/media/utils/comments.ts';
 import { filtersToParams, parseFilters } from '#lib/media/utils/moderationFilters.ts';
@@ -175,6 +180,22 @@ export const actions: Actions = {
 			(staff, data) => banAccount(staff, text(data, 'userId') ?? '', reasonOf(data)),
 			purgeOutcome
 		),
+	unmute: (event) =>
+		act(
+			event,
+			'unmute',
+			commentKey,
+			(staff, data) => unmuteUser(staff, text(data, 'userId') ?? '', reasonOf(data)),
+			purgeOutcome
+		),
+	unban: (event) =>
+		act(
+			event,
+			'unban',
+			commentKey,
+			(staff, data) => unbanAccount(staff, text(data, 'userId') ?? '', reasonOf(data)),
+			purgeOutcome
+		),
 	countReport: (event) =>
 		act(
 			event,
@@ -207,5 +228,9 @@ export const actions: Actions = {
 	dismissFlag: (event) =>
 		act(event, 'dismissFlag', flagKey, async (staff, data) =>
 			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff))
+		),
+	reopenFlag: (event) =>
+		act(event, 'reopenFlag', flagKey, async (staff, data) =>
+			flagResult(await reopenCountFlag(text(data, 'id') ?? '', staff))
 		)
 };

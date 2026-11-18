@@ -60,6 +60,8 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 		reports: [],
 		authorCommentCount: 4,
 		authorMutedUntil: null,
+		authorBanned: false,
+		authorMutedByModerator: false,
 		...over
 	};
 }
@@ -90,14 +92,16 @@ function mount(
 }
 
 describe('ModerationItem', () => {
-	it('says when the author is muted and offers no Mute author, and marks an edited comment', () => {
+	it('says when the author is muted and offers no Mute account, and marks an edited comment', () => {
 		mount({
 			authorMutedUntil: '2026-11-20T10:00:00.000Z',
+			authorBanned: false,
+			authorMutedByModerator: false,
 			comment: { ...item().comment, editedAt: '2026-11-02T10:00:00.000Z' }
 		});
 		expect(screen.getByText(/Muted until/)).toBeTruthy();
-		expect(screen.queryByRole('button', { name: 'Mute author' })).toBeNull();
-		expect(screen.getByRole('button', { name: 'Ban author' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Ban account' })).toBeTruthy();
 		expect(screen.getByText('Edited')).toBeTruthy();
 	});
 
@@ -166,8 +170,8 @@ describe('ModerationItem', () => {
 			'Dismiss reports',
 			'Hide',
 			'Reject',
-			'Mute author',
-			'Ban author'
+			'Mute account',
+			'Ban account'
 		])
 			expect(screen.queryByRole('button', { name })).toBeNull();
 	});
@@ -175,24 +179,24 @@ describe('ModerationItem', () => {
 	it('offers an administrator every control on an administrator’s comment, Mute and Ban excepted on themselves', () => {
 		const admin = { ...AUTHOR, id: 'boss', role: 'administrator' as const };
 		mount({ author: admin }, { me: { id: 'other', role: 'administrator' } });
-		for (const name of ['Approve', 'Hide', 'Reject', 'Mute author', 'Ban author'])
+		for (const name of ['Approve', 'Hide', 'Reject', 'Mute account', 'Ban account'])
 			expect(screen.getByRole('button', { name })).toBeTruthy();
 		cleanup();
 		mount({ author: admin }, { me: { id: 'boss', role: 'administrator' } });
 		for (const name of ['Approve', 'Hide', 'Reject'])
 			expect(screen.getByRole('button', { name })).toBeTruthy();
-		expect(screen.queryByRole('button', { name: 'Mute author' })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Ban author' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
 	});
 
 	it('asks for a confirmation that names the consequence of a ban', async () => {
 		mount();
-		await fireEvent.click(screen.getByRole('button', { name: 'Ban author' }));
-		expect(screen.getByText(/Its sessions end, it cannot sign in again/)).toBeTruthy();
-		expect(screen.getByText(/no way to undo a ban/)).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Ban account' })).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Ban account' }));
+		expect(screen.getByText(/Its sessions end, it cannot sign in/)).toBeTruthy();
+		expect(screen.getByText(/Only an administrator can lift a ban/)).toBeTruthy();
+		expect(screen.getAllByRole('button', { name: 'Ban account' })).toHaveLength(2);
 		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
+		expect(screen.getAllByRole('button', { name: 'Ban account' })).toHaveLength(1);
 	});
 
 	it('names what a reject does to the author before it is sent', async () => {
@@ -206,7 +210,7 @@ describe('ModerationItem', () => {
 
 	it('offers a listed mute length and posts the author id', async () => {
 		mount();
-		await fireEvent.click(screen.getByRole('button', { name: 'Mute author' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Mute account' }));
 		const select = screen.getByLabelText('Length');
 		expect([...select.querySelectorAll('option')].map((o) => o.textContent)).toEqual([
 			'1 day',
@@ -312,10 +316,11 @@ describe('focus after an action', () => {
 
 	it('stays on a row that is still there, such as one that was only muted', async () => {
 		mountTwo(false);
-		await fireEvent.click(screen.getByRole('button', { name: 'Mute author' }));
-		await fireEvent.submit(
-			screen.getByRole('button', { name: 'Mute account' }).closest('form') as HTMLFormElement
-		);
+		await fireEvent.click(screen.getByRole('button', { name: 'Mute account' }));
+		const submitButton = screen
+			.getAllByRole('button', { name: 'Mute account' })
+			.find((b) => b.closest('form'));
+		await fireEvent.submit(submitButton?.closest('form') as HTMLFormElement);
 		await waitFor(() => expect(document.activeElement?.id).toBe('comment-c1'));
 	});
 });
@@ -333,13 +338,18 @@ describe('RecentActionRow', () => {
 		commentId: 'c1',
 		commentStatus: 'rejected',
 		commentEditedAt: null,
+		inForce: null,
+		flag: null,
 		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
 
 	function mountEntry(e: RecentAction) {
 		const list = document.body.appendChild(document.createElement('ul'));
-		return render(RecentActionRow, { props: { entry: e }, target: list });
+		return render(RecentActionRow, {
+			props: { entry: e, me: { id: 'mod', role: 'moderator' } },
+			target: list
+		});
 	}
 
 	it('reads as who did what to which comment, with the reason', () => {
@@ -432,6 +442,7 @@ describe('the held report row', () => {
 			reportCount: 4,
 			commentCount: 1,
 			role: 'user',
+			mutedByModerator: false,
 			countsFrom: new Date(Date.now() + 4 * 86_400_000).toISOString(),
 			restricted: null
 		},

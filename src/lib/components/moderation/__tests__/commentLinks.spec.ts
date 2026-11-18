@@ -50,7 +50,9 @@ describe('links to a comment from the moderation views', () => {
 			severity: null,
 			reports: [],
 			authorCommentCount: 1,
-			authorMutedUntil: null
+			authorMutedUntil: null,
+			authorBanned: false,
+			authorMutedByModerator: false
 		};
 		inList(ModerationItemRow, { item, me: MOD });
 		const link = screen.getByRole('link', { name: 'View comment' });
@@ -68,7 +70,9 @@ describe('links to a comment from the moderation views', () => {
 			aiCategories: [],
 			reports: [],
 			authorCommentCount: 1,
-			authorMutedUntil: null
+			authorMutedUntil: null,
+			authorBanned: false,
+			authorMutedByModerator: false
 		};
 		inList(ModerationItemRow, { item, me: MOD });
 		expect(document.querySelector('a[href*="#comment-"]')).toBeNull();
@@ -84,6 +88,8 @@ describe('links to a comment from the moderation views', () => {
 			reports: [],
 			authorCommentCount: 1,
 			authorMutedUntil: null,
+			authorBanned: false,
+			authorMutedByModerator: false,
 			severity: null,
 			aiFailure: null,
 			latestLabel: null
@@ -111,6 +117,8 @@ describe('links to a comment from the moderation views', () => {
 			commentId: 'c1',
 			commentStatus: 'hidden',
 			commentEditedAt: null,
+			inForce: null,
+			flag: null,
 			title: { id: 't1', ...TITLE },
 			...over
 		});

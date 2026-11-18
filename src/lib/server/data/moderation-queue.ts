@@ -3,13 +3,19 @@ import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
-import { commentReports, comments, moderationActions } from '#db/schema/community.ts';
+import {
+	commentReports,
+	comments,
+	moderationActions,
+	titleCountFlags
+} from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import type { CommentStatus, OwnComment, ReportReason } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
 import { activeMute } from './mute.ts';
+import { accountsMutedByModerator, latestActionRows } from './moderation-target.ts';
 import {
 	afterPriority,
 	priorityCursorOf,
@@ -20,6 +26,8 @@ import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
+
+const FLAG_ACTIONS = ['resolve_count_flag', 'dismiss_count_flag', 'reopen_flag'] as const;
 
 /** Rows per queue tab. */
 export const QUEUE_LIMIT = 50;
@@ -43,6 +51,10 @@ export type ModerationItem = {
 	authorCommentCount: number;
 	/** When the author's mute ends, while it is in the future; otherwise null. */
 	authorMutedUntil: string | null;
+	/** Whether the author is banned, so the item offers Lift ban in place of Mute and Ban. */
+	authorBanned: boolean;
+	/** Whether a moderator set the author's latest mute, which a moderator may end (`muteSetByModerator`). */
+	authorMutedByModerator: boolean;
 };
 
 /** What a stored verdict says, read once: the categories, the severity and the failure code. */
@@ -122,6 +134,8 @@ export async function toModerationItems(
 			counts.set(row.userId, row.n);
 		}
 	}
+	const mutedAuthors = rows.map((r) => r.author).filter((a) => activeMute(a.mutedUntil) !== null);
+	const mutedByModerator = await accountsMutedByModerator(mutedAuthors.map((a) => a.id));
 	return rows.map(({ comment, author, title }) => {
 		const verdict = readAiVerdict(comment.aiVerdict);
 		return {
@@ -139,7 +153,9 @@ export async function toModerationItems(
 					reporter: r.reporter
 				})),
 			authorCommentCount: counts.get(author.id) ?? 0,
-			authorMutedUntil: activeMute(author.mutedUntil)
+			authorMutedUntil: activeMute(author.mutedUntil),
+			authorBanned: author.bannedAt !== null,
+			authorMutedByModerator: mutedByModerator.has(author.id)
 		};
 	});
 }
@@ -232,6 +248,14 @@ export type RecentAction = {
 	commentStatus: CommentStatus | null;
 	/** When the author last edited the comment, so the log can say it changed after the action. */
 	commentEditedAt: string | null;
+	/**
+	 * Whether this row's mute or ban is still in force: it is the account's latest such row and
+	 * the account is still muted or banned. `byModerator` says a moderator wrote the mute, which
+	 * a moderator may end. Null on every other row.
+	 */
+	inForce: { byModerator: boolean } | null;
+	/** The count flag a flag action closed or re-opened, and its status now, so the log can re-open it. */
+	flag: { id: string; status: (typeof titleCountFlags.$inferSelect)['status'] } | null;
 	/** The title the comment is on, or the title a report or count-flag action concerns. */
 	title: {
 		id: string;
@@ -253,10 +277,20 @@ export async function listRecentActions(
 			targetBody: comments.body,
 			targetStatus: comments.status,
 			targetEditedAt: comments.editedAt,
+			flagId: titleCountFlags.id,
+			flagStatus: titleCountFlags.status,
 			title: { id: titles.id, kind: titles.kind, tmdbId: titles.tmdbId, name: titles.title }
 		})
 		.from(moderationActions)
 		.leftJoin(comments, eq(moderationActions.targetCommentId, comments.id))
+		.leftJoin(
+			titleCountFlags,
+			and(
+				inArray(moderationActions.action, FLAG_ACTIONS),
+				eq(titleCountFlags.titleId, moderationActions.targetTitleId),
+				eq(titleCountFlags.reporterId, moderationActions.targetUserId)
+			)
+		)
 		.leftJoin(
 			titles,
 			eq(titles.id, sql`coalesce(${comments.titleId}, ${moderationActions.targetTitleId})`)
@@ -286,13 +320,43 @@ export async function listRecentActions(
 		)
 	];
 	const people = new Map<string, PublicUser>();
+	const standing = new Map<string, { muted: boolean; banned: boolean }>();
 	for (const chunk of chunkForD1(userIds, 1)) {
 		for (const row of await db.select().from(users).where(inArray(users.id, chunk))) {
 			people.set(row.id, toPublicUser(row));
+			standing.set(row.id, {
+				muted: activeMute(row.mutedUntil) !== null,
+				banned: row.bannedAt !== null
+			});
 		}
 	}
+	const targetsOf = (action: 'mute' | 'ban') => [
+		...new Set(
+			rows
+				.filter((r) => r.action.action === action && r.action.targetUserId !== null)
+				.map((r) => r.action.targetUserId as string)
+		)
+	];
+	const latestMute = await latestActionRows('mute', targetsOf('mute'));
+	const latestBan = await latestActionRows('ban', targetsOf('ban'));
+	const inForce = (action: typeof moderationActions.$inferSelect): RecentAction['inForce'] => {
+		const target = action.targetUserId && standing.get(action.targetUserId);
+		if (!target) return null;
+		if (action.action === 'mute') {
+			const latest = latestMute.get(action.targetUserId as string);
+			return target.muted && latest?.id === action.id
+				? { byModerator: latest.actorRole === 'moderator' }
+				: null;
+		}
+		if (action.action === 'ban') {
+			return target.banned && latestBan.get(action.targetUserId as string)?.id === action.id
+				? { byModerator: false }
+				: null;
+		}
+		return null;
+	};
 	const items: RecentAction[] = rows.map(
-		({ action, targetBody, targetStatus, targetEditedAt, title }) => ({
+		({ action, targetBody, targetStatus, targetEditedAt, flagId, flagStatus, title }) => ({
 			id: action.id,
 			action: action.action,
 			reason: action.reason,
@@ -304,6 +368,8 @@ export async function listRecentActions(
 			commentId: action.targetCommentId,
 			commentStatus: targetStatus,
 			commentEditedAt: targetEditedAt?.toISOString() ?? null,
+			inForce: inForce(action),
+			flag: flagId && flagStatus ? { id: flagId, status: flagStatus } : null,
 			title: title && title.name !== null ? title : null
 		})
 	);

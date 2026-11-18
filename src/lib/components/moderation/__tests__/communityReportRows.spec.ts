@@ -56,6 +56,7 @@ const account = (over: Partial<ReportAccount> = {}): ReportAccount => ({
 	role: 'user',
 	countsFrom: new Date(Date.now() - 93 * DAY).toISOString(),
 	restricted: null,
+	mutedByModerator: false,
 	...over
 });
 
@@ -100,7 +101,7 @@ const titleReport = (over: Partial<TitleReport> = {}): TitleReport => ({
 function mountRow(report: TitleReport, canAct = true, canRestrict = canAct) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(TitleReportRow, {
-		props: { report, titleId: 't1', canAct, canRestrict },
+		props: { report, titleId: 't1', canAct, canRestrict, staffRole: 'moderator' },
 		target: list
 	});
 }
@@ -230,6 +231,7 @@ describe('the open title view', () => {
 		flags: [
 			{
 				id: 'f1',
+				status: 'open',
 				note: 'Too low',
 				reporter: 'bo',
 				reporterId: 'u1',
@@ -238,6 +240,7 @@ describe('the open title view', () => {
 			},
 			{
 				id: 'f2',
+				status: 'open',
 				note: null,
 				reporter: null,
 				reporterId: 'u2',
@@ -252,7 +255,8 @@ describe('the open title view', () => {
 		tmdbId: 348,
 		name: 'Alien',
 		reports: [],
-		flags: []
+		flags: [],
+		closedFlags: []
 	};
 	const me = { id: 'mod', role: 'moderator' };
 
@@ -398,12 +402,17 @@ describe('the action log sentences', () => {
 		commentId: null,
 		commentStatus: null,
 		commentEditedAt: null,
+		inForce: null,
+		flag: null,
 		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
 	const mountEntry = (e: RecentAction) => {
 		const list = document.body.appendChild(document.createElement('ul'));
-		return render(RecentActionRow, { props: { entry: e }, target: list });
+		return render(RecentActionRow, {
+			props: { entry: e, me: { id: 'mod', role: 'moderator' } },
+			target: list
+		});
 	};
 
 	it.each([

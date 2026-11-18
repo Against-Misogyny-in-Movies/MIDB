@@ -26,7 +26,8 @@ const reports = {
 	listFlaggedTitles: vi.fn(),
 	getOpenTitle: vi.fn()
 };
-const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn() };
+const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn(), reopenCountFlag: vi.fn() };
+const reversals = { unmuteUser: vi.fn(), unbanAccount: vi.fn() };
 const getSourceSyncDates = vi.fn();
 const getModerationCounts = vi.fn();
 
@@ -46,6 +47,7 @@ vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
+vi.mock('#lib/server/data/moderation-reversals.ts', () => reversals);
 vi.mock('#lib/server/data/moderation-counts.ts', () => ({
 	getModerationCounts: () => getModerationCounts()
 }));
@@ -69,15 +71,21 @@ const REPORT_NAMES = [
 	'rejectReport',
 	'rejectAccountReports',
 	'resolveFlag',
-	'dismissFlag'
+	'dismissFlag',
+	'reopenFlag'
 ] as const;
-type Name = (typeof NAMES)[number] | (typeof REPORT_NAMES)[number];
+const REVERSAL_NAMES = ['unmute', 'unban'] as const;
+type Name =
+	| (typeof NAMES)[number]
+	| (typeof REPORT_NAMES)[number]
+	| (typeof REVERSAL_NAMES)[number];
 
 const REPORT_FIELDS = { id: 'f1', userId: 'u1', titleId: 't1' };
 const allFns = () => [
 	...Object.values(queries),
 	...Object.values(reports),
-	...Object.values(flags)
+	...Object.values(flags),
+	...Object.values(reversals)
 ];
 
 function run(
@@ -111,6 +119,8 @@ beforeEach(() => {
 	for (const fn of Object.values(reports))
 		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
 	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue({ ok: true });
+	for (const fn of Object.values(reversals))
+		fn.mockReset().mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
 	const empty = { items: [], nextCursor: null };
 	reports.listHeldReports.mockResolvedValue(empty);
 	reports.listFlaggedTitles.mockResolvedValue(empty);
@@ -295,6 +305,61 @@ describe('community-report actions', () => {
 	});
 });
 
+describe('reversals', () => {
+	it('unmute and unban call the data function with the account and the reason', async () => {
+		expect(await run('unmute', { id: 'c1', userId: 'u1', reason: ' mistake ' })).toEqual({
+			id: 'c1',
+			done: 'unmute'
+		});
+		expect(reversals.unmuteUser).toHaveBeenCalledWith(MOD, 'u1', 'mistake');
+		expect(await run('unban', { userId: 'u1' })).toEqual({ id: 'u1', done: 'unban' });
+		expect(reversals.unbanAccount).toHaveBeenCalledWith(MOD, 'u1', null);
+	});
+
+	it('purges the profile and the counts their result names, and touches no comment list', async () => {
+		await run('unmute');
+		await run('unban');
+		expect(purgeProfiles).toHaveBeenCalledTimes(2);
+		expect(purgeProfiles).toHaveBeenCalledWith(['u1']);
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		['unmute', 'unmuteUser', 'not-muted', 409, 'This account is not muted.'],
+		['unban', 'unbanAccount', 'not-banned', 409, 'This account is not banned.'],
+		['unban', 'unbanAccount', 'admin-only', 403, 'Only an administrator can lift a ban.'],
+		[
+			'unmute',
+			'unmuteUser',
+			'admin-acted',
+			403,
+			'An administrator acted on this last, so only an administrator can act on it again.'
+		]
+	] as const)(
+		'%s refused as %s answers %i with a toast message',
+		async (name, fn, reason, status, message) => {
+			reversals[fn].mockResolvedValue({ ok: false, reason });
+			const result = await run(name);
+			expect(result).toMatchObject({ status, data: { id: 'c1', error: message } });
+			expect(purgeProfiles).not.toHaveBeenCalled();
+		}
+	);
+
+	it('refuses a request without a target', async () => {
+		expect(await run('unmute', {})).toMatchObject({ status: 400 });
+		expect(reversals.unmuteUser).not.toHaveBeenCalled();
+	});
+
+	it('reopenFlag re-opens the flag as the acting staff member and purges nothing', async () => {
+		expect(await run('reopenFlag', REPORT_FIELDS)).toEqual({ id: 'f1', done: 'reopenFlag' });
+		expect(flags.reopenCountFlag).toHaveBeenCalledWith('f1', MOD);
+		flags.reopenCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
+		expect(await run('reopenFlag', REPORT_FIELDS)).toMatchObject({ status: 403 });
+		expect(purgeTitlesReports).not.toHaveBeenCalled();
+		expect(purgeProfiles).not.toHaveBeenCalled();
+	});
+});
+
 describe('purging', () => {
 	it.each(['approve', 'hide', 'reject', 'restore', 'dismiss'] as const)(
 		'%s purges the title’s comment list',
@@ -350,7 +415,7 @@ describe('purging', () => {
 
 	it.each([
 		['edited', 409, /edited after this page loaded/],
-		['admin-acted', 403, /administrator acted on this comment last/]
+		['admin-acted', 403, /administrator acted on this last/]
 	] as const)('a %s refusal answers %i with its own message', async (reason, status, message) => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason });
 		const result = await run('approve');

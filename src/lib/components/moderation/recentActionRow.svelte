@@ -1,22 +1,28 @@
 <script lang="ts">
 	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
 	import { formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { toastActionResult } from '#lib/media/utils/rowSubmit.ts';
+	import { canActOn, canCloseFlag } from '#lib/media/utils/canActOn.ts';
+	import { rowSubmit, toastActionResult } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		entry: RecentAction;
+		/** The acting staff member: their role decides which reversals the row offers (`canActOn`, `canCloseFlag`). */
+		me: { id: string; role: string };
 	}
 
-	let { entry }: Props = $props();
+	let { entry, me }: Props = $props();
 
 	let busy = $state(false);
+	let panelBusy = $state<string | null>(null);
+	let panel = $state<'unmute' | 'unban' | null>(null);
 	let root: HTMLElement | undefined = $state();
 
 	/** What a row says for each action. An action this build does not know reads as a plain label. */
@@ -33,25 +39,34 @@
 		reject_account_reports: 'rejected every community report by',
 		resolve_count_flag: 'resolved Counts look wrong on',
 		dismiss_count_flag: 'dismissed Counts look wrong on',
+		reopen_flag: 're-opened Counts look wrong on',
 		unmute: 'ended the mute of',
 		unban: 'lifted the ban on',
-		reopen_flag: 're-opened Counts look wrong on',
 		set_role: 'changed the role of',
 		note: 'added a note on'
 	};
-	const verb = $derived((VERBS as Record<string, string | undefined>)[entry.action] ?? 'acted on');
 	/** The actions on a title's counts: the title ends the sentence, and the moderation view opens it. */
 	const ON_COUNTS = new Set<RecentAction['action']>([
 		'approve_report',
 		'reject_report',
 		'resolve_count_flag',
-		'dismiss_count_flag'
+		'dismiss_count_flag',
+		'reopen_flag'
 	]);
 	const FLAG_ACTIONS = new Set<RecentAction['action']>([
 		'resolve_count_flag',
-		'dismiss_count_flag'
+		'dismiss_count_flag',
+		'reopen_flag'
 	]);
 
+	/** A flag row that names the flag's reporter reads "from <name> on <title>". */
+	const flagFrom = $derived(FLAG_ACTIONS.has(entry.action) && entry.targetUser !== null);
+	const verb = $derived(
+		((VERBS as Record<string, string | undefined>)[entry.action] ?? 'acted on').replace(
+			/ on$/,
+			flagFrom ? ' from' : ' on'
+		)
+	);
 	/** A hide or a reject can be undone while the comment is still in that state. */
 	const restorable = $derived(
 		entry.commentId !== null &&
@@ -77,6 +92,34 @@
 			: undefined
 	);
 	const inline = $derived(FLAG_ACTIONS.has(entry.action));
+	const submit = rowSubmit(
+		() => root,
+		(name) => (panelBusy = name),
+		() => (panel = null)
+	);
+	/** A mute still in force: an administrator ends any, a moderator one a moderator set, and `canActOn` applies. */
+	const endable = $derived(
+		entry.action === 'mute' &&
+			entry.inForce !== null &&
+			entry.targetUser !== null &&
+			canActOn(me, entry.targetUser, 'restrict') &&
+			(me.role === 'administrator' || entry.inForce.byModerator)
+	);
+	/** A ban still in force: only an administrator lifts it. */
+	const liftable = $derived(
+		entry.action === 'ban' &&
+			entry.inForce !== null &&
+			entry.targetUser !== null &&
+			me.role === 'administrator' &&
+			canActOn(me, entry.targetUser, 'restrict')
+	);
+	/** A closed flag can be re-opened by whoever may close it. */
+	const reopenable = $derived(
+		entry.flag !== null &&
+			entry.flag.status !== 'open' &&
+			entry.targetUser !== null &&
+			canCloseFlag(me, entry.targetUser)
+	);
 	const muteLength = $derived(
 		entry.muteHours === null ? '' : ` for ${formatMuteHours(entry.muteHours)}`
 	);
@@ -100,7 +143,9 @@
 					username={entry.targetUser.username}
 					name={entry.targetUser.displayName}
 				/></span
-			>{/if}{#if inline && entry.title}{@render titleLink(entry.title.name)}{/if}{muteLength}
+			>{/if}{#if inline && entry.title}{flagFrom ? ' on ' : ''}{@render titleLink(
+				entry.title.name
+			)}{/if}{muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
 		{#if commentLink}<CommentLink href={commentLink} />{/if}
 	</p>
@@ -115,6 +160,46 @@
 	{/if}
 	{#if entry.reason}
 		<p class="label">Reason: {entry.reason}</p>
+	{/if}
+	{#if endable || liftable || reopenable}
+		<div class="reversals">
+			{#if endable}
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'unmute'}
+					onclick={() => (panel = panel === 'unmute' ? null : 'unmute')}>End mute</button
+				>
+			{/if}
+			{#if liftable}
+				<button
+					class="btn btn--ghost"
+					type="button"
+					aria-expanded={panel === 'unban'}
+					onclick={() => (panel = panel === 'unban' ? null : 'unban')}>Lift ban</button
+				>
+			{/if}
+			{#if reopenable && entry.flag}
+				<form method="POST" action="?/reopenFlag" use:enhance={submit('reopenFlag')}>
+					<input type="hidden" name="id" value={entry.flag.id} />
+					<button
+						class="btn btn--ghost"
+						aria-busy={panelBusy === 'reopenFlag'}
+						disabled={panelBusy !== null && panelBusy !== 'reopenFlag'}>Re-open</button
+					>
+				</form>
+			{/if}
+		</div>
+		{#if panel && entry.targetUser}
+			<ModerationConfirm
+				kind={panel}
+				name={entry.targetUser.displayName}
+				fields={{ userId: entry.targetUser.id }}
+				busy={panelBusy}
+				{submit}
+				oncancel={() => (panel = null)}
+			/>
+		{/if}
 	{/if}
 	{#if restorable}
 		<form
@@ -153,6 +238,11 @@
 
 	.name {
 		@apply font-semibold;
+	}
+
+	.reversals {
+		@apply flex flex-wrap;
+		gap: var(--spacing-sm);
 	}
 
 	.body {

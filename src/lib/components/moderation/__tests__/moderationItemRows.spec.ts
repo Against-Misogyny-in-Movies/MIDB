@@ -41,6 +41,8 @@ function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { ranked?: b
 				reports: [],
 				authorCommentCount: 4,
 				authorMutedUntil: null,
+				authorBanned: false,
+				authorMutedByModerator: false,
 				...over
 			},
 			me,

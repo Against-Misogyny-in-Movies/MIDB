@@ -11,6 +11,7 @@ import { titleUm, umSource } from '#db/schema/sources.ts';
 import { titles } from '#db/schema/titles.ts';
 import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/communityReports.ts';
 import { activeMute } from './mute.ts';
+import { accountsMutedByModerator } from './moderation-target.ts';
 import { QUEUE_LIMIT } from './moderation-queue.ts';
 import { countsFromDate } from './counting-account.ts';
 import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
@@ -51,6 +52,8 @@ export type ReportAccount = {
 	countsFrom: string;
 	/** Why the account's reports are left out of the counts now: it is banned or muted. */
 	restricted: 'banned' | 'muted' | null;
+	/** Whether a moderator set the account's latest mute, which a moderator may end (`muteSetByModerator`). */
+	mutedByModerator: boolean;
 };
 
 export type HeldReport = {
@@ -79,6 +82,8 @@ export type FlaggedTitle = {
 	title: ReportedTitle;
 	flags: {
 		id: string;
+		/** `open` on the flagged list; a closed flag only on an open title's closed list. */
+		status: (typeof titleCountFlags.$inferSelect)['status'];
 		note: string | null;
 		reporter: string | null;
 		/** The reporter's account and role, so the page hides the buttons a moderator may not use (their own flag, an administrator's). */
@@ -137,6 +142,9 @@ async function accountsOf(rows: AccountRow[]): Promise<Map<string, ReportAccount
 			.groupBy(comments.userId))
 			commentCounts.set(r.userId, r.n);
 	}
+	const mutedByModerator = await accountsMutedByModerator(
+		ids.filter((id) => activeMute(rows.find((r) => r.userId === id)?.mutedUntil ?? null))
+	);
 	return new Map(
 		rows.map((r) => [
 			r.userId,
@@ -148,7 +156,8 @@ async function accountsOf(rows: AccountRow[]): Promise<Map<string, ReportAccount
 				commentCount: commentCounts.get(r.userId) ?? 0,
 				role: r.role,
 				countsFrom: countsFromDate(r.accountCreatedAt, r.role).toISOString(),
-				restricted: r.bannedAt ? 'banned' : activeMute(r.mutedUntil) ? 'muted' : null
+				restricted: r.bannedAt ? 'banned' : activeMute(r.mutedUntil) ? 'muted' : null,
+				mutedByModerator: mutedByModerator.has(r.userId)
 			}
 		])
 	);
@@ -288,6 +297,7 @@ async function openFlagsOf(titleIds: string[]): Promise<Map<string, TitleFlags>>
 		for (const f of await db
 			.select({
 				id: titleCountFlags.id,
+				status: titleCountFlags.status,
 				titleId: titleCountFlags.titleId,
 				note: titleCountFlags.note,
 				createdAt: titleCountFlags.createdAt,
@@ -302,6 +312,7 @@ async function openFlagsOf(titleIds: string[]): Promise<Map<string, TitleFlags>>
 			const list = flags.get(f.titleId) ?? [];
 			list.push({
 				id: f.id,
+				status: f.status,
 				note: f.note,
 				reporter: f.reporter,
 				reporterId: f.reporterId,
@@ -312,6 +323,37 @@ async function openFlagsOf(titleIds: string[]): Promise<Map<string, TitleFlags>>
 		}
 	}
 	return flags;
+}
+
+/** The most recently closed flags on a title kept for the open title view, which offers to re-open them. */
+const CLOSED_FLAGS_SHOWN = 20;
+
+/** The title's resolved and dismissed flags, the most recently closed first. */
+async function closedFlagsOf(titleId: string): Promise<TitleFlags> {
+	const found = await db
+		.select({
+			id: titleCountFlags.id,
+			status: titleCountFlags.status,
+			note: titleCountFlags.note,
+			createdAt: titleCountFlags.createdAt,
+			reporter: users.username,
+			reporterId: users.id,
+			reporterRole: users.role
+		})
+		.from(titleCountFlags)
+		.innerJoin(users, eq(titleCountFlags.reporterId, users.id))
+		.where(and(eq(titleCountFlags.titleId, titleId), ne(titleCountFlags.status, 'open')))
+		.orderBy(desc(titleCountFlags.updatedAt), desc(titleCountFlags.id))
+		.limit(CLOSED_FLAGS_SHOWN);
+	return found.map((f) => ({
+		id: f.id,
+		status: f.status,
+		note: f.note,
+		reporter: f.reporter,
+		reporterId: f.reporterId,
+		reporterRole: f.reporterRole,
+		createdAt: f.createdAt.toISOString()
+	}));
 }
 
 /**
@@ -370,6 +412,8 @@ export type OpenTitle = ReportedTitle & {
 	reports: TitleReport[];
 	/** The title's open "counts look wrong" flags, whichever page of the flagged list it is on. */
 	flags: TitleFlags;
+	/** Its recently closed flags, which a moderator may re-open. */
+	closedFlags: TitleFlags;
 };
 
 /** The title with its reports, or null when no title has that id. */
@@ -379,9 +423,10 @@ export async function getOpenTitle(titleId: string): Promise<OpenTitle | null> {
 		.from(titles)
 		.where(eq(titles.id, titleId));
 	if (!row) return null;
-	const [reportList, flags] = await Promise.all([
+	const [reportList, flags, closedFlags] = await Promise.all([
 		listTitleReports(titleId),
-		openFlagsOf([titleId])
+		openFlagsOf([titleId]),
+		closedFlagsOf(titleId)
 	]);
-	return { ...row, reports: reportList, flags: flags.get(titleId) ?? [] };
+	return { ...row, reports: reportList, flags: flags.get(titleId) ?? [], closedFlags };
 }

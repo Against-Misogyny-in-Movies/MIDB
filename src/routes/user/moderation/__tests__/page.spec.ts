@@ -136,7 +136,8 @@ describe('the community-reports tab', () => {
 					tmdbId: 70523,
 					name: 'Dark',
 					reports: [],
-					flags: []
+					flags: [],
+					closedFlags: []
 				}
 			},
 			form: null

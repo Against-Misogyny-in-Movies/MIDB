@@ -3,7 +3,7 @@
 	import { MODERATION_REASON_MAX, MUTE_HOURS, formatMuteHours } from '#lib/media/utils/comments.ts';
 	import type { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
-	type Kind = 'hide' | 'reject' | 'mute' | 'ban' | 'rejectAll';
+	type Kind = 'hide' | 'reject' | 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
 
 	interface Props {
 		kind: Kind;
@@ -39,6 +39,8 @@
 		reject: 'reject',
 		mute: 'mute',
 		ban: 'ban',
+		unmute: 'unmute',
+		unban: 'unban',
 		rejectAll: 'rejectAccountReports'
 	};
 	const BUTTONS: Record<Kind, string> = {
@@ -46,6 +48,8 @@
 		reject: 'Reject comment',
 		mute: 'Mute account',
 		ban: 'Ban account',
+		unmute: 'End mute',
+		unban: 'Lift ban',
 		rejectAll: 'Reject all community reports'
 	};
 	const noun = $derived(count === 1 ? 'comment' : 'comments');
@@ -87,8 +91,16 @@
 			Mute {name}? Until the mute ends, the account cannot write, edit, delete, vote on or report
 			comments, and its community reports leave the counts.
 		{:else if kind === 'ban'}
-			Ban {name}? Its sessions end, it cannot sign in again, its community reports leave the counts,
-			and this page has no way to undo a ban.
+			Ban {name}? Its sessions end, it cannot sign in, its community reports leave the counts, its
+			comment votes are removed and its published and pending comments are hidden. Only an
+			administrator can lift a ban, and lifting it does not bring those back.
+		{:else if kind === 'unmute'}
+			End the mute on {name}? The account can write, edit, delete, vote on and report comments
+			again, and its community reports count again.
+		{:else if kind === 'unban'}
+			Lift the ban on {name}? The account can sign in again and its community reports count again.
+			The comments the ban hid stay hidden and its removed votes stay removed; restore the comments
+			one by one or in bulk.
 		{:else if reportCount === 1}
 			Reject the community report from {name}? It leaves the counts of the title it covers.
 		{:else}

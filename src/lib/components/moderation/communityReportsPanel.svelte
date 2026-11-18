@@ -41,10 +41,16 @@
 		<h2 id="open-title" class="heading" tabindex="-1">
 			{#if openHref}<a class="link" href={openHref}>{openTitle.name}</a>{:else}{openTitle.name}{/if}
 		</h2>
-		{#if openTitle.flags.length > 0}
+		{#if openTitle.flags.length > 0 || openTitle.closedFlags.length > 0}
 			<div class="card flags">
 				<h3 class="heading">Counts look wrong</h3>
-				<CountFlagList flags={openTitle.flags} {me} />
+				{#if openTitle.flags.length > 0}
+					<CountFlagList flags={openTitle.flags} {me} />
+				{/if}
+				{#if openTitle.closedFlags.length > 0}
+					<p class="label">Closed</p>
+					<CountFlagList flags={openTitle.closedFlags} {me} />
+				{/if}
 			</div>
 		{/if}
 		{#if openTitle.reports.length === 0}
@@ -58,6 +64,7 @@
 						titleId={openTitle.id}
 						canAct={canActOn(me, account)}
 						canRestrict={canActOn(me, account, 'restrict')}
+						staffRole={me.role}
 					/>
 				{/each}
 			</ul>
