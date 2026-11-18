@@ -352,7 +352,7 @@ describe('RecentActionRow labels', () => {
 	it('shows the rule beside the note', () => {
 		mountEntry(entry({ ...plain, action: 'reject', rule: 'harassment', reason: 'Slur' }));
 		expect(screen.getByText('Rule: Harassment')).toBeTruthy();
-		expect(screen.getByText('Reason: Slur')).toBeTruthy();
+		expect(screen.getByText('Note: Slur')).toBeTruthy();
 		cleanup();
 		mountEntry(entry({ ...plain, action: 'reject', rule: null, reason: 'Slur' }));
 		expect(screen.queryByText(/^Rule:/)).toBeNull();

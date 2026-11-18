@@ -77,7 +77,7 @@
 	{#if account.banned}
 		<p class="label">
 			Banned on {formatDate(account.banned.at)}{account.banned.reason
-				? `. Reason: ${account.banned.reason}`
+				? `. Note: ${account.banned.reason}`
 				: ''}
 		</p>
 	{/if}
@@ -97,8 +97,8 @@
 		<ReportAccountActions account={actionable} {canAct} {canRestrict} {me} />
 	{:else}
 		<p class="label">
-			This account was deleted, so only its moderation log remains. Its comments, notes and reports
-			are gone.
+			This account was deleted. Its notes and reports are gone, and its comments are removed or
+			emptied of text; its moderation log remains.
 		</p>
 	{/if}
 </section>

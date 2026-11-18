@@ -43,4 +43,5 @@ CREATE INDEX `moderation_actions_comment_idx` ON `moderation_actions` (`target_c
 CREATE INDEX `moderation_actions_target_user_idx` ON `moderation_actions` (`target_user_id`);--> statement-breakpoint
 CREATE INDEX `moderation_actions_actor_idx` ON `moderation_actions` (`actor_id`);
 --> statement-breakpoint
+-- `comments.moderation_rule` is an ADD COLUMN, not the table rebuild the generator wrote for the CHECK: dropping `comments` cascades to every reply through `parent_id`, which would delete them. `db/test/migration-0007.db.spec.ts` checks that existing rows survive.
 ALTER TABLE `comments` ADD `moderation_rule` text CONSTRAINT "comments_rule_check" CHECK("moderation_rule" IN ('hate', 'harassment', 'threat', 'sexual-content', 'spam', 'violence', 'disparagement', 'trolling', 'other'));

@@ -23,7 +23,7 @@ describe('the log’s action groups', () => {
 		expect(LOG_ACTION_GROUPS.map((g) => g.label)).toEqual([
 			'Comments',
 			'Mutes and bans',
-			'Community reports and flags',
+			'Community reports and Counts look wrong',
 			'Roles and notes'
 		]);
 	});

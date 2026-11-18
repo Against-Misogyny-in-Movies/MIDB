@@ -374,7 +374,7 @@ describe('purging', () => {
 			const result = await run(name);
 			expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
 			expect((result as { data: { error: string } }).data.error).toBe(
-				'This account is already banned, so it cannot be banned or muted again.'
+				'This account is banned, so it cannot be banned again or muted.'
 			);
 			expect(purgeProfiles).not.toHaveBeenCalled();
 		}

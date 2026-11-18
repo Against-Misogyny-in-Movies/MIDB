@@ -77,10 +77,10 @@ describe('CommentHistoryRow', () => {
 
 	it('shows the reason of a rejected comment and who hid a hidden one', () => {
 		mount(row({ status: 'rejected', moderationReason: 'Contains a slur' }));
-		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
+		expect(screen.getByText(/Rejected. Contains a slur\. Only the author/)).toBeTruthy();
 		cleanup();
 		mount(row({ status: 'hidden' }));
-		expect(screen.getByText(/A moderator hid this comment/)).toBeTruthy();
+		expect(screen.getByText(/Hidden by a moderator/)).toBeTruthy();
 	});
 
 	it('shows the rule and the note of a rejected or hidden comment', () => {
@@ -89,20 +89,22 @@ describe('CommentHistoryRow', () => {
 		);
 		expect(
 			screen.getByText(
-				'Rejected: Harassment. Named a reader. Only the author and moderators see the comment.'
+				'Rejected. Rule: Harassment. Named a reader. Only the author and moderators see the comment.'
 			)
 		).toBeTruthy();
 		cleanup();
 		mount(row({ status: 'rejected', moderationRule: 'hate' }));
 		expect(
-			screen.getByText('Rejected: Hate or bigotry. Only the author and moderators see the comment.')
+			screen.getByText(
+				'Rejected. Rule: Hate or bigotry. Only the author and moderators see the comment.'
+			)
 		).toBeTruthy();
 		cleanup();
 		mount(row({ status: 'hidden', moderationReason: 'Twice', moderationRule: 'spam' }));
-		expect(screen.getByText('A moderator hid this comment. Spam. Reason: Twice')).toBeTruthy();
+		expect(screen.getByText('Hidden by a moderator. Rule: Spam. Twice.')).toBeTruthy();
 		cleanup();
 		mount(row({ status: 'hidden', moderationRule: 'trolling' }));
-		expect(screen.getByText('A moderator hid this comment. Trolling.')).toBeTruthy();
+		expect(screen.getByText('Hidden by a moderator. Rule: Trolling.')).toBeTruthy();
 	});
 
 	it('offers neither edit nor delete on a deleted comment, and no edit on a hidden one', () => {

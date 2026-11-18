@@ -115,7 +115,7 @@ describe('the log tab', () => {
 		expect(groups.map((g) => g.getAttribute('label'))).toEqual([
 			'Comments',
 			'Mutes and bans',
-			'Community reports and flags',
+			'Community reports and Counts look wrong',
 			'Roles and notes'
 		]);
 		expect(groups[1].querySelector('option')?.textContent?.trim()).toBe('All mutes and bans');

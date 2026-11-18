@@ -169,8 +169,8 @@
 			again, and its community reports count again.
 		{:else if kind === 'unban'}
 			Lift the ban on {name}? The account can sign in again and its community reports count again.
-			The comments the ban hid stay hidden and its removed votes stay removed; restore the comments
-			one by one or in bulk.
+			The comments the ban hid stay hidden and its removed votes stay removed. A moderator can
+			restore them one by one or in bulk.
 		{:else if kind === 'removeModerator'}
 			Remove the moderator role from {name}? The account loses the moderation pages at once.
 		{:else if reportCount === 1}

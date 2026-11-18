@@ -123,7 +123,7 @@ describe('CommentsState', () => {
 		const state = new CommentsState('movie', '1', async () => json({ comment: rejected }, 201));
 		await state.post('hello');
 		expect(shown()).toEqual([
-			'warn: Rejected: Attacks a person. Only the author and moderators see the comment.'
+			'warn: Rejected. Attacks a person. Only the author and moderators see the comment.'
 		]);
 	});
 

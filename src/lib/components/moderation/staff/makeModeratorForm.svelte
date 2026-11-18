@@ -44,9 +44,10 @@
 		</span>
 	</label>
 	<p class="label">
-		A moderator reviews comments and community reports, and mutes or bans accounts with the role
-		user. The change is written to the log. The administrator role is given only by the seed script
-		(<code>pnpm db:seed:admin</code>).
+		A moderator reviews comments and community reports, and mutes or bans ordinary accounts. The
+		change is written to the log. The administrator role is given only by the seed script (<code
+			>pnpm db:seed:admin</code
+		>).
 	</p>
 </form>
 

@@ -16,9 +16,9 @@ export const LOG_ACTION_LABELS: Record<LogAction, string> = {
 	approve_report: 'Count community report',
 	reject_report: 'Reject community report',
 	reject_account_reports: 'Reject all community reports',
-	resolve_count_flag: 'Resolve flag',
-	dismiss_count_flag: 'Dismiss flag',
-	reopen_flag: 'Re-open flag',
+	resolve_count_flag: 'Resolve Counts look wrong',
+	dismiss_count_flag: 'Dismiss Counts look wrong',
+	reopen_flag: 'Re-open Counts look wrong',
 	set_role: 'Change role',
 	note: 'Add note'
 };
@@ -37,7 +37,7 @@ export const LOG_ACTION_GROUPS = [
 	},
 	{
 		id: 'reports',
-		label: 'Community reports and flags',
+		label: 'Community reports and Counts look wrong',
 		actions: [
 			'approve_report',
 			'reject_report',

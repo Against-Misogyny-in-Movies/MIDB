@@ -167,11 +167,13 @@ describe('CommentsSection links to a comment', () => {
 		session.set({ ...ANNA, id: 'mod', username: 'mod', displayName: 'mod', role: 'moderator' });
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'hidden', reason: 'off topic', rule: null })
+			second: thread(view('second'), { status: 'hidden', reason: 'off topic', rule: 'spam' })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();
-		expect(pinned.textContent).toMatch(/A moderator hid this comment/);
+		expect(pinned.textContent).toMatch(
+			/Hidden by a moderator\. Rule: Spam\. off topic\. Only the author and moderators see the comment/
+		);
 		for (const name of ['Edit', 'Delete', 'Report', 'Reply', 'Upvote']) {
 			expect(within(pinned).queryByRole('button', { name })).toBeNull();
 		}

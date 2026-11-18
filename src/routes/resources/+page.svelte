@@ -346,8 +346,9 @@
 					</p>
 					<p>
 						A moderator can end a mute that a moderator set, and an administrator can end any mute.
-						Only an administrator can lift a ban. Lifting it restores sign-in only: the comments it
-						hid stay hidden until a moderator restores them, and its removed votes stay removed.
+						Only an administrator can lift a ban. Lifting it lets the account sign in again and puts
+						its community reports back in the counts. The comments it hid stay hidden until a
+						moderator restores them, and its removed votes stay removed.
 					</p>
 				</SubBlock>
 			</MetricArticle>

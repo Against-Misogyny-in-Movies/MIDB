@@ -164,7 +164,7 @@ describe('CommentsSection check', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 		await waitFor(() =>
 			expect(shown()).toContain(
-				'warn: Rejected: Attacks a person. Only the author and moderators see the comment.'
+				'warn: Rejected. Attacks a person. Only the author and moderators see the comment.'
 			)
 		);
 	});

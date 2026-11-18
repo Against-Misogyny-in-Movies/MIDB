@@ -84,7 +84,7 @@ describe('makeModeratorForm', () => {
 
 	it('says what a moderator can do and that only the seed script gives administrator', () => {
 		render(MakeModeratorForm);
-		expect(screen.getByText(/mutes or bans accounts with the role user/)).toBeTruthy();
+		expect(screen.getByText(/mutes or bans ordinary accounts/)).toBeTruthy();
 		expect(screen.getByText(/only by the seed script/)).toBeTruthy();
 		expect(screen.getByText('pnpm db:seed:admin')).toBeTruthy();
 	});

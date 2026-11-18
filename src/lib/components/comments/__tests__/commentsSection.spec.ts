@@ -209,7 +209,7 @@ describe('CommentsSection signed in', () => {
 		expect(await screen.findByText('Own p')).toBeTruthy();
 		expect(screen.getByText('Awaiting review')).toBeTruthy();
 		expect(screen.getByText('Rejected')).toBeTruthy();
-		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
+		expect(screen.getByText(/Rejected. Contains a slur\. Only the author/)).toBeTruthy();
 	});
 
 	it('has no vote or report controls on the reader’s own comment, and edit and delete on it only', async () => {

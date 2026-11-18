@@ -88,7 +88,7 @@ const refusals: Record<Refusal, [number, string]> = {
 	'not-muted': [409, 'This account is not muted.'],
 	'not-banned': [409, 'This account is not banned.'],
 	'admin-only': [403, 'Only an administrator can lift a ban.'],
-	'already-banned': [409, 'This account is already banned, so it cannot be banned or muted again.'],
+	'already-banned': [409, 'This account is banned, so it cannot be banned again or muted.'],
 	'forbidden-target': [
 		403,
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'

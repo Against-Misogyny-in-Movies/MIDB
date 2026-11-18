@@ -133,7 +133,7 @@ describe('accountSummary', () => {
 		const banned = view({ banned: { at: '2026-11-10T10:00:00.000Z', reason: 'Spam ring' } });
 		const { unmount } = render(AccountSummary, { account: banned, me: ADMIN });
 		expect(screen.getByText('Banned')).toBeTruthy();
-		expect(screen.getByText('Banned on 10/11/2026. Reason: Spam ring')).toBeTruthy();
+		expect(screen.getByText('Banned on 10/11/2026. Note: Spam ring')).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Lift ban' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
@@ -194,7 +194,7 @@ describe('accountSummary', () => {
 		});
 		expect(screen.getByRole('heading', { name: 'Deleted account' })).toBeTruthy();
 		expect(screen.getByText('Deleted')).toBeTruthy();
-		expect(screen.getByText(/only its moderation log remains/)).toBeTruthy();
+		expect(screen.getByText(/its moderation log remains/)).toBeTruthy();
 		expect(screen.queryByRole('button')).toBeNull();
 		expect(screen.queryByText('Comments')).toBeNull();
 	});
@@ -327,7 +327,7 @@ describe('accountLists', () => {
 		);
 		expect(screen.getByText('Hidden')).toBeTruthy();
 		expect(screen.getByText('Published')).toBeTruthy();
-		expect(screen.getByText(/A moderator hid this comment\. Harassment\./)).toBeTruthy();
+		expect(screen.getByText(/Hidden by a moderator\. Rule: Harassment\./)).toBeTruthy();
 		expect(screen.getByText('Reply')).toBeTruthy();
 		expect(screen.getByText('Edited')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /Edit|Delete/ })).toBeNull();

@@ -187,7 +187,7 @@
 		<p class="label">Rule: {MODERATION_RULE_LABELS[entry.rule]}</p>
 	{/if}
 	{#if entry.reason && !roleChange}
-		<p class="label">Reason: {entry.reason}</p>
+		<p class="label">Note: {entry.reason}</p>
 	{/if}
 	{#if endable || liftable || reopenable}
 		<div class="reversals action-row">

@@ -409,7 +409,7 @@ describe('RecentActionRow', () => {
 		mountEntry(entry());
 		expect(screen.getByText(/rejected a comment/)).toBeTruthy();
 		expect(screen.getByText('The rejected text')).toBeTruthy();
-		expect(screen.getByText('Reason: Slur')).toBeTruthy();
+		expect(screen.getByText('Note: Slur')).toBeTruthy();
 	});
 
 	it('offers Restore for a hide or reject that still stands, and for nothing else', () => {

@@ -24,26 +24,26 @@ describe('the moderation rules', () => {
 describe('what the author reads', () => {
 	it('leads a rejection with the rule, then the note', () => {
 		expect(unpublishedNote('rejected', 'Named a reader', 'harassment')).toBe(
-			'Rejected: Harassment. Named a reader. Only the author and moderators see the comment.'
+			'Rejected. Rule: Harassment. Named a reader. Only the author and moderators see the comment.'
 		);
 		expect(unpublishedNote('rejected', null, 'other')).toBe(
-			'Rejected: Other. Only the author and moderators see the comment.'
+			'Rejected. Rule: Other. Only the author and moderators see the comment.'
 		);
 	});
 
 	it('keeps the automatic check’s reason as it was when there is no rule', () => {
 		expect(unpublishedNote('rejected', 'Contains a slur', null)).toBe(
-			'Rejected: Contains a slur. Only the author and moderators see the comment.'
+			'Rejected. Contains a slur. Only the author and moderators see the comment.'
 		);
 		expect(unpublishedNote('rejected', 'Attacks a person.')).toBe(
-			'Rejected: Attacks a person. Only the author and moderators see the comment.'
+			'Rejected. Attacks a person. Only the author and moderators see the comment.'
 		);
 	});
 
 	it('says the rule once for a hidden comment, with the note after it', () => {
-		expect(hiddenNote(null, null)).toBe('A moderator hid this comment.');
-		expect(hiddenNote('Twice', null)).toBe('A moderator hid this comment. Reason: Twice');
-		expect(hiddenNote('Twice', 'spam')).toBe('A moderator hid this comment. Spam. Reason: Twice');
+		expect(hiddenNote(null, null)).toBe('Hidden by a moderator.');
+		expect(hiddenNote('Twice', null)).toBe('Hidden by a moderator. Twice.');
+		expect(hiddenNote('Twice', 'spam')).toBe('Hidden by a moderator. Rule: Spam. Twice.');
 	});
 
 	it('shows the rule in the toast of an edit that a moderator’s rejection still holds', () => {
@@ -53,6 +53,6 @@ describe('what the author reads', () => {
 				moderationReason: null,
 				moderationRule: 'threat'
 			}).text
-		).toContain('Rejected: Threat.');
+		).toContain('Rejected. Rule: Threat.');
 	});
 });

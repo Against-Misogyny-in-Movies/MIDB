@@ -146,7 +146,7 @@ export const MODERATION_RULE_MEANINGS: Record<(typeof moderationRule)[number], s
 	violence: 'Glorifying or calling for violence.',
 	disparagement: 'Demeaning a person or a group without a slur.',
 	trolling: 'Bad-faith bait meant to provoke.',
-	other: "A harm that no other rule names. The moderator's note says what."
+	other: "A harm that no other rule names. The moderator's note, when there is one, says what."
 };
 
 /** What a comment's status reads as to its author. */
@@ -168,21 +168,34 @@ export const formatMuteHours = (hours: number): string =>
 /** A sentence's end: the text with a full stop unless it already ends one. */
 const sentence = (text: string): string => (/[.!?]$/.test(text) ? text : `${text}.`);
 
+/** What the author reads after a decision that the rest of the site cannot see. */
+const SEEN_BY = 'Only the author and moderators see the comment.';
+
 /**
- * What a moderator told the author about a decision, as sentences: the rule's label, then the
- * moderator's note. Empty when neither was given (an automatic decision keeps its own reason in
- * the note).
+ * One decision as the author reads it, in one shape: the outcome, "Rule: Harassment.", the
+ * moderator's note, then `tail`. The rule and the note are left out when none was given (an
+ * automatic decision keeps its own reason in the note).
  */
-function decisionLead(reason: string | null, rule: ModerationRule | null): string {
+function decision(
+	outcome: string,
+	reason: string | null,
+	rule: ModerationRule | null,
+	tail?: string
+): string {
 	const note = reason?.trim();
-	return [rule ? sentence(MODERATION_RULE_LABELS[rule]) : null, note ? sentence(note) : null]
-		.filter((part) => part !== null)
+	return [
+		outcome,
+		rule ? `Rule: ${sentence(MODERATION_RULE_LABELS[rule])}` : null,
+		note ? sentence(note) : null,
+		tail
+	]
+		.filter((part) => part)
 		.join(' ');
 }
 
 /**
- * What the author reads under a comment that is not public. A rejected comment leads with the
- * rule and the note, then says who can see it.
+ * What the author reads under a comment that is not public. A rejected or hidden comment leads
+ * with the outcome, the rule and the note, then says who can see it.
  */
 export function unpublishedNote(
 	status: Exclude<(typeof commentStatus)[number], 'published'>,
@@ -192,20 +205,20 @@ export function unpublishedNote(
 	if (status === 'pending') {
 		return 'Only the author and moderators see the comment until a moderator decides.';
 	}
-	if (status === 'hidden') {
-		return 'A moderator hid this comment. Only the author and moderators see it.';
-	}
 	if (status === 'deleted') {
 		return 'The author deleted this comment. Only the author and moderators see it.';
 	}
-	const lead = decisionLead(reason, rule);
-	return `Rejected: ${lead ? `${lead} ` : ''}Only the author and moderators see the comment.`;
+	return decision(
+		status === 'hidden' ? 'Hidden by a moderator.' : 'Rejected.',
+		reason,
+		rule,
+		SEEN_BY
+	);
 }
 
 /** What the author reads in their comment history under a comment a moderator hid. */
 export function hiddenNote(reason: string | null, rule: ModerationRule | null): string {
-	const ruled = rule ? ` ${sentence(MODERATION_RULE_LABELS[rule])}` : '';
-	return `A moderator hid this comment.${ruled}${reason ? ` Reason: ${reason}` : ''}`;
+	return decision('Hidden by a moderator.', reason, rule);
 }
 
 /**
