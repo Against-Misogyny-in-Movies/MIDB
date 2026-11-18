@@ -16,6 +16,7 @@ import {
 	type QueueName,
 	type QueuePage
 } from '#lib/server/data/queue-cursor.ts';
+import { logActionsOf } from '#lib/media/utils/moderationLog.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 const query = z.object({
@@ -26,6 +27,17 @@ const query = z.object({
 		.regex(/^[\w-]+$/),
 	/** The log only: the account whose actions it lists (`LogFilter`). */
 	account: z
+		.string()
+		.max(64)
+		.regex(/^[\w-]+$/)
+		.optional(),
+	/** The log only: a group or an action (`logActionsOf`), and the staff member's id. */
+	action: z
+		.string()
+		.max(32)
+		.refine((value) => logActionsOf(value) !== null)
+		.optional(),
+	actor: z
 		.string()
 		.max(64)
 		.regex(/^[\w-]+$/)
@@ -44,7 +56,7 @@ const lists: Record<QueueName, (cursor: string, filter: LogFilter) => Promise<Qu
 /**
  * A further page of a moderation list for its "Show more" control: `?queue=` is `pending`,
  * `reported`, `held`, `flagged` or `log`, and `cursor` is the one the previous page answered
- * (`QueuePage`). `account` narrows `log` to one account's actions. Staff only (401 signed out, 403 otherwise) and `private, no-store`. Staff are
+ * (`QueuePage`). `account`, `actor` (a staff member's id) and `action` (a group or an action, `logActionsOf`) narrow `log`. Staff only (401 signed out, 403 otherwise) and `private, no-store`. Staff are
  * not rate-limited, like the page's own load and actions. A missing queue, or a cursor that list
  * did not make, is 400.
  */
@@ -53,13 +65,17 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const parsed = query.safeParse({
 		queue: url.searchParams.get('queue'),
 		cursor: url.searchParams.get('cursor'),
-		account: url.searchParams.get('account') ?? undefined
+		account: url.searchParams.get('account') ?? undefined,
+		action: url.searchParams.get('action') ?? undefined,
+		actor: url.searchParams.get('actor') ?? undefined
 	});
 	if (!parsed.success || !decodeQueueCursor(parsed.data.cursor, QUEUE_SHAPES[parsed.data.queue])) {
 		error(400, 'Invalid request');
 	}
 	const page = await lists[parsed.data.queue](parsed.data.cursor, {
-		accountId: parsed.data.account
+		accountId: parsed.data.account,
+		actorId: parsed.data.actor,
+		actions: logActionsOf(parsed.data.action ?? null) ?? undefined
 	});
 	return Response.json(page, { headers: PRIVATE_NO_STORE });
 };

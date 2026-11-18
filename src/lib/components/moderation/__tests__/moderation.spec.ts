@@ -381,6 +381,7 @@ describe('RecentActionRow', () => {
 		commentEditedAt: null,
 		inForce: null,
 		flag: null,
+		reverses: null,
 		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});

@@ -22,6 +22,9 @@ const DATA = {
 	flagged: null,
 	openTitle: null,
 	recent: null,
+	logFilters: null,
+	logParams: '',
+	unknownNames: [],
 	staleSources: []
 };
 
@@ -63,10 +66,10 @@ describe('the moderation tabs', () => {
 			await rerender({ data: { ...DATA, tab: href.slice('?tab='.length) }, form: null } as never);
 		};
 		await press(/Pending/, 'ArrowRight', /Reported/, '?tab=reported');
-		await press(/Reported/, 'End', /Recent actions/, '?tab=log');
-		await press(/Recent actions/, 'ArrowRight', /Pending/, '?tab=pending');
-		await press(/Pending/, 'ArrowLeft', /Recent actions/, '?tab=log');
-		await press(/Recent actions/, 'Home', /Pending/, '?tab=pending');
+		await press(/Reported/, 'End', /^Log/, '?tab=log');
+		await press(/^Log/, 'ArrowRight', /Pending/, '?tab=pending');
+		await press(/Pending/, 'ArrowLeft', /^Log/, '?tab=log');
+		await press(/^Log/, 'Home', /Pending/, '?tab=pending');
 	});
 
 	it('takes the selected tab from the loaded data, not from a click', async () => {
@@ -231,7 +234,7 @@ describe('the table tab', () => {
 
 	it('goes to the chosen tab’s own URL, with none of the table’s filters', async () => {
 		render(Page, { data: TABLE_DATA, form: null } as never);
-		await fireEvent.click(tab(/Recent actions/));
+		await fireEvent.click(tab(/^Log/));
 		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=log', { reset: false });
 		goto.mockClear();
 		await fireEvent.click(tab(/MIDB community reports/));
@@ -428,6 +431,8 @@ describe('the queue lists', () => {
 		expect(fetcher.mock.calls[0][0]).toBe('/api/moderation/queue?queue=flagged&cursor=f1');
 	});
 
+	const NO_FILTERS = { action: null, actor: null, account: null };
+
 	it('pages the log', async () => {
 		const fetcher = vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null }));
 		vi.stubGlobal('fetch', fetcher);
@@ -436,7 +441,8 @@ describe('the queue lists', () => {
 				...DATA,
 				tab: 'log',
 				pending: null,
-				recent: { items: [], nextCursor: null }
+				recent: { items: [], nextCursor: null },
+				logFilters: NO_FILTERS
 			},
 			form: null
 		} as never);

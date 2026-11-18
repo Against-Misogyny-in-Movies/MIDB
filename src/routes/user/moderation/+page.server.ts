@@ -22,6 +22,8 @@ import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { AI_QUERY_MAX } from '#lib/media/utils/comments.ts';
 import { filtersToParams, parseFilters } from '#lib/media/utils/moderationFilters.ts';
 import { staleSyncSources } from '#lib/media/utils/staleSync.ts';
+import { parseLogFilters } from '#lib/media/utils/moderationLog.ts';
+import { resolveLogFilter } from '#lib/server/moderation/log-filter.ts';
 import { parseModerationTab } from '#lib/media/utils/moderationTabs.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
@@ -38,6 +40,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const tab = parseModerationTab(params.get('tab'), !!params.get('title')?.trim());
 	const titleId = tab === 'reports' ? params.get('title')?.trim() || null : null;
 	const filters = tab === 'table' ? parseFilters(params) : null;
+	const logFilters = tab === 'log' ? parseLogFilters(params) : null;
+	const log = logFilters ? await resolveLogFilter(logFilters) : null;
 	const openList = tab === 'reports' && !titleId;
 	const [counts, syncDates, pending, reported, recent, held, flagged, openTitle, table] =
 		await Promise.all([
@@ -45,7 +49,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			getSourceSyncDates(),
 			tab === 'pending' ? listPendingQueue() : null,
 			tab === 'reported' ? listReportedQueue() : null,
-			tab === 'log' ? listRecentActions() : null,
+			log
+				? log.unknown.length > 0
+					? { items: [], nextCursor: null }
+					: listRecentActions(null, undefined, log.filter)
+				: null,
 			openList ? listHeldReports() : null,
 			openList ? listFlaggedTitles() : null,
 			titleId ? getOpenTitle(titleId) : null,
@@ -59,6 +67,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		pending,
 		reported,
 		recent,
+		// The log's filters as typed, the ids they resolved to for further pages, and the names no account has.
+		logFilters,
+		logParams: log?.params ?? '',
+		unknownNames: log?.unknown ?? [],
 		held,
 		flagged,
 		openTitle,

@@ -216,6 +216,7 @@ const entry = (over: Partial<RecentAction>): RecentAction => ({
 	commentEditedAt: null,
 	inForce: { byModerator: true },
 	flag: null,
+	reverses: null,
 	title: null,
 	...over
 });

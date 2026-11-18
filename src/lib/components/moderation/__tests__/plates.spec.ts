@@ -132,6 +132,7 @@ describe('every plate takes focus on open and returns it on Cancel or Escape', (
 					commentEditedAt: null,
 					inForce: { byModerator: false },
 					flag: null,
+					reverses: null,
 					title: null
 				} satisfies RecentAction,
 				me: ADMIN

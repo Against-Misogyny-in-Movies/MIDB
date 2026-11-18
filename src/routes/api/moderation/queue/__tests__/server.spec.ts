@@ -77,6 +77,22 @@ describe('GET /api/moderation/queue', () => {
 		expect(await status(get(`?queue=log&cursor=${SHAPES.log}&account=a%20b`))).toBe(400);
 	});
 
+	it('narrows the log by action, group and staff member, and refuses an action it does not know', async () => {
+		await get(`?queue=log&cursor=${SHAPES.log}&action=restrictions&actor=ada-id&account=acct-1`);
+		expect(lists.listRecentActions).toHaveBeenCalledExactlyOnceWith(SHAPES.log, undefined, {
+			accountId: 'acct-1',
+			actorId: 'ada-id',
+			actions: ['mute', 'unmute', 'ban', 'unban']
+		});
+		lists.listRecentActions.mockClear();
+		await get(`?queue=log&cursor=${SHAPES.log}&action=hide`);
+		expect(lists.listRecentActions).toHaveBeenCalledWith(SHAPES.log, undefined, {
+			actions: ['hide']
+		});
+		expect(await status(get(`?queue=log&cursor=${SHAPES.log}&action=drop`))).toBe(400);
+		expect(await status(get(`?queue=log&cursor=${SHAPES.log}&actor=a%20b`))).toBe(400);
+	});
+
 	it('runs the staff guard without a page redirect, before reading anything', async () => {
 		await get(`?queue=pending&cursor=${SHAPES.pending}`);
 		expect(requireRole).toHaveBeenCalledWith({}, ['moderator', 'administrator']);

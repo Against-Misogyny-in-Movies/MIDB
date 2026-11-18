@@ -29,6 +29,7 @@ import {
 	severityRank
 } from './moderation-priority.ts';
 import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
+import { reversedActions, type ReversedAction } from './moderation-reverses.ts';
 import { reporterRecords, type ReporterRecord } from './reporter-record.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
@@ -307,6 +308,8 @@ export type RecentAction = {
 	inForce: { byModerator: boolean } | null;
 	/** The count flag a flag action closed or re-opened, and its status now, so the log can re-open it. */
 	flag: { id: string; status: (typeof titleCountFlags.$inferSelect)['status'] } | null;
+	/** The earlier action this one undid (End mute, Lift ban, Restore, Re-open); null on any other row, or when none is logged (`moderation-reverses.ts`). */
+	reverses: ReversedAction | null;
 	/** The title the comment is on, or the title a report or count-flag action concerns. */
 	title: {
 		id: string;
@@ -323,11 +326,15 @@ export type LogFilter = {
 	 * comments (a comment action names the comment only).
 	 */
 	accountId?: string;
+	/** Only these actions. */
+	actions?: readonly Action[];
+	/** Only the actions this staff member took. */
+	actorId?: string;
 };
 
 /** The condition of a log filter over `moderation_actions`; undefined for none. */
 function logFilterWhere(filter: LogFilter) {
-	return filter.accountId
+	const account = filter.accountId
 		? or(
 				eq(moderationActions.targetUserId, filter.accountId),
 				inArray(
@@ -336,6 +343,11 @@ function logFilterWhere(filter: LogFilter) {
 				)
 			)
 		: undefined;
+	return and(
+		filter.actions ? inArray(moderationActions.action, [...filter.actions]) : undefined,
+		filter.actorId ? eq(moderationActions.actorId, filter.actorId) : undefined,
+		account
+	);
 }
 
 /**
@@ -435,6 +447,7 @@ export async function listRecentActions(
 		}
 		return null;
 	};
+	const reversed = await reversedActions(rows.map((r) => r.action));
 	const items: RecentAction[] = rows.map(
 		({ action, targetBody, targetStatus, targetEditedAt, flagId, flagStatus, title }) => ({
 			id: action.id,
@@ -451,6 +464,7 @@ export async function listRecentActions(
 			commentEditedAt: targetEditedAt?.toISOString() ?? null,
 			inForce: inForce(action),
 			flag: flagId && flagStatus ? { id: flagId, status: flagStatus } : null,
+			reverses: reversed.get(action.id) ?? null,
 			title: title && title.name !== null ? title : null
 		})
 	);

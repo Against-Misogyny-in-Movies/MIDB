@@ -123,6 +123,7 @@ describe('links to a comment from the moderation views', () => {
 			commentEditedAt: null,
 			inForce: null,
 			flag: null,
+			reverses: null,
 			title: { id: 't1', ...TITLE },
 			...over
 		});

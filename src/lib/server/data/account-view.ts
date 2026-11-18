@@ -91,3 +91,15 @@ export async function getAccountView(id: string): Promise<AccountView | null> {
 		figures: deleted ? null : await figuresOf(id)
 	};
 }
+
+/**
+ * The id of the account with this username (compared case-insensitively), or null. A deleted
+ * account has no username, so it is never found by one.
+ */
+export async function accountIdByUsername(username: string): Promise<string | null> {
+	const [row] = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(sql`lower(${users.username})`, username.toLowerCase()));
+	return row?.id ?? null;
+}

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
+	import LogFilters from '#lib/components/moderation/logFilters.svelte';
 	import PagedList from '#lib/components/moderation/pagedList.svelte';
 	import ModerationSettings from '#lib/components/moderation/moderationSettings.svelte';
 	import ShortcutList from '#lib/components/moderation/shortcutList.svelte';
@@ -75,8 +76,20 @@
 			label: 'MIDB community reports',
 			count: data.counts.held + data.counts.flagged
 		},
-		{ id: 'log' as const, label: 'Recent actions', count: null }
+		{ id: 'log' as const, label: 'Log', count: null }
 	]);
+
+	/** What an empty log says: no account behind a name typed into a filter, a filter that matches nothing, or an empty log. */
+	const logEmpty = $derived.by(() => {
+		const unknown = data.unknownNames;
+		const f = data.logFilters;
+		if (f && unknown.length > 0) {
+			return `No account is named ${unknown.map((k) => (k === 'actor' ? f.actor : f.account)).join(' or ')}.`;
+		}
+		return f && (f.action || f.actor || f.account)
+			? 'No moderation actions match these filters.'
+			: 'No moderation actions yet.';
+	});
 
 	/** "Hidden. 41 left in Pending.": the result of the last action and what remains in this tab, from the load's totals. */
 	const status = $derived.by(() => {
@@ -193,18 +206,22 @@
 					<SkeletonRows rows={6} label="Loading comments" height="3rem" />
 				</div>
 			{/if}
-		{:else if tab === 'log' && data.recent}
-			<PagedList
-				page={data.recent}
-				queue="log"
-				key={(entry) => entry.id}
-				empty="No moderation actions yet."
-				noun="actions"
-			>
-				{#snippet row(entry)}
-					<RecentActionRow {entry} me={data.me} />
-				{/snippet}
-			</PagedList>
+		{:else if tab === 'log' && data.recent && data.logFilters}
+			<div class="stack">
+				<LogFilters filters={data.logFilters} />
+				<PagedList
+					page={data.recent}
+					queue="log"
+					params={data.logParams}
+					key={(entry) => entry.id}
+					empty={logEmpty}
+					noun="actions"
+				>
+					{#snippet row(entry)}
+						<RecentActionRow {entry} me={data.me} />
+					{/snippet}
+				</PagedList>
+			</div>
 		{:else if tab === 'reports'}
 			<CommunityReportsPanel
 				held={data.held}
@@ -300,6 +317,11 @@
 		background-color: var(--brand-wash);
 		color: var(--brand);
 		font-weight: 600;
+	}
+
+	.stack {
+		@apply flex flex-col;
+		gap: var(--spacing-md);
 	}
 
 	.count {

@@ -119,6 +119,15 @@
 			entry.targetUser !== null &&
 			canCloseFlag(me, entry.targetUser)
 	);
+	/** What an undone action is called in "Undoes the …". */
+	const UNDONE: Partial<Record<RecentAction['action'], string>> = {
+		mute: 'mute',
+		ban: 'ban',
+		hide: 'hide',
+		reject: 'rejection',
+		resolve_count_flag: 'resolution',
+		dismiss_count_flag: 'dismissal'
+	};
 	const muteLength = $derived(
 		entry.muteHours === null ? '' : ` for ${formatMuteHours(entry.muteHours)}`
 	);
@@ -158,6 +167,12 @@
 	{/if}
 	{#if editedSince}
 		<p class="label">Edited since</p>
+	{/if}
+	{#if entry.reverses}
+		<p class="label">
+			Undoes the {UNDONE[entry.reverses.action]} by {entry.reverses.actor ?? 'a removed account'}
+			on {formatDate(entry.reverses.createdAt)}.
+		</p>
 	{/if}
 	{#if entry.rule}
 		<p class="label">Rule: {MODERATION_RULE_LABELS[entry.rule]}</p>
