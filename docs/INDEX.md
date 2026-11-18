@@ -94,7 +94,7 @@ STATUS.md, then the live plan section for the active phase.
 
 - `docs/phases/STATUS.md` — Phase status (~6.3K tok)
   - 5–16 Rules (~250)
-  - 17–82 Phases (~3.2K)
+  - 17–82 Phases (~3.1K)
   - 83–144 Open items (~1.4K) ← 2
   - 145–199 Standing decisions (~1.4K)
 
