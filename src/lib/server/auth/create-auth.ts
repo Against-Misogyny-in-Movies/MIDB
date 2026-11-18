@@ -44,7 +44,15 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 	}
 
 	const socialProviders = {
-		...(google && { google: { clientId: google.clientId, clientSecret: google.clientSecret } }),
+		// `select_account` makes Google show its account chooser on every sign-in, so a reader
+		// signed in to several Google accounts picks one instead of getting Google's default.
+		...(google && {
+			google: {
+				clientId: google.clientId,
+				clientSecret: google.clientSecret,
+				prompt: 'select_account' as const
+			}
+		}),
 		...(discord && { discord: { clientId: discord.clientId, clientSecret: discord.clientSecret } })
 	};
 

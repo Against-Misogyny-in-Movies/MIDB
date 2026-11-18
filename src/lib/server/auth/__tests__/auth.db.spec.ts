@@ -43,6 +43,21 @@ describe('the secret', () => {
 	});
 });
 
+describe('Google sign-in', () => {
+	it('asks Google for the account chooser', async () => {
+		const withGoogle = createAuth({
+			db,
+			origin: 'http://localhost:5173',
+			secret: 'a-test-secret-of-at-least-thirty-two-characters',
+			google: { clientId: 'id', clientSecret: 'secret' }
+		});
+		const { url } = await withGoogle.api.signInSocial({
+			body: { provider: 'google', callbackURL: '/' }
+		});
+		expect(new URL(url ?? '').searchParams.get('prompt')).toBe('select_account');
+	});
+});
+
 describe('passkey sign-up', () => {
 	it('resolves a fresh user each time', () => {
 		expect(resolveNewPasskeyUser().id).not.toBe(resolveNewPasskeyUser().id);

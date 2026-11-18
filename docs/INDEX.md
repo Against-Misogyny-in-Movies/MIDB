@@ -76,7 +76,7 @@ Read the sections your task touches.
   - 717–727 Live search (`src/lib/components/search/`) (~710)
   - 728–741 Server cache (`src/lib/server/cache/`) (~700)
   - 742–757 TMDB integration (~810)
-  - 758–776 Auth flow (Better Auth) (~2.0K)
+  - 758–776 Auth flow (Better Auth) (~2.1K)
   - 777–799 Caching policy (~2.1K) ← 9
   - 800–857 Configuration & environment (~4.0K)
     - 817–829 Local run sequence (~130)
