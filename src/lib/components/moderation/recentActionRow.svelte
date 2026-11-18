@@ -19,6 +19,7 @@
 	let busy = $state(false);
 	let root: HTMLElement | undefined = $state();
 
+	/** What a row says for each action. An action this build does not know reads as a plain label. */
 	const VERBS: Record<RecentAction['action'], string> = {
 		approve: 'approved a comment',
 		hide: 'hid a comment',
@@ -31,8 +32,14 @@
 		reject_report: 'rejected a community report by',
 		reject_account_reports: 'rejected every community report by',
 		resolve_count_flag: 'resolved Counts look wrong on',
-		dismiss_count_flag: 'dismissed Counts look wrong on'
+		dismiss_count_flag: 'dismissed Counts look wrong on',
+		unmute: 'ended the mute of',
+		unban: 'lifted the ban on',
+		reopen_flag: 're-opened Counts look wrong on',
+		set_role: 'changed the role of',
+		note: 'added a note on'
 	};
+	const verb = $derived((VERBS as Record<string, string | undefined>)[entry.action] ?? 'acted on');
 	/** The actions on a title's counts: the title ends the sentence, and the moderation view opens it. */
 	const ON_COUNTS = new Set<RecentAction['action']>([
 		'approve_report',
@@ -87,7 +94,7 @@
 				name={entry.actor?.displayName ?? 'A removed account'}
 			/></span
 		>
-		{VERBS[entry.action]}{#if entry.targetUser}
+		{verb}{#if entry.targetUser}
 			<span class="name"
 				><ProfileLink
 					username={entry.targetUser.username}

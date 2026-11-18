@@ -41,8 +41,33 @@ export const moderationAction = [
 	'reject_report',
 	'reject_account_reports',
 	'resolve_count_flag',
-	'dismiss_count_flag'
+	'dismiss_count_flag',
+	'unmute',
+	'unban',
+	'reopen_flag',
+	'set_role',
+	'note'
 ] as const;
+
+/**
+ * The rules a moderator names when they hide, reject, mute or ban: the report reasons, the
+ * classifier's extra categories and `other`. Stored with the comment (`comments.moderation_rule`)
+ * and the logged action (`moderation_actions.rule`); the AI and blocklist paths leave it null.
+ */
+export const moderationRule = [
+	'hate',
+	'harassment',
+	'threat',
+	'sexual-content',
+	'spam',
+	'violence',
+	'disparagement',
+	'trolling',
+	'other'
+] as const;
+
+/** A staff note on an account is 1 to this many characters. */
+export const NOTE_MAX = 1000;
 
 /** A moderator's reason on a hide or a reject is at most this long (the classifier's reason limit). */
 export const MODERATION_REASON_MAX = 140;

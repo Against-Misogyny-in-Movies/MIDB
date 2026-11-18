@@ -10,10 +10,12 @@ import type { CommentStatus } from '#lib/media/types/comments.ts';
 export {
 	COMMENT_BODY_MAX,
 	MODERATION_REASON_MAX,
+	NOTE_MAX,
 	REPORT_NOTE_MAX,
 	SCAN_CONCERN_MAX,
 	commentStatus,
 	moderationAction,
+	moderationRule,
 	moderationSource,
 	reportReason,
 	reportStatus

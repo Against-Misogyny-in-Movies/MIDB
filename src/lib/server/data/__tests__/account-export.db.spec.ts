@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '#lib/server/db.ts';
 import { accounts, passkeys, retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import {
+	accountNotes,
 	commentReports,
 	commentVotes,
 	communityContentReports,
@@ -188,6 +189,9 @@ beforeEach(async () => {
 		reason: 'MODERATION-LOG-REASON',
 		muteHours: 24
 	});
+	await db
+		.insert(accountNotes)
+		.values({ userId: 'anna-id', authorId: 'mod-id', body: 'STAFF-NOTE-ABOUT-ANNA' });
 });
 
 describe('buildAccountExport', () => {
@@ -337,6 +341,7 @@ describe('buildAccountExport', () => {
 			'google-sub-anna',
 			'AI-VERDICT-INTERNALS',
 			'MODERATION-LOG-REASON',
+			'STAFF-NOTE-ABOUT-ANNA',
 			'mod-id',
 			'moddy'
 		]) {

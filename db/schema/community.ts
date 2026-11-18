@@ -21,10 +21,12 @@ import {
 import {
 	COMMENT_BODY_MAX,
 	MODERATION_REASON_MAX,
+	NOTE_MAX,
 	REPORT_NOTE_MAX,
 	SCAN_CONCERN_MAX,
 	commentStatus,
 	moderationAction,
+	moderationRule,
 	moderationSource,
 	reportReason,
 	reportStatus
@@ -139,6 +141,8 @@ export const comments = sqliteTable(
 		editedAt: integer('edited_at', { mode: 'timestamp_ms' }),
 		moderationSource: text('moderation_source', { enum: moderationSource }),
 		moderationReason: text('moderation_reason'),
+		/** The rule a moderator named when hiding or rejecting; null on the classifier's and the blocklist's decisions. */
+		moderationRule: text('moderation_rule', { enum: moderationRule }),
 		/** The classifier's verdict as JSON text; null until one ran. */
 		aiVerdict: text('ai_verdict'),
 		...timestamps()
@@ -160,7 +164,8 @@ export const comments = sqliteTable(
 		),
 		check('comments_ai_verdict_json', sql`${t.aiVerdict} IS NULL OR json_valid(${t.aiVerdict})`),
 		enumCheck('comments_status_check', t.status, commentStatus),
-		enumCheck('comments_source_check', t.moderationSource, moderationSource)
+		enumCheck('comments_source_check', t.moderationSource, moderationSource),
+		enumCheck('comments_rule_check', t.moderationRule, moderationRule)
 	]
 );
 
@@ -268,6 +273,8 @@ export const moderationActions = sqliteTable(
 		targetTitleId: text('target_title_id').references(() => titles.id, { onDelete: 'set null' }),
 		action: text('action', { enum: moderationAction }).notNull(),
 		reason: text('reason'),
+		/** The rule behind a hide, a reject, a mute or a ban; null on the other actions. */
+		rule: text('rule', { enum: moderationRule }),
 		/** The length of a mute, in hours; null on every other action. */
 		muteHours: integer('mute_hours'),
 		createdAt: createdAt()
@@ -275,6 +282,9 @@ export const moderationActions = sqliteTable(
 	(t) => [
 		index('moderation_actions_created_idx').on(t.createdAt),
 		index('moderation_actions_comment_idx').on(t.targetCommentId),
+		index('moderation_actions_target_user_idx').on(t.targetUserId),
+		index('moderation_actions_actor_idx').on(t.actorId),
+		enumCheck('moderation_actions_rule_check', t.rule, moderationRule),
 		enumCheck('moderation_actions_action_check', t.action, moderationAction),
 		check('moderation_actions_mute_hours', sql`${t.muteHours} IS NULL OR ${t.muteHours} > 0`),
 		check(
@@ -348,5 +358,32 @@ export const titleCountFlags = sqliteTable(
 		index('tcf_status_title_idx').on(t.status, t.titleId),
 		enumCheck('tcf_status_check', t.status, reportStatus),
 		check('tcf_note_length', sql`length(${t.note}) <= ${sql.raw(String(REPORT_NOTE_MAX))}`)
+	]
+);
+
+/**
+ * A staff member's private note on an account. Only staff read it; it is deleted with the
+ * account (`#lib/server/data/account-scrub.ts`) and is not in the account's data download. The
+ * author is kept as null when their account goes.
+ */
+export const accountNotes = sqliteTable(
+	'account_notes',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		authorId: text('author_id').references(() => users.id, { onDelete: 'set null' }),
+		body: text('body').notNull(),
+		...timestamps()
+	},
+	(t) => [
+		index('account_notes_user_idx').on(t.userId, t.createdAt),
+		check(
+			'account_notes_body_length',
+			sql`length(${t.body}) BETWEEN 1 AND ${sql.raw(String(NOTE_MAX))}`
+		)
 	]
 );

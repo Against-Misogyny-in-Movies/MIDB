@@ -11,6 +11,7 @@ import {
 } from '#db/schema/auth.ts';
 import { titles } from '#db/schema/titles.ts';
 import {
+	accountNotes,
 	commentAiLabels,
 	commentReports,
 	commentVotes,
@@ -377,6 +378,16 @@ describe('scrubAccount', () => {
 		expect(await db.select().from(communityBechdelRatings)).toEqual([]);
 		expect(await db.select().from(communityUmReports)).toEqual([]);
 		expect(await db.select().from(communityDddVotes)).toEqual([]);
+	});
+
+	it('deletes the staff notes about her and keeps the notes about others', async () => {
+		await db.insert(accountNotes).values([
+			{ userId: 'anna', authorId: 'admin', body: 'NOTE-ABOUT-ANNA' },
+			{ userId: 'bob', authorId: 'anna', body: 'note about bob' }
+		]);
+		await scrubAccount('anna');
+		const notes = await db.select().from(accountNotes);
+		expect(notes.map((n) => n.body)).toEqual(['note about bob']);
 	});
 
 	it('keeps the moderation log, which no longer names her', async () => {

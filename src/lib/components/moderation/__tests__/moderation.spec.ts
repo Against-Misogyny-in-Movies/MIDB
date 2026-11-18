@@ -360,6 +360,12 @@ describe('RecentActionRow', () => {
 		expect(screen.queryByRole('button', { name: 'Restore comment' })).toBeNull();
 	});
 
+	it('reads an action this build does not know as a plain label', () => {
+		mountEntry(entry({ action: 'future_action' as RecentAction['action'] }));
+		expect(screen.getByText(/acted on/)).toBeTruthy();
+		expect(screen.queryByText(/undefined/)).toBeNull();
+	});
+
 	it('links the title and marks a comment edited after the action', () => {
 		mountEntry(entry({ commentEditedAt: '2026-11-04T10:00:00.000Z' }));
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');

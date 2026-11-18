@@ -10,6 +10,7 @@ import {
 	verifications
 } from '#db/schema/auth.ts';
 import {
+	accountNotes,
 	commentAiLabels,
 	commentReports,
 	commentVotes,
@@ -130,6 +131,8 @@ function scrubStatements(userId: string, username: string | null, now: Date): Ba
 				sql`${comments.id} IN (SELECT comment_id FROM comment_votes WHERE user_id = ${userId})`
 			),
 		db.delete(commentVotes).where(eq(commentVotes.userId, userId)),
+		// Staff notes about the account go with it; the moderation log keeps its rows.
+		db.delete(accountNotes).where(eq(accountNotes.userId, userId)),
 		db.delete(commentReports).where(eq(commentReports.reporterId, userId)),
 		db.delete(titleCountFlags).where(eq(titleCountFlags.reporterId, userId)),
 		db.delete(communityContentReports).where(eq(communityContentReports.userId, userId)),
