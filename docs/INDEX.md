@@ -13,10 +13,10 @@ Read whole.
 - `.claude/rules/code-standards.md` — Code standards (~3.7K tok)
   - 5–22 Server / client boundary (~620) ← 1
   - 23–27 Caching (~110)
-  - 28–34 Route folders are thin (~130) ← 1
+  - 28–34 Route folders are thin (~130)
   - 35–56 File organisation (~640) ← 3
   - 57–76 Components (~460) ← 3
-  - 77–100 Database (~780) ← 2
+  - 77–100 Database (~780) ← 1
   - 101–107 Testing (~190) ← 1
   - 108–120 Making a change (~440) ← 3
   - 121–137 Checking a change (~230) ← 6
@@ -92,33 +92,11 @@ Read the sections your task touches.
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~6.3K tok)
-  - 5–16 Rules (~250)
-  - 17–82 Phases (~3.1K)
-  - 83–144 Open items (~1.4K) ← 2
-  - 145–199 Standing decisions (~1.4K)
-
-## Live plans
-
-Read when a task names the plan.
-
-- `docs/plans/plan-moderation.md` — Plan: moderation section (~3.5K tok)
-  - 14–17 Job and audience (~90)
-  - 18–30 What the research says (~560)
-  - 31–57 Findings in the current section (~550)
-    - 35–43 Missing (~180)
-    - 44–48 Rules that disagree (~90)
-    - 49–57 Structure (~250)
-  - 58–95 Target design (~810)
-    - 60–66 Routes (~80)
-    - 67–79 Queue page (~450)
-    - 80–83 Account view (~100)
-    - 84–89 Reversals (~80)
-    - 90–95 Other additions (~90)
-  - 96–104 Schema (~160)
-  - 105–110 Scope and boundaries (~110)
-  - 111–128 Phases (~810)
-  - 129–137 Decisions (~170) ← 1
+- `docs/phases/STATUS.md` — Phase status (~6.1K tok)
+  - 5–16 Rules (~260)
+  - 17–82 Phases (~2.8K)
+  - 83–152 Open items (~1.6K) ← 1
+  - 153–207 Standing decisions (~1.4K)
 
 ## Policies
 
