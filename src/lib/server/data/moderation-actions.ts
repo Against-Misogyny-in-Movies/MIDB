@@ -15,7 +15,11 @@ import {
 	type BatchStatement,
 	type EditedAt
 } from './comment-status.ts';
-import { lastActionByAdministrator, targetAllowed } from './moderation-target.ts';
+import {
+	lastActionByAdministrator,
+	notBoundByAdministrator,
+	targetAllowed
+} from './moderation-target.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import type { PurgePlan } from '#lib/server/moderation/purge.ts';
 import { banReach, banWeightStatements } from './ban-weight.ts';
@@ -39,9 +43,16 @@ export type ModerationResult =
 			ok: false;
 			/**
 			 * `edited`: the text changed after the moderator's view loaded. `admin-acted`: an
-			 * administrator took the latest action, which binds a moderator.
+			 * administrator took the latest action, which binds a moderator. `already-banned`: a ban or
+			 * a mute of an account that is banned.
 			 */
-			reason: 'not-found' | 'invalid-state' | 'forbidden-target' | 'edited' | 'admin-acted';
+			reason:
+				| 'not-found'
+				| 'invalid-state'
+				| 'forbidden-target'
+				| 'edited'
+				| 'admin-acted'
+				| 'already-banned';
 	  };
 
 /**
@@ -54,11 +65,12 @@ function logCommentAction(
 	action: Action,
 	reason: string | null,
 	from: CommentStatus,
-	extraWhere: SQL = sql`1 = 1`
+	extraWhere: SQL = sql`1 = 1`,
+	rowId?: string
 ): BatchStatement {
 	return db.insert(moderationActions).select(
 		db
-			.select(logRow(actorId, action, { commentId: comments.id, reason }))
+			.select(logRow(actorId, action, { commentId: comments.id, reason, id: rowId }))
 			.from(comments)
 			.where(and(eq(comments.id, commentId), eq(comments.status, from), extraWhere))
 	);
@@ -69,15 +81,17 @@ const hasOpenReports = (commentId: string) =>
 
 /**
  * Resolves or dismisses a comment's open reports, only while the comment is still in
- * `expected` (and, when `editedAt` is given, unedited since the moderator's view), so a batch
- * whose status move is lost resolves nothing. It returns the rows it changed.
+ * `expected` (and, when `editedAt` is given, unedited since the moderator's view, and while
+ * `extra` holds), so a batch whose status move is lost resolves nothing. It returns the rows it
+ * changed.
  */
 const resolveOpenReports = (
 	commentId: string,
 	actorId: string,
 	status: 'resolved' | 'dismissed',
 	expected: CommentStatus,
-	editedAt?: EditedAt
+	editedAt?: EditedAt,
+	extra?: SQL
 ) =>
 	db
 		.update(commentReports)
@@ -86,20 +100,24 @@ const resolveOpenReports = (
 			and(
 				eq(commentReports.commentId, commentId),
 				eq(commentReports.status, 'open'),
-				stillIn(commentId, expected, editedAt)
+				stillIn(commentId, expected, editedAt),
+				extra
 			)
 		)
 		.returning({ id: commentReports.id });
 
 /**
- * Why a batch that moved nothing lost: the comment's text changed since the moderator's view
- * (`edited`), or it left the expected status or lost its reports (`invalid-state`).
+ * Why a batch that moved nothing lost: an administrator acted on the comment after the
+ * moderator's read (`admin-acted`, when `bound`), the comment's text changed since the moderator's
+ * view (`edited`), or it left the expected status or lost its reports (`invalid-state`).
  */
 async function lostRace(
 	commentId: string,
 	from: readonly CommentStatus[],
-	editedAt: EditedAt | undefined
-): Promise<'edited' | 'invalid-state'> {
+	editedAt: EditedAt | undefined,
+	bound: boolean
+): Promise<'admin-acted' | 'edited' | 'invalid-state'> {
+	if (bound && (await lastActionByAdministrator(commentId))) return 'admin-acted';
 	const [now] = await db
 		.select({ status: comments.status, editedAt: comments.editedAt })
 		.from(comments)
@@ -112,16 +130,22 @@ async function lostRace(
 	return stale ? 'edited' : 'invalid-state';
 }
 
-/** A moderator is bound by an administrator's latest action on the comment; an administrator is not. */
+/**
+ * A moderator is bound by an administrator's latest action on the comment; an administrator is
+ * not. The read answers the refusal early, and the batch carries `notBoundByAdministrator`, so an
+ * administrator who acts after it still wins.
+ */
+const boundByAdministrator = (actor: UserRow) => actor.role !== 'administrator';
 async function heldByAdministrator(actor: UserRow, commentId: string): Promise<boolean> {
-	return actor.role !== 'administrator' && (await lastActionByAdministrator(commentId));
+	return boundByAdministrator(actor) && (await lastActionByAdministrator(commentId));
 }
 
 /**
  * One moderator action on a comment, as a single batch: the log row, the status move (with its
  * reply counts) and the resolution of the comment's open reports. The actor must be allowed to
- * act on the comment's author (`targetAllowed`), and a moderator may not undo an administrator's
- * latest action when `spec.adminBinds` is set (`admin-acted`). A spec with `editedAt` makes the
+ * act on the comment's author (`targetAllowed`), and a moderator may not act on a comment whose
+ * latest action an administrator took (`admin-acted`: read before the batch, and guarded inside it
+ * by `notBoundByAdministrator`, so an administrator acting in between is not overridden). A spec with `editedAt` makes the
  * comment public only if its stored `editedAt` still equals it, so the moderator publishes the
  * text they saw; a comment edited since answers `edited`. When the comment left the expected
  * status between the read and the batch, nothing is written and the result is `invalid-state`.
@@ -137,8 +161,6 @@ async function moveComment(
 		reports: 'resolved' | 'dismissed' | null;
 		/** The `editedAt` the moderator's view showed, for an action that publishes. */
 		editedAt?: EditedAt;
-		/** Whether a moderator may not act on a comment an administrator last acted on. */
-		adminBinds?: boolean;
 	}
 ): Promise<ModerationResult> {
 	const found = await getCommentWithTitle(commentId);
@@ -146,31 +168,44 @@ async function moveComment(
 	const { comment, title } = found;
 	const author = await targetAllowed(actor, comment.userId);
 	if (typeof author === 'string') return { ok: false, reason: author };
-	if (spec.adminBinds && (await heldByAdministrator(actor, commentId))) {
-		return { ok: false, reason: 'admin-acted' };
-	}
+	if (await heldByAdministrator(actor, commentId)) return { ok: false, reason: 'admin-acted' };
 	if (!spec.from.includes(comment.status)) return { ok: false, reason: 'invalid-state' };
 	if (spec.editedAt !== undefined && editedSince(comment.editedAt, spec.editedAt)) {
 		return { ok: false, reason: 'edited' };
 	}
+	const bound = boundByAdministrator(actor);
+	const logId = crypto.randomUUID();
+	const adminGuard = bound ? notBoundByAdministrator(commentId, logId) : undefined;
 	const version = spec.editedAt === undefined ? undefined : unchangedSince(spec.editedAt);
+	const guard = and(version, adminGuard);
 
 	// Read before the move, so a failed read cannot leave a move whose purge is skipped.
 	const replyAuthorIds = await replyAuthorsAffected(commentId, comment.status, spec.to);
 	const moved = await runMove([
-		logCommentAction(actor.id, commentId, action, spec.reason, comment.status, version),
+		logCommentAction(actor.id, commentId, action, spec.reason, comment.status, guard, logId),
 		...(spec.reports
-			? [resolveOpenReports(commentId, actor.id, spec.reports, comment.status, spec.editedAt)]
+			? [
+					resolveOpenReports(
+						commentId,
+						actor.id,
+						spec.reports,
+						comment.status,
+						spec.editedAt,
+						adminGuard
+					)
+				]
 			: []),
 		...statusMove(
 			commentId,
 			comment.status,
 			spec.to,
 			{ moderationSource: 'moderator', moderationReason: spec.reason },
-			version
+			guard
 		)
 	]);
-	if (!moved) return { ok: false, reason: await lostRace(commentId, spec.from, spec.editedAt) };
+	if (!moved) {
+		return { ok: false, reason: await lostRace(commentId, spec.from, spec.editedAt, bound) };
+	}
 	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
 }
 
@@ -184,8 +219,7 @@ export const approveComment = (actor: UserRow, commentId: string, editedAt: Edit
 		to: 'published',
 		reason: null,
 		reports: 'dismissed',
-		editedAt,
-		adminBinds: true
+		editedAt
 	});
 
 /** Takes a pending or published comment out of view, keeping it for its replies and the author. */
@@ -213,8 +247,7 @@ export const restoreComment = (actor: UserRow, commentId: string, editedAt: Edit
 		to: 'published',
 		reason: null,
 		reports: null,
-		editedAt,
-		adminBinds: true
+		editedAt
 	});
 
 /**
@@ -241,6 +274,9 @@ export async function dismissReports(
 
 	const restores = comment.status === 'pending' && comment.moderationSource === 'reports';
 	if (restores && editedSince(comment.editedAt, editedAt)) return { ok: false, reason: 'edited' };
+	const bound = boundByAdministrator(actor);
+	const logId = crypto.randomUUID();
+	const adminGuard = bound ? notBoundByAdministrator(commentId, logId) : undefined;
 	const version = restores ? unchangedSince(editedAt) : undefined;
 	const replyAuthorIds = restores
 		? await replyAuthorsAffected(commentId, 'pending', 'published')
@@ -252,14 +288,16 @@ export async function dismissReports(
 			'dismiss',
 			null,
 			comment.status,
-			version ? and(hasOpenReports(commentId), version) : hasOpenReports(commentId)
+			and(hasOpenReports(commentId), version, adminGuard),
+			logId
 		),
 		resolveOpenReports(
 			commentId,
 			actor.id,
 			'dismissed',
 			comment.status,
-			restores ? editedAt : undefined
+			restores ? editedAt : undefined,
+			adminGuard
 		),
 		...(restores
 			? statusMove(
@@ -267,7 +305,7 @@ export async function dismissReports(
 					'pending',
 					'published',
 					{ moderationSource: null, moderationReason: null },
-					version
+					and(version, adminGuard)
 				)
 			: [])
 	]);
@@ -275,7 +313,11 @@ export async function dismissReports(
 	if (!Array.isArray(resolved) || resolved.length === 0) {
 		return {
 			ok: false,
-			reason: restores ? await lostRace(commentId, ['pending'], editedAt) : 'invalid-state'
+			reason: restores
+				? await lostRace(commentId, ['pending'], editedAt, bound)
+				: bound && (await lastActionByAdministrator(commentId))
+					? 'admin-acted'
+					: 'invalid-state'
 		};
 	}
 	if (!restores) return { ok: true, title };

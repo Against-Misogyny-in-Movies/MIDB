@@ -214,9 +214,10 @@ describe('a lost race', () => {
 			rejectComment(mod, id, 'no')
 		]);
 		expect([approved.ok, rejected.ok].filter(Boolean)).toHaveLength(1);
+		// The administrator's decision binds the moderator, so a moderator who lost to it is told so.
 		expect([approved, rejected].find((r) => !r.ok)).toEqual({
 			ok: false,
-			reason: 'invalid-state'
+			reason: approved.ok ? 'admin-acted' : 'invalid-state'
 		});
 		expect(await logged()).toBe(1);
 	});

@@ -358,6 +358,30 @@ describe('purging', () => {
 		expect((result as { data: { error: string } }).data.error).toMatch(message);
 	});
 
+	it.each([
+		['mute', 'muteUser'],
+		['ban', 'banAccount']
+	] as const)(
+		'refuses ?/%s on an account that is already banned, with a toast message',
+		async (name, fn) => {
+			queries[fn].mockResolvedValue({ ok: false, reason: 'already-banned' });
+			const result = await run(name);
+			expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
+			expect((result as { data: { error: string } }).data.error).toBe(
+				'This account is already banned, so it cannot be banned or muted again.'
+			);
+			expect(purgeProfiles).not.toHaveBeenCalled();
+		}
+	);
+
+	it('a hide or reject refused for an administrator’s decision answers 403', async () => {
+		queries.hideComment.mockResolvedValue({ ok: false, reason: 'admin-acted' });
+		queries.rejectComment.mockResolvedValue({ ok: false, reason: 'admin-acted' });
+		for (const name of ['hide', 'reject'] as const) {
+			expect(await run(name)).toMatchObject({ status: 403, data: { id: 'c1' } });
+		}
+	});
+
 	it('mute and ban touch no list and purge the profile their result names', async () => {
 		queries.muteUser.mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
 		queries.banAccount.mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });

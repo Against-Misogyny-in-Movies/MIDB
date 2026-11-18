@@ -19,10 +19,17 @@ const none = (name: string) => sql<string | null>`NULL`.as(name);
 export function logRow(
 	actorId: string,
 	action: Action,
-	target: { commentId?: LogTarget; userId?: LogTarget; titleId?: LogTarget; reason?: string | null }
+	target: {
+		commentId?: LogTarget;
+		userId?: LogTarget;
+		titleId?: LogTarget;
+		reason?: string | null;
+		/** The row's id, when a later statement of the batch must tell this row from the others. */
+		id?: string;
+	}
 ) {
 	return {
-		id: sql<string>`${crypto.randomUUID()}`.as('id'),
+		id: sql<string>`${target.id ?? crypto.randomUUID()}`.as('id'),
 		actorId: sql<string>`${actorId}`.as('actorId'),
 		targetCommentId: target.commentId ?? none('targetCommentId'),
 		targetUserId: target.userId ?? none('targetUserId'),

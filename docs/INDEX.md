@@ -52,7 +52,7 @@ Read the sections your task touches.
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~91.1K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~91.3K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
@@ -65,7 +65,7 @@ Read the sections your task touches.
     - 419–426 Migrations (~330)
   - 427–456 Source sync (~1.9K) ← 3
   - 457–529 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
-  - 530–566 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.7K) ← 2
+  - 530–566 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.8K) ← 2
   - 567–586 UM Disambiguation (~830)
   - 587–595 UM flag rendering (~250)
   - 596–604 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
