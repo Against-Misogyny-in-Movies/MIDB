@@ -43,6 +43,9 @@ function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { inRow?: bo
 				parent: null,
 				reports: [],
 				authorCommentCount: 4,
+				authorHiddenOrRejected: 0,
+				authorOpenReportsAgainst: 0,
+				authorJoinedAt: '2026-01-05T10:00:00.000Z',
 				authorMutedUntil: null,
 				authorBanned: false,
 				authorMutedByModerator: false,
@@ -77,8 +80,8 @@ describe('ModerationItem reports and read-only state', () => {
 		).toEqual([
 			'Spam',
 			'Reported by bo',
-			'2 upheld, 1 dismissed',
 			expect.stringMatching(/2026|Nov/),
+			'Earlier reports: 2 of 3 upheld',
 			'An advert'
 		]);
 	});
@@ -156,8 +159,12 @@ describe('the panel under a table row', () => {
 			}
 		);
 		expect(screen.getByText('The whole text of it')).toBeTruthy();
-		expect(screen.getByText('Banned')).toBeTruthy();
-		expect(screen.getByText('4 comments in all')).toBeTruthy();
+		expect(screen.getByText(/ · Banned$/)).toBeTruthy();
+		expect(
+			screen.getByText(
+				/^4 comments in all · 0 hidden or rejected · 0 open reports against · Joined /
+			)
+		).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
 	});
 });

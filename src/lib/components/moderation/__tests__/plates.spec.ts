@@ -71,6 +71,9 @@ describe('every plate takes focus on open and returns it on Cancel or Escape', (
 					parent: null,
 					reports: [],
 					authorCommentCount: 2,
+					authorHiddenOrRejected: 0,
+					authorOpenReportsAgainst: 0,
+					authorJoinedAt: '2026-01-05T10:00:00.000Z',
 					authorMutedUntil: null,
 					authorBanned: false,
 					authorMutedByModerator: false
@@ -99,11 +102,11 @@ describe('every plate takes focus on open and returns it on Cancel or Escape', (
 			} satisfies ReportAccount,
 			canAct: true,
 			canRestrict: true,
-			staffRole: 'administrator'
+			me: ADMIN
 		});
 		await opensAndCloses('End mute', () => screen.getByLabelText(/Note, kept in the log/));
-		await opensAndCloses('Reject all from this account', () =>
-			screen.getByRole('button', { name: /Reject all community reports/ })
+		await opensAndCloses('Reject all community reports from this account', () =>
+			screen.getByRole('button', { name: /^Reject all community reports$/ })
 		);
 	});
 
@@ -133,6 +136,7 @@ describe('every plate takes focus on open and returns it on Cancel or Escape', (
 					inForce: { byModerator: false },
 					flag: null,
 					reverses: null,
+					latestForComment: false,
 					title: null
 				} satisfies RecentAction,
 				me: ADMIN

@@ -93,7 +93,7 @@ const refusals: Record<Refusal, [number, string]> = {
 		403,
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
-	'own-flag': [403, "A moderator cannot close their own flag or an administrator's."],
+	'own-flag': [403, "A moderator cannot close or re-open their own flag or an administrator's."],
 	'not-administrator': [403, 'Only an administrator can change roles.'],
 	'unknown-account': [404, 'No account has that username.'],
 	'account-banned': [409, 'A banned account cannot be made a moderator.'],

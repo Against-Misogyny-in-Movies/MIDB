@@ -2,11 +2,12 @@ import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
-import { moderationActions } from '#db/schema/community.ts';
+import { comments, moderationActions } from '#db/schema/community.ts';
+import { titles } from '#db/schema/titles.ts';
+import type { PurgePlan } from '#lib/server/moderation/purge.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
-import { runBatch } from './comment-status.ts';
-import { logRow } from './moderation-log.ts';
+import { logWhere, runLogged } from './moderation-log.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
 /** One administrator or moderator on the staff page. */
@@ -55,8 +56,16 @@ export async function listStaff(): Promise<StaffMember[]> {
 	}));
 }
 
+/** The titles where the account has published comments, whose cached lists show its staff badge. */
+const publishedCommentTitles = (userId: string) =>
+	db
+		.selectDistinct({ kind: titles.kind, tmdbId: titles.tmdbId })
+		.from(comments)
+		.innerJoin(titles, eq(comments.titleId, titles.id))
+		.where(and(eq(comments.userId, userId), eq(comments.status, 'published')));
+
 export type RoleResult =
-	| { ok: true; title: null; purge: { profiles: string[] } }
+	| { ok: true; title: null; purge: PurgePlan }
 	| {
 			ok: false;
 			/**
@@ -86,8 +95,9 @@ const otherAdministrator = (userId: string) =>
  * row's reason is the new role. Only an administrator changes roles, and never to administrator
  * (the seed script is the one way). Refused: an account that is gone, a banned one on its way
  * to moderator, one that already has the role, and an administrator (`last-administrator` when
- * no other can act, else `is-administrator`). The purge is the account's profile, which shows
- * the staff badge.
+ * no other can act, else `is-administrator`). A batch lost because the actor is no longer an
+ * administrator answers `not-administrator`. The purge is the account's profile and the comment
+ * lists of the titles it has published comments on, which show the staff badge.
  */
 export async function setStaffRole(
 	actor: UserRow,
@@ -122,17 +132,20 @@ export async function setStaffRole(
 		role === 'moderator' ? isNull(users.bannedAt) : undefined,
 		sql`EXISTS (SELECT 1 FROM "user" a WHERE a.id = ${actor.id} AND a.role = 'administrator')`
 	);
-	const results = await runBatch([
-		db.insert(moderationActions).select(
-			db
-				.select(logRow(actor.id, 'set_role', { userId: users.id, reason: role }))
-				.from(users)
-				.where(applies)
-		),
+	const applied = await runLogged(
+		logWhere(actor.id, 'set_role', { userId: users.id, reason: role }, users, applies),
 		db.update(users).set({ role }).where(applies).returning({ id: users.id })
-	]);
-	const changed = results[1];
-	return Array.isArray(changed) && changed.length > 0
-		? { ok: true, title: null, purge: { profiles: [row.id] } }
-		: { ok: false, reason: 'already-role' };
+	);
+	if (applied) {
+		return {
+			ok: true,
+			title: null,
+			purge: { profiles: [row.id], commentTitles: await publishedCommentTitles(row.id) }
+		};
+	}
+	const [stillAdministrator] = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(and(eq(users.id, actor.id), eq(users.role, 'administrator')));
+	return { ok: false, reason: stillAdministrator ? 'already-role' : 'not-administrator' };
 }

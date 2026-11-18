@@ -120,10 +120,25 @@ describe('reopenCountFlag', () => {
 		const own = await flag('mod');
 		const theirs = await flag('admin');
 		const plain = await flag('r1');
-		for (const id of [own, theirs, plain]) await resolveCountFlag(id, admin);
+		for (const id of [own, theirs]) await resolveCountFlag(id, admin);
+		await resolveCountFlag(plain, mod);
 		expect(await reopenCountFlag(own, mod)).toEqual({ ok: false, reason: 'own-flag' });
 		expect(await reopenCountFlag(theirs, mod)).toEqual({ ok: false, reason: 'own-flag' });
 		expect(await reopenCountFlag(plain, mod)).toEqual({ ok: true });
 		expect(await reopenCountFlag(own, admin)).toEqual({ ok: true });
+	});
+
+	it('refuses a moderator a flag an administrator closed, whoever closed it before', async () => {
+		const a = await flag('r1');
+		await resolveCountFlag(a, mod);
+		await reopenCountFlag(a, mod);
+		await dismissCountFlag(a, admin);
+		const logged = (await db.select().from(moderationActions)).length;
+		expect(await reopenCountFlag(a, mod)).toEqual({ ok: false, reason: 'admin-acted' });
+		expect((await db.select().from(titleCountFlags))[0].status).toBe('dismissed');
+		expect(await db.select().from(moderationActions)).toHaveLength(logged);
+		expect(await reopenCountFlag(a, admin)).toEqual({ ok: true });
+		await resolveCountFlag(a, mod);
+		expect(await reopenCountFlag(a, mod)).toEqual({ ok: true });
 	});
 });

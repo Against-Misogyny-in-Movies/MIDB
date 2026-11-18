@@ -14,17 +14,28 @@ const STATUS_LABELS: Record<string, string> = {
 /**
  * The result of the last action on a queue, which the page turns into the status line under the
  * tabs ("Hidden. 41 left in Pending."). The count comes from the load, so the page owns it; this
- * holds only the label, which a tab change clears.
+ * holds the label, which a tab change clears, and the reader of the count (`left`).
  */
 class ModerationStatus {
 	label = $state<string | null>(null);
 	/** True from the moment an action is sent until the page has updated, so a removed row eases out (`easeOut`). */
 	acting = false;
 
-	/** Records the action that went through; an action the line has no words for leaves it as it was. */
-	say(done: unknown) {
+	/**
+	 * What remains in the open queue ("41 left in Pending."), read from the page's data when an
+	 * action's toast is made, since the toast is the one announcement of the result. The queue page
+	 * sets it; it is null elsewhere.
+	 */
+	left: (() => string) | null = null;
+
+	/**
+	 * Records the action that went through and says whether the status line has words for it; an
+	 * action it has none for leaves the label as it was.
+	 */
+	say(done: unknown): boolean {
 		const label = typeof done === 'string' ? STATUS_LABELS[done] : undefined;
 		if (label) this.label = label;
+		return label !== undefined;
 	}
 
 	clear() {

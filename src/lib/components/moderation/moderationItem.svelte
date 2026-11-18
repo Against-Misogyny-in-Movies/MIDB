@@ -12,7 +12,7 @@
 		REPORT_REASON_LABELS,
 		categoryLabel
 	} from '#lib/media/utils/comments.ts';
-	import { canActOn } from '#lib/media/utils/canActOn.ts';
+	import { canActOn, canEndMute, canLiftBan } from '#lib/media/utils/canActOn.ts';
 	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
@@ -71,8 +71,8 @@
 	const restorable = $derived(comment.status === 'hidden' || comment.status === 'rejected');
 	const removable = $derived(comment.status === 'pending' || comment.status === 'published');
 	/** A moderator ends only a mute a moderator set; an administrator ends any, and only they lift a ban. */
-	const canEndMute = $derived(me.role === 'administrator' || item.authorMutedByModerator);
-	const canLiftBan = $derived(me.role === 'administrator');
+	const endable = $derived(canEndMute(me, author, item.authorMutedByModerator));
+	const liftable = $derived(canLiftBan(me, author));
 	const href = $derived(titleHref(item.title.kind, item.title.tmdbId));
 	const permalink = $derived(commentHref(item.title.kind, item.title.tmdbId, comment.id));
 	const SOURCES: Record<string, string> = {
@@ -81,6 +81,23 @@
 		reports: 'Sent back by reports'
 	};
 	const heldBy = $derived(comment.moderationSource ? SOURCES[comment.moderationSource] : null);
+	/** The author's standing and figures, the ones the account's page shows, in one line. */
+	const standing = $derived(
+		[
+			`${item.authorCommentCount} ${item.authorCommentCount === 1 ? 'comment' : 'comments'} in all`,
+			`${item.authorHiddenOrRejected} hidden or rejected`,
+			`${item.authorOpenReportsAgainst} open ${item.authorOpenReportsAgainst === 1 ? 'report' : 'reports'} against`,
+			`Joined ${formatDate(item.authorJoinedAt)}`,
+			item.authorBanned
+				? 'Banned'
+				: item.authorMutedUntil
+					? `Muted until ${formatDate(item.authorMutedUntil)}`
+					: null,
+			heldBy
+		]
+			.filter((fact) => fact !== null)
+			.join(' · ')
+	);
 	/** A severe comment's text stays out of sight until a moderator asks for it, unless the setting is off. */
 	const collapsible = $derived(item.severe && moderationPrefs.collapseSevere);
 	const shown = $derived(revealed ?? ownRevealed);
@@ -149,23 +166,17 @@
 		</p>
 	{/if}
 
-	<p class="label standing">
-		<span>
-			{item.authorCommentCount}
-			{item.authorCommentCount === 1 ? 'comment' : 'comments'} in all
-		</span>
-		{#if item.authorBanned}
-			<span>Banned</span>
-		{:else if item.authorMutedUntil}
-			<span>Muted until {formatDate(item.authorMutedUntil)}</span>
-		{/if}
-		{#if heldBy}<span>{heldBy}</span>{/if}
-	</p>
+	<p class="label">{standing}</p>
 
 	{#if item.parent}
 		<p class="context">
-			In reply to <strong>{item.parent.author}</strong>{#if item.parent.excerpt}: {item.parent
-					.excerpt}{:else}, a deleted comment{/if}
+			In reply to <strong
+				><AccountLink
+					id={item.parent.authorId}
+					username={item.parent.authorUsername}
+					name={item.parent.author}
+				/></strong
+			>{#if item.parent.excerpt}: {item.parent.excerpt}{:else}, a deleted comment{/if}
 		</p>
 	{/if}
 	{#if comment.replyCount > 0}
@@ -178,8 +189,8 @@
 	{#if collapsed}
 		<div class="collapsed">
 			<p>
-				The automatic check rated this comment severity {item.severity}, the most severe. Its text
-				stays hidden until shown.
+				The automatic check rated this comment severity {item.severity} of 3. Its text stays hidden until
+				shown.
 			</p>
 		</div>
 	{:else}
@@ -195,7 +206,7 @@
 				aria-keyshortcuts={keys && collapsed ? 's' : undefined}
 				onclick={() => show(collapsed)}
 			>
-				{collapsed ? 'Show comment' : 'Hide comment'}
+				{collapsed ? 'Show comment' : 'Collapse comment'}
 			</button>
 		</div>
 	{/if}
@@ -225,8 +236,8 @@
 								name={report.reporter ?? 'An account'}
 							/></span
 						>
-						<span class="label">{recordLine(report.record)}</span>
 						<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
+						<span class="label record">{recordLine(report.record)}</span>
 						{#if report.note}<span class="note">{report.note}</span>{/if}
 					</li>
 				{/each}
@@ -302,7 +313,7 @@
 		{/if}
 		{#if canRestrict}
 			{#if item.authorBanned}
-				{#if canLiftBan}
+				{#if liftable}
 					<button
 						class="btn btn--ghost"
 						type="button"
@@ -320,7 +331,7 @@
 						bind:this={triggers.mute}
 						onclick={() => toggle('mute')}>Mute account</button
 					>
-				{:else if canEndMute}
+				{:else if endable}
 					<button
 						class="btn btn--ghost"
 						type="button"
@@ -328,6 +339,8 @@
 						bind:this={triggers.unmute}
 						onclick={() => toggle('unmute')}>End mute</button
 					>
+				{:else}
+					<p class="label">Only an administrator can end this mute.</p>
 				{/if}
 				<button
 					class="btn btn--ghost"
@@ -361,11 +374,6 @@
 	.who {
 		@apply inline-flex items-center;
 		gap: var(--spacing-xs);
-	}
-
-	.standing {
-		@apply flex flex-wrap;
-		gap: var(--spacing-xs) var(--spacing-sm);
 	}
 
 	/* The parent's start: a 1px hairline, so the quote reads as another voice. */
@@ -406,6 +414,11 @@
 	.reports li {
 		@apply flex flex-wrap items-center text-sm;
 		gap: var(--spacing-xs) var(--spacing-sm);
+	}
+
+	/* The reporter's record has its own line, apart from the report's date. */
+	.record {
+		flex-basis: 100%;
 	}
 
 	.note {

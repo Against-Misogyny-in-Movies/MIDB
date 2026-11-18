@@ -20,10 +20,10 @@
 		/** Whether they may mute or ban it. */
 		canRestrict: boolean;
 		/** The acting staff member's role, for the account's End mute and Lift ban. */
-		staffRole: string;
+		me: { id: string; role: string };
 	}
 
-	let { report, titleId, canAct, canRestrict, staffRole }: Props = $props();
+	let { report, titleId, canAct, canRestrict, me }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -73,6 +73,6 @@
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<ReportAccountActions account={report.account} {canAct} {canRestrict} {staffRole} />
+		<ReportAccountActions account={report.account} {canAct} {canRestrict} {me} />
 	{/snippet}
 </ReportRowShell>

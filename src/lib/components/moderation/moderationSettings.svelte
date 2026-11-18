@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { REJECT_MIN_SEVERITY } from '#lib/media/utils/comments.ts';
 	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
 
 	interface Props {
@@ -19,7 +20,7 @@
 			checked={moderationPrefs.collapseSevere}
 			onchange={(event) => moderationPrefs.setCollapseSevere(event.currentTarget.checked)}
 		/>
-		Collapse the most severe comments
+		Collapse comments of severity {REJECT_MIN_SEVERITY} and above
 	</label>
 	<label class="check-row">
 		<input

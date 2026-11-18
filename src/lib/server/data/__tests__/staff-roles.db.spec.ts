@@ -4,7 +4,7 @@ import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { moderationActions } from '#db/schema/community.ts';
 import { userValues } from '#db/test/users.ts';
-import { listRecentActions } from '../moderation-queue.ts';
+import { listRecentActions } from '../recent-actions.ts';
 import { listStaff, setStaffRole } from '../staff-roles.ts';
 import { scrubAccount } from '../account-scrub.ts';
 import { getUserById, type UserRow } from '../user-queries.ts';
@@ -41,7 +41,7 @@ describe('setStaffRole: making a moderator', () => {
 		expect(await setStaffRole(admin, { username: 'PLAIN_user' }, 'moderator')).toEqual({
 			ok: true,
 			title: null,
-			purge: { profiles: ['user'] }
+			purge: { profiles: ['user'], commentTitles: [] }
 		});
 		expect(await role('user')).toBe('moderator');
 		const [row] = await log();
@@ -110,7 +110,7 @@ describe('setStaffRole: removing the role', () => {
 		expect(await setStaffRole(admin, { id: 'mod' }, 'user')).toEqual({
 			ok: true,
 			title: null,
-			purge: { profiles: ['mod'] }
+			purge: { profiles: ['mod'], commentTitles: [] }
 		});
 		expect(await role('mod')).toBe('user');
 		expect((await log())[0]).toMatchObject({ targetUserId: 'mod', reason: 'user' });

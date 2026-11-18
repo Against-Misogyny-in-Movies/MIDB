@@ -19,7 +19,7 @@ import {
 } from '../account-lists.ts';
 import { getAccountView } from '../account-view.ts';
 import { banAccount, hideComment, muteUser } from '../moderation-actions.ts';
-import { listRecentActions } from '../moderation-queue.ts';
+import { listRecentActions } from '../recent-actions.ts';
 import { getUserById, type UserRow } from '../user-queries.ts';
 
 const T0 = Date.UTC(2026, 10, 1);

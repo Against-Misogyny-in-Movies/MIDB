@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { titles } from '#db/schema/titles.ts';
-import { comments } from '#db/schema/community.ts';
+import { commentReports, comments } from '#db/schema/community.ts';
 import { userValues } from '#db/test/users.ts';
 import { PARENT_EXCERPT_MAX, listPendingQueue } from '#lib/server/data/moderation-queue.ts';
-import { REJECT_MIN_SEVERITY } from '#lib/server/moderation/policy.ts';
+import { REJECT_MIN_SEVERITY } from '#lib/media/utils/comments.ts';
 import { eq, sql } from 'drizzle-orm';
 
 let titleRow: typeof titles.$inferSelect;
@@ -57,6 +57,8 @@ describe('the thread context of a queue item', () => {
 		const [item] = (await listPendingQueue()).items;
 		expect(item.parent).toEqual({
 			author: 'parent_author',
+			authorId: 'parent',
+			authorUsername: 'parent_author',
 			excerpt: 'x'.repeat(PARENT_EXCERPT_MAX)
 		});
 		expect(item.comment.replyCount).toBe(0);
@@ -77,7 +79,38 @@ describe('the thread context of a queue item', () => {
 		await hold(replyId, null);
 		await db.update(comments).set({ status: 'deleted' }).where(eq(comments.id, parentId));
 		const [item] = (await listPendingQueue()).items;
-		expect(item.parent).toEqual({ author: 'parent_author', excerpt: null });
+		expect(item.parent).toEqual({
+			author: 'parent_author',
+			authorId: 'parent',
+			authorUsername: 'parent_author',
+			excerpt: null
+		});
+	});
+});
+
+describe('the figures of the author', () => {
+	it('count their withheld comments, the open reports against them and the day they joined', async () => {
+		const held = await write('author', 'Held');
+		const hidden = await write('author', 'Hidden');
+		const rejected = await write('author', 'Rejected');
+		await write('author', 'Fine');
+		await db.update(comments).set({ status: 'hidden' }).where(eq(comments.id, hidden));
+		await db.update(comments).set({ status: 'rejected' }).where(eq(comments.id, rejected));
+		await hold(held, null);
+		await db.insert(users).values(userValues('r1'));
+		await db.insert(commentReports).values([
+			{ commentId: held, reporterId: 'r1', reason: 'spam' },
+			{ commentId: hidden, reporterId: 'r1', reason: 'hate', status: 'resolved' }
+		]);
+		const [item] = (await listPendingQueue()).items;
+		expect(item).toMatchObject({
+			authorCommentCount: 4,
+			authorHiddenOrRejected: 2,
+			authorOpenReportsAgainst: 1
+		});
+		expect(item.authorJoinedAt).toBe(
+			(await db.select().from(users).where(eq(users.id, 'author')))[0].createdAt.toISOString()
+		);
 	});
 });
 

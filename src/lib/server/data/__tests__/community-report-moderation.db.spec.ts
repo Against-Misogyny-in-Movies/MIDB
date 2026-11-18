@@ -25,7 +25,7 @@ import {
 } from '#lib/server/data/community-report-queue.ts';
 import { banAccount, muteUser } from '#lib/server/data/moderation-actions.ts';
 import { dismissCountFlag, resolveCountFlag } from '#lib/server/data/count-flags.ts';
-import { listRecentActions } from '#lib/server/data/moderation-queue.ts';
+import { listRecentActions } from '#lib/server/data/recent-actions.ts';
 import { getReportCounts } from '#lib/server/data/community-reports.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 

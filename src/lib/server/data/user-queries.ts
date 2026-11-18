@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, not } from 'drizzle-orm';
+import { and, desc, eq, ne, not, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
@@ -12,6 +12,7 @@ import { usernameRefusal } from '#lib/server/moderation/username-check.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
+import { onTarget } from './moderation-target.ts';
 import { countsFromDate } from './counting-account.ts';
 import { countedReportsWhere } from './community-reports.ts';
 
@@ -45,14 +46,19 @@ export async function getUserById(id: string): Promise<UserRow | null> {
 
 /**
  * The two statements of a ban, for the batch of `banAccount` that also logs it: the ban and the
- * end of every session the account holds. The session cookie cache lets a session read as valid
+ * end of every session the account holds, both only while `guard` holds on the account (the
+ * sessions' statement must run first, since the ban makes it false). The session cookie cache lets a session read as valid
  * for a few minutes, so `locals.getUser` also re-reads `banned_at`; the `session.create` hook
  * (`create-auth.ts`) refuses a new session.
  */
-export function banStatements(id: string, reason: string | null) {
+export function banStatements(id: string, reason: string | null, guard: SQL) {
 	return [
-		db.update(users).set({ bannedAt: new Date(), banReason: reason }).where(eq(users.id, id)),
-		db.delete(sessions).where(eq(sessions.userId, id))
+		db
+			.update(users)
+			.set({ bannedAt: new Date(), banReason: reason })
+			.where(guard)
+			.returning({ id: users.id }),
+		db.delete(sessions).where(and(eq(sessions.userId, id), onTarget(guard)))
 	] as const;
 }
 

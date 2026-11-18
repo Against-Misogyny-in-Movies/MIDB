@@ -37,6 +37,7 @@ const ROW: RecentAction = {
 	inForce: null,
 	flag: null,
 	reverses: null,
+	latestForComment: false,
 	title: null
 };
 

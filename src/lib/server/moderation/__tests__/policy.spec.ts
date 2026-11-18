@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { MODERATION_REASON_MAX } from '#lib/media/utils/comments.ts';
 import { BLOCKLIST_TERMS } from '../blocklist.ts';
-import { applyPolicy, BLOCKLIST_REASON, blocklistReason, REJECT_MIN_SEVERITY } from '../policy.ts';
+import { REJECT_MIN_SEVERITY } from '#lib/media/utils/comments.ts';
+import { applyPolicy, BLOCKLIST_REASON, blocklistReason } from '../policy.ts';
 import type { Verdict } from '../verdict.ts';
 
 const verdict = (over: Partial<Verdict>): Verdict => ({

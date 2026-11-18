@@ -38,7 +38,7 @@ vi.mock('#lib/server/data/account-lists.ts', () => ({
 	listAccountReports: (...args: unknown[]) => listAccountReports(...args),
 	listReportsAgainst: (...args: unknown[]) => listReportsAgainst(...args)
 }));
-vi.mock('#lib/server/data/moderation-queue.ts', () => ({
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
 	listRecentActions: (...args: unknown[]) => listRecentActions(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => ({
@@ -69,7 +69,7 @@ const { load, actions } = await import('../+page.server');
 
 const MOD = { id: 'mod-1', role: 'moderator' };
 const loadEvent = (id = 'acct-1') => ({ locals: {}, params: { id } }) as Parameters<typeof load>[0];
-const LIVE = { user: { id: 'acct-1' }, deleted: false, figures: {} };
+const LIVE = { user: { id: 'acct-1', role: 'user' }, deleted: false, figures: {} };
 
 beforeEach(() => {
 	for (const fn of [
@@ -136,6 +136,44 @@ describe('load', () => {
 		expect(listAccountReports).toHaveBeenCalledWith('acct-1');
 		expect(listReportsAgainst).toHaveBeenCalledWith('acct-1');
 		expect(data).toMatchObject({ account: LIVE, notes: { total: 0 } });
+	});
+
+	it.each([
+		['the viewer’s own account', { id: 'mod-1', role: 'moderator' }, MOD],
+		['an administrator, for a moderator', { id: 'admin-1', role: 'administrator' }, MOD],
+		['another moderator, for a moderator', { id: 'mod-2', role: 'moderator' }, MOD],
+		[
+			'the viewer’s own account, for an administrator',
+			{ id: 'admin-1', role: 'administrator' },
+			{ id: 'admin-1', role: 'administrator' }
+		]
+	])('reads no notes about %s', async (_label, user, viewer) => {
+		requireRole.mockResolvedValue(viewer);
+		getAccountView.mockResolvedValue({ ...LIVE, user });
+		const data = await load(loadEvent(user.id));
+		expect(listAccountNotes).not.toHaveBeenCalled();
+		expect(data).toMatchObject({ notes: null });
+		expect(listRecentActions).toHaveBeenCalledOnce();
+		expect(listAccountComments).toHaveBeenCalledOnce();
+	});
+
+	it.each([
+		['a moderator reading about an ordinary account', MOD, { id: 'acct-1', role: 'user' }],
+		[
+			'an administrator reading about a moderator',
+			{ id: 'admin-1', role: 'administrator' },
+			{ id: 'mod-2', role: 'moderator' }
+		],
+		[
+			'an administrator reading about another administrator',
+			{ id: 'admin-1', role: 'administrator' },
+			{ id: 'admin-2', role: 'administrator' }
+		]
+	])('reads the notes for %s', async (_label, viewer, user) => {
+		requireRole.mockResolvedValue(viewer);
+		getAccountView.mockResolvedValue({ ...LIVE, user });
+		await load(loadEvent(user.id));
+		expect(listAccountNotes).toHaveBeenCalledWith(user.id);
 	});
 
 	it('gives a deleted account its log only', async () => {

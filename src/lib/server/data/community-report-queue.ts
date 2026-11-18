@@ -11,7 +11,7 @@ import { titleUm, umSource } from '#db/schema/sources.ts';
 import { titles } from '#db/schema/titles.ts';
 import { CONCERN_FLAGS, type ConcernFlagKey } from '#lib/media/utils/communityReports.ts';
 import { activeMute } from './mute.ts';
-import { accountsMutedByModerator } from './moderation-target.ts';
+import { accountsMutedByModerator, flagsClosedByAdministrator } from './moderation-target.ts';
 import { QUEUE_LIMIT } from './moderation-queue.ts';
 import { countsFromDate } from './counting-account.ts';
 import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
@@ -89,6 +89,8 @@ export type FlaggedTitle = {
 		/** The reporter's account and role, so the page hides the buttons a moderator may not use (their own flag, an administrator's). */
 		reporterId: string;
 		reporterRole: string;
+		/** Whether an administrator took the flag's latest close, which a moderator cannot re-open (`canReopenFlag`); false on an open flag. */
+		closedByAdministrator: boolean;
 		createdAt: string;
 	}[];
 };
@@ -317,6 +319,7 @@ async function openFlagsOf(titleIds: string[]): Promise<Map<string, TitleFlags>>
 				reporter: f.reporter,
 				reporterId: f.reporterId,
 				reporterRole: f.reporterRole,
+				closedByAdministrator: false,
 				createdAt: f.createdAt.toISOString()
 			});
 			flags.set(f.titleId, list);
@@ -345,6 +348,9 @@ async function closedFlagsOf(titleId: string): Promise<TitleFlags> {
 		.where(and(eq(titleCountFlags.titleId, titleId), ne(titleCountFlags.status, 'open')))
 		.orderBy(desc(titleCountFlags.updatedAt), desc(titleCountFlags.id))
 		.limit(CLOSED_FLAGS_SHOWN);
+	const adminClosed = await flagsClosedByAdministrator(
+		found.map((f) => ({ reporterId: f.reporterId, titleId }))
+	);
 	return found.map((f) => ({
 		id: f.id,
 		status: f.status,
@@ -352,6 +358,7 @@ async function closedFlagsOf(titleId: string): Promise<TitleFlags> {
 		reporter: f.reporter,
 		reporterId: f.reporterId,
 		reporterRole: f.reporterRole,
+		closedByAdministrator: adminClosed.has(`${f.reporterId}:${titleId}`),
 		createdAt: f.createdAt.toISOString()
 	}));
 }

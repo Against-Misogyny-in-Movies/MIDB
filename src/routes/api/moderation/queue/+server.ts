@@ -4,12 +4,8 @@ import type { RequestHandler } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { PRIVATE_NO_STORE } from '#lib/server/http/cache.ts';
 import { listFlaggedTitles, listHeldReports } from '#lib/server/data/community-report-queue.ts';
-import {
-	listPendingQueue,
-	listRecentActions,
-	listReportedQueue,
-	type LogFilter
-} from '#lib/server/data/moderation-queue.ts';
+import { listPendingQueue, listReportedQueue } from '#lib/server/data/moderation-queue.ts';
+import { listRecentActions, type LogFilter } from '#lib/server/data/recent-actions.ts';
 import {
 	QUEUE_SHAPES,
 	decodeQueueCursor,

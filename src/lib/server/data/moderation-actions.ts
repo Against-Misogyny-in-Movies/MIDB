@@ -17,14 +17,18 @@ import {
 } from './comment-status.ts';
 import {
 	lastActionByAdministrator,
+	latestActionRows,
 	notBoundByAdministrator,
+	onTarget,
+	restrictGuard,
 	targetAllowed
 } from './moderation-target.ts';
+import { activeMute } from './mute.ts';
 import { replyAuthorsAffected } from './comment-reply-authors.ts';
 import type { PurgePlan } from '#lib/server/moderation/purge.ts';
 import { banReach, banWeightStatements } from './ban-weight.ts';
 import { banStatements, type UserRow } from './user-queries.ts';
-import { logRow } from './moderation-log.ts';
+import { logRow, logWhere, runLogged } from './moderation-log.ts';
 
 type Action = (typeof moderationAction)[number];
 type Rule = (typeof moderationRule)[number];
@@ -359,22 +363,12 @@ export async function dismissReports(
 	return { ok: true, title, authorId: comment.userId, replyAuthorIds };
 }
 
-function logUserAction(
-	actorId: string,
-	targetUserId: string,
-	action: Action,
-	reason: string | null,
-	rule: Rule | null,
-	muteHours: number | null = null
-) {
-	return db
-		.insert(moderationActions)
-		.values({ actorId, targetUserId, action, reason, rule, muteHours });
-}
-
 /**
  * Stops a user from commenting for `hours` hours from now; the log row keeps the length. A
- * moderator's mute never ends before an active one does. The
+ * moderator's mute never ends before an active one does, and a moderator may not mute an account
+ * whose active mute an administrator set (`admin-acted`, so the new log row cannot make it a
+ * moderator's to end). The batch carries `restrictGuard`, so an account promoted or banned
+ * between the read and the batch is refused instead of muted, and the reason is read again. The
  * counts of every title the account reported leave it out, and so does its profile's list of
  * counted reports, so their cached counts and the profile are purged.
  */
@@ -387,16 +381,25 @@ export async function muteUser(
 ): Promise<ModerationResult> {
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
+	const moderator = actor.role !== 'administrator';
+	if (moderator && activeMute(target.mutedUntil)) {
+		const latest = (await latestActionRows('mute', [targetId])).get(targetId);
+		if (latest?.actorRole === 'administrator') return { ok: false, reason: 'admin-acted' };
+	}
 	const until = Date.now() + hours * 3_600_000;
 	// A moderator never shortens an active mute; an administrator may set any length.
-	const mutedUntil =
-		actor.role === 'administrator'
-			? new Date(until)
-			: sql<Date>`max(coalesce(${users.mutedUntil}, 0), ${until})`;
-	await runBatch([
-		db.update(users).set({ mutedUntil }).where(eq(users.id, targetId)),
-		logUserAction(actor.id, targetId, 'mute', reason, rule, hours)
-	]);
+	const mutedUntil = moderator
+		? sql<Date>`max(coalesce(${users.mutedUntil}, 0), ${until})`
+		: new Date(until);
+	const guard = restrictGuard(actor, targetId, true);
+	const applied = await runLogged(
+		logWhere(actor.id, 'mute', { userId: users.id, reason, rule, muteHours: hours }, users, guard),
+		db.update(users).set({ mutedUntil }).where(guard).returning({ id: users.id })
+	);
+	if (!applied) {
+		const now = await targetAllowed(actor, targetId, 'restrict');
+		return { ok: false, reason: typeof now === 'string' ? now : 'admin-acted' };
+	}
 	return { ok: true, title: null, purge: { profiles: [targetId], reportedBy: targetId } };
 }
 
@@ -406,6 +409,8 @@ export async function muteUser(
  * of every comment it voted on is recomputed without them, and its published and pending
  * comments become `hidden` (source `moderator`, reason "Account banned") with their parents'
  * reply counts adjusted. The statements select by the account's id, so no id list is bound.
+ * Every statement carries `restrictGuard`, so an account that was banned or promoted between the
+ * read and the batch is refused whole (the reason is read again) and its weight is taken once.
  * The counts of every title the account reported leave it out, so the result's `purge` names
  * their counts, the profile, which is a 404 from now on, the lists of the titles and the
  * profiles of the authors that the votes and hidden comments touched.
@@ -419,11 +424,17 @@ export async function banAccount(
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
 	const reach = await banReach(targetId);
-	await runBatch([
-		...banStatements(targetId, reason),
-		logUserAction(actor.id, targetId, 'ban', reason, rule),
-		...banWeightStatements(targetId)
-	]);
+	const guard = restrictGuard(actor, targetId, false);
+	const [setBanned, endSessions] = banStatements(targetId, reason, guard);
+	const applied = await runLogged(
+		logWhere(actor.id, 'ban', { userId: users.id, reason, rule }, users, guard),
+		setBanned,
+		[...banWeightStatements(targetId, onTarget(guard)), endSessions]
+	);
+	if (!applied) {
+		const now = await targetAllowed(actor, targetId, 'restrict');
+		return { ok: false, reason: typeof now === 'string' ? now : 'already-banned' };
+	}
 	return {
 		ok: true,
 		title: null,

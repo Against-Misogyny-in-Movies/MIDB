@@ -43,6 +43,9 @@ vi.mock('#lib/server/http/purge-title.ts', () => ({
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
+	listRecentActions: queries.listRecentActions
+}));
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
@@ -293,7 +296,7 @@ describe('community-report actions', () => {
 		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
 		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({
 			status: 403,
-			data: { error: "A moderator cannot close their own flag or an administrator's." }
+			data: { error: "A moderator cannot close or re-open their own flag or an administrator's." }
 		});
 	});
 });

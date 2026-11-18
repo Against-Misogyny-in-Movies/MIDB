@@ -30,8 +30,8 @@
 				name={report.reporter ?? 'An account'}
 			/></span
 		>
-		<span class="label">{recordLine(report.record)}</span>
 		<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
+		<span class="label record">{recordLine(report.record)}</span>
 	</div>
 	{#if report.note}<p class="note">{report.note}</p>{/if}
 	<div class="meta">
@@ -58,6 +58,11 @@
 	.meta {
 		@apply flex flex-wrap items-center text-sm;
 		gap: var(--spacing-xs) var(--spacing-sm);
+	}
+
+	/* The reporter's record has its own line, apart from the report's date. */
+	.record {
+		flex-basis: 100%;
 	}
 
 	.note {

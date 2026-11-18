@@ -61,6 +61,9 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 		parent: null,
 		reports: [],
 		authorCommentCount: 4,
+		authorHiddenOrRejected: 0,
+		authorOpenReportsAgainst: 0,
+		authorJoinedAt: '2026-01-05T10:00:00.000Z',
 		authorMutedUntil: null,
 		authorBanned: false,
 		authorMutedByModerator: false,
@@ -111,7 +114,11 @@ describe('ModerationItem', () => {
 		mount();
 		expect(screen.getByText('A comment under review')).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
-		expect(screen.getByText('4 comments in all')).toBeTruthy();
+		expect(
+			screen.getByText(
+				/^4 comments in all · 0 hidden or rejected · 0 open reports against · Joined /
+			)
+		).toBeTruthy();
 	});
 
 	it('shows no category list until the classifier supplied categories', () => {
@@ -155,7 +162,7 @@ describe('ModerationItem', () => {
 		expect(screen.getByRole('link', { name: 'Public profile of bo' }).getAttribute('href')).toBe(
 			'/u/bo'
 		);
-		expect(screen.getAllByText('2 upheld, 1 dismissed')).toHaveLength(2);
+		expect(screen.getAllByText('Earlier reports: 2 of 3 upheld')).toHaveLength(2);
 		expect(
 			screen.getByText(
 				(_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by An account'
@@ -382,6 +389,7 @@ describe('RecentActionRow', () => {
 		inForce: null,
 		flag: null,
 		reverses: null,
+		latestForComment: true,
 		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
@@ -409,6 +417,9 @@ describe('RecentActionRow', () => {
 		expect(screen.queryByRole('button', { name: 'Restore comment' })).toBeNull();
 		cleanup();
 		mountEntry(entry({ action: 'approve', commentStatus: 'published' }));
+		expect(screen.queryByRole('button', { name: 'Restore comment' })).toBeNull();
+		cleanup();
+		mountEntry(entry({ latestForComment: false }));
 		expect(screen.queryByRole('button', { name: 'Restore comment' })).toBeNull();
 	});
 

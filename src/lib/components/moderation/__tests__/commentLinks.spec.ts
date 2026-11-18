@@ -53,6 +53,9 @@ describe('links to a comment from the moderation views', () => {
 			parent: null,
 			reports: [],
 			authorCommentCount: 1,
+			authorHiddenOrRejected: 0,
+			authorOpenReportsAgainst: 0,
+			authorJoinedAt: '2026-01-05T10:00:00.000Z',
 			authorMutedUntil: null,
 			authorBanned: false,
 			authorMutedByModerator: false
@@ -73,6 +76,9 @@ describe('links to a comment from the moderation views', () => {
 			aiCategories: [],
 			reports: [],
 			authorCommentCount: 1,
+			authorHiddenOrRejected: 0,
+			authorOpenReportsAgainst: 0,
+			authorJoinedAt: '2026-01-05T10:00:00.000Z',
 			authorMutedUntil: null,
 			authorBanned: false,
 			authorMutedByModerator: false
@@ -90,6 +96,9 @@ describe('links to a comment from the moderation views', () => {
 			aiCategories: [],
 			reports: [],
 			authorCommentCount: 1,
+			authorHiddenOrRejected: 0,
+			authorOpenReportsAgainst: 0,
+			authorJoinedAt: '2026-01-05T10:00:00.000Z',
 			authorMutedUntil: null,
 			authorBanned: false,
 			authorMutedByModerator: false,
@@ -124,6 +133,7 @@ describe('links to a comment from the moderation views', () => {
 			inForce: null,
 			flag: null,
 			reverses: null,
+			latestForComment: true,
 			title: { id: 't1', ...TITLE },
 			...over
 		});

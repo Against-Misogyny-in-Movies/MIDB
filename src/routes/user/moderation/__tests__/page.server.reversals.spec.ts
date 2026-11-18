@@ -43,6 +43,9 @@ vi.mock('#lib/server/http/purge-title.ts', () => ({
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
+	listRecentActions: queries.listRecentActions
+}));
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);

@@ -3,11 +3,11 @@ import { eq } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { titles } from '#db/schema/titles.ts';
-import { comments, moderationActions } from '#db/schema/community.ts';
+import { comments, moderationActions, titleCountFlags } from '#db/schema/community.ts';
 import { userValues } from '#db/test/users.ts';
 import { LOG_ACTION_GROUPS, logActionsOf } from '#lib/media/utils/moderationLog.ts';
 import { accountIdByUsername } from '../account-view.ts';
-import { listRecentActions } from '../moderation-queue.ts';
+import { listRecentActions } from '../recent-actions.ts';
 import { banAccount, hideComment, muteUser, restoreComment } from '../moderation-actions.ts';
 import { unbanAccount, unmuteUser } from '../moderation-reversals.ts';
 import { getUserById, type UserRow } from '../user-queries.ts';
@@ -169,6 +169,41 @@ describe('the action a reversal undoes', () => {
 		await log('reopen', 'reopen_flag', { targetUserId: 'a', targetTitleId: titleId });
 		const item = (await listRecentActions()).items.find((i) => i.id === 'reopen')!;
 		expect(item.reverses).toMatchObject({ action: 'resolve_count_flag' });
+	});
+
+	it('says nothing when another reversal of its kind sits between the two', async () => {
+		await db.insert(comments).values({ id: 'c1', titleId, userId: 'a', body: 'x' });
+		const at = (n: number) => ({ targetCommentId: 'c1', createdAt: new Date(T0 + n) });
+		await log('h', 'hide', at(1));
+		await log('r1', 'restore', at(2));
+		await log('r2', 'restore', at(3));
+		const items = (await listRecentActions()).items;
+		expect(items.find((i) => i.id === 'r1')!.reverses).toMatchObject({ action: 'hide' });
+		expect(items.find((i) => i.id === 'r2')!.reverses).toBeNull();
+	});
+
+	it('flags only the latest hide of a comment, and a flag an administrator closed', async () => {
+		await db
+			.insert(comments)
+			.values({ id: 'c1', titleId, userId: 'a', body: 'x', status: 'hidden' });
+		await log('h1', 'hide', { targetCommentId: 'c1', createdAt: new Date(T0 + 1) });
+		await log('h2', 'reject', { targetCommentId: 'c1', createdAt: new Date(T0 + 2) });
+		await db
+			.insert(titleCountFlags)
+			.values({ id: 'f', titleId, reporterId: 'a', status: 'resolved' });
+		await log('close', 'resolve_count_flag', {
+			actorId: 'admin',
+			targetUserId: 'a',
+			targetTitleId: titleId,
+			createdAt: new Date(T0 + 3)
+		});
+		const items = (await listRecentActions()).items;
+		expect(items.find((i) => i.id === 'h1')!.latestForComment).toBe(false);
+		expect(items.find((i) => i.id === 'h2')!.latestForComment).toBe(true);
+		expect(items.find((i) => i.id === 'close')!.flag).toMatchObject({
+			id: 'f',
+			closedByAdministrator: true
+		});
 	});
 
 	it('says nothing for a reversal with no earlier action logged, or only a later one', async () => {

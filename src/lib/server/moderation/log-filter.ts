@@ -1,5 +1,5 @@
 import { accountIdByUsername } from '#lib/server/data/account-view.ts';
-import type { LogFilter } from '#lib/server/data/moderation-queue.ts';
+import type { LogFilter } from '#lib/server/data/recent-actions.ts';
 import { logActionsOf, type LogFilters } from '#lib/media/utils/moderationLog.ts';
 
 export type ResolvedLogFilter = {

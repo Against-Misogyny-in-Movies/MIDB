@@ -101,7 +101,7 @@ const titleReport = (over: Partial<TitleReport> = {}): TitleReport => ({
 function mountRow(report: TitleReport, canAct = true, canRestrict = canAct) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(TitleReportRow, {
-		props: { report, titleId: 't1', canAct, canRestrict, staffRole: 'moderator' },
+		props: { report, titleId: 't1', canAct, canRestrict, me: { id: 'viewer', role: 'moderator' } },
 		target: list
 	});
 }
@@ -140,7 +140,7 @@ describe('the title report row', () => {
 		const group = screen.getByText('Account').closest('div')!;
 		expect(within(group).getByRole('button', { name: 'Mute account' })).toBeTruthy();
 		expect(
-			within(group).getByRole('button', { name: 'Reject all from this account' })
+			within(group).getByRole('button', { name: 'Reject all community reports from this account' })
 		).toBeTruthy();
 		expect(within(group).queryByRole('button', { name: 'Count it' })).toBeNull();
 	});
@@ -149,7 +149,9 @@ describe('the title report row', () => {
 		mountRow(titleReport({ account: account({ role: 'administrator' }) }), false);
 		expect(screen.queryByText('Account')).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Reject all from this account' })).toBeNull();
+		expect(
+			screen.queryByRole('button', { name: 'Reject all community reports from this account' })
+		).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
 		expect(screen.getByText('An administrator decides on this report.')).toBeTruthy();
@@ -158,14 +160,18 @@ describe('the title report row', () => {
 	it('offers an administrator their own report but not Mute or Ban on themselves', () => {
 		mountRow(titleReport(), true, false);
 		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Reject all from this account' })).toBeTruthy();
+		expect(
+			screen.getByRole('button', { name: 'Reject all community reports from this account' })
+		).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
 	});
 
 	it('asks before rejecting every report, naming the count and the consequence', async () => {
 		mountRow(titleReport());
-		await fireEvent.click(screen.getByRole('button', { name: 'Reject all from this account' }));
+		await fireEvent.click(
+			screen.getByRole('button', { name: 'Reject all community reports from this account' })
+		);
 		expect(
 			screen.getByText(
 				/Reject all 3 community reports from anna\? They leave the counts on every title they cover\./
@@ -236,6 +242,7 @@ describe('the open title view', () => {
 				reporter: 'bo',
 				reporterId: 'u1',
 				reporterRole: 'user',
+				closedByAdministrator: false,
 				createdAt: '2026-11-10T10:00:00Z'
 			},
 			{
@@ -245,6 +252,7 @@ describe('the open title view', () => {
 				reporter: null,
 				reporterId: 'u2',
 				reporterRole: 'user',
+				closedByAdministrator: false,
 				createdAt: '2026-11-11T10:00:00Z'
 			}
 		]
@@ -418,6 +426,7 @@ describe('the action log sentences', () => {
 		inForce: null,
 		flag: null,
 		reverses: null,
+		latestForComment: false,
 		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});

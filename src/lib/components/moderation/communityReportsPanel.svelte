@@ -64,7 +64,7 @@
 						titleId={openTitle.id}
 						canAct={canActOn(me, account)}
 						canRestrict={canActOn(me, account, 'restrict')}
-						staffRole={me.role}
+						{me}
 					/>
 				{/each}
 			</ul>

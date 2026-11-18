@@ -94,7 +94,7 @@
 				</div>
 			{/each}
 		</dl>
-		<ReportAccountActions account={actionable} {canAct} {canRestrict} staffRole={me.role} />
+		<ReportAccountActions account={actionable} {canAct} {canRestrict} {me} />
 	{:else}
 		<p class="label">
 			This account was deleted, so only its moderation log remains. Its comments, notes and reports

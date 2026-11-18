@@ -1,8 +1,6 @@
 import type { CommentStatus } from '#lib/media/types/comments.ts';
+import { REJECT_MIN_SEVERITY } from '#lib/media/utils/comments.ts';
 import type { Verdict } from './verdict.ts';
-
-/** A `reject` verdict at or above this severity rejects the comment; below it a person decides. */
-export const REJECT_MIN_SEVERITY = 2;
 
 /** What the automatic check found, before it becomes a status. */
 export type CheckOutcome =

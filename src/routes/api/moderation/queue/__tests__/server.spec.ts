@@ -14,6 +14,9 @@ vi.mock('#lib/server/auth/guards.ts', () => ({
 	requireRole: (...args: unknown[]) => requireRole(...args)
 }));
 vi.mock('#lib/server/data/moderation-queue.ts', () => lists);
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
+	listRecentActions: lists.listRecentActions
+}));
 vi.mock('#lib/server/data/community-report-queue.ts', () => lists);
 
 const route = await import('../+server');

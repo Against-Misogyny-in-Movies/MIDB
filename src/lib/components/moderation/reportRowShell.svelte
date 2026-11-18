@@ -64,6 +64,8 @@
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
 		padding: 16px 20px;
+		/* A row focused after an action is scrolled clear of the 4rem sticky header. */
+		scroll-margin-top: 5rem;
 	}
 
 	.meta {

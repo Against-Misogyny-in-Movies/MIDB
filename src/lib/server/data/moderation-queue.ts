@@ -1,41 +1,25 @@
-import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
-import {
-	commentReports,
-	comments,
-	moderationActions,
-	titleCountFlags
-} from '#db/schema/community.ts';
+import { commentReports, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
-import type {
-	CommentStatus,
-	ModerationRule,
-	OwnComment,
-	ReportReason
-} from '#lib/media/types/comments.ts';
-import type { moderationAction } from '#lib/media/utils/comments.ts';
-import { REJECT_MIN_SEVERITY } from '#lib/server/moderation/policy.ts';
+import type { OwnComment, ReportReason } from '#lib/media/types/comments.ts';
+import { REJECT_MIN_SEVERITY } from '#lib/media/utils/comments.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
 import { activeMute } from './mute.ts';
-import { accountsMutedByModerator, latestActionRows } from './moderation-target.ts';
+import { accountsMutedByModerator } from './moderation-target.ts';
 import {
 	afterPriority,
 	priorityCursorOf,
 	priorityOrder,
 	severityRank
 } from './moderation-priority.ts';
-import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
-import { reversedActions, type ReversedAction } from './moderation-reverses.ts';
+import { toQueuePage, type QueuePage } from './queue-cursor.ts';
 import { reporterRecords, type ReporterRecord } from './reporter-record.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
-
-type Action = (typeof moderationAction)[number];
-
-const FLAG_ACTIONS = ['resolve_count_flag', 'dismiss_count_flag', 'reopen_flag'] as const;
 
 /** Rows per queue tab. */
 export const QUEUE_LIMIT = 50;
@@ -55,8 +39,10 @@ export type ModerationItem = {
 	severe: boolean;
 	/** The comment this one replies to, for the thread context; null for a top-level comment. */
 	parent: {
-		/** The parent's author, as the panel names them. */
+		/** The parent's author, as the panel names them, and the account the name links to. */
 		author: string;
+		authorId: string;
+		authorUsername: string | null;
 		/** The start of the parent's text; null when the parent is deleted. */
 		excerpt: string | null;
 	} | null;
@@ -73,6 +59,11 @@ export type ModerationItem = {
 	}[];
 	/** How many comments the author has written in all, as context for the decision. */
 	authorCommentCount: number;
+	/** How many of their comments are hidden or rejected now, and how many open reports name them. */
+	authorHiddenOrRejected: number;
+	authorOpenReportsAgainst: number;
+	/** When the author's account was created (ISO). */
+	authorJoinedAt: string;
 	/** When the author's mute ends, while it is in the future; otherwise null. */
 	authorMutedUntil: string | null;
 	/** Whether the author is banned, so the item offers Lift ban in place of Mute and Ban. */
@@ -126,6 +117,8 @@ async function parentsOf(parentIds: (string | null)[]) {
 			.where(inArray(comments.id, chunk))) {
 			found.set(row.id, {
 				author: toPublicUser(row.author).displayName,
+				authorId: row.author.id,
+				authorUsername: row.author.username,
 				excerpt: row.status === 'deleted' ? null : row.body.slice(0, PARENT_EXCERPT_MAX)
 			});
 		}
@@ -178,6 +171,25 @@ export async function toModerationItems(
 			counts.set(row.userId, row.n);
 		}
 	}
+	const withheld = new Map<string, number>();
+	const against = new Map<string, number>();
+	for (const chunk of chunkForD1(authorIds, 1, 2)) {
+		for (const row of await db
+			.select({ userId: comments.userId, n: sql<number>`count(*)` })
+			.from(comments)
+			.where(and(inArray(comments.userId, chunk), inArray(comments.status, ['hidden', 'rejected'])))
+			.groupBy(comments.userId)) {
+			withheld.set(row.userId, row.n);
+		}
+		for (const row of await db
+			.select({ userId: comments.userId, n: sql<number>`count(*)` })
+			.from(commentReports)
+			.innerJoin(comments, eq(commentReports.commentId, comments.id))
+			.where(and(inArray(comments.userId, chunk), eq(commentReports.status, 'open')))
+			.groupBy(comments.userId)) {
+			against.set(row.userId, row.n);
+		}
+	}
 	const records = await reporterRecords(reports.map((r) => r.reporterId));
 	const parents = await parentsOf(rows.map((r) => r.comment.parentId));
 	const mutedAuthors = rows.map((r) => r.author).filter((a) => activeMute(a.mutedUntil) !== null);
@@ -203,6 +215,9 @@ export async function toModerationItems(
 					record: records.get(r.reporterId) ?? { total: 0, upheld: 0, dismissed: 0 }
 				})),
 			authorCommentCount: counts.get(author.id) ?? 0,
+			authorHiddenOrRejected: withheld.get(author.id) ?? 0,
+			authorOpenReportsAgainst: against.get(author.id) ?? 0,
+			authorJoinedAt: author.createdAt.toISOString(),
 			authorMutedUntil: activeMute(author.mutedUntil),
 			authorBanned: author.bannedAt !== null,
 			authorMutedByModerator: mutedByModerator.has(author.id)
@@ -280,193 +295,4 @@ export async function listReportedQueue(
 		.limit(limit + 1);
 	const page = toQueuePage(rows, limit, (r) => priorityCursorOf(keyOf(r)));
 	return { ...page, items: await toModerationItems(page.items) };
-}
-
-export type RecentAction = {
-	id: string;
-	action: Action;
-	reason: string | null;
-	/** The rule the moderator named for a hide, a reject, a mute or a ban. */
-	rule: ModerationRule | null;
-	createdAt: string;
-	actor: PublicUser | null;
-	targetUser: PublicUser | null;
-	/** The length of a mute, in hours; null on every other action. */
-	muteHours: number | null;
-	/** The comment's text, so the log reads without opening it. */
-	commentBody: string | null;
-	/** The comment acted on and where it is now, so a hide or a reject can be undone from the log. */
-	commentId: string | null;
-	commentStatus: CommentStatus | null;
-	/** When the author last edited the comment, so the log can say it changed after the action. */
-	commentEditedAt: string | null;
-	/**
-	 * Whether this row's mute or ban is still in force: it is the account's latest such row and
-	 * the account is still muted or banned. `byModerator` says a moderator wrote the mute, which
-	 * a moderator may end. Null on every other row.
-	 */
-	inForce: { byModerator: boolean } | null;
-	/** The count flag a flag action closed or re-opened, and its status now, so the log can re-open it. */
-	flag: { id: string; status: (typeof titleCountFlags.$inferSelect)['status'] } | null;
-	/** The earlier action this one undid (End mute, Lift ban, Restore, Re-open); null on any other row, or when none is logged (`moderation-reverses.ts`). */
-	reverses: ReversedAction | null;
-	/** The title the comment is on, or the title a report or count-flag action concerns. */
-	title: {
-		id: string;
-		kind: CommentWithTitle['title']['kind'];
-		tmdbId: number | null;
-		name: string;
-	} | null;
-};
-
-/** What narrows the log. */
-export type LogFilter = {
-	/**
-	 * Actions that concern one account: those that name it (`target_user_id`) and those on its
-	 * comments (a comment action names the comment only).
-	 */
-	accountId?: string;
-	/** Only these actions. */
-	actions?: readonly Action[];
-	/** Only the actions this staff member took. */
-	actorId?: string;
-};
-
-/** The condition of a log filter over `moderation_actions`; undefined for none. */
-function logFilterWhere(filter: LogFilter) {
-	const account = filter.accountId
-		? or(
-				eq(moderationActions.targetUserId, filter.accountId),
-				inArray(
-					moderationActions.targetCommentId,
-					db.select({ id: comments.id }).from(comments).where(eq(comments.userId, filter.accountId))
-				)
-			)
-		: undefined;
-	return and(
-		filter.actions ? inArray(moderationActions.action, [...filter.actions]) : undefined,
-		filter.actorId ? eq(moderationActions.actorId, filter.actorId) : undefined,
-		account
-	);
-}
-
-/**
- * A page of the moderation log, newest first (then id), narrowed by `filter`. A cursor this
- * module did not make reads as the first page.
- */
-export async function listRecentActions(
-	cursor?: string | null,
-	limit = QUEUE_LIMIT,
-	filter: LogFilter = {}
-): Promise<QueuePage<RecentAction>> {
-	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.log);
-	const found = await db
-		.select({
-			action: moderationActions,
-			targetBody: comments.body,
-			targetStatus: comments.status,
-			targetEditedAt: comments.editedAt,
-			flagId: titleCountFlags.id,
-			flagStatus: titleCountFlags.status,
-			title: { id: titles.id, kind: titles.kind, tmdbId: titles.tmdbId, name: titles.title }
-		})
-		.from(moderationActions)
-		.leftJoin(comments, eq(moderationActions.targetCommentId, comments.id))
-		.leftJoin(
-			titleCountFlags,
-			and(
-				inArray(moderationActions.action, FLAG_ACTIONS),
-				eq(titleCountFlags.titleId, moderationActions.targetTitleId),
-				eq(titleCountFlags.reporterId, moderationActions.targetUserId)
-			)
-		)
-		.leftJoin(
-			titles,
-			eq(titles.id, sql`coalesce(${comments.titleId}, ${moderationActions.targetTitleId})`)
-		)
-		.where(
-			and(
-				logFilterWhere(filter),
-				after
-					? or(
-							lt(moderationActions.createdAt, new Date(after[0])),
-							and(
-								eq(moderationActions.createdAt, new Date(after[0])),
-								lt(moderationActions.id, after[1])
-							)
-						)
-					: undefined
-			)
-		)
-		.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id))
-		.limit(limit + 1);
-	const { items: rows, nextCursor } = toQueuePage(found, limit, (r) => [
-		r.action.createdAt.getTime(),
-		r.action.id
-	]);
-	const userIds = [
-		...new Set(
-			rows
-				.flatMap(({ action }) => [action.actorId, action.targetUserId])
-				.filter((id) => id !== null)
-		)
-	];
-	const people = new Map<string, PublicUser>();
-	const standing = new Map<string, { muted: boolean; banned: boolean }>();
-	for (const chunk of chunkForD1(userIds, 1)) {
-		for (const row of await db.select().from(users).where(inArray(users.id, chunk))) {
-			people.set(row.id, toPublicUser(row));
-			standing.set(row.id, {
-				muted: activeMute(row.mutedUntil) !== null,
-				banned: row.bannedAt !== null
-			});
-		}
-	}
-	const targetsOf = (action: 'mute' | 'ban') => [
-		...new Set(
-			rows
-				.filter((r) => r.action.action === action && r.action.targetUserId !== null)
-				.map((r) => r.action.targetUserId as string)
-		)
-	];
-	const latestMute = await latestActionRows('mute', targetsOf('mute'));
-	const latestBan = await latestActionRows('ban', targetsOf('ban'));
-	const inForce = (action: typeof moderationActions.$inferSelect): RecentAction['inForce'] => {
-		const target = action.targetUserId && standing.get(action.targetUserId);
-		if (!target) return null;
-		if (action.action === 'mute') {
-			const latest = latestMute.get(action.targetUserId as string);
-			return target.muted && latest?.id === action.id
-				? { byModerator: latest.actorRole === 'moderator' }
-				: null;
-		}
-		if (action.action === 'ban') {
-			return target.banned && latestBan.get(action.targetUserId as string)?.id === action.id
-				? { byModerator: false }
-				: null;
-		}
-		return null;
-	};
-	const reversed = await reversedActions(rows.map((r) => r.action));
-	const items: RecentAction[] = rows.map(
-		({ action, targetBody, targetStatus, targetEditedAt, flagId, flagStatus, title }) => ({
-			id: action.id,
-			action: action.action,
-			reason: action.reason,
-			rule: action.rule,
-			createdAt: action.createdAt.toISOString(),
-			actor: (action.actorId && people.get(action.actorId)) || null,
-			targetUser: (action.targetUserId && people.get(action.targetUserId)) || null,
-			muteHours: action.muteHours,
-			commentBody: targetBody,
-			commentId: action.targetCommentId,
-			commentStatus: targetStatus,
-			commentEditedAt: targetEditedAt?.toISOString() ?? null,
-			inForce: inForce(action),
-			flag: flagId && flagStatus ? { id: flagId, status: flagStatus } : null,
-			reverses: reversed.get(action.id) ?? null,
-			title: title && title.name !== null ? title : null
-		})
-	);
-	return { items, nextCursor };
 }

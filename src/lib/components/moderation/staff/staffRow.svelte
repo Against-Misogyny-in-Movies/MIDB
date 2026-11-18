@@ -59,6 +59,7 @@
 		@apply flex flex-wrap items-center justify-between;
 		gap: var(--spacing-sm) var(--spacing-md);
 		padding: var(--spacing-md) 20px;
+		scroll-margin-top: 5rem;
 	}
 
 	.who {

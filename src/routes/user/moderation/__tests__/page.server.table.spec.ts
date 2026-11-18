@@ -48,6 +48,9 @@ vi.mock('#lib/server/http/purge-title.ts', () => ({
 vi.mock('#lib/server/env.ts', () => ({ env: serverEnv }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => actionsFns);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queue);
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
+	listRecentActions: queue.listRecentActions
+}));
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => ({

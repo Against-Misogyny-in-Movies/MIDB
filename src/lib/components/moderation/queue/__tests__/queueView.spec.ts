@@ -54,6 +54,9 @@ function item(id: string, over: Partial<ModerationItem> = {}): ModerationItem {
 		parent: null,
 		reports: [],
 		authorCommentCount: 3,
+		authorHiddenOrRejected: 0,
+		authorOpenReportsAgainst: 0,
+		authorJoinedAt: '2026-01-05T10:00:00.000Z',
 		authorMutedUntil: null,
 		authorBanned: false,
 		authorMutedByModerator: false,
@@ -165,7 +168,12 @@ describe('the panel', () => {
 		mount([
 			item('c1', {
 				comment: { ...item('c1').comment, parentId: 'p1', replyCount: 2 },
-				parent: { author: 'lorde_8841', excerpt: 'The ending only works if the film believes her.' }
+				parent: {
+					author: 'lorde_8841',
+					authorId: 'lorde',
+					authorUsername: 'lorde_8841',
+					excerpt: 'The ending only works if the film believes her.'
+				}
 			})
 		]);
 		const p = within(panel());
@@ -175,7 +183,16 @@ describe('the panel', () => {
 	});
 
 	it('names a deleted parent without an excerpt, and shows no thread for a top-level comment', () => {
-		mount([item('c1', { parent: { author: 'lorde_8841', excerpt: null } })]);
+		mount([
+			item('c1', {
+				parent: {
+					author: 'lorde_8841',
+					authorId: 'lorde',
+					authorUsername: 'lorde_8841',
+					excerpt: null
+				}
+			})
+		]);
 		expect(panel().textContent).toContain('a deleted comment');
 		cleanup();
 		mount([item('c1')]);
@@ -223,12 +240,12 @@ describe('collapsed severe comments', () => {
 		expect(within(panel()).getByRole('button', { name: 'Show comment' })).toBeTruthy();
 	});
 
-	it('shows the text in the row and the panel on Show comment, and collapses again on Hide comment', async () => {
+	it('shows the text in the row and the panel on Show comment, and collapses again on Collapse comment', async () => {
 		mount([severe()]);
 		await fireEvent.click(within(panel()).getByRole('button', { name: 'Show comment' }));
 		expect(within(row('c1')).getByText('Body of c1')).toBeTruthy();
 		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
-		await fireEvent.click(within(panel()).getByRole('button', { name: 'Hide comment' }));
+		await fireEvent.click(within(panel()).getByRole('button', { name: 'Collapse comment' }));
 		expect(within(panel()).queryByText('Body of c1')).toBeNull();
 		expect(within(row('c1')).queryByText('Body of c1')).toBeNull();
 	});
@@ -244,7 +261,7 @@ describe('collapsed severe comments', () => {
 	it('shows a comment below the severity as it is, with no Show comment button', () => {
 		mount([item('c1', { severity: 1, severe: false })]);
 		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
-		expect(screen.queryByRole('button', { name: /Show comment|Hide comment/ })).toBeNull();
+		expect(screen.queryByRole('button', { name: /Show comment|Collapse comment/ })).toBeNull();
 	});
 
 	it('shows every comment as it is when the setting is off', () => {
@@ -252,7 +269,7 @@ describe('collapsed severe comments', () => {
 		mount([severe()]);
 		expect(within(row('c1')).getByText('Body of c1')).toBeTruthy();
 		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
-		expect(screen.queryByRole('button', { name: /Show comment|Hide comment/ })).toBeNull();
+		expect(screen.queryByRole('button', { name: /Show comment|Collapse comment/ })).toBeNull();
 	});
 });
 
@@ -308,7 +325,7 @@ describe('the keyboard path', () => {
 		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
 		await key('s');
 		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
-		expect(within(panel()).getByRole('button', { name: 'Hide comment' })).toBeTruthy();
+		expect(within(panel()).getByRole('button', { name: 'Collapse comment' })).toBeTruthy();
 	});
 
 	it('approves, dismisses and restores at once, through the visible buttons', async () => {

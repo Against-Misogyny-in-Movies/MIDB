@@ -9,7 +9,9 @@ vi.mock('#lib/server/auth/guards.ts', () => ({
 }));
 vi.mock('#lib/server/data/moderation-queue.ts', () => ({
 	listPendingQueue: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
-	listReportedQueue: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+	listReportedQueue: vi.fn().mockResolvedValue({ items: [], nextCursor: null })
+}));
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
 	listRecentActions: (...args: unknown[]) => listRecentActions(...args)
 }));
 vi.mock('#lib/server/data/account-view.ts', () => ({

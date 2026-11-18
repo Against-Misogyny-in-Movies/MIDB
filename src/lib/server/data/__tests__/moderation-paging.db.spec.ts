@@ -13,11 +13,8 @@ import {
 import { userValues } from '#db/test/users.ts';
 import { listFlaggedTitles, listHeldReports } from '#lib/server/data/community-report-queue.ts';
 import { getModerationCounts } from '#lib/server/data/moderation-counts.ts';
-import {
-	listPendingQueue,
-	listRecentActions,
-	listReportedQueue
-} from '#lib/server/data/moderation-queue.ts';
+import { listPendingQueue, listReportedQueue } from '#lib/server/data/moderation-queue.ts';
+import { listRecentActions } from '#lib/server/data/recent-actions.ts';
 import { QUEUE_SHAPES, decodeQueueCursor, type QueuePage } from '#lib/server/data/queue-cursor.ts';
 
 const T0 = Date.UTC(2026, 10, 1);

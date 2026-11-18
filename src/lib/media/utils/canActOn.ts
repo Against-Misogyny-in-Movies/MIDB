@@ -34,3 +34,37 @@ export function canCloseFlag(
 		me.role === 'administrator' || (reporter.id !== me.id && reporter.role !== 'administrator')
 	);
 }
+
+/**
+ * Whether a staff member may end `target`'s mute. An administrator may end any mute; a moderator
+ * only one a moderator set (`mutedByModerator`), on an account they may restrict. The server
+ * decides (`unmuteUser`), and the pages hide the control it would refuse.
+ */
+export function canEndMute(
+	me: { id: string; role: string },
+	target: { id: string; role: string },
+	mutedByModerator: boolean
+): boolean {
+	return canActOn(me, target, 'restrict') && (me.role === 'administrator' || mutedByModerator);
+}
+
+/** Whether a staff member may lift `target`'s ban: only an administrator (`unbanAccount`). */
+export function canLiftBan(
+	me: { id: string; role: string },
+	target: { id: string; role: string }
+): boolean {
+	return me.role === 'administrator' && canActOn(me, target, 'restrict');
+}
+
+/**
+ * Whether a staff member may re-open a closed flag raised by `reporter`: the authority of
+ * closing it, and, for a moderator, only a flag that no administrator closed
+ * (`closedByAdministrator`). The server decides (`reopenCountFlag`).
+ */
+export function canReopenFlag(
+	me: { id: string; role: string },
+	reporter: { id: string; role: string },
+	closedByAdministrator: boolean
+): boolean {
+	return canCloseFlag(me, reporter) && (me.role === 'administrator' || !closedByAdministrator);
+}

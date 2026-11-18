@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import type { ReportAccount } from '#lib/media/types/moderation.ts';
+	import { canEndMute, canLiftBan } from '#lib/media/utils/canActOn.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	interface Props {
@@ -9,11 +10,11 @@
 		canAct: boolean;
 		/** False for an account they cannot mute or ban (`canActOn` with `restrict`). */
 		canRestrict: boolean;
-		/** The acting staff member's role: an administrator lifts any ban and ends any mute, a moderator only a mute a moderator set. */
-		staffRole: string;
+		/** The acting staff member: an administrator lifts any ban and ends any mute, a moderator only a mute a moderator set (`canEndMute`, `canLiftBan`). */
+		me: { id: string; role: string };
 	}
 
-	let { account, canAct, canRestrict, staffRole }: Props = $props();
+	let { account, canAct, canRestrict, me }: Props = $props();
 
 	type Panel = 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
 	let panel = $state<Panel | null>(null);
@@ -27,12 +28,13 @@
 	);
 
 	const name = $derived(account.username ?? 'this account');
-	const canEndMute = $derived(staffRole === 'administrator' || account.mutedByModerator);
-	const canLiftBan = $derived(staffRole === 'administrator');
+	const target = $derived({ id: account.userId, role: account.role });
+	const endable = $derived(canEndMute(me, target, account.mutedByModerator));
+	const liftable = $derived(canLiftBan(me, target));
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 </script>
 
-{#if (canAct && account.reportCount > 0) || (canRestrict && (account.restricted !== 'banned' || canLiftBan))}
+{#if (canAct && account.reportCount > 0) || (canRestrict && (account.restricted !== 'banned' || liftable))}
 	<div class="account" bind:this={root} tabindex="-1">
 		<p class="label">Account</p>
 		<div class="action-row">
@@ -42,12 +44,12 @@
 					type="button"
 					aria-expanded={panel === 'rejectAll'}
 					bind:this={triggers.rejectAll}
-					onclick={() => toggle('rejectAll')}>Reject all from this account</button
+					onclick={() => toggle('rejectAll')}>Reject all community reports from this account</button
 				>
 			{/if}
 			{#if canRestrict}
 				{#if account.restricted === 'banned'}
-					{#if canLiftBan}
+					{#if liftable}
 						<button
 							class="btn btn--ghost"
 							type="button"
@@ -58,7 +60,7 @@
 					{/if}
 				{:else}
 					{#if account.restricted === 'muted'}
-						{#if canEndMute}
+						{#if endable}
 							<button
 								class="btn btn--ghost"
 								type="button"
@@ -66,6 +68,8 @@
 								bind:this={triggers.unmute}
 								onclick={() => toggle('unmute')}>End mute</button
 							>
+						{:else}
+							<p class="label">Only an administrator can end this mute.</p>
 						{/if}
 					{:else}
 						<button

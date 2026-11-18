@@ -21,7 +21,8 @@ import {
 	rejectComment,
 	restoreComment
 } from '#lib/server/data/moderation-actions.ts';
-import { listPendingQueue, listRecentActions } from '#lib/server/data/moderation-queue.ts';
+import { listPendingQueue } from '#lib/server/data/moderation-queue.ts';
+import { listRecentActions } from '#lib/server/data/recent-actions.ts';
 import type * as DecideModule from '#lib/server/moderation/decide.ts';
 import type { UserRow } from '#lib/server/data/user-queries.ts';
 import type { TitleRow } from '#lib/server/data/title-queries.ts';

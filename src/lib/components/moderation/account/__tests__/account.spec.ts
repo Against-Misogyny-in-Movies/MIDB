@@ -101,7 +101,7 @@ describe('accountSummary', () => {
 		expect(figure('Open reports against').textContent).toContain('12');
 		expect(figure('Community reports').textContent).toContain('18');
 		expect(figure('Comment reports made').textContent).toContain('5');
-		expect(figure('Comment reports made').textContent).toContain('4 upheld, 1 dismissed');
+		expect(figure('Comment reports made').textContent).toContain('Earlier reports: 4 of 5 upheld');
 	});
 
 	it('says a mute with its end day, and offers End mute to an administrator', () => {
@@ -153,14 +153,18 @@ describe('accountSummary', () => {
 		const { unmount } = render(AccountSummary, { account: view(), me: MOD });
 		expect(screen.getByRole('button', { name: 'Mute account' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Ban account' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Reject all from this account' })).toBeTruthy();
+		expect(
+			screen.getByRole('button', { name: 'Reject all community reports from this account' })
+		).toBeTruthy();
 		unmount();
 		const none = view();
 		render(AccountSummary, {
 			account: { ...none, figures: { ...none.figures!, communityReportsLive: 0 } },
 			me: MOD
 		});
-		expect(screen.queryByRole('button', { name: 'Reject all from this account' })).toBeNull();
+		expect(
+			screen.queryByRole('button', { name: 'Reject all community reports from this account' })
+		).toBeNull();
 	});
 
 	it('shows no action a moderator may not take on an administrator or on themselves', () => {
@@ -344,7 +348,7 @@ describe('accountLists', () => {
 		expect(within(row).getByRole('link', { name: 'lorde_8841' }).getAttribute('href')).toBe(
 			'/user/moderation/accounts/lorde'
 		);
-		expect(within(row).getByText('3 upheld, 1 dismissed')).toBeTruthy();
+		expect(within(row).getByText('Earlier reports: 3 of 4 upheld')).toBeTruthy();
 	});
 
 	it('moves between tabs with the arrow keys, wrapping', async () => {

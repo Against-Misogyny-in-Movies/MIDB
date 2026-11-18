@@ -50,6 +50,9 @@ const item = (over: Partial<ModerationItem> = {}): ModerationItem => ({
 	parent: null,
 	reports: [],
 	authorCommentCount: 2,
+	authorHiddenOrRejected: 0,
+	authorOpenReportsAgainst: 0,
+	authorJoinedAt: '2026-01-05T10:00:00.000Z',
 	authorMutedUntil: null,
 	authorBanned: false,
 	authorMutedByModerator: false,
@@ -115,7 +118,7 @@ describe('ModerationItem offers the action that fits the state', () => {
 		expect(button('Lift ban')).toBeTruthy();
 		expect(button('Mute account')).toBeNull();
 		expect(button('Ban account')).toBeNull();
-		expect(screen.getByText('Banned')).toBeTruthy();
+		expect(screen.getByText(/ · Banned$/)).toBeTruthy();
 		cleanup();
 		mountItem({ authorBanned: true });
 		expect(button('Lift ban')).toBeNull();
@@ -165,7 +168,7 @@ function mountAccount(over: Partial<ReportAccount>, staffRole: string) {
 		account: account(over),
 		canAct: true,
 		canRestrict: true,
-		staffRole
+		me: { id: 'viewer', role: staffRole }
 	});
 }
 
@@ -185,6 +188,7 @@ describe('ReportAccountActions offers the action that fits the account', () => {
 		cleanup();
 		mountAccount({ restricted: 'muted' }, 'moderator');
 		expect(button('End mute')).toBeNull();
+		expect(screen.getByText('Only an administrator can end this mute.')).toBeTruthy();
 		cleanup();
 		mountAccount({ restricted: 'muted', mutedByModerator: true }, 'moderator');
 		expect(button('End mute')).toBeTruthy();
@@ -217,6 +221,7 @@ const entry = (over: Partial<RecentAction>): RecentAction => ({
 	inForce: { byModerator: true },
 	flag: null,
 	reverses: null,
+	latestForComment: false,
 	title: null,
 	...over
 });
@@ -267,7 +272,7 @@ describe('RecentActionRow offers the reversal that is still possible', () => {
 			action: 'resolve_count_flag',
 			muteHours: null,
 			inForce: null,
-			flag: { id: 'f1', status: 'resolved' },
+			flag: { id: 'f1', status: 'resolved', closedByAdministrator: false },
 			title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' }
 		});
 		mountEntry(closed);
@@ -276,7 +281,9 @@ describe('RecentActionRow offers the reversal that is still possible', () => {
 		expect((form.querySelector('[name=id]') as HTMLInputElement).value).toBe('f1');
 		expect(screen.getByText(/resolved Counts look wrong from/)).toBeTruthy();
 		cleanup();
-		mountEntry(entry({ ...closed, flag: { id: 'f1', status: 'open' } }));
+		mountEntry(
+			entry({ ...closed, flag: { id: 'f1', status: 'open', closedByAdministrator: false } })
+		);
 		expect(button('Re-open')).toBeNull();
 		cleanup();
 		mountEntry({
@@ -286,6 +293,21 @@ describe('RecentActionRow offers the reversal that is still possible', () => {
 		expect(button('Re-open')).toBeNull();
 		cleanup();
 		mountEntry({ ...closed, targetUser: { ...AUTHOR, id: 'admin', role: 'administrator' } }, ADMIN);
+		expect(button('Re-open')).toBeTruthy();
+	});
+
+	it('hides Re-open from a moderator when an administrator closed the flag', () => {
+		const byAdmin = entry({
+			action: 'resolve_count_flag',
+			muteHours: null,
+			inForce: null,
+			flag: { id: 'f1', status: 'resolved', closedByAdministrator: true },
+			title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' }
+		});
+		mountEntry(byAdmin);
+		expect(button('Re-open')).toBeNull();
+		cleanup();
+		mountEntry(byAdmin, ADMIN);
 		expect(button('Re-open')).toBeTruthy();
 	});
 });
@@ -298,6 +320,7 @@ describe('CountFlagItem on a closed flag', () => {
 		reporter: 'anna',
 		reporterId: 'u1',
 		reporterRole: 'user',
+		closedByAdministrator: false,
 		createdAt: '2026-11-01T10:00:00.000Z'
 	};
 

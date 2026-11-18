@@ -21,7 +21,13 @@
 
 	let { data } = $props();
 
-	onMount(() => moderationPrefs.start());
+	onMount(() => {
+		moderationPrefs.start();
+		moderationStatus.left = remaining;
+		return () => {
+			moderationStatus.left = null;
+		};
+	});
 
 	/** The URL is the one source of the open tab: the load parses `?tab=` and `?title=`. */
 	const tab = $derived(data.tab);
@@ -91,13 +97,17 @@
 			: 'No moderation actions yet.';
 	});
 
-	/** "Hidden. 41 left in Pending.": the result of the last action and what remains in this tab, from the load's totals. */
-	const status = $derived.by(() => {
-		if (!moderationStatus.label || (tab !== 'pending' && tab !== 'reported')) return '';
+	/** "41 left in Pending.": what remains in the open queue, from the load's totals; empty on the other tabs. */
+	function remaining(): string {
+		if (tab !== 'pending' && tab !== 'reported') return '';
 		const left = data.counts[tab];
-		const tabName = tab === 'pending' ? 'Pending' : 'Reported';
-		return `${moderationStatus.label}. ${left === 0 ? 'Nothing' : left} left in ${tabName}.`;
-	});
+		return `${left === 0 ? 'Nothing' : left} left in ${tab === 'pending' ? 'Pending' : 'Reported'}.`;
+	}
+
+	/** "Hidden. 41 left in Pending.": the result of the last action and the count. The toast announces it, so the line is for the eye. */
+	const status = $derived(
+		moderationStatus.label && remaining() ? `${moderationStatus.label}. ${remaining()}` : ''
+	);
 
 	/**
 	 * Choosing a tab goes to its URL, which the load reads. The tab buttons stay mounted, so the
@@ -188,7 +198,7 @@
 	</div>
 
 	{#if queueTab}
-		<p class="status" role="status">{status}</p>
+		<p class="status" aria-hidden="true">{status}</p>
 	{/if}
 
 	{#if helpOpen && keyTab}

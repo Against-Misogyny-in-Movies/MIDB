@@ -45,14 +45,15 @@ afterEach(() => {
 describe('the status line', () => {
 	const statusLine = () => document.querySelector('p.status');
 
-	it('is a polite status under the tabs that says the result and what remains in the tab', () => {
+	it('is a line under the tabs that says the result and what remains, for the eye: the toast announces it', () => {
 		moderationStatus.say('hide');
 		render(Page, {
 			data: { ...DATA, counts: { ...DATA.counts, pending: 41 } },
 			form: null
 		} as never);
 		const line = statusLine() as HTMLElement;
-		expect(line.getAttribute('role')).toBe('status');
+		expect(line.getAttribute('aria-hidden')).toBe('true');
+		expect(line.hasAttribute('role')).toBe(false);
 		expect(line.textContent).toBe('Hidden. 41 left in Pending.');
 		expect(
 			document.getElementById('tab-log')!.compareDocumentPosition(line) &
@@ -104,7 +105,7 @@ describe('the status line', () => {
 describe('the collapse setting', () => {
 	const control = () =>
 		screen.queryByRole<HTMLInputElement>('checkbox', {
-			name: 'Collapse the most severe comments'
+			name: 'Collapse comments of severity 2 and above'
 		});
 
 	it('is in the header on the queues and the table, on by default', () => {
@@ -150,7 +151,7 @@ describe('the shortcut setting and the shortcut list', () => {
 		expect(setting()?.checked).toBe(true);
 		expect(setting()?.closest('.settings')).toBe(
 			screen
-				.getByRole('checkbox', { name: 'Collapse the most severe comments' })
+				.getByRole('checkbox', { name: 'Collapse comments of severity 2 and above' })
 				.closest('.settings')
 		);
 		await fireEvent.click(setting()!);

@@ -60,15 +60,19 @@
 		color: var(--ink);
 		cursor: pointer;
 		transition: background-color 0.15s ease;
+		/* The sticky header is 4rem: a row scrolled into view stops clear of it. */
+		scroll-margin-top: 5rem;
 	}
 
 	.row-button:hover {
 		background-color: var(--surface-sunken);
 	}
 
-	/* The wash and the heavier title say which row is open; the ring says which has the keys. */
+	/* The wash, a 1px brand outline and the heavier title say which row is open, so colour is not the only mark; the 2px ring says which has the keys. */
 	.row-button[aria-current='true'] {
 		background-color: var(--brand-wash);
+		outline: 1px solid var(--brand);
+		outline-offset: -1px;
 	}
 
 	.row-button[aria-current='true'] .title {

@@ -26,6 +26,12 @@ export {
 	reportStatus
 } from '#db/lib/comments.ts';
 
+/**
+ * A `reject` verdict at or above this severity rejects the comment, and the moderation queue
+ * starts a comment at or above it collapsed (`severity` runs 0 to 3).
+ */
+export const REJECT_MIN_SEVERITY = 2;
+
 /** What the classifier may flag a comment for. */
 export const VERDICT_CATEGORIES = [
 	'hate',

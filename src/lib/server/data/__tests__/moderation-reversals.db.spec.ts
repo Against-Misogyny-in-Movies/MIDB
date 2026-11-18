@@ -12,7 +12,8 @@ import {
 import { userValues } from '#db/test/users.ts';
 import { banAccount, muteUser } from '../moderation-actions.ts';
 import { unbanAccount, unmuteUser } from '../moderation-reversals.ts';
-import { listPendingQueue, listRecentActions } from '../moderation-queue.ts';
+import { listPendingQueue } from '../moderation-queue.ts';
+import { listRecentActions } from '../recent-actions.ts';
 import { getOpenTitle } from '../community-report-queue.ts';
 import { getUserById, type UserRow } from '../user-queries.ts';
 

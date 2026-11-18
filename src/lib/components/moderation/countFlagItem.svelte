@@ -82,6 +82,7 @@
 	.flag {
 		@apply flex flex-col;
 		gap: var(--spacing-xs);
+		scroll-margin-top: 5rem;
 	}
 
 	.line {

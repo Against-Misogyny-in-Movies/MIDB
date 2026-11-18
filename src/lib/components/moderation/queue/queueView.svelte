@@ -175,6 +175,7 @@
 
 	.empty {
 		@apply text-ink-muted;
+		scroll-margin-top: 5rem;
 	}
 
 	/* Rows are plain list items; the open item's panel follows its row. */

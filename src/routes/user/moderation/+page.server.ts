@@ -2,11 +2,8 @@ import type { Actions, PageServerLoad } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
 import { act, text, type Outcome } from '#lib/server/http/moderation-action.ts';
 import { env } from '#lib/server/env.ts';
-import {
-	listPendingQueue,
-	listRecentActions,
-	listReportedQueue
-} from '#lib/server/data/moderation-queue.ts';
+import { listPendingQueue, listReportedQueue } from '#lib/server/data/moderation-queue.ts';
+import { listRecentActions } from '#lib/server/data/recent-actions.ts';
 import {
 	getOpenTitle,
 	listFlaggedTitles,

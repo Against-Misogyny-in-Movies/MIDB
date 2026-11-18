@@ -7,13 +7,13 @@
 	import { MODERATION_RULE_LABELS, formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
-	import { canActOn, canCloseFlag } from '#lib/media/utils/canActOn.ts';
+	import { canEndMute, canLiftBan, canReopenFlag } from '#lib/media/utils/canActOn.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
 		entry: RecentAction;
-		/** The acting staff member: their role decides which reversals the row offers (`canActOn`, `canCloseFlag`). */
+		/** The acting staff member: their role decides which reversals the row offers (`canEndMute`, `canLiftBan`, `canReopenFlag`). */
 		me: { id: string; role: string };
 	}
 
@@ -76,10 +76,11 @@
 						flagFrom ? ' from' : ' on'
 					)
 	);
-	/** A hide or a reject can be undone while the comment is still in that state. */
+	/** The latest hide or reject of a comment can be undone while the comment is still in that state. */
 	const restorable = $derived(
 		entry.commentId !== null &&
 			(entry.action === 'hide' || entry.action === 'reject') &&
+			entry.latestForComment &&
 			(entry.commentStatus === 'hidden' || entry.commentStatus === 'rejected')
 	);
 	/** The author changed the text after this action, so the text below is not what was acted on. */
@@ -106,28 +107,26 @@
 		(name) => (busy = name),
 		() => (panel = null)
 	);
-	/** A mute still in force: an administrator ends any, a moderator one a moderator set, and `canActOn` applies. */
+	/** A mute still in force, for whoever may end it (`canEndMute`). */
 	const endable = $derived(
 		entry.action === 'mute' &&
 			entry.inForce !== null &&
 			entry.targetUser !== null &&
-			canActOn(me, entry.targetUser, 'restrict') &&
-			(me.role === 'administrator' || entry.inForce.byModerator)
+			canEndMute(me, entry.targetUser, entry.inForce.byModerator)
 	);
-	/** A ban still in force: only an administrator lifts it. */
+	/** A ban still in force, for whoever may lift it (`canLiftBan`). */
 	const liftable = $derived(
 		entry.action === 'ban' &&
 			entry.inForce !== null &&
 			entry.targetUser !== null &&
-			me.role === 'administrator' &&
-			canActOn(me, entry.targetUser, 'restrict')
+			canLiftBan(me, entry.targetUser)
 	);
-	/** A closed flag can be re-opened by whoever may close it. */
+	/** A closed flag, for whoever may re-open it (`canReopenFlag`). */
 	const reopenable = $derived(
 		entry.flag !== null &&
 			entry.flag.status !== 'open' &&
 			entry.targetUser !== null &&
-			canCloseFlag(me, entry.targetUser)
+			canReopenFlag(me, entry.targetUser, entry.flag.closedByAdministrator)
 	);
 	/** What an undone action is called in "Undoes the …". */
 	const UNDONE: Partial<Record<RecentAction['action'], string>> = {
@@ -255,6 +254,7 @@
 		@apply flex flex-col items-start;
 		gap: var(--spacing-xs);
 		padding: 14px 20px;
+		scroll-margin-top: 5rem;
 	}
 
 	.line {

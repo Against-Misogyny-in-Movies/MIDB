@@ -204,13 +204,21 @@ describe('an administrator’s decision binds a moderator', () => {
 			(await db.select().from(users).where(eq(users.id, 'u3')))[0].mutedUntil?.getTime() ?? 0;
 		await muteUser(admin, 'u3', 168, null);
 		const long = await mutedUntil();
-		expect(await muteUser(mod, 'u3', 24, null)).toMatchObject({ ok: true });
+		// A moderator cannot mute over an administrator's mute at all (`admin-acted`).
+		expect(await muteUser(mod, 'u3', 24, null)).toEqual({ ok: false, reason: 'admin-acted' });
 		expect(await mutedUntil()).toBe(long);
 		await muteUser(admin, 'u3', 24, null);
 		expect(await mutedUntil()).toBeLessThan(long);
 		const short = await mutedUntil();
-		await muteUser(mod, 'u3', 168, null);
-		expect(await mutedUntil()).toBeGreaterThan(short);
+		expect(await muteUser(mod, 'u3', 168, null)).toEqual({ ok: false, reason: 'admin-acted' });
+		expect(await mutedUntil()).toBe(short);
+		// Over a moderator's own mute a shorter one changes nothing, and a longer one extends it.
+		await muteUser(mod, 'u4', 168, null);
+		const own = (await db.select().from(users).where(eq(users.id, 'u4')))[0].mutedUntil!.getTime();
+		await muteUser(mod, 'u4', 24, null);
+		expect((await db.select().from(users).where(eq(users.id, 'u4')))[0].mutedUntil!.getTime()).toBe(
+			own
+		);
 		expect(
 			(await db.select().from(moderationActions)).filter((a) => a.action === 'mute')
 		).toHaveLength(4);
