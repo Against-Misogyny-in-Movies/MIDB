@@ -25,6 +25,8 @@ const DONE: Record<string, string | ((data: DoneData) => string)> = {
 	unban: 'Ban lifted.',
 	reopenFlag: 'Re-opened.',
 	note: 'Note added.',
+	makeModerator: 'Moderator role given.',
+	removeModerator: 'Moderator role removed.',
 	resolveFlag: 'Marked resolved.',
 	dismissFlag: 'Dismissed.',
 	aiSearch: 'Filters set from the search.',

@@ -72,3 +72,28 @@ describe('a reversal row', () => {
 		expect(screen.queryByText(/Undoes/)).toBeNull();
 	});
 });
+
+describe('a role change row', () => {
+	it('reads "made <name> a moderator" for the moderator role, with no reason line', () => {
+		mount({ action: 'set_role', reason: 'moderator' });
+		const line = screen.getByText(/made/).closest('p')!;
+		expect(line.textContent?.replace(/\s+/g, ' ')).toMatch(
+			/^adm_one made\s*woolf_2210\s*a moderator/
+		);
+		expect(screen.queryByText(/Reason:/)).toBeNull();
+	});
+
+	it('reads "removed the moderator role from <name>" for user', () => {
+		mount({ action: 'set_role', reason: 'user' });
+		const line = screen.getByText(/removed the moderator role from/).closest('p')!;
+		expect(line.textContent?.replace(/\s+/g, ' ')).toMatch(
+			/^adm_one removed the moderator role from\s*woolf_2210/
+		);
+		expect(screen.queryByText(/Reason:/)).toBeNull();
+	});
+
+	it('falls back to "changed the role of" for a role change with no recognised role', () => {
+		mount({ action: 'set_role', reason: null });
+		expect(screen.getByText(/changed the role of/)).toBeTruthy();
+	});
+});

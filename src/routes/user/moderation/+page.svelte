@@ -148,6 +148,9 @@
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
 		<h1 class="display">Moderation</h1>
+		{#if data.me.role === 'administrator'}
+			<a class="chip staff-link" href="/user/moderation/staff">Staff roles</a>
+		{/if}
 		{#if keyTab}
 			<ModerationSettings {helpOpen} ontogglehelp={toggleHelp} bind:helpButton />
 		{/if}
@@ -292,6 +295,10 @@
 
 	h1 {
 		font-size: 1.875rem;
+	}
+
+	.staff-link {
+		@apply self-start;
 	}
 
 	header {

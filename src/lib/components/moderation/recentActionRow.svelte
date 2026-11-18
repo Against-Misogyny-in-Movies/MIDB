@@ -60,11 +60,21 @@
 
 	/** A flag row that names the flag's reporter reads "from <name> on <title>". */
 	const flagFrom = $derived(FLAG_ACTIONS.has(entry.action) && entry.targetUser !== null);
+	/** A role change stores the new role as its reason: "made <name> a moderator", "removed the moderator role from <name>". */
+	const roleChange = $derived(
+		entry.action === 'set_role' && (entry.reason === 'moderator' || entry.reason === 'user')
+			? entry.reason
+			: null
+	);
 	const verb = $derived(
-		((VERBS as Record<string, string | undefined>)[entry.action] ?? 'acted on').replace(
-			/ on$/,
-			flagFrom ? ' from' : ' on'
-		)
+		roleChange === 'moderator'
+			? 'made'
+			: roleChange === 'user'
+				? 'removed the moderator role from'
+				: ((VERBS as Record<string, string | undefined>)[entry.action] ?? 'acted on').replace(
+						/ on$/,
+						flagFrom ? ' from' : ' on'
+					)
 	);
 	/** A hide or a reject can be undone while the comment is still in that state. */
 	const restorable = $derived(
@@ -155,7 +165,7 @@
 				/></span
 			>{/if}{#if inline && entry.title}{flagFrom ? ' on ' : ''}{@render titleLink(
 				entry.title.name
-			)}{/if}{muteLength}
+			)}{/if}{roleChange === 'moderator' ? ' a moderator' : muteLength}
 		<time class="label" datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
 		{#if commentLink}<CommentLink href={commentLink} />{/if}
 	</p>
@@ -177,7 +187,7 @@
 	{#if entry.rule}
 		<p class="label">Rule: {MODERATION_RULE_LABELS[entry.rule]}</p>
 	{/if}
-	{#if entry.reason}
+	{#if entry.reason && !roleChange}
 		<p class="label">Reason: {entry.reason}</p>
 	{/if}
 	{#if endable || liftable || reopenable}

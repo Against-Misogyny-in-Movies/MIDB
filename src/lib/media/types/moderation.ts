@@ -29,3 +29,5 @@ export type {
 	ReportAgainst
 } from '#lib/server/data/account-lists.ts';
 export type { ReporterRecord } from '#lib/server/data/reporter-record.ts';
+
+export type { StaffMember } from '#lib/server/data/staff-roles.ts';

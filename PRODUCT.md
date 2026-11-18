@@ -17,6 +17,7 @@ People deciding whether to watch something, often right before watching, often o
 - `/user/settings`: an account's email, sign-in methods, sessions, appearance, a data download, account deletion and Sign out. (Operate.)
 - `/user/moderation`: moderators and administrators review pending and reported comments, community reports held for review and titles whose counts readers flagged, mute or ban an account and end a mute or a ban, and read the action log. (Operate.)
 - `/user/moderation/accounts/[id]`: staff see one account: its standing, figures, every moderation action on it, staff notes, its comments, community reports and the reports against it, with the account's actions. Every account name in moderation links to it. (Operate.)
+- `/user/moderation/staff`: administrators see the administrators and moderators with the date each took the role, give an account the moderator role by username and remove it; the administrator role is not given here. (Operate.)
 - `/auth`, `/user/*`: account. Readers sign in with a passkey, Google or Discord; there are no passwords. (Operate.)
 - Source freshness: a metric section shows when its source last synced ("Updated <date>"). A daily job refreshes the Bechdel Test, Unconsenting Media and TMDB popularity data, and moderators see a warning when a source is stale. (Read.)
 

@@ -48,7 +48,7 @@ A fork or a copy needs a Cloudflare account and a domain in a Cloudflare zone. T
 
 9. **Canonical repository.** `deploy.yml` and `sync-sources.yml` run only when `github.repository` is `Against-Misogyny-in-Movies/MIDB`. Change that string in both files (it appears in each job's `if`) to the new repository's full name.
 10. **First load.** Put `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID` and `CLOUDFLARE_API_TOKEN` in `.env`, then run `pnpm db:migrate:remote` and `pnpm db:sync:all --remote`. The next push to `main` deploys; the daily sync keeps the data current. The workflow migrates the preview database but does not load source data into it; `pnpm db:sync:all --remote` with the preview database's id as `CLOUDFLARE_D1_DATABASE_ID` does.
-11. **First administrator.** Sign in once on the site, then run `pnpm db:seed:admin --username <username> --remote`.
+11. **First administrator.** Sign in once on the site, then run `pnpm db:seed:admin --username <username> --remote`. This script is the only way to give the administrator role; administrators give and remove the moderator role on `/user/moderation/staff`.
 
 ## Tests
 

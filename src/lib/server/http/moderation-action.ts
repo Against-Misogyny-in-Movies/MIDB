@@ -6,7 +6,8 @@ import type { EditedAt } from '#lib/server/data/comment-status.ts';
 import type { ModerationResult } from '#lib/server/data/moderation-actions.ts';
 import type { ReportModerationResult } from '#lib/server/data/community-report-moderation.ts';
 import type { FlagCloseResult } from '#lib/server/data/count-flags.ts';
-import type { UserRow } from '#lib/server/data/user-queries.ts';
+import type { RoleResult } from '#lib/server/data/staff-roles.ts';
+import type { UserRole, UserRow } from '#lib/server/data/user-queries.ts';
 import type { ScanFailure } from '#lib/server/moderation/scan.ts';
 import { SCAN_CONCERN_MAX } from '#lib/media/utils/comments.ts';
 import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
@@ -50,7 +51,7 @@ type FlagCloseRefusal = Extract<FlagCloseResult, { ok: false }>['reason'];
 
 /** Why a request is refused before or instead of a change. */
 type Refusal =
-	| Extract<ModerationResult | ReportModerationResult, { ok: false }>['reason']
+	| Extract<ModerationResult | ReportModerationResult | RoleResult, { ok: false }>['reason']
 	| ScanFailure
 	| FlagCloseRefusal
 	| 'invalid'
@@ -65,6 +66,7 @@ type ExtraOutcome = { ok: true; extra: Record<string, unknown> } | { ok: false; 
 
 export type Outcome =
 	| ModerationResult
+	| RoleResult
 	| ReportModerationResult
 	| Extract<FlagCloseResult, { ok: false }>
 	| ExtraOutcome;
@@ -92,6 +94,15 @@ const refusals: Record<Refusal, [number, string]> = {
 		'A moderator can act only on ordinary accounts. An administrator can act on any account but cannot mute or ban their own.'
 	],
 	'own-flag': [403, "A moderator cannot close their own flag or an administrator's."],
+	'not-administrator': [403, 'Only an administrator can change roles.'],
+	'unknown-account': [404, 'No account has that username.'],
+	'account-banned': [409, 'A banned account cannot be made a moderator.'],
+	'already-role': [409, 'The account already has that role.'],
+	'is-administrator': [
+		403,
+		'An administrator cannot be demoted here. The seed script sets administrators.'
+	],
+	'last-administrator': [409, 'This is the only administrator left, so the role stays.'],
 	'bulk-unchanged': [409, 'None of the selected comments could be changed.'],
 	'invalid-concern': [400, `The scan text must be 1 to ${SCAN_CONCERN_MAX} characters.`],
 	'ai-unavailable': [503, 'AI search and scan are not set up on this site.'],
@@ -107,7 +118,7 @@ const refusals: Record<Refusal, [number, string]> = {
  * One moderator action: the guard (403 for anyone else), the AI rate limit when `bucket` is given, then `run`
  * over the form. `key` reads the action's target, and a form without one is refused; `after`
  * runs on success and awaits (the data actions purge the edge caches there, `purgeOutcome`, so
- * the change is public at once). Staff are not rate-limited; only the AI calls, which cost money, pass `bucket` (`RL_MODERATE_AI`).
+ * the change is public at once). Staff are not rate-limited; only the AI calls, which cost money, pass `bucket` (`RL_MODERATE_AI`). `roles` are the roles the guard lets through (staff by default; the staff page passes administrators).
  */
 export async function act(
 	event: ActionEvent,
@@ -115,9 +126,10 @@ export async function act(
 	key: (data: FormData) => string | null,
 	run: (staff: UserRow, data: FormData) => Promise<Outcome> | Outcome,
 	after?: (result: Extract<Outcome, { ok: true }>) => void | Promise<void>,
-	bucket?: 'RL_MODERATE_AI'
+	bucket?: 'RL_MODERATE_AI',
+	roles: readonly UserRole[] = STAFF_ROLES
 ) {
-	const staff = await requireRole(event.locals, STAFF_ROLES);
+	const staff = await requireRole(event.locals, roles);
 	if (bucket) await rateLimit(event, bucket, { userId: staff.id });
 	const data = await event.request.formData();
 	const target = key(data);

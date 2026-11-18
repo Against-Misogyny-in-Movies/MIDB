@@ -150,3 +150,18 @@ describe('the log tab', () => {
 		);
 	});
 });
+
+describe('the header’s Staff roles link', () => {
+	it('is for administrators only', () => {
+		const { unmount } = render(Page, {
+			data: { ...DATA, me: { id: 'adm', role: 'administrator' } },
+			form: null
+		} as never);
+		expect(screen.getByRole('link', { name: 'Staff roles' }).getAttribute('href')).toBe(
+			'/user/moderation/staff'
+		);
+		unmount();
+		render(Page, { data: DATA, form: null } as never);
+		expect(screen.queryByRole('link', { name: 'Staff roles' })).toBeNull();
+	});
+});
