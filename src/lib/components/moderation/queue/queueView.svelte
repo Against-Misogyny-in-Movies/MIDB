@@ -6,6 +6,7 @@
 	import { describeStatus } from '#lib/media/utils/commentApi.ts';
 	import { easeOut, vanishOut } from '#lib/media/utils/easeOut.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { pressPanelButton, pressesButton, shortcutOf } from '#lib/media/utils/moderationKeys.ts';
 	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
 	import { ProfilePager } from '#lib/media/utils/profilePager.svelte.js';
 
@@ -71,6 +72,43 @@
 	);
 
 	let moreButton: HTMLButtonElement | undefined = $state();
+	let list: HTMLUListElement | undefined = $state();
+
+	const rowButton = (item: ModerationItem) => document.getElementById(`row-${item.comment.id}`);
+	const openPanel = () => list?.querySelector<HTMLElement>('li.panel > [id^="comment-"]');
+
+	function open(item: ModerationItem) {
+		selectedId = item.comment.id;
+	}
+
+	/** The keyboard path: j and k move the open item and the focus, Enter moves the focus into the panel, and a letter presses the panel's button. */
+	function onkeydown(event: KeyboardEvent) {
+		const shortcut = shortcutOf(event, moderationPrefs.shortcuts);
+		if (!shortcut || shortcut === 'help' || !current) return;
+		if (shortcut === 'next' || shortcut === 'previous') {
+			const target = items[index + (shortcut === 'next' ? 1 : -1)];
+			event.preventDefault();
+			if (!target) return;
+			open(target);
+			void focusAfterUpdate(() => rowButton(target));
+		} else if (shortcut === 'panel') {
+			// Enter on any other control keeps its own meaning.
+			const from = event.target;
+			if (
+				!(from === document.body || (from instanceof HTMLElement && from.id.startsWith('row-')))
+			) {
+				return;
+			}
+			event.preventDefault();
+			if (from instanceof HTMLElement && from.id.startsWith('row-')) {
+				const row = items.find((item) => `row-${item.comment.id}` === from.id);
+				if (row) open(row);
+			}
+			void focusAfterUpdate(openPanel);
+		} else if (pressesButton(shortcut) && !event.repeat) {
+			if (pressPanelButton(openPanel(), shortcut)) event.preventDefault();
+		}
+	}
 
 	/** Moves the focus to the first row the page added, or back to the button when none was. */
 	async function showMore() {
@@ -81,10 +119,12 @@
 	}
 </script>
 
+<svelte:window {onkeydown} />
+
 {#if items.length === 0}
 	<p class="empty" id="moderation-empty" tabindex="-1">{empty}</p>
 {:else}
-	<ul class="card row-list list" style:--rows={items.length}>
+	<ul class="card row-list list" style:--rows={items.length} bind:this={list}>
 		{#each entries as entry (entry.key)}
 			{#if entry.kind === 'row'}
 				<li class="row" out:easeOut|global>
@@ -92,7 +132,7 @@
 						item={entry.item}
 						selected={entry.item === current}
 						collapsed={collapsedFor(entry.item)}
-						onselect={() => (selectedId = entry.item.comment.id)}
+						onselect={() => open(entry.item)}
 					/>
 				</li>
 			{:else}

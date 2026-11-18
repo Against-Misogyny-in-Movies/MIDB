@@ -126,6 +126,7 @@
 			<button
 				class="chip"
 				type="button"
+				id="review-{id}"
 				aria-expanded={open}
 				aria-controls={open ? `detail-${id}` : undefined}
 				aria-label="{open ? 'Close' : 'Review'} the comment by {row.author.displayName}"

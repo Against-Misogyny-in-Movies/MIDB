@@ -4,6 +4,7 @@
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
 	import PagedList from '#lib/components/moderation/pagedList.svelte';
 	import ModerationSettings from '#lib/components/moderation/moderationSettings.svelte';
+	import ShortcutList from '#lib/components/moderation/shortcutList.svelte';
 	import QueueView from '#lib/components/moderation/queue/queueView.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
@@ -12,6 +13,7 @@
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { shortcutOf } from '#lib/media/utils/moderationKeys.ts';
 	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
 	import { moderationStatus } from '#lib/media/utils/moderationStatus.svelte.js';
 	import { tabHref, type ModerationTab } from '#lib/media/utils/moderationTabs.ts';
@@ -23,6 +25,34 @@
 	/** The URL is the one source of the open tab: the load parses `?tab=` and `?title=`. */
 	const tab = $derived(data.tab);
 	const queueTab = $derived(tab === 'pending' || tab === 'reported');
+	/** The tabs the keyboard shortcuts work on. */
+	const keyTab = $derived(queueTab || tab === 'table');
+
+	/** The shortcut list: `?` or its button opens it, Escape or Close closes it and gives the focus back. */
+	let helpOpen = $state(false);
+	let helpButton: HTMLButtonElement | undefined = $state();
+	let helpFrom: HTMLElement | null = null;
+
+	function toggleHelp() {
+		if (helpOpen) return closeHelp();
+		const active = document.activeElement;
+		// A click does not focus the button in every browser; the opening button is the fallback.
+		helpFrom = active instanceof HTMLElement && active !== document.body ? active : null;
+		helpOpen = true;
+	}
+
+	function closeHelp() {
+		helpOpen = false;
+		void focusAfterUpdate(() => (helpFrom?.isConnected ? helpFrom : helpButton));
+	}
+
+	function onkeydown(event: KeyboardEvent) {
+		if (helpOpen && event.key === 'Escape' && !event.defaultPrevented) return closeHelp();
+		if (keyTab && shortcutOf(event, moderationPrefs.shortcuts) === 'help') {
+			event.preventDefault();
+			toggleHelp();
+		}
+	}
 
 	/** The last action's result belongs to the tab it ran in. */
 	let shownTab: ModerationTab | undefined;
@@ -93,6 +123,8 @@
 	}
 </script>
 
+<svelte:window {onkeydown} />
+
 <svelte:head>
 	<title>Moderation · MIDB</title>
 </svelte:head>
@@ -103,8 +135,8 @@
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
 		<h1 class="display">Moderation</h1>
-		{#if queueTab || tab === 'table'}
-			<ModerationSettings />
+		{#if keyTab}
+			<ModerationSettings {helpOpen} ontogglehelp={toggleHelp} bind:helpButton />
 		{/if}
 	</header>
 
@@ -141,6 +173,10 @@
 
 	{#if queueTab}
 		<p class="status" role="status">{status}</p>
+	{/if}
+
+	{#if helpOpen && keyTab}
+		<ShortcutList onclose={closeHelp} />
 	{/if}
 
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">

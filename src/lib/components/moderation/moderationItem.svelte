@@ -101,6 +101,8 @@
 		() => (typeof fallbackId === 'function' ? fallbackId() : fallbackId)
 	);
 
+	/** Whether single-key shortcuts act, so the buttons they press say so (`aria-keyshortcuts`). */
+	const keys = $derived(moderationPrefs.shortcuts);
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 </script>
 
@@ -188,6 +190,7 @@
 				type="button"
 				aria-expanded={!collapsed}
 				data-action="reveal"
+				aria-keyshortcuts={keys && collapsed ? 's' : undefined}
 				onclick={() => show(collapsed)}
 			>
 				{collapsed ? 'Show comment' : 'Hide comment'}
@@ -235,6 +238,7 @@
 				<button
 					class="btn btn--ink"
 					data-action="approve"
+					aria-keyshortcuts={keys ? 'a' : undefined}
 					aria-busy={busy === 'approve'}
 					disabled={busy !== null && busy !== 'approve'}
 				>
@@ -249,6 +253,7 @@
 				<button
 					class="btn btn--ink"
 					data-action="dismiss"
+					aria-keyshortcuts={keys ? 'd' : undefined}
 					aria-busy={busy === 'dismiss'}
 					disabled={busy !== null && busy !== 'dismiss'}
 				>
@@ -263,6 +268,7 @@
 				<button
 					class="btn btn--ink"
 					data-action="restore"
+					aria-keyshortcuts={keys ? 'r' : undefined}
 					aria-busy={busy === 'restore'}
 					disabled={busy !== null && busy !== 'restore'}
 				>
@@ -275,6 +281,7 @@
 				class="btn btn--ghost"
 				type="button"
 				data-action="hide"
+				aria-keyshortcuts={keys ? 'h' : undefined}
 				aria-expanded={panel === 'hide'}
 				bind:this={triggers.hide}
 				onclick={() => toggle('hide')}>Hide</button
@@ -283,6 +290,7 @@
 				class="btn btn--ghost"
 				type="button"
 				data-action="reject"
+				aria-keyshortcuts={keys ? 'x' : undefined}
 				aria-expanded={panel === 'reject'}
 				bind:this={triggers.reject}
 				onclick={() => toggle('reject')}>Reject</button

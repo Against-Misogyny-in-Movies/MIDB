@@ -2,6 +2,9 @@
 	import TableRow from '#lib/components/moderation/table/tableRow.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { pressPanelButton, pressesButton, shortcutOf } from '#lib/media/utils/moderationKeys.ts';
+	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
 
 	interface Props {
@@ -15,7 +18,31 @@
 
 	/** The row whose detail is open: the full comment with every action. */
 	let openId = $state<string | null>(null);
+
+	/**
+	 * With a detail open, j and k open the next and previous row's, and a letter presses the open
+	 * detail's button. With none open the keys do nothing: Review is the way in.
+	 */
+	function onkeydown(event: KeyboardEvent) {
+		if (openId === null) return;
+		const shortcut = shortcutOf(event, moderationPrefs.shortcuts);
+		if (!shortcut) return;
+		if (shortcut === 'next' || shortcut === 'previous') {
+			event.preventDefault();
+			const target =
+				rows[rows.findIndex((r) => r.comment.id === openId) + (shortcut === 'next' ? 1 : -1)];
+			if (!target) return;
+			openId = target.comment.id;
+			void focusAfterUpdate(() => document.getElementById(`review-${target.comment.id}`));
+		} else if (pressesButton(shortcut) && !event.repeat) {
+			if (pressPanelButton(document.getElementById(`detail-${openId}`), shortcut)) {
+				event.preventDefault();
+			}
+		}
+	}
 </script>
+
+<svelte:window {onkeydown} />
 
 <!-- The focus lands here when an action takes its row off the page and no neighbour can take it. -->
 <div class="card" id={TABLE_FOCUS.card} tabindex="-1">

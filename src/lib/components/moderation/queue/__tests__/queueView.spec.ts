@@ -2,7 +2,19 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ModerationItem } from '#lib/media/types/moderation.ts';
 
-vi.mock('$app/forms', () => ({ enhance: () => ({ destroy() {} }) }));
+/** The actions the forms posted, in order. */
+const posted = vi.hoisted(() => [] as string[]);
+
+vi.mock('$app/forms', () => ({
+	enhance: (node: HTMLFormElement) => {
+		const onSubmit = (event: Event) => {
+			event.preventDefault();
+			posted.push(node.getAttribute('action') ?? '');
+		};
+		node.addEventListener('submit', onSubmit);
+		return { destroy: () => node.removeEventListener('submit', onSubmit) };
+	}
+}));
 
 const { default: QueueView } = await import('../queueView.svelte');
 const { moderationPrefs } = await import('#lib/media/utils/moderationPrefs.svelte.js');
@@ -64,6 +76,8 @@ const panel = () => slot().firstElementChild as HTMLElement;
 
 afterEach(() => {
 	cleanup();
+	posted.length = 0;
+	moderationPrefs.shortcuts = true;
 	moderationPrefs.collapseSevere = true;
 	localStorage.clear();
 });
@@ -220,5 +234,139 @@ describe('collapsed severe comments', () => {
 		expect(within(row('c1')).getByText('Body of c1')).toBeTruthy();
 		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /Show comment|Hide comment/ })).toBeNull();
+	});
+});
+
+describe('the keyboard path', () => {
+	const key = (name: string, init: KeyboardEventInit = {}, target: Element = document.body) =>
+		fireEvent.keyDown(target, { key: name, ...init });
+
+	it('moves the open item and the focus to the next and previous row with j and k', async () => {
+		mount([item('c1'), item('c2'), item('c3')]);
+		await key('j');
+		expect(row('c2').getAttribute('aria-current')).toBe('true');
+		await waitFor(() => expect(document.activeElement).toBe(row('c2')));
+		expect(panel().id).toBe('comment-c2');
+		await key('j');
+		await waitFor(() => expect(document.activeElement).toBe(row('c3')));
+		await key('j');
+		expect(row('c3').getAttribute('aria-current')).toBe('true');
+		await key('k');
+		await waitFor(() => expect(document.activeElement).toBe(row('c2')));
+		expect(row('c2').getAttribute('aria-current')).toBe('true');
+	});
+
+	it('stays on the first row on k, and on the last on j', async () => {
+		mount([item('c1'), item('c2')]);
+		await key('k');
+		expect(row('c1').getAttribute('aria-current')).toBe('true');
+		await key('j');
+		await key('j');
+		expect(row('c2').getAttribute('aria-current')).toBe('true');
+	});
+
+	it('moves the focus into the open item’s panel on Enter from a row or from the page', async () => {
+		mount([item('c1'), item('c2')]);
+		await key('Enter');
+		expect(document.activeElement).toBe(panel());
+		row('c2').focus();
+		await key('Enter', {}, row('c2'));
+		await waitFor(() => expect(panel().id).toBe('comment-c2'));
+		await waitFor(() => expect(document.activeElement).toBe(panel()));
+	});
+
+	it('leaves Enter on another control to that control', async () => {
+		mount([item('c1')]);
+		const button = within(panel()).getByRole('button', { name: 'Hide' });
+		const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+		button.dispatchEvent(event);
+		expect(event.defaultPrevented).toBe(false);
+	});
+
+	it('shows a collapsed comment with s, once', async () => {
+		mount([item('c1', { severity: 3, severe: true, aiCategories: ['threat'] })]);
+		await key('s');
+		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
+		await key('s');
+		expect(within(panel()).getByText('Body of c1')).toBeTruthy();
+		expect(within(panel()).getByRole('button', { name: 'Hide comment' })).toBeTruthy();
+	});
+
+	it('approves, dismisses and restores at once, through the visible buttons', async () => {
+		mount([
+			item('c1', {
+				reports: [
+					{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: 'bo' }
+				]
+			})
+		]);
+		await key('a');
+		await key('d');
+		expect(posted).toEqual(['?/approve', '?/dismiss']);
+		cleanup();
+		posted.length = 0;
+		mount([item('c1', { comment: { ...item('c1').comment, status: 'hidden' } })]);
+		await key('r');
+		expect(posted).toEqual(['?/restore']);
+	});
+
+	it('does nothing for a key whose button the item does not have', async () => {
+		mount([item('c1')]);
+		await key('d');
+		await key('r');
+		expect(posted).toEqual([]);
+	});
+
+	it('opens the rule list for h and x, and never acts on one press', async () => {
+		mount([item('c1', { comment: { ...item('c1').comment, status: 'published' } })]);
+		await key('h');
+		expect(document.querySelector('form.plate')?.getAttribute('action')).toBe('?/hide');
+		await key('Escape', {}, document.activeElement as Element);
+		await waitFor(() => expect(document.querySelector('form.plate')).toBeNull());
+		await key('x');
+		expect(document.querySelector('form.plate')?.getAttribute('action')).toBe('?/reject');
+		expect(posted).toEqual([]);
+	});
+
+	it('does nothing while a field has the focus', async () => {
+		mount([item('c1'), item('c2')]);
+		await fireEvent.click(within(panel()).getByRole('button', { name: 'Hide' }));
+		const field = screen.getByLabelText(/Note, shown to the author/);
+		await key('j', {}, field);
+		await key('a', {}, field);
+		expect(row('c1').getAttribute('aria-current')).toBe('true');
+		expect(posted).toEqual([]);
+	});
+
+	it('does nothing while a modifier key is held', async () => {
+		mount([item('c1'), item('c2')]);
+		await key('j', { ctrlKey: true });
+		await key('a', { metaKey: true });
+		await key('j', { altKey: true });
+		expect(row('c1').getAttribute('aria-current')).toBe('true');
+		expect(posted).toEqual([]);
+	});
+
+	it('does nothing when the setting is off, and the buttons still work', async () => {
+		moderationPrefs.setShortcuts(false);
+		mount([item('c1'), item('c2')]);
+		await key('j');
+		await key('a');
+		expect(row('c1').getAttribute('aria-current')).toBe('true');
+		expect(posted).toEqual([]);
+		expect(
+			within(panel()).getByRole('button', { name: 'Approve' }).getAttribute('aria-keyshortcuts')
+		).toBeNull();
+		await fireEvent.click(within(panel()).getByRole('button', { name: 'Approve' }));
+		expect(posted).toEqual(['?/approve']);
+	});
+
+	it('says which key each button answers to while the shortcuts are on', () => {
+		mount([item('c1')]);
+		const keys = (name: string) =>
+			within(panel()).getByRole('button', { name }).getAttribute('aria-keyshortcuts');
+		expect(keys('Approve')).toBe('a');
+		expect(keys('Hide')).toBe('h');
+		expect(keys('Reject')).toBe('x');
 	});
 });
