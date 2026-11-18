@@ -73,9 +73,9 @@ Status is `not started`, `active`, or `completed`. This file keeps only what is 
 | MR5   | Moderation: schema               | completed   | 2026-11-18. Review waits for the final round. `0007` keeps a hand-edited SQL body so `comments` gains its column without a rebuild.         |
 | MR6   | Moderation: reversals            | completed   | 2026-11-18. Review waits for the final round.                                                                                               |
 | MR7   | Moderation: rule-based reasons   | completed   | 2026-11-18. Review waits for the final round. A hidden own comment shows its rule in the history and Not public tab, not on the title page. |
-| MR8   | Moderation: queue and panel      | active      | 2026-11-18. `docs/plans/plan-moderation.md`.                                                                                                |
-| MR9   | Moderation: keyboard triage      | not started | `docs/plans/plan-moderation.md`.                                                                                                            |
-| MR10  | Moderation: account view         | not started | `docs/plans/plan-moderation.md`.                                                                                                            |
+| MR8   | Moderation: queue and panel      | completed   | 2026-11-18. Review waits for the final round. Works around a Svelte 5.57.3 out-transition bug (`docs/architecture.md`).                     |
+| MR9   | Moderation: keyboard triage      | completed   | 2026-11-18. Review waits for the final round. Not tried with a screen reader.                                                               |
+| MR10  | Moderation: account view         | active      | 2026-11-18. `docs/plans/plan-moderation.md`.                                                                                                |
 | MR11  | Moderation: log tab              | not started | `docs/plans/plan-moderation.md`.                                                                                                            |
 | MR12  | Moderation: staff roles          | not started | `docs/plans/plan-moderation.md`.                                                                                                            |
 | MR13  | Moderation: docs and copy        | not started | `docs/plans/plan-moderation.md`.                                                                                                            |
