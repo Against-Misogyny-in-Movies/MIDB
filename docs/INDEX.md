@@ -52,41 +52,41 @@ Read the sections your task touches.
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~91.3K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~91.5K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
-  - 68–315 Directory layout (~12.1K)
-    - 306–315 File-organisation conventions (~450)
-  - 316–329 Styling & theming (~1.1K)
-  - 330–342 Copy & voice (~540) ← 1
-  - 343–381 Routes (~27.5K)
-  - 382–426 User & roles (~4.0K)
-    - 419–426 Migrations (~330)
-  - 427–456 Source sync (~1.9K) ← 3
-  - 457–529 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
-  - 530–566 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.8K) ← 2
-  - 567–586 UM Disambiguation (~830)
-  - 587–595 UM flag rendering (~250)
-  - 596–604 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 605–615 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 616–629 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K) ← 1
-  - 630–641 Shared marker pattern (metric row markers) (~410) ← 5
-  - 642–684 Component library (`src/lib/components/`) (~15.9K)
-  - 685–695 Live search (`src/lib/components/search/`) (~710)
-  - 696–709 Server cache (`src/lib/server/cache/`) (~700)
-  - 710–725 TMDB integration (~810)
-  - 726–744 Auth flow (Better Auth) (~2.0K)
-  - 745–767 Caching policy (~2.1K) ← 9
-  - 768–825 Configuration & environment (~4.0K)
-    - 785–797 Local run sequence (~130)
-    - 798–801 npm scripts (~200)
-    - 802–812 CI (`.github/workflows/tests.yml`) (~490)
-    - 813–825 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 826–842 Testing (~1.2K)
-    - 837–842 Verification baseline (~80)
-  - 843–851 Known gaps / TODO (~180) ← 1
-  - 852–860 Related docs (~140)
+  - 68–316 Directory layout (~12.2K)
+    - 307–316 File-organisation conventions (~450)
+  - 317–330 Styling & theming (~1.1K)
+  - 331–343 Copy & voice (~540) ← 1
+  - 344–382 Routes (~27.5K)
+  - 383–427 User & roles (~4.0K)
+    - 420–427 Migrations (~330)
+  - 428–457 Source sync (~1.9K) ← 3
+  - 458–530 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
+  - 531–567 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.9K) ← 2
+  - 568–587 UM Disambiguation (~830)
+  - 588–596 UM flag rendering (~250)
+  - 597–605 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 606–616 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 617–630 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K) ← 1
+  - 631–642 Shared marker pattern (metric row markers) (~410) ← 5
+  - 643–685 Component library (`src/lib/components/`) (~15.9K)
+  - 686–696 Live search (`src/lib/components/search/`) (~710)
+  - 697–710 Server cache (`src/lib/server/cache/`) (~700)
+  - 711–726 TMDB integration (~810)
+  - 727–745 Auth flow (Better Auth) (~2.0K)
+  - 746–768 Caching policy (~2.1K) ← 9
+  - 769–826 Configuration & environment (~4.0K)
+    - 786–798 Local run sequence (~130)
+    - 799–802 npm scripts (~200)
+    - 803–813 CI (`.github/workflows/tests.yml`) (~490)
+    - 814–826 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 827–843 Testing (~1.2K)
+    - 838–843 Verification baseline (~80)
+  - 844–852 Known gaps / TODO (~180) ← 1
+  - 853–861 Related docs (~140)
 
 ## Phases
 

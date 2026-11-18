@@ -47,6 +47,7 @@ describe('links to a comment from the moderation views', () => {
 			author: AUTHOR,
 			title: TITLE,
 			aiCategories: [],
+			severity: null,
 			reports: [],
 			authorCommentCount: 1,
 			authorMutedUntil: null

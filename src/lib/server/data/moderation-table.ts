@@ -25,10 +25,8 @@ export type AiLabel = {
 	createdAt: string;
 };
 
-/** A moderation row plus what the table adds: the verdict's severity and failure, and the newest scan label. */
+/** A moderation row plus what the table adds: the verdict's failure and the newest scan label. */
 export type ModerationTableRow = ModerationItem & {
-	/** The verdict's severity, 0 to 3; null when no verdict ran or it failed. */
-	severity: number | null;
 	/** The failure code when the classifier gave no verdict, otherwise null. */
 	aiFailure: string | null;
 	latestLabel: AiLabel | null;
@@ -173,7 +171,6 @@ export async function listModerationTable(filters: TableFilters): Promise<Modera
 			const verdict = readAiVerdict(rows[i].comment.aiVerdict);
 			return {
 				...item,
-				severity: verdict.severity,
 				aiFailure: verdict.failure,
 				latestLabel: labels.get(item.comment.id) ?? null
 			};

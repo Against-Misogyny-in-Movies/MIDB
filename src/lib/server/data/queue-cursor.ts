@@ -6,14 +6,14 @@ type Shape = readonly ('n' | 's')[];
 type Parts<S extends Shape> = { [K in keyof S]: S[K] extends 'n' ? number : string };
 
 /**
- * The parts of each list's cursor, in its sort order: Pending the last row's `created_at` (ms) and
- * id; Reported its open report count, `created_at` and id; held reports `created_at`, account id
+ * The parts of each list's cursor, in its sort order: Pending and Reported the last row's severity
+ * rank, open report count, `created_at` (ms) and id (`moderation-priority.ts`); held reports `created_at`, account id
  * and title id; flagged titles the open flag count, the oldest flag's time and the title id; the
  * log `created_at` and id.
  */
 export const QUEUE_SHAPES = {
-	pending: ['n', 's'],
-	reported: ['n', 'n', 's'],
+	pending: ['n', 'n', 'n', 's'],
+	reported: ['n', 'n', 'n', 's'],
 	held: ['n', 's', 's'],
 	flagged: ['n', 'n', 's'],
 	log: ['n', 's']

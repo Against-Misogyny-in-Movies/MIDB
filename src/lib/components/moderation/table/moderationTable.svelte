@@ -196,7 +196,12 @@
 											</p>
 										{/if}
 										<ul class="item">
-											<ModerationItemRow item={row} {me} fallbackId={TABLE_FOCUS.card} />
+											<ModerationItemRow
+												item={row}
+												{me}
+												ranked={false}
+												fallbackId={TABLE_FOCUS.card}
+											/>
 										</ul>
 									</div>
 								</td>

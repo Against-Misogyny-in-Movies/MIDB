@@ -290,8 +290,8 @@ describe('queue cursors', () => {
 		await addComments('pending', [0, 1, 2]);
 		const { nextCursor } = await listPendingQueue(null, 1);
 		expect(nextCursor).toMatch(/^[A-Za-z0-9_-]+$/);
-		expect(decodeQueueCursor(nextCursor, QUEUE_SHAPES.pending)).toEqual([T0, 'c000']);
-		expect(decodeQueueCursor(nextCursor, QUEUE_SHAPES.reported)).toBeNull();
+		expect(decodeQueueCursor(nextCursor, QUEUE_SHAPES.pending)).toEqual([1, 0, T0, 'c000']);
+		expect(decodeQueueCursor(nextCursor, QUEUE_SHAPES.held)).toBeNull();
 		expect(decodeQueueCursor('???', QUEUE_SHAPES.pending)).toBeNull();
 		expect(decodeQueueCursor('x'.repeat(201), QUEUE_SHAPES.pending)).toBeNull();
 		expect(decodeQueueCursor(btoa('[1.5,"a"]'), QUEUE_SHAPES.pending)).toBeNull();

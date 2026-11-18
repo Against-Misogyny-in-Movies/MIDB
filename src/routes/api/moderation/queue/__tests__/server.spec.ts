@@ -20,8 +20,8 @@ const route = await import('../+server');
 
 const PAGE = { items: [{ id: 'x' }], nextCursor: null };
 const SHAPES = {
-	pending: encodeQueueCursor([1, 'c1']),
-	reported: encodeQueueCursor([2, 1, 'c1']),
+	pending: encodeQueueCursor([4, 1, 1, 'c1']),
+	reported: encodeQueueCursor([4, 2, 1, 'c1']),
 	held: encodeQueueCursor([1, 'u1', 't1']),
 	flagged: encodeQueueCursor([2, 1, 't1']),
 	log: encodeQueueCursor([1, 'a1'])
@@ -83,7 +83,7 @@ describe('GET /api/moderation/queue', () => {
 		expect(await status(get(`?queue=table&cursor=${SHAPES.pending}`))).toBe(400);
 		expect(await status(get('?queue=pending'))).toBe(400);
 		expect(await status(get('?queue=pending&cursor=not-a-cursor'))).toBe(400);
-		expect(await status(get(`?queue=pending&cursor=${SHAPES.reported}`))).toBe(400);
+		expect(await status(get(`?queue=pending&cursor=${SHAPES.held}`))).toBe(400);
 		expect(await status(get(`?queue=held&cursor=${'a'.repeat(201)}`))).toBe(400);
 		for (const fn of Object.values(lists)) expect(fn).not.toHaveBeenCalled();
 	});

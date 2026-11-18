@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 import { chunkForD1 } from '#db/lib/chunkForD1.ts';
 import { db } from '#lib/server/db.ts';
@@ -10,6 +10,12 @@ import type { CommentStatus, OwnComment, ReportReason } from '#lib/media/types/c
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
 import { activeMute } from './mute.ts';
+import {
+	afterPriority,
+	priorityCursorOf,
+	priorityOrder,
+	severityRank
+} from './moderation-priority.ts';
 import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
@@ -24,6 +30,8 @@ export type ModerationItem = {
 	title: { kind: CommentWithTitle['title']['kind']; tmdbId: number | null; name: string };
 	/** The classifier's categories, when it ran. */
 	aiCategories: string[];
+	/** The classifier's severity, 0 to 3; null when no verdict ran or it failed. */
+	severity: number | null;
 	/** Each open report with its reporter's username (staff see it); null when the account has none. */
 	reports: {
 		reason: ReportReason;
@@ -114,22 +122,26 @@ export async function toModerationItems(
 			counts.set(row.userId, row.n);
 		}
 	}
-	return rows.map(({ comment, author, title }) => ({
-		comment: toOwnComment(comment),
-		author: toPublicUser(author),
-		title: { kind: title.kind, tmdbId: title.tmdbId, name: title.title },
-		aiCategories: readAiVerdict(comment.aiVerdict).categories,
-		reports: reports
-			.filter((r) => r.commentId === comment.id)
-			.map((r) => ({
-				reason: r.reason,
-				note: r.note,
-				createdAt: r.createdAt.toISOString(),
-				reporter: r.reporter
-			})),
-		authorCommentCount: counts.get(author.id) ?? 0,
-		authorMutedUntil: activeMute(author.mutedUntil)
-	}));
+	return rows.map(({ comment, author, title }) => {
+		const verdict = readAiVerdict(comment.aiVerdict);
+		return {
+			comment: toOwnComment(comment),
+			author: toPublicUser(author),
+			title: { kind: title.kind, tmdbId: title.tmdbId, name: title.title },
+			aiCategories: verdict.categories,
+			severity: verdict.severity,
+			reports: reports
+				.filter((r) => r.commentId === comment.id)
+				.map((r) => ({
+					reason: r.reason,
+					note: r.note,
+					createdAt: r.createdAt.toISOString(),
+					reporter: r.reporter
+				})),
+			authorCommentCount: counts.get(author.id) ?? 0,
+			authorMutedUntil: activeMute(author.mutedUntil)
+		};
+	});
 }
 
 /** Adds the author and the title to a select from comments, so every list reads the same rows. */
@@ -138,6 +150,17 @@ export const withContext = <Query extends SQLiteSelect>(query: Query) =>
 		.innerJoin(users, eq(comments.userId, users.id))
 		.innerJoin(titles, eq(comments.titleId, titles.id));
 
+const keyOf = (r: {
+	rank: number;
+	reportCount: number;
+	comment: { createdAt: Date; id: string };
+}) => ({
+	rank: r.rank,
+	reportCount: r.reportCount,
+	createdAt: r.comment.createdAt,
+	id: r.comment.id
+});
+
 const commentRows = () =>
 	withContext(
 		db
@@ -145,6 +168,7 @@ const commentRows = () =>
 				comment: comments,
 				author: users,
 				title: titles,
+				rank: severityRank,
 				reportCount: sql<number>`${openReportCount}`
 			})
 			.from(comments)
@@ -152,68 +176,43 @@ const commentRows = () =>
 	);
 
 /**
- * Comments waiting for a moderator, oldest first (then id, so the order is total and a cursor
- * resumes exactly). A cursor this module did not make reads as the first page.
+ * Comments waiting for a moderator, in priority order (`moderation-priority.ts`): the most
+ * severe verdict first, then the most open reports, then the oldest. A cursor this module did not
+ * make reads as the first page.
  */
 export async function listPendingQueue(
 	cursor?: string | null,
 	limit = QUEUE_LIMIT
 ): Promise<QueuePage<ModerationItem>> {
-	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.pending);
 	const rows = await commentRows()
-		.where(
-			and(
-				eq(comments.status, 'pending'),
-				after
-					? or(
-							gt(comments.createdAt, new Date(after[0])),
-							and(eq(comments.createdAt, new Date(after[0])), gt(comments.id, after[1]))
-						)
-					: undefined
-			)
-		)
-		.orderBy(comments.createdAt, comments.id)
+		.where(and(eq(comments.status, 'pending'), afterPriority(cursor, openReportCount)))
+		.orderBy(...priorityOrder(openReportCount))
 		.limit(limit + 1);
-	const page = toQueuePage(rows, limit, (r) => [r.comment.createdAt.getTime(), r.comment.id]);
+	const page = toQueuePage(rows, limit, (r) => priorityCursorOf(keyOf(r)));
 	return { ...page, items: await toModerationItems(page.items) };
 }
 
 /**
- * Pending and published comments with open reports, most reported first, then oldest (then id).
- * A page resumes after the last row's count, so a report that lands between two pages can move a
- * row across the boundary; the row still shows once on the page that holds it.
+ * Pending and published comments with open reports, in the same priority order as Pending. A
+ * page resumes after the last row's sort key, so a report or a verdict that changes between two
+ * page loads can move a row across the boundary; the row still shows once on the page that holds
+ * it.
  */
 export async function listReportedQueue(
 	cursor?: string | null,
 	limit = QUEUE_LIMIT
 ): Promise<QueuePage<ModerationItem>> {
-	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.reported);
 	const rows = await commentRows()
 		.where(
 			and(
 				inArray(comments.status, ['pending', 'published']),
 				sql`${openReportCount} > 0`,
-				after
-					? or(
-							sql`${openReportCount} < ${after[0]}`,
-							and(
-								sql`${openReportCount} = ${after[0]}`,
-								or(
-									gt(comments.createdAt, new Date(after[1])),
-									and(eq(comments.createdAt, new Date(after[1])), gt(comments.id, after[2]))
-								)
-							)
-						)
-					: undefined
+				afterPriority(cursor, openReportCount)
 			)
 		)
-		.orderBy(sql`${openReportCount} DESC`, comments.createdAt, comments.id)
+		.orderBy(...priorityOrder(openReportCount))
 		.limit(limit + 1);
-	const page = toQueuePage(rows, limit, (r) => [
-		r.reportCount,
-		r.comment.createdAt.getTime(),
-		r.comment.id
-	]);
+	const page = toQueuePage(rows, limit, (r) => priorityCursorOf(keyOf(r)));
 	return { ...page, items: await toModerationItems(page.items) };
 }
 

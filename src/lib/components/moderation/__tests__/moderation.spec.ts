@@ -56,6 +56,7 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 		author: AUTHOR,
 		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 		aiCategories: [],
+		severity: null,
 		reports: [],
 		authorCommentCount: 4,
 		authorMutedUntil: null,

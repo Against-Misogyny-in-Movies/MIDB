@@ -16,7 +16,7 @@ const AUTHOR = {
 
 const MOD = { id: 'mod', role: 'moderator' };
 
-function mount(over: Partial<ModerationItem> = {}, me = MOD) {
+function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { ranked?: boolean } = {}) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(ModerationItemRow, {
 		props: {
@@ -37,12 +37,14 @@ function mount(over: Partial<ModerationItem> = {}, me = MOD) {
 				author: AUTHOR,
 				title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 				aiCategories: [],
+				severity: null,
 				reports: [],
 				authorCommentCount: 4,
 				authorMutedUntil: null,
 				...over
 			},
-			me
+			me,
+			...extra
 		},
 		target: list
 	});
@@ -78,5 +80,25 @@ describe('ModerationItem reports and read-only state', () => {
 		const { container } = mount();
 		expect(screen.queryByText(/decides on this comment/)).toBeNull();
 		expect(container.querySelector('.actions')).not.toBeNull();
+	});
+});
+
+describe('the severity that ranks a queue row', () => {
+	it('shows the classifier’s severity as a toned badge in the author line, from severity 1', () => {
+		mount({ severity: 3 });
+		expect(screen.getByText('Severity 3')).toBeTruthy();
+	});
+
+	it('shows no badge for a comment the classifier found nothing in, or never checked', () => {
+		mount({ severity: 0 });
+		expect(screen.queryByText(/^Severity/)).toBeNull();
+		cleanup();
+		mount({ severity: null });
+		expect(screen.queryByText(/^Severity/)).toBeNull();
+	});
+
+	it('leaves it to the table’s own column when ranked is off', () => {
+		mount({ severity: 3 }, MOD, { ranked: false });
+		expect(screen.queryByText(/^Severity/)).toBeNull();
 	});
 });

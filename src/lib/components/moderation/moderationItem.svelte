@@ -16,17 +16,19 @@
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
-	import { commentStatusTone } from '#lib/media/utils/tones.ts';
+	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
 		item: ModerationItem;
 		/** The acting staff member; `canActOn` decides which controls the author's account allows. */
 		me: { id: string; role: string };
+		/** Whether the author line shows the classifier's severity, which ranks the queue lists; the table has its own column for it. */
+		ranked?: boolean;
 		/** The element that takes the focus when an action takes this row off the page and no neighbour can (default: the empty-state line). */
 		fallbackId?: string;
 	}
 
-	let { item, me, fallbackId = 'moderation-empty' }: Props = $props();
+	let { item, me, ranked = true, fallbackId = 'moderation-empty' }: Props = $props();
 
 	type Panel = 'hide' | 'reject' | 'mute' | 'ban';
 	let panel = $state<Panel | null>(null);
@@ -78,6 +80,9 @@
 		{#if permalink}<CommentLink href={permalink} />{/if}
 		{#if comment.editedAt}<span class="label">Edited</span>{/if}
 		<Badge tone={commentStatusTone(comment.status)}>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
+		{#if ranked && item.severity !== null && item.severity > 0}
+			<Badge tone={severityTone(item.severity)}>Severity {item.severity}</Badge>
+		{/if}
 		{#if heldBy}<span class="label">{heldBy}</span>{/if}
 	</header>
 
