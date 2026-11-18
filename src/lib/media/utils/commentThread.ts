@@ -1,8 +1,17 @@
-import type { CommentStatus, CommentView, OwnComment } from '#lib/media/types/comments.ts';
+import type {
+	CommentStatus,
+	CommentView,
+	ModerationRule,
+	OwnComment
+} from '#lib/media/types/comments.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 
 /** What an unpublished comment shows its author and staff: its status and the moderation reason. */
-export type ReviewState = { status: Exclude<CommentStatus, 'published'>; reason: string | null };
+export type ReviewState = {
+	status: Exclude<CommentStatus, 'published'>;
+	reason: string | null;
+	rule: ModerationRule | null;
+};
 
 /** A comment as the section draws it: the public view, plus the review state on the reader's own. */
 export type ShownComment = Omit<CommentView, 'replies'> & { review: ReviewState | null };
@@ -39,7 +48,8 @@ function ownAsShown(own: OwnComment, me: PublicUser, names: Map<string, Name>): 
 				? null
 				: {
 						status: own.status === 'rejected' ? 'rejected' : 'pending',
-						reason: own.moderationReason
+						reason: own.moderationReason,
+						rule: own.moderationRule
 					}
 	};
 }

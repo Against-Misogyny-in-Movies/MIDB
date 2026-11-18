@@ -14,11 +14,17 @@ import {
 	withViewedEditedAt,
 	type Outcome
 } from '#lib/server/http/moderation-action.ts';
-import { pageIds, reasonOf } from './action-form.ts';
+import { pageIds, reasonOf, ruleOf } from './action-form.ts';
+import type { ModerationRule } from '#lib/media/types/comments.ts';
 import { purgePlan } from './purge.ts';
 
 /** What a bulk operation reads for one comment: the reason, and the `editedAt` its row showed. */
-type BulkInput = { reason: string | null; editedAt: EditedAt | undefined };
+type BulkInput = {
+	reason: string | null;
+	/** The rule a hide or a reject names; the other operations take none. */
+	rule: ModerationRule | null;
+	editedAt: EditedAt | undefined;
+};
 
 /**
  * The five operations a bulk action applies to each comment, by the single-comment functions.
@@ -28,8 +34,8 @@ type BulkInput = { reason: string | null; editedAt: EditedAt | undefined };
 const BULK_OPS = {
 	approve: (staff, id, { editedAt }) =>
 		withViewedEditedAt(editedAt, (viewed) => approveComment(staff, id, viewed)),
-	hide: (staff, id, { reason }) => hideComment(staff, id, reason),
-	reject: (staff, id, { reason }) => rejectComment(staff, id, reason),
+	hide: (staff, id, { reason, rule }) => hideComment(staff, id, reason, rule),
+	reject: (staff, id, { reason, rule }) => rejectComment(staff, id, reason, rule),
 	restore: (staff, id, { editedAt }) =>
 		withViewedEditedAt(editedAt, (viewed) => restoreComment(staff, id, viewed)),
 	dismiss: (staff, id, { editedAt }) =>
@@ -58,6 +64,8 @@ export async function runBulk(staff: UserRow, data: FormData): Promise<Outcome> 
 	const op = text(data, 'op');
 	const ids = pageIds(data);
 	if (!isBulkOp(op) || !ids) return { ok: false, reason: 'invalid' };
+	const rule = ruleOf(data);
+	if ((op === 'hide' || op === 'reject') && rule === null) return { ok: false, reason: 'invalid' };
 	const reason = reasonOf(data);
 	const touched = new Map<string, NonNullable<Extract<ModerationResult, { ok: true }>['title']>>();
 	const authors = new Set<string>();
@@ -67,6 +75,7 @@ export async function runBulk(staff: UserRow, data: FormData): Promise<Outcome> 
 		for (const id of ids) {
 			const result = await BULK_OPS[op](staff, id, {
 				reason,
+				rule,
 				editedAt: viewedEditedAt(data, `editedAt.${id}`)
 			});
 			if (!result.ok) {

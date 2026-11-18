@@ -86,6 +86,7 @@ const loadEvent = (search: string) =>
 function run(name: 'aiSearch' | 'scan' | 'bulk', fields: [string, string][]) {
 	const form = new FormData();
 	for (const [key, value] of fields) form.append(key, value);
+	form.append('rule', 'spam');
 	const event = {
 		locals: {},
 		request: new Request('http://localhost/user/moderation', { method: 'POST', body: form }),
@@ -359,12 +360,14 @@ describe('?/bulk', () => {
 			['ids', 'c1']
 		]);
 		expect(rateLimit).not.toHaveBeenCalled();
-		expect(actionsFns.hideComment.mock.calls.map(([, id, reason]) => [id, reason])).toEqual([
-			['c1', 'Off topic'],
-			['c2', 'Off topic'],
-			['c3', 'Off topic'],
-			['c4', 'Off topic'],
-			['c5', 'Off topic']
+		expect(
+			actionsFns.hideComment.mock.calls.map(([, id, reason, rule]) => [id, reason, rule])
+		).toEqual([
+			['c1', 'Off topic', 'spam'],
+			['c2', 'Off topic', 'spam'],
+			['c3', 'Off topic', 'spam'],
+			['c4', 'Off topic', 'spam'],
+			['c5', 'Off topic', 'spam']
 		]);
 		expect(actionsFns.hideComment.mock.calls[0][0]).toBe(STAFF);
 		expect(purgeTitlesComments).toHaveBeenCalledExactlyOnceWith([ALIEN, DARK]);

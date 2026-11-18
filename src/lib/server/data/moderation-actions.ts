@@ -3,7 +3,7 @@ import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
 import { commentReports, comments, moderationActions } from '#db/schema/community.ts';
 import type { CommentStatus } from '#lib/media/types/comments.ts';
-import type { moderationAction } from '#lib/media/utils/comments.ts';
+import type { moderationAction, moderationRule } from '#lib/media/utils/comments.ts';
 import { getCommentWithTitle, type CommentWithTitle } from './comment-queries.ts';
 import {
 	runBatch,
@@ -27,6 +27,7 @@ import { banStatements, type UserRow } from './user-queries.ts';
 import { logRow } from './moderation-log.ts';
 
 type Action = (typeof moderationAction)[number];
+type Rule = (typeof moderationRule)[number];
 
 export type ModerationResult =
 	| {
@@ -68,13 +69,14 @@ function logCommentAction(
 	commentId: string,
 	action: Action,
 	reason: string | null,
+	rule: Rule | null,
 	from: CommentStatus,
 	extraWhere: SQL = sql`1 = 1`,
 	rowId?: string
 ): BatchStatement {
 	return db.insert(moderationActions).select(
 		db
-			.select(logRow(actorId, action, { commentId: comments.id, reason, id: rowId }))
+			.select(logRow(actorId, action, { commentId: comments.id, reason, rule, id: rowId }))
 			.from(comments)
 			.where(and(eq(comments.id, commentId), eq(comments.status, from), extraWhere))
 	);
@@ -162,6 +164,7 @@ async function moveComment(
 		from: readonly CommentStatus[];
 		to: CommentStatus;
 		reason: string | null;
+		rule: Rule | null;
 		reports: 'resolved' | 'dismissed' | null;
 		/** The `editedAt` the moderator's view showed, for an action that publishes. */
 		editedAt?: EditedAt;
@@ -186,7 +189,16 @@ async function moveComment(
 	// Read before the move, so a failed read cannot leave a move whose purge is skipped.
 	const replyAuthorIds = await replyAuthorsAffected(commentId, comment.status, spec.to);
 	const moved = await runMove([
-		logCommentAction(actor.id, commentId, action, spec.reason, comment.status, guard, logId),
+		logCommentAction(
+			actor.id,
+			commentId,
+			action,
+			spec.reason,
+			spec.rule,
+			comment.status,
+			guard,
+			logId
+		),
 		...(spec.reports
 			? [
 					resolveOpenReports(
@@ -203,7 +215,11 @@ async function moveComment(
 			commentId,
 			comment.status,
 			spec.to,
-			{ moderationSource: 'moderator', moderationReason: spec.reason },
+			{
+				moderationSource: 'moderator',
+				moderationReason: spec.reason,
+				moderationRule: spec.rule
+			},
 			guard
 		)
 	]);
@@ -222,25 +238,38 @@ export const approveComment = (actor: UserRow, commentId: string, editedAt: Edit
 		from: ['pending'],
 		to: 'published',
 		reason: null,
+		rule: null,
 		reports: 'dismissed',
 		editedAt
 	});
 
 /** Takes a pending or published comment out of view, keeping it for its replies and the author. */
-export const hideComment = (actor: UserRow, commentId: string, reason: string | null) =>
+export const hideComment = (
+	actor: UserRow,
+	commentId: string,
+	reason: string | null,
+	rule: Rule | null = null
+) =>
 	moveComment(actor, commentId, 'hide', {
 		from: ['pending', 'published'],
 		to: 'hidden',
 		reason,
+		rule,
 		reports: 'resolved'
 	});
 
 /** Rejects a pending or published comment; the author sees the reason. */
-export const rejectComment = (actor: UserRow, commentId: string, reason: string | null) =>
+export const rejectComment = (
+	actor: UserRow,
+	commentId: string,
+	reason: string | null,
+	rule: Rule | null = null
+) =>
 	moveComment(actor, commentId, 'reject', {
 		from: ['pending', 'published'],
 		to: 'rejected',
 		reason,
+		rule,
 		reports: 'resolved'
 	});
 
@@ -250,6 +279,7 @@ export const restoreComment = (actor: UserRow, commentId: string, editedAt: Edit
 		from: ['hidden', 'rejected'],
 		to: 'published',
 		reason: null,
+		rule: null,
 		reports: null,
 		editedAt
 	});
@@ -291,6 +321,7 @@ export async function dismissReports(
 			commentId,
 			'dismiss',
 			null,
+			null,
 			comment.status,
 			and(hasOpenReports(commentId), version, adminGuard),
 			logId
@@ -308,7 +339,7 @@ export async function dismissReports(
 					commentId,
 					'pending',
 					'published',
-					{ moderationSource: null, moderationReason: null },
+					{ moderationSource: null, moderationReason: null, moderationRule: null },
 					and(version, adminGuard)
 				)
 			: [])
@@ -333,9 +364,12 @@ function logUserAction(
 	targetUserId: string,
 	action: Action,
 	reason: string | null,
+	rule: Rule | null,
 	muteHours: number | null = null
 ) {
-	return db.insert(moderationActions).values({ actorId, targetUserId, action, reason, muteHours });
+	return db
+		.insert(moderationActions)
+		.values({ actorId, targetUserId, action, reason, rule, muteHours });
 }
 
 /**
@@ -348,7 +382,8 @@ export async function muteUser(
 	actor: UserRow,
 	targetId: string,
 	hours: number,
-	reason: string | null
+	reason: string | null,
+	rule: Rule | null = null
 ): Promise<ModerationResult> {
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
@@ -360,7 +395,7 @@ export async function muteUser(
 			: sql<Date>`max(coalesce(${users.mutedUntil}, 0), ${until})`;
 	await runBatch([
 		db.update(users).set({ mutedUntil }).where(eq(users.id, targetId)),
-		logUserAction(actor.id, targetId, 'mute', reason, hours)
+		logUserAction(actor.id, targetId, 'mute', reason, rule, hours)
 	]);
 	return { ok: true, title: null, purge: { profiles: [targetId], reportedBy: targetId } };
 }
@@ -378,14 +413,15 @@ export async function muteUser(
 export async function banAccount(
 	actor: UserRow,
 	targetId: string,
-	reason: string | null
+	reason: string | null,
+	rule: Rule | null = null
 ): Promise<ModerationResult> {
 	const target = await targetAllowed(actor, targetId, 'restrict');
 	if (typeof target === 'string') return { ok: false, reason: target };
 	const reach = await banReach(targetId);
 	await runBatch([
 		...banStatements(targetId, reason),
-		logUserAction(actor.id, targetId, 'ban', reason),
+		logUserAction(actor.id, targetId, 'ban', reason, rule),
 		...banWeightStatements(targetId)
 	]);
 	return {

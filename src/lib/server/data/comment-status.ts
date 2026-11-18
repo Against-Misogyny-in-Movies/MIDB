@@ -50,7 +50,7 @@ export const unchangedSince = (editedAt: EditedAt): SQL => sql`edited_at IS ${ed
 export type StatusPatch = Partial<
 	Pick<
 		typeof comments.$inferInsert,
-		'body' | 'editedAt' | 'moderationSource' | 'moderationReason' | 'aiVerdict'
+		'body' | 'editedAt' | 'moderationSource' | 'moderationReason' | 'moderationRule' | 'aiVerdict'
 	>
 >;
 

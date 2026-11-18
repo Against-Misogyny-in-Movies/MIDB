@@ -48,6 +48,7 @@ function own(id: string, over: Partial<OwnComment> = {}): OwnComment {
 		status: 'pending',
 		moderationSource: null,
 		moderationReason: null,
+		moderationRule: null,
 		score: 0,
 		replyCount: 0,
 		createdAt: '2026-11-02T10:00:00.000Z',

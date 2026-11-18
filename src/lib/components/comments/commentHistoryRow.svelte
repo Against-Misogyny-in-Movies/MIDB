@@ -5,7 +5,7 @@
 	import CommentLink from './commentLink.svelte';
 	import OwnCommentDelete from './ownCommentDelete.svelte';
 	import OwnCommentEdit from './ownCommentEdit.svelte';
-	import { COMMENT_STATUS_LABELS, unpublishedNote } from '#lib/media/utils/comments.ts';
+	import { COMMENT_STATUS_LABELS, hiddenNote, unpublishedNote } from '#lib/media/utils/comments.ts';
 	import type { UserCommentRow } from '#lib/media/types/comments.ts';
 	import { OwnCommentEditing } from '#lib/media/utils/ownCommentEditing.svelte.js';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -57,13 +57,11 @@
 	{/if}
 
 	{#if comment.status === 'rejected'}
-		<p class="label">{unpublishedNote('rejected', comment.moderationReason)}</p>
-	{:else if comment.status === 'hidden'}
 		<p class="label">
-			A moderator hid this comment.{comment.moderationReason
-				? ` Reason: ${comment.moderationReason}`
-				: ''}
+			{unpublishedNote('rejected', comment.moderationReason, comment.moderationRule)}
 		</p>
+	{:else if comment.status === 'hidden'}
+		<p class="label">{hiddenNote(comment.moderationReason, comment.moderationRule)}</p>
 	{/if}
 
 	{#if editable || deletable}

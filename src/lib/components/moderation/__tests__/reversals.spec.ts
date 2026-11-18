@@ -36,6 +36,7 @@ const item = (over: Partial<ModerationItem> = {}): ModerationItem => ({
 		status: 'published',
 		moderationSource: null,
 		moderationReason: null,
+		moderationRule: null,
 		score: 0,
 		replyCount: 0,
 		createdAt: '2026-11-01T10:00:00.000Z',
@@ -130,7 +131,7 @@ describe('ModerationItem offers the action that fits the state', () => {
 			.find((f) => f) as HTMLFormElement;
 		expect(form.getAttribute('action')).toBe('?/unban');
 		expect((form.querySelector('[name=userId]') as HTMLInputElement).value).toBe('u1');
-		expect(screen.getByLabelText(/Reason, kept in the log \(optional\)/)).toBeTruthy();
+		expect(screen.getByLabelText(/Note, kept in the log \(optional\)/)).toBeTruthy();
 	});
 
 	it('opens a plate for End mute that posts to ?/unmute', async () => {
@@ -202,6 +203,7 @@ const entry = (over: Partial<RecentAction>): RecentAction => ({
 	id: 'a1',
 	action: 'mute',
 	reason: null,
+	rule: null,
 	createdAt: '2026-11-03T10:00:00.000Z',
 	actor: { ...AUTHOR, id: 'mod', displayName: 'mod', role: 'moderator' },
 	targetUser: AUTHOR,
@@ -309,5 +311,24 @@ describe('CountFlagItem on a closed flag', () => {
 		const list = document.body.appendChild(document.createElement('ul'));
 		render(CountFlagItem, { props: { flag, canAct: false }, target: list });
 		expect(button('Re-open')).toBeNull();
+	});
+});
+
+describe('RecentActionRow labels', () => {
+	const plain = { muteHours: null, inForce: null };
+
+	it('reads an action this build does not know as a plain label', () => {
+		mountEntry(entry({ ...plain, action: 'future_action' as RecentAction['action'] }));
+		expect(screen.getByText(/acted on/)).toBeTruthy();
+		expect(screen.queryByText(/undefined/)).toBeNull();
+	});
+
+	it('shows the rule beside the note', () => {
+		mountEntry(entry({ ...plain, action: 'reject', rule: 'harassment', reason: 'Slur' }));
+		expect(screen.getByText('Rule: Harassment')).toBeTruthy();
+		expect(screen.getByText('Reason: Slur')).toBeTruthy();
+		cleanup();
+		mountEntry(entry({ ...plain, action: 'reject', rule: null, reason: 'Slur' }));
+		expect(screen.queryByText(/^Rule:/)).toBeNull();
 	});
 });

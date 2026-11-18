@@ -162,6 +162,7 @@ export async function getUserComments(userId: string, { notPublic = false } = {}
 			status: comments.status,
 			score: comments.score,
 			moderationReason: comments.moderationReason,
+			moderationRule: comments.moderationRule,
 			parentId: comments.parentId,
 			replyCount: comments.replyCount,
 			createdAt: comments.createdAt,

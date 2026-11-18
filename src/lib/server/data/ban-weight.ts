@@ -80,7 +80,8 @@ export function banWeightStatements(targetId: string): BatchStatement[] {
 			.set({
 				status: 'hidden',
 				moderationSource: 'moderator',
-				moderationReason: BAN_COMMENT_REASON
+				moderationReason: BAN_COMMENT_REASON,
+				moderationRule: null
 			})
 			.where(and(eq(comments.userId, targetId), inArray(comments.status, ['published', 'pending'])))
 	];

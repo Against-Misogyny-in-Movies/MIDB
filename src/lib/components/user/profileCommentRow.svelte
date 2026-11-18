@@ -34,6 +34,7 @@
 	const status = $derived(changed?.status ?? 'published');
 	const edited = $derived(comment.edited || changed?.editedAt != null);
 	const reason = $derived(changed?.moderationReason ?? null);
+	const rule = $derived(changed?.moderationRule ?? null);
 	const permalink = $derived(commentHref(comment.title.kind, comment.title.tmdbId, comment.id));
 	const rowId = $derived(`profile-comment-${comment.id}`);
 
@@ -99,7 +100,7 @@
 	<p class="body">{body}</p>
 {/if}
 {#if status === 'rejected'}
-	<p class="label">{unpublishedNote('rejected', reason)}</p>
+	<p class="label">{unpublishedNote('rejected', reason, rule)}</p>
 {/if}
 {#if own && menuItems.length > 0}
 	<span class="more">

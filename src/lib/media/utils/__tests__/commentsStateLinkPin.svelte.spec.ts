@@ -42,7 +42,7 @@ describe('CommentsState.showLink on a placeholder', () => {
 	}
 
 	it('fetches the thread, so its author or staff see the comment with its status', async () => {
-		const review = { status: 'hidden' as const, reason: 'off topic' };
+		const review = { status: 'hidden' as const, reason: 'off topic', rule: null };
 		const { state, fetcher } = setup(json(thread(view('gone'), { review })));
 		await state.load();
 		expect(await state.showLink('gone')).toBe(true);

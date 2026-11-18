@@ -11,7 +11,12 @@ import {
 } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
-import type { CommentStatus, OwnComment, ReportReason } from '#lib/media/types/comments.ts';
+import type {
+	CommentStatus,
+	ModerationRule,
+	OwnComment,
+	ReportReason
+} from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
 import { activeMute } from './mute.ts';
@@ -236,6 +241,8 @@ export type RecentAction = {
 	id: string;
 	action: Action;
 	reason: string | null;
+	/** The rule the moderator named for a hide, a reject, a mute or a ban. */
+	rule: ModerationRule | null;
 	createdAt: string;
 	actor: PublicUser | null;
 	targetUser: PublicUser | null;
@@ -360,6 +367,7 @@ export async function listRecentActions(
 			id: action.id,
 			action: action.action,
 			reason: action.reason,
+			rule: action.rule,
 			createdAt: action.createdAt.toISOString(),
 			actor: (action.actorId && people.get(action.actorId)) || null,
 			targetUser: (action.targetUserId && people.get(action.targetUserId)) || null,

@@ -29,6 +29,7 @@ function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { ranked?: b
 					status: 'pending',
 					moderationSource: null,
 					moderationReason: null,
+					moderationRule: null,
 					score: 0,
 					replyCount: 0,
 					createdAt: '2026-11-01T10:00:00.000Z',

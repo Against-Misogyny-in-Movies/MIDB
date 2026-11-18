@@ -10,6 +10,7 @@ const row = (over: Partial<UserCommentRow> = {}): UserCommentRow => ({
 	status: 'published',
 	score: 4,
 	moderationReason: null,
+	moderationRule: null,
 	parentId: null,
 	replyCount: 0,
 	createdAt: '2026-11-01T10:00:00.000Z',
@@ -82,6 +83,28 @@ describe('CommentHistoryRow', () => {
 		expect(screen.getByText(/A moderator hid this comment/)).toBeTruthy();
 	});
 
+	it('shows the rule and the note of a rejected or hidden comment', () => {
+		mount(
+			row({ status: 'rejected', moderationReason: 'Named a reader', moderationRule: 'harassment' })
+		);
+		expect(
+			screen.getByText(
+				'Rejected: Harassment. Named a reader. Only the author and moderators see the comment.'
+			)
+		).toBeTruthy();
+		cleanup();
+		mount(row({ status: 'rejected', moderationRule: 'hate' }));
+		expect(
+			screen.getByText('Rejected: Hate or bigotry. Only the author and moderators see the comment.')
+		).toBeTruthy();
+		cleanup();
+		mount(row({ status: 'hidden', moderationReason: 'Twice', moderationRule: 'spam' }));
+		expect(screen.getByText('A moderator hid this comment. Spam. Reason: Twice')).toBeTruthy();
+		cleanup();
+		mount(row({ status: 'hidden', moderationRule: 'trolling' }));
+		expect(screen.getByText('A moderator hid this comment. Trolling.')).toBeTruthy();
+	});
+
 	it('offers neither edit nor delete on a deleted comment, and no edit on a hidden one', () => {
 		mount(row({ status: 'deleted' }));
 		expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
@@ -100,6 +123,7 @@ describe('CommentHistoryRow', () => {
 					body: 'Changed',
 					status: 'pending',
 					moderationReason: null,
+					moderationRule: null,
 					editedAt: '2026-11-03T10:00:00.000Z'
 				}
 			})

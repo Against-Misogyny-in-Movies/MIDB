@@ -4,8 +4,13 @@
  * categories are app data, so they live here.
  */
 
-import type { reportReason, commentStatus, moderationSource } from '#db/lib/comments.ts';
-import type { CommentStatus } from '#lib/media/types/comments.ts';
+import type {
+	moderationRule,
+	reportReason,
+	commentStatus,
+	moderationSource
+} from '#db/lib/comments.ts';
+import type { CommentStatus, ModerationRule } from '#lib/media/types/comments.ts';
 
 export {
 	COMMENT_BODY_MAX,
@@ -109,6 +114,35 @@ export const REPORT_REASON_LABELS: Record<(typeof reportReason)[number], string>
 	other: 'Other'
 };
 
+/**
+ * The rules a moderator names when they hide, reject, mute or ban, as the plates and the author
+ * read them; the "Comment rules" section of `/resources` lists the same rules.
+ */
+export const MODERATION_RULE_LABELS: Record<(typeof moderationRule)[number], string> = {
+	hate: 'Hate or bigotry',
+	harassment: 'Harassment',
+	threat: 'Threat',
+	'sexual-content': 'Sexual content',
+	spam: 'Spam',
+	violence: 'Violence',
+	disparagement: 'Disparagement',
+	trolling: 'Trolling',
+	other: 'Other'
+};
+
+/** What each rule covers, as the "Comment rules" section of `/resources` states it. */
+export const MODERATION_RULE_MEANINGS: Record<(typeof moderationRule)[number], string> = {
+	hate: 'Hate speech or bigotry against a group.',
+	harassment: 'Attacking, insulting or harassing a person.',
+	threat: 'A threat of harm.',
+	'sexual-content': 'Explicit sexual content, or sexual content involving minors.',
+	spam: 'Spam, advertising or links with no relation to the title.',
+	violence: 'Glorifying or calling for violence.',
+	disparagement: 'Demeaning a person or a group without a slur.',
+	trolling: 'Bad-faith bait meant to provoke.',
+	other: "A harm that no other rule names. The moderator's note says what."
+};
+
 /** What a comment's status reads as to its author. */
 export const COMMENT_STATUS_LABELS: Record<(typeof commentStatus)[number], string> = {
 	pending: 'Awaiting review',
@@ -125,25 +159,47 @@ export const MUTE_HOURS = [24, 168, 720] as const;
 export const formatMuteHours = (hours: number): string =>
 	hours === 24 ? '1 day' : `${hours / 24} days`;
 
+/** A sentence's end: the text with a full stop unless it already ends one. */
+const sentence = (text: string): string => (/[.!?]$/.test(text) ? text : `${text}.`);
+
 /**
- * What the author reads under a comment that is not public: for a rejected one the reason
- * first, then who can see it.
+ * What a moderator told the author about a decision, as sentences: the rule's label, then the
+ * moderator's note. Empty when neither was given (an automatic decision keeps its own reason in
+ * the note).
+ */
+function decisionLead(reason: string | null, rule: ModerationRule | null): string {
+	const note = reason?.trim();
+	return [rule ? sentence(MODERATION_RULE_LABELS[rule]) : null, note ? sentence(note) : null]
+		.filter((part) => part !== null)
+		.join(' ');
+}
+
+/**
+ * What the author reads under a comment that is not public. A rejected comment leads with the
+ * rule and the note, then says who can see it.
  */
 export function unpublishedNote(
 	status: Exclude<(typeof commentStatus)[number], 'published'>,
-	reason: string | null
+	reason: string | null,
+	rule: ModerationRule | null = null
 ): string {
 	if (status === 'pending') {
 		return 'Only the author and moderators see the comment until a moderator decides.';
 	}
-	if (status === 'hidden')
+	if (status === 'hidden') {
 		return 'A moderator hid this comment. Only the author and moderators see it.';
+	}
 	if (status === 'deleted') {
 		return 'The author deleted this comment. Only the author and moderators see it.';
 	}
-	const text = reason?.trim();
-	const lead = text ? `${/[.!?]$/.test(text) ? text : `${text}.`} ` : '';
-	return `Rejected: ${lead}Only the author and moderators see the comment.`;
+	const lead = decisionLead(reason, rule);
+	return `Rejected: ${lead ? `${lead} ` : ''}Only the author and moderators see the comment.`;
+}
+
+/** What the author reads in their comment history under a comment a moderator hid. */
+export function hiddenNote(reason: string | null, rule: ModerationRule | null): string {
+	const ruled = rule ? ` ${sentence(MODERATION_RULE_LABELS[rule])}` : '';
+	return `A moderator hid this comment.${ruled}${reason ? ` Reason: ${reason}` : ''}`;
 }
 
 /**
@@ -152,10 +208,17 @@ export function unpublishedNote(
  */
 export function commentResult(
 	action: 'post' | 'edit',
-	comment: { status: CommentStatus; moderationReason: string | null }
+	comment: {
+		status: CommentStatus;
+		moderationReason: string | null;
+		moderationRule?: ModerationRule | null;
+	}
 ): { tone: 'success' | 'warn'; text: string } {
 	if (comment.status === 'rejected') {
-		return { tone: 'warn', text: unpublishedNote('rejected', comment.moderationReason) };
+		return {
+			tone: 'warn',
+			text: unpublishedNote('rejected', comment.moderationReason, comment.moderationRule ?? null)
+		};
 	}
 	if (comment.status === 'pending') {
 		const lead = action === 'post' ? 'Comment sent.' : 'Comment saved.';

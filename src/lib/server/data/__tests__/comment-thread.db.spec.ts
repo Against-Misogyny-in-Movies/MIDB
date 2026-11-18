@@ -124,12 +124,13 @@ describe('getCommentThread', () => {
 		});
 	});
 
-	it('carries the moderation reason of a rejected comment to those who may read it', async () => {
+	it('carries the moderation reason and rule of a rejected comment to those who may read it', async () => {
 		const id = await store('author', 'Words', undefined, false);
-		await rejectComment(mod, id, 'spam');
+		await rejectComment(mod, id, 'Twice today', 'spam');
 		expect((await getCommentThread(id, viewers.author))?.review).toEqual({
 			status: 'rejected',
-			reason: 'spam'
+			reason: 'Twice today',
+			rule: 'spam'
 		});
 	});
 

@@ -1,4 +1,5 @@
-import { MODERATION_REASON_MAX, MUTE_HOURS } from '#lib/media/utils/comments.ts';
+import { MODERATION_REASON_MAX, MUTE_HOURS, moderationRule } from '#lib/media/utils/comments.ts';
+import type { ModerationRule } from '#lib/media/types/comments.ts';
 import { TABLE_PAGE_SIZE } from '#lib/media/utils/moderationFilters.ts';
 import { muteUser } from '#lib/server/data/moderation-actions.ts';
 import type { FlagCloseResult } from '#lib/server/data/count-flags.ts';
@@ -22,6 +23,24 @@ export const reportKey = (data: FormData) => {
 export const reasonOf = (data: FormData) =>
 	text(data, 'reason')?.slice(0, MODERATION_REASON_MAX) ?? null;
 
+/** The rule a hide, a reject, a mute or a ban names; null when the field is absent or not one of `moderationRule`. */
+export function ruleOf(data: FormData): ModerationRule | null {
+	const value = text(data, 'rule');
+	return moderationRule.find((rule) => rule === value) ?? null;
+}
+
+/**
+ * Runs an action that takes a rule with the form's rule, or refuses it as `invalid` when the
+ * rule is missing or outside the list.
+ */
+export function withRule(
+	data: FormData,
+	run: (rule: ModerationRule) => Promise<Outcome> | Outcome
+): Promise<Outcome> | Outcome {
+	const rule = ruleOf(data);
+	return rule === null ? { ok: false, reason: 'invalid' } : run(rule);
+}
+
 /** The distinct comment ids of the form's `ids` fields; null when none, or more than a page. */
 export function pageIds(data: FormData): string[] | null {
 	const ids = [
@@ -43,5 +62,7 @@ export const flagResult = (closed: FlagCloseResult): Outcome =>
 export function muteFromForm(staff: UserRow, data: FormData): Outcome | Promise<Outcome> {
 	const hours = Number(text(data, 'hours'));
 	if (!MUTE_HOURS.some((h) => h === hours)) return { ok: false, reason: 'invalid' as const };
-	return muteUser(staff, text(data, 'userId') ?? '', hours, reasonOf(data));
+	return withRule(data, (rule) =>
+		muteUser(staff, text(data, 'userId') ?? '', hours, reasonOf(data), rule)
+	);
 }

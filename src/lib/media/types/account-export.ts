@@ -1,5 +1,5 @@
 import type { TitleKind } from '#lib/server/data/title-queries.ts';
-import type { CommentStatus, ReportReason } from '#lib/media/types/comments.ts';
+import type { CommentStatus, ModerationRule, ReportReason } from '#lib/media/types/comments.ts';
 import type {
 	ConcernFlagKey,
 	ContentReportStatus,
@@ -64,6 +64,8 @@ export type AccountExport = {
 		status: CommentStatus;
 		/** Why a comment was rejected or hidden: the reason the author sees on the profile. */
 		moderationReason: string | null;
+		/** The rule a moderator named when hiding or rejecting the comment; null otherwise. */
+		moderationRule: ModerationRule | null;
 		score: number;
 		createdAt: string;
 		editedAt: string | null;

@@ -4,7 +4,7 @@
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
-	import { formatMuteHours } from '#lib/media/utils/comments.ts';
+	import { MODERATION_RULE_LABELS, formatMuteHours } from '#lib/media/utils/comments.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -157,6 +157,9 @@
 	{/if}
 	{#if editedSince}
 		<p class="label">Edited since</p>
+	{/if}
+	{#if entry.rule}
+		<p class="label">Rule: {MODERATION_RULE_LABELS[entry.rule]}</p>
 	{/if}
 	{#if entry.reason}
 		<p class="label">Reason: {entry.reason}</p>

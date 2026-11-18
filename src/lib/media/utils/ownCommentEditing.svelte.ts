@@ -4,7 +4,10 @@ import { commentResult } from '#lib/media/utils/comments.ts';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 /** What a saved edit changes on a row. */
-export type EditedComment = Pick<OwnComment, 'body' | 'status' | 'moderationReason' | 'editedAt'>;
+export type EditedComment = Pick<
+	OwnComment,
+	'body' | 'status' | 'moderationReason' | 'moderationRule' | 'editedAt'
+>;
 
 type Handlers = {
 	/** The comment's id. */
@@ -68,6 +71,7 @@ export class OwnCommentEditing {
 			body: saved.body,
 			status: saved.status,
 			moderationReason: saved.moderationReason,
+			moderationRule: saved.moderationRule,
 			editedAt: saved.editedAt
 		});
 		this.mode = null;

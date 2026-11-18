@@ -27,7 +27,6 @@ const reports = {
 	getOpenTitle: vi.fn()
 };
 const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn(), reopenCountFlag: vi.fn() };
-const reversals = { unmuteUser: vi.fn(), unbanAccount: vi.fn() };
 const getSourceSyncDates = vi.fn();
 const getModerationCounts = vi.fn();
 
@@ -47,7 +46,7 @@ vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
-vi.mock('#lib/server/data/moderation-reversals.ts', () => reversals);
+vi.mock('#lib/server/data/moderation-reversals.ts', () => ({}));
 vi.mock('#lib/server/data/moderation-counts.ts', () => ({
 	getModerationCounts: () => getModerationCounts()
 }));
@@ -74,18 +73,13 @@ const REPORT_NAMES = [
 	'dismissFlag',
 	'reopenFlag'
 ] as const;
-const REVERSAL_NAMES = ['unmute', 'unban'] as const;
-type Name =
-	| (typeof NAMES)[number]
-	| (typeof REPORT_NAMES)[number]
-	| (typeof REVERSAL_NAMES)[number];
+type Name = (typeof NAMES)[number] | (typeof REPORT_NAMES)[number];
 
 const REPORT_FIELDS = { id: 'f1', userId: 'u1', titleId: 't1' };
 const allFns = () => [
 	...Object.values(queries),
 	...Object.values(reports),
-	...Object.values(flags),
-	...Object.values(reversals)
+	...Object.values(flags)
 ];
 
 function run(
@@ -95,7 +89,8 @@ function run(
 		userId: 'u1',
 		titleId: 't1',
 		hours: '24',
-		editedAt: ''
+		editedAt: '',
+		rule: 'spam'
 	}
 ) {
 	const form = new FormData();
@@ -119,8 +114,6 @@ beforeEach(() => {
 	for (const fn of Object.values(reports))
 		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
 	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue({ ok: true });
-	for (const fn of Object.values(reversals))
-		fn.mockReset().mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
 	const empty = { items: [], nextCursor: null };
 	reports.listHeldReports.mockResolvedValue(empty);
 	reports.listFlaggedTitles.mockResolvedValue(empty);
@@ -305,61 +298,6 @@ describe('community-report actions', () => {
 	});
 });
 
-describe('reversals', () => {
-	it('unmute and unban call the data function with the account and the reason', async () => {
-		expect(await run('unmute', { id: 'c1', userId: 'u1', reason: ' mistake ' })).toEqual({
-			id: 'c1',
-			done: 'unmute'
-		});
-		expect(reversals.unmuteUser).toHaveBeenCalledWith(MOD, 'u1', 'mistake');
-		expect(await run('unban', { userId: 'u1' })).toEqual({ id: 'u1', done: 'unban' });
-		expect(reversals.unbanAccount).toHaveBeenCalledWith(MOD, 'u1', null);
-	});
-
-	it('purges the profile and the counts their result names, and touches no comment list', async () => {
-		await run('unmute');
-		await run('unban');
-		expect(purgeProfiles).toHaveBeenCalledTimes(2);
-		expect(purgeProfiles).toHaveBeenCalledWith(['u1']);
-		expect(purgeTitlesComments).not.toHaveBeenCalled();
-	});
-
-	it.each([
-		['unmute', 'unmuteUser', 'not-muted', 409, 'This account is not muted.'],
-		['unban', 'unbanAccount', 'not-banned', 409, 'This account is not banned.'],
-		['unban', 'unbanAccount', 'admin-only', 403, 'Only an administrator can lift a ban.'],
-		[
-			'unmute',
-			'unmuteUser',
-			'admin-acted',
-			403,
-			'An administrator acted on this last, so only an administrator can act on it again.'
-		]
-	] as const)(
-		'%s refused as %s answers %i with a toast message',
-		async (name, fn, reason, status, message) => {
-			reversals[fn].mockResolvedValue({ ok: false, reason });
-			const result = await run(name);
-			expect(result).toMatchObject({ status, data: { id: 'c1', error: message } });
-			expect(purgeProfiles).not.toHaveBeenCalled();
-		}
-	);
-
-	it('refuses a request without a target', async () => {
-		expect(await run('unmute', {})).toMatchObject({ status: 400 });
-		expect(reversals.unmuteUser).not.toHaveBeenCalled();
-	});
-
-	it('reopenFlag re-opens the flag as the acting staff member and purges nothing', async () => {
-		expect(await run('reopenFlag', REPORT_FIELDS)).toEqual({ id: 'f1', done: 'reopenFlag' });
-		expect(flags.reopenCountFlag).toHaveBeenCalledWith('f1', MOD);
-		flags.reopenCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
-		expect(await run('reopenFlag', REPORT_FIELDS)).toMatchObject({ status: 403 });
-		expect(purgeTitlesReports).not.toHaveBeenCalled();
-		expect(purgeProfiles).not.toHaveBeenCalled();
-	});
-});
-
 describe('purging', () => {
 	it.each(['approve', 'hide', 'reject', 'restore', 'dismiss'] as const)(
 		'%s purges the title’s comment list',
@@ -481,29 +419,32 @@ describe('purging', () => {
 
 describe('inputs', () => {
 	it('trims a reason and keeps it to the limit', async () => {
-		await run('reject', { id: 'c1', reason: `  ${'x'.repeat(300)}  ` });
+		await run('reject', { id: 'c1', rule: 'spam', reason: `  ${'x'.repeat(300)}  ` });
 		expect(queries.rejectComment).toHaveBeenCalledWith(
 			expect.objectContaining({ id: 'mod-1' }),
 			'c1',
-			'x'.repeat(140)
+			'x'.repeat(140),
+			'spam'
 		);
 	});
 
 	it('passes no reason when the field is empty', async () => {
-		await run('hide', { id: 'c1', reason: '   ' });
+		await run('hide', { id: 'c1', rule: 'spam', reason: '   ' });
 		expect(queries.hideComment).toHaveBeenCalledWith(
 			expect.objectContaining({ id: 'mod-1' }),
 			'c1',
-			null
+			null,
+			'spam'
 		);
 	});
 
 	it('mutes for a listed length only', async () => {
-		await run('mute', { id: 'c1', userId: 'u1', hours: '168' });
-		const [actor, userId, hours] = queries.muteUser.mock.calls[0];
+		await run('mute', { id: 'c1', userId: 'u1', hours: '168', rule: 'spam' });
+		const [actor, userId, hours, , rule] = queries.muteUser.mock.calls[0];
 		expect(actor).toBe(MOD);
 		expect(userId).toBe('u1');
 		expect(hours).toBe(168);
+		expect(rule).toBe('spam');
 
 		queries.muteUser.mockClear();
 		const result = await run('mute', { id: 'c1', userId: 'u1', hours: '5' });
@@ -543,8 +484,8 @@ describe('inputs', () => {
 	);
 
 	it('a ban passes the acting user and the account', async () => {
-		await run('ban', { id: 'c1', userId: 'u1', reason: 'Slurs' });
-		expect(queries.banAccount).toHaveBeenCalledWith(MOD, 'u1', 'Slurs');
+		await run('ban', { id: 'c1', userId: 'u1', reason: 'Slurs', rule: 'hate' });
+		expect(queries.banAccount).toHaveBeenCalledWith(MOD, 'u1', 'Slurs', 'hate');
 	});
 
 	it('maps a forbidden target to 403 with a message for the row', async () => {

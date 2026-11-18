@@ -208,7 +208,9 @@
 		{/if}
 
 		{#if comment.review}
-			<p class="label">{unpublishedNote(comment.review.status, comment.review.reason)}</p>
+			<p class="label">
+				{unpublishedNote(comment.review.status, comment.review.reason, comment.review.rule)}
+			</p>
 		{/if}
 	{/if}
 

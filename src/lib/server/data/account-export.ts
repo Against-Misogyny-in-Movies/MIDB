@@ -99,6 +99,7 @@ export async function buildAccountExport(
 				body: comments.body,
 				status: comments.status,
 				moderationReason: comments.moderationReason,
+				moderationRule: comments.moderationRule,
 				score: comments.score,
 				createdAt: comments.createdAt,
 				editedAt: comments.editedAt,
@@ -181,6 +182,7 @@ export async function buildAccountExport(
 			body: row.body,
 			status: row.status,
 			moderationReason: row.moderationReason,
+			moderationRule: row.moderationRule,
 			score: row.score,
 			createdAt: iso(row.createdAt),
 			editedAt: isoOrNull(row.editedAt)

@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { MODERATION_REASON_MAX, MUTE_HOURS, formatMuteHours } from '#lib/media/utils/comments.ts';
+	import type { ModerationRule } from '#lib/media/types/comments.ts';
+	import {
+		MODERATION_REASON_MAX,
+		MODERATION_RULE_LABELS,
+		MUTE_HOURS,
+		formatMuteHours,
+		moderationRule
+	} from '#lib/media/utils/comments.ts';
 	import type { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	type Kind = 'hide' | 'reject' | 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
@@ -59,6 +66,11 @@
 			: `${BUTTONS[kind].replace(' comment', '')} ${count} ${noun}`
 	);
 	const shownToAuthor = $derived(kind === 'hide' || kind === 'reject');
+	/** A hide, a reject, a mute and a ban name the rule behind them. */
+	const needsRule = $derived(
+		kind === 'hide' || kind === 'reject' || kind === 'mute' || kind === 'ban'
+	);
+	let rule = $state<ModerationRule | null>(null);
 </script>
 
 <form
@@ -75,18 +87,18 @@
 	<p class="text-sm">
 		{#if count !== undefined && kind === 'hide'}
 			Hide {count} selected {noun}? A pending or published one is taken out of view, its replies
-			stay under a placeholder, and its author sees it as hidden. A comment in any other status
-			stays as it is.
+			stay under a placeholder, and its author sees it as hidden, with the rule and the note. A
+			comment in any other status stays as it is.
 		{:else if count !== undefined && kind === 'reject'}
 			Reject {count} selected {noun}? A pending or published one is taken out of view, and its
-			author sees it as rejected, with the reason when one is given. A comment in any other status
-			stays as it is.
+			author sees it as rejected, with the rule and the note. A comment in any other status stays as
+			it is.
 		{:else if kind === 'hide'}
 			Hide this comment? It leaves the public list, and replies stay under a placeholder. The author
-			sees it as hidden.
+			sees it as hidden, with the rule and the note.
 		{:else if kind === 'reject'}
-			Reject this comment? It leaves the public list, and the author sees it as rejected with the
-			reason.
+			Reject this comment? It leaves the public list, and the author sees it as rejected, with the
+			rule and the note.
 		{:else if kind === 'mute'}
 			Mute {name}? Until the mute ends, the account cannot write, edit, delete, vote on or report
 			comments, and its community reports leave the counts.
@@ -118,12 +130,23 @@
 			</select>
 		</label>
 	{/if}
+	{#if needsRule}
+		<fieldset class="rules">
+			<legend class="label">Rule</legend>
+			{#each moderationRule as value (value)}
+				<label class="rule">
+					<input type="radio" name="rule" {value} bind:group={rule} />
+					{MODERATION_RULE_LABELS[value]}
+				</label>
+			{/each}
+		</fieldset>
+	{/if}
 	{#if kind !== 'rejectAll'}
 		<label class="field">
 			<span class="label">
 				{shownToAuthor
-					? 'Reason, shown to the author (optional)'
-					: 'Reason, kept in the log (optional)'}
+					? 'Note, shown to the author (optional)'
+					: 'Note, kept in the log (optional)'}
 			</span>
 			<input class="input" name="reason" maxlength={MODERATION_REASON_MAX} autocomplete="off" />
 		</label>
@@ -132,7 +155,7 @@
 		<button
 			class="btn btn--ink"
 			aria-busy={busy === kind}
-			disabled={busy !== null && busy !== kind}
+			disabled={(busy !== null && busy !== kind) || (needsRule && rule === null)}
 		>
 			{button}
 		</button>
@@ -151,6 +174,36 @@
 	.field {
 		@apply flex flex-col;
 		gap: var(--spacing-xs);
+	}
+
+	.rules {
+		@apply grid;
+		grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+		gap: var(--spacing-xs) var(--spacing-md);
+		border: 0;
+		margin: 0;
+		padding: 0;
+	}
+
+	.rules legend {
+		@apply w-full;
+		grid-column: 1 / -1;
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.rule {
+		@apply inline-flex items-center gap-xs text-sm cursor-pointer;
+		min-height: 1.75rem;
+	}
+
+	.rule input {
+		accent-color: var(--brand);
+	}
+
+	@media (pointer: coarse) {
+		.rule {
+			min-height: 2.75rem;
+		}
 	}
 
 	.actions {

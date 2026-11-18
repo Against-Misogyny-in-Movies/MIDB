@@ -394,6 +394,7 @@ describe('the action log sentences', () => {
 		id: 'a',
 		action: 'approve_report',
 		reason: null,
+		rule: null,
 		createdAt: '2026-11-03T10:00:00.000Z',
 		actor,
 		targetUser: target,

@@ -147,6 +147,7 @@ function scrubStatements(userId: string, username: string | null, now: Date): Ba
 				status: 'deleted',
 				body: DELETED_COMMENT_BODY,
 				moderationReason: null,
+				moderationRule: null,
 				aiVerdict: null
 			})
 			.where(eq(comments.userId, userId)),

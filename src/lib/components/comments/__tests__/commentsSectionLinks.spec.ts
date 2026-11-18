@@ -154,7 +154,7 @@ describe('CommentsSection links to a comment', () => {
 	it('shows the status of a pending comment its reader may see', async () => {
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'pending', reason: null })
+			second: thread(view('second'), { status: 'pending', reason: null, rule: null })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();
@@ -167,7 +167,7 @@ describe('CommentsSection links to a comment', () => {
 		session.set({ ...ANNA, id: 'mod', username: 'mod', displayName: 'mod', role: 'moderator' });
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'hidden', reason: 'off topic' })
+			second: thread(view('second'), { status: 'hidden', reason: 'off topic', rule: null })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();
@@ -181,7 +181,7 @@ describe('CommentsSection links to a comment', () => {
 		session.set(ANNA);
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'deleted', reason: null })
+			second: thread(view('second'), { status: 'deleted', reason: null, rule: null })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();

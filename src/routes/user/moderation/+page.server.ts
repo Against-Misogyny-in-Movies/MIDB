@@ -42,7 +42,8 @@ import {
 	flagResult,
 	muteFromForm,
 	reasonOf,
-	reportKey
+	reportKey,
+	withRule
 } from '#lib/server/moderation/action-form.ts';
 import { runBulk } from '#lib/server/moderation/bulk.ts';
 import { purgeOutcome } from '#lib/server/moderation/purge.ts';
@@ -138,7 +139,8 @@ export const actions: Actions = {
 			event,
 			'hide',
 			commentKey,
-			(staff, data) => hideComment(staff, text(data, 'id') ?? '', reasonOf(data)),
+			(staff, data) =>
+				withRule(data, (rule) => hideComment(staff, text(data, 'id') ?? '', reasonOf(data), rule)),
 			purgeOutcome
 		),
 	reject: (event) =>
@@ -146,7 +148,10 @@ export const actions: Actions = {
 			event,
 			'reject',
 			commentKey,
-			(staff, data) => rejectComment(staff, text(data, 'id') ?? '', reasonOf(data)),
+			(staff, data) =>
+				withRule(data, (rule) =>
+					rejectComment(staff, text(data, 'id') ?? '', reasonOf(data), rule)
+				),
 			purgeOutcome
 		),
 	restore: (event) =>
@@ -177,7 +182,10 @@ export const actions: Actions = {
 			event,
 			'ban',
 			commentKey,
-			(staff, data) => banAccount(staff, text(data, 'userId') ?? '', reasonOf(data)),
+			(staff, data) =>
+				withRule(data, (rule) =>
+					banAccount(staff, text(data, 'userId') ?? '', reasonOf(data), rule)
+				),
 			purgeOutcome
 		),
 	unmute: (event) =>

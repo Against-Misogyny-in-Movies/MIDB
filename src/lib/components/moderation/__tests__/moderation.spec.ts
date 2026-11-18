@@ -48,6 +48,7 @@ function item(over: Partial<ModerationItem> = {}): ModerationItem {
 			status: 'pending',
 			moderationSource: null,
 			moderationReason: null,
+			moderationRule: null,
 			score: 0,
 			replyCount: 0,
 			createdAt: '2026-11-01T10:00:00.000Z',
@@ -202,7 +203,9 @@ describe('ModerationItem', () => {
 	it('names what a reject does to the author before it is sent', async () => {
 		mount();
 		await fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
-		expect(screen.getByText(/the author sees it as rejected with the reason/)).toBeTruthy();
+		expect(
+			screen.getByText(/the author sees it as rejected, with the rule and the note/)
+		).toBeTruthy();
 		const form = screen.getByRole('button', { name: 'Reject comment' }).closest('form')!;
 		expect(form.getAttribute('action')).toBe('?/reject');
 		expect((form.querySelector('[name=id]') as HTMLInputElement).value).toBe('c1');
@@ -330,6 +333,7 @@ describe('RecentActionRow', () => {
 		id: 'a1',
 		action: 'reject',
 		reason: 'Slur',
+		rule: null,
 		createdAt: '2026-11-03T10:00:00.000Z',
 		actor: { ...AUTHOR, id: 'mod', displayName: 'mod' },
 		targetUser: null,
@@ -368,12 +372,6 @@ describe('RecentActionRow', () => {
 		cleanup();
 		mountEntry(entry({ action: 'approve', commentStatus: 'published' }));
 		expect(screen.queryByRole('button', { name: 'Restore comment' })).toBeNull();
-	});
-
-	it('reads an action this build does not know as a plain label', () => {
-		mountEntry(entry({ action: 'future_action' as RecentAction['action'] }));
-		expect(screen.getByText(/acted on/)).toBeTruthy();
-		expect(screen.queryByText(/undefined/)).toBeNull();
 	});
 
 	it('links the title and marks a comment edited after the action', () => {

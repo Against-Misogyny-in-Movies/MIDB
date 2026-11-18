@@ -55,6 +55,7 @@ describe('the owner’s view', () => {
 					status: 'pending',
 					score: 0,
 					moderationReason: null,
+					moderationRule: null,
 					parentId: null,
 					replyCount: 0,
 					createdAt: '2026-11-02T10:00:00.000Z',
@@ -270,6 +271,7 @@ describe('the owner’s view', () => {
 						body: 'Changed',
 						status: 'pending',
 						moderationReason: null,
+						moderationRule: null,
 						editedAt: '2026-11-03T10:00:00.000Z'
 					}
 				});
