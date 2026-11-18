@@ -1,10 +1,16 @@
 import type { getUserComments } from '#lib/server/data/user-queries.ts';
 import type { PublicUser } from './user.ts';
-import type { commentStatus, moderationSource, reportReason } from '#lib/media/utils/comments.ts';
+import type {
+	commentStatus,
+	moderationRule,
+	moderationSource,
+	reportReason
+} from '#lib/media/utils/comments.ts';
 
 export type CommentStatus = (typeof commentStatus)[number];
 export type ModerationSource = (typeof moderationSource)[number];
 export type ReportReason = (typeof reportReason)[number];
+export type ModerationRule = (typeof moderationRule)[number];
 export type CommentSort = 'top' | 'new';
 
 /**
@@ -49,7 +55,11 @@ export type CommentThread = {
 	tmdbId: number;
 	root: CommentView;
 	/** Set when the linked comment is not published: its status and the moderation reason. */
-	review: { status: Exclude<CommentStatus, 'published'>; reason: string | null } | null;
+	review: {
+		status: Exclude<CommentStatus, 'published'>;
+		reason: string | null;
+		rule: ModerationRule | null;
+	} | null;
 };
 
 /** The reader's own comment, in any status, as the author sees it. */
@@ -61,6 +71,8 @@ export type OwnComment = {
 	status: CommentStatus;
 	moderationSource: ModerationSource | null;
 	moderationReason: string | null;
+	/** The rule a moderator named when hiding or rejecting the comment; null otherwise. */
+	moderationRule: ModerationRule | null;
 	score: number;
 	replyCount: number;
 	createdAt: string;

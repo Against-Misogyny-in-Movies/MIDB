@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import CountRejectForms from '#lib/components/moderation/countRejectForms.svelte';
 	import ReportAccountActions from '#lib/components/moderation/reportAccountActions.svelte';
@@ -19,9 +19,11 @@
 		canAct: boolean;
 		/** Whether they may mute or ban it. */
 		canRestrict: boolean;
+		/** The acting staff member's role, for the account's End mute and Lift ban. */
+		me: { id: string; role: string };
 	}
 
-	let { report, titleId, canAct, canRestrict }: Props = $props();
+	let { report, titleId, canAct, canRestrict, me }: Props = $props();
 
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
@@ -45,7 +47,8 @@
 	bind:root
 	readOnly={canAct ? undefined : 'An administrator decides on this report.'}
 >
-	{#snippet name()}<ProfileLink
+	{#snippet name()}<AccountLink
+			id={report.account.userId}
 			username={report.account.username}
 			name={report.account.username ?? 'An account'}
 		/>{/snippet}
@@ -70,6 +73,6 @@
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<ReportAccountActions account={report.account} {canAct} {canRestrict} />
+		<ReportAccountActions account={report.account} {canAct} {canRestrict} {me} />
 	{/snippet}
 </ReportRowShell>

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	formatCurrency,
 	formatDate,
+	formatTime,
 	displayTitle,
 	formatRuntime,
 	countryName,
@@ -78,6 +79,18 @@ describe('formatDate', () => {
 	test('returns — for an empty or invalid value', () => {
 		expect(formatDate('')).toBe('—');
 		expect(formatDate('not a date')).toBe('—');
+	});
+});
+
+describe('formatTime', () => {
+	test('formats the time of day in UTC, on a 24-hour clock', () => {
+		expect(formatTime('2026-11-12T23:59:00.000Z')).toBe('23:59 UTC');
+		expect(formatTime('2026-11-12T00:05:00.000Z')).toBe('00:05 UTC');
+	});
+
+	test('returns — for an empty or invalid value', () => {
+		expect(formatTime('')).toBe('—');
+		expect(formatTime('not a date')).toBe('—');
 	});
 });
 

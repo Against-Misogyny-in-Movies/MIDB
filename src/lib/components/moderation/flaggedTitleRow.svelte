@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import ReportRowShell from '#lib/components/moderation/reportRowShell.svelte';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -25,7 +25,11 @@
 		{#each flagged.flags as flag (flag.id)}
 			<li>
 				<span class="label"
-					><ProfileLink username={flag.reporter} name={flag.reporter ?? 'An account'} /></span
+					><AccountLink
+						id={flag.reporterId}
+						username={flag.reporter}
+						name={flag.reporter ?? 'An account'}
+					/></span
 				>
 				<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 				{#if flag.note}<span class="note">{flag.note}</span>{/if}

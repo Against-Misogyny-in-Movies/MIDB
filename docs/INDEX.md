@@ -41,77 +41,77 @@ Each agent reads its own file.
 Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
-- `PRODUCT.md` — Product (~690 tok)
-- `DESIGN.md` — Design (~6.2K tok)
+- `PRODUCT.md` — Product (~940 tok)
+- `DESIGN.md` — Design (~9.9K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~3.6K) ← 1
-  - 66–73 Pages (~1.1K)
-  - 74–77 Motion (~110)
-  - 78–81 Browser surfaces (~50)
-  - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~64.3K tok)
+  - 37–68 Components (~5.9K) ← 1
+  - 69–76 Pages (~2.5K)
+  - 77–80 Motion (~110)
+  - 81–84 Browser surfaces (~50)
+  - 85–88 Avoid (~90)
+- `docs/architecture.md` — MIDB — Architecture Reference (~100.6K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
-  - 68–297 Directory layout (~10.6K)
-    - 288–297 File-organisation conventions (~450)
-  - 298–311 Styling & theming (~970)
-  - 312–324 Copy & voice (~540) ← 1
-  - 325–358 Routes (~11.4K)
-  - 359–401 User & roles (~3.1K)
-    - 394–401 Migrations (~330)
-  - 402–431 Source sync (~1.9K) ← 3
-  - 432–504 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
-  - 505–540 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~4.3K) ← 2
-  - 541–560 UM Disambiguation (~830)
-  - 561–569 UM flag rendering (~250)
-  - 570–578 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 579–589 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 590–602 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.1K)
-  - 603–614 Shared marker pattern (metric row markers) (~410) ← 5
-  - 615–657 Component library (`src/lib/components/`) (~8.7K)
-  - 658–668 Live search (`src/lib/components/search/`) (~710)
-  - 669–682 Server cache (`src/lib/server/cache/`) (~700)
-  - 683–698 TMDB integration (~810)
-  - 699–717 Auth flow (Better Auth) (~2.0K)
-  - 718–740 Caching policy (~2.1K) ← 8
-  - 741–798 Configuration & environment (~4.0K)
-    - 758–770 Local run sequence (~130)
-    - 771–774 npm scripts (~200)
-    - 775–785 CI (`.github/workflows/tests.yml`) (~490)
-    - 786–798 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 799–815 Testing (~1.2K)
-    - 810–815 Verification baseline (~80)
-  - 816–824 Known gaps / TODO (~180) ← 1
-  - 825–833 Related docs (~140)
+  - 68–328 Directory layout (~13.5K)
+    - 319–328 File-organisation conventions (~450)
+  - 329–342 Styling & theming (~1.1K)
+  - 343–355 Copy & voice (~540) ← 1
+  - 356–395 Routes (~28.4K)
+  - 396–441 User & roles (~4.4K)
+    - 434–441 Migrations (~490)
+  - 442–471 Source sync (~1.9K) ← 3
+  - 472–544 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
+  - 545–595 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~8.9K) ← 2
+  - 596–615 UM Disambiguation (~830)
+  - 616–624 UM flag rendering (~250)
+  - 625–633 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 634–644 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 645–658 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K) ← 1
+  - 659–670 Shared marker pattern (metric row markers) (~410) ← 5
+  - 671–716 Component library (`src/lib/components/`) (~18.4K)
+  - 717–727 Live search (`src/lib/components/search/`) (~710)
+  - 728–741 Server cache (`src/lib/server/cache/`) (~700)
+  - 742–757 TMDB integration (~810)
+  - 758–776 Auth flow (Better Auth) (~2.0K)
+  - 777–799 Caching policy (~2.1K) ← 9
+  - 800–857 Configuration & environment (~4.0K)
+    - 817–829 Local run sequence (~130)
+    - 830–833 npm scripts (~200)
+    - 834–844 CI (`.github/workflows/tests.yml`) (~490)
+    - 845–857 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 858–874 Testing (~1.2K)
+    - 869–874 Verification baseline (~80)
+  - 875–883 Known gaps / TODO (~180) ← 1
+  - 884–892 Related docs (~140)
 
 ## Phases
 
 STATUS.md, then the live plan section for the active phase.
 
-- `docs/phases/STATUS.md` — Phase status (~4.5K tok)
+- `docs/phases/STATUS.md` — Phase status (~6.1K tok)
   - 5–16 Rules (~260)
-  - 17–60 Phases (~1.8K)
-  - 61–110 Open items (~1.2K) ← 1
-  - 111–159 Standing decisions (~1.2K)
+  - 17–82 Phases (~2.8K)
+  - 83–152 Open items (~1.6K) ← 1
+  - 153–207 Standing decisions (~1.4K)
 
 ## Policies
 
 Read before a change that touches what they describe.
 
 - `CONTRIBUTING.md` — Contributing (~640 tok)
-- `SECURITY.md` — Security (~5.5K tok)
-  - 5–23 Network (~4.8K)
-  - 24–34 Supply chain (~570)
-  - 35–40 Reporting a vulnerability (~90)
-- `PRIVACY.md` — Privacy (~3.5K tok)
-  - 5–15 Reading the site (~630)
-  - 16–32 Signing in (~790)
-  - 33–46 Ratings and comments (~2.0K)
-  - 47–50 Contact (~40)
+- `SECURITY.md` — Security (~7.5K tok)
+  - 5–30 Network (~6.8K)
+  - 31–41 Supply chain (~570)
+  - 42–47 Reporting a vulnerability (~90)
+- `PRIVACY.md` — Privacy (~5.1K tok)
+  - 5–15 Reading the site (~800)
+  - 16–35 Signing in (~1.8K)
+  - 36–50 Ratings and comments (~2.4K)
+  - 51–54 Contact (~40)
 - `ACCESSIBILITY.md` — Accessibility (~660 tok)
 - `THIRD_PARTY_NOTICES.md` — Third-party notices (~900 tok)
 
@@ -125,5 +125,5 @@ The sections each area's comments cite, most cited first. Read these before chan
 - `scripts/docs`: .claude/rules/code-standards.md, Checking a change (1); .claude/rules/docs-standards.md, The index (1); docs/architecture.md, Caching policy (1)
 - `scripts/git`: .claude/rules/commit-standards.md, Subject line (1)
 - `src`: docs/architecture.md, Caching policy (1)
-- `src/lib`: docs/architecture.md, Caching policy (3); docs/architecture.md, Shared marker pattern (metric row markers) (3); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (2); DESIGN.md, Components (1); docs/architecture.md, Source sync (1); docs/phases/STATUS.md, Open items (1)
+- `src/lib`: docs/architecture.md, Caching policy (4); docs/architecture.md, Shared marker pattern (metric row markers) (3); docs/architecture.md, Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (2); DESIGN.md, Components (1); docs/architecture.md, Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (1); docs/architecture.md, Source sync (1); docs/phases/STATUS.md, Open items (1)
 - `src/routes`: docs/architecture.md, Shared marker pattern (metric row markers) (1)

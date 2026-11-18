@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -27,7 +27,8 @@
 <li class="flag" tabindex="-1" bind:this={root}>
 	<p class="line">
 		<span class="label"
-			>Reported by <ProfileLink
+			>Reported by <AccountLink
+				id={flag.reporterId}
 				username={flag.reporter}
 				name={flag.reporter ?? 'An account'}
 			/></span
@@ -35,8 +36,24 @@
 		<time class="label" datetime={flag.createdAt}>{formatDate(flag.createdAt)}</time>
 		{#if flag.note}<span class="note">{flag.note}</span>{/if}
 	</p>
-	{#if canAct}
-		<div class="actions">
+	{#if flag.status !== 'open'}
+		<p class="label">{flag.status === 'resolved' ? 'Resolved' : 'Dismissed'}</p>
+		{#if canAct}
+			<div class="action-row">
+				<form method="POST" action="?/reopenFlag" use:enhance={submit('reopenFlag')}>
+					<input type="hidden" name="id" value={flag.id} />
+					<button
+						class="btn btn--ghost"
+						aria-busy={busy === 'reopenFlag'}
+						disabled={busy !== null && busy !== 'reopenFlag'}
+					>
+						Re-open
+					</button>
+				</form>
+			</div>
+		{/if}
+	{:else if canAct}
+		<div class="action-row">
 			{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
 				<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
 					<input type="hidden" name="id" value={flag.id} />
@@ -65,6 +82,7 @@
 	.flag {
 		@apply flex flex-col;
 		gap: var(--spacing-xs);
+		scroll-margin-top: 5rem;
 	}
 
 	.line {
@@ -74,10 +92,5 @@
 
 	.note {
 		overflow-wrap: anywhere;
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

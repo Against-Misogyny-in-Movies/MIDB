@@ -223,7 +223,11 @@ export async function getCommentThread(
 		review:
 			target.status === 'published'
 				? null
-				: { status: target.status, reason: target.moderationReason }
+				: {
+						status: target.status,
+						reason: target.moderationReason,
+						rule: target.moderationRule
+					}
 	};
 }
 
@@ -236,6 +240,7 @@ export function toOwnComment(row: CommentRow): OwnComment {
 		status: row.status,
 		moderationSource: row.moderationSource,
 		moderationReason: row.moderationReason,
+		moderationRule: row.moderationRule,
 		score: row.score,
 		replyCount: row.replyCount,
 		createdAt: row.createdAt.toISOString(),
@@ -428,7 +433,13 @@ export async function editComment(id: string, userId: string, body: string): Pro
 		statusMove(comment.id, comment.status, status, {
 			body,
 			editedAt: new Date(),
-			...(held ? {} : { moderationSource: decision.source, moderationReason: decision.reason }),
+			...(held
+				? {}
+				: {
+						moderationSource: decision.source,
+						moderationReason: decision.reason,
+						moderationRule: null
+					}),
 			aiVerdict: decision.aiVerdict
 		})
 	);

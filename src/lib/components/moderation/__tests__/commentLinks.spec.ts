@@ -28,6 +28,7 @@ const COMMENT = {
 	status: 'pending' as const,
 	moderationSource: null,
 	moderationReason: null,
+	moderationRule: null,
 	score: 0,
 	replyCount: 0,
 	createdAt: '2026-11-01T10:00:00.000Z',
@@ -47,9 +48,17 @@ describe('links to a comment from the moderation views', () => {
 			author: AUTHOR,
 			title: TITLE,
 			aiCategories: [],
+			severity: null,
+			severe: false,
+			parent: null,
 			reports: [],
 			authorCommentCount: 1,
-			authorMutedUntil: null
+			authorHiddenOrRejected: 0,
+			authorOpenReportsAgainst: 0,
+			authorJoinedAt: '2026-01-05T10:00:00.000Z',
+			authorMutedUntil: null,
+			authorBanned: false,
+			authorMutedByModerator: false
 		};
 		inList(ModerationItemRow, { item, me: MOD });
 		const link = screen.getByRole('link', { name: 'View comment' });
@@ -67,7 +76,12 @@ describe('links to a comment from the moderation views', () => {
 			aiCategories: [],
 			reports: [],
 			authorCommentCount: 1,
-			authorMutedUntil: null
+			authorHiddenOrRejected: 0,
+			authorOpenReportsAgainst: 0,
+			authorJoinedAt: '2026-01-05T10:00:00.000Z',
+			authorMutedUntil: null,
+			authorBanned: false,
+			authorMutedByModerator: false
 		};
 		inList(ModerationItemRow, { item, me: MOD });
 		expect(document.querySelector('a[href*="#comment-"]')).toBeNull();
@@ -82,7 +96,12 @@ describe('links to a comment from the moderation views', () => {
 			aiCategories: [],
 			reports: [],
 			authorCommentCount: 1,
+			authorHiddenOrRejected: 0,
+			authorOpenReportsAgainst: 0,
+			authorJoinedAt: '2026-01-05T10:00:00.000Z',
 			authorMutedUntil: null,
+			authorBanned: false,
+			authorMutedByModerator: false,
 			severity: null,
 			aiFailure: null,
 			latestLabel: null
@@ -102,6 +121,7 @@ describe('links to a comment from the moderation views', () => {
 			id: 'a1',
 			action: 'hide',
 			reason: null,
+			rule: null,
 			createdAt: '2026-11-03T10:00:00.000Z',
 			actor: { ...AUTHOR, id: 'mod', displayName: 'mod' },
 			targetUser: null,
@@ -110,6 +130,10 @@ describe('links to a comment from the moderation views', () => {
 			commentId: 'c1',
 			commentStatus: 'hidden',
 			commentEditedAt: null,
+			inForce: null,
+			flag: null,
+			reverses: null,
+			latestForComment: true,
 			title: { id: 't1', ...TITLE },
 			...over
 		});

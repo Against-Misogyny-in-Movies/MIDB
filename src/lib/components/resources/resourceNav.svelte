@@ -6,9 +6,11 @@
 
 	interface Props {
 		items: Item[];
+		/** Always the plain wrapped list of the phone layout, whatever the width (a page that shows the list in its column, not beside it). */
+		wrapped?: boolean;
 	}
 
-	let { items }: Props = $props();
+	let { items, wrapped = false }: Props = $props();
 
 	// Seeded to the first section; the scroll handler below keeps it in sync.
 	let active = $state('');
@@ -23,9 +25,11 @@
 		if (sections.length === 0) return;
 
 		function update() {
-			// At the bottom, the last section can't reach the line: pin it active.
-			const atBottom =
-				window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+			// At the bottom, the last section can't reach the line: pin it active. A page that does
+			// not scroll is at its bottom from the start, so it keeps the first section.
+			const { scrollHeight } = document.documentElement;
+			const scrolls = scrollHeight > window.innerHeight;
+			const atBottom = scrolls && window.innerHeight + window.scrollY >= scrollHeight - 2;
 			if (atBottom) {
 				active = sections[sections.length - 1].id;
 				return;
@@ -48,7 +52,7 @@
 	});
 </script>
 
-<nav class="resource-nav" aria-label="On this page">
+<nav class="resource-nav" class:wrapped aria-label="On this page">
 	<p class="label heading">On this page</p>
 	<ul>
 		{#each items as item (item.id)}
@@ -109,7 +113,7 @@
 		}
 	}
 
-	/* Phones: a plain list of the four sections under the intro; nothing pins. */
+	/* Phones, and any width with `wrapped`: a plain wrapped list under the intro; nothing pins. */
 	@media (max-width: 767px) {
 		ul {
 			@apply flex-row flex-wrap gap-x-md;
@@ -123,5 +127,22 @@
 			color: var(--ink-muted);
 			background-color: transparent;
 		}
+	}
+
+	.wrapped .heading {
+		padding-inline: 0;
+	}
+
+	.wrapped ul {
+		@apply flex-row flex-wrap gap-x-md;
+	}
+
+	.wrapped a {
+		padding-inline: 0;
+	}
+
+	.wrapped a.active {
+		color: var(--ink-muted);
+		background-color: transparent;
 	}
 </style>

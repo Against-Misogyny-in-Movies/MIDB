@@ -441,7 +441,7 @@ describe('reports', () => {
 			await reportComment({ commentId: id, reporterId, reason: 'hate', note: 'no' });
 		}
 		expect((await row(id)).status).toBe('pending');
-		const [queued] = await listReportedQueue();
+		const [queued] = (await listReportedQueue()).items;
 		expect(queued.reports).toHaveLength(3);
 
 		expect(await dismissReports(mod, id, null)).toMatchObject({ ok: true });

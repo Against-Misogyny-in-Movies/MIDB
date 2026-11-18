@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { replaceState } from '$app/navigation';
-	import { page } from '$app/state';
 	import LogoutButton from '#lib/components/auth/logoutButton.svelte';
+	import OnThisPageLayout from '#lib/components/resources/onThisPageLayout.svelte';
+	import ResourceNav from '#lib/components/resources/resourceNav.svelte';
+	import AccountDataCard from '#lib/components/user/accountDataCard.svelte';
+	import DeleteAccountCard from '#lib/components/user/deleteAccountCard.svelte';
+	import AppearanceCard from '#lib/components/user/appearanceCard.svelte';
+	import SessionsCard from '#lib/components/user/sessionsCard.svelte';
+	import SignInMethodsCard from '#lib/components/user/signInMethodsCard.svelte';
+	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
+	import { AUTH_PROVIDERS } from '#lib/media/utils/auth-providers.ts';
 	import { profileHref } from '#lib/media/utils/profileHref.ts';
-	import Notice from '#lib/components/ui/notice.svelte';
-	import { AUTH_PROVIDERS, providerIcon, providerLabel } from '#lib/media/utils/auth-providers.ts';
-	import { HEADING_ID, passkeyName, SignInMethods } from '#lib/signInMethods.svelte.ts';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -15,278 +18,92 @@
 
 	let { data }: Props = $props();
 
-	const methods = new SignInMethods();
+	// One entry per section on the page, in order.
+	const sections = [
+		{ id: 'email', label: 'Email' },
+		{ id: 'sign-in-methods', label: 'Sign-in methods' },
+		{ id: 'sessions', label: 'Sessions' },
+		{ id: 'appearance', label: 'Appearance' },
+		{ id: 'account-data', label: 'Account data' },
+		{ id: 'delete-account', label: 'Delete account' }
+	];
 
-	const linkable = $derived(
-		AUTH_PROVIDERS.filter(
-			(p) => data.providers[p.id] && !methods.accounts.some((a) => a.providerId === p.id)
-		)
+	// The providers this deployment offers: the email can only come from one of them.
+	const providerNames = $derived(
+		AUTH_PROVIDERS.filter((p) => data.providers[p.id])
+			.map((p) => p.label)
+			.join(' or ')
 	);
-
-	function added(value?: Date | string | null, withTime = false) {
-		if (!value) return '';
-		// The reader's own time zone, in the site's `dd/mm/yyyy` date format.
-		const when = new Date(value).toLocaleString('en-GB', {
-			dateStyle: 'short',
-			...(withTime && { timeStyle: 'short' })
-		});
-		return `Added ${when}`;
-	}
-
-	onMount(() => {
-		const params = page.url.searchParams;
-		void methods.load(params.get('error'), params.get('linked'));
-		// The result is shown once: a reload of the page does not show it again.
-		if (params.has('error') || params.has('linked')) {
-			const url = new URL(page.url.href);
-			url.searchParams.delete('error');
-			url.searchParams.delete('linked');
-			replaceState(url, page.state);
-		}
-	});
+	const emailHint = $derived(
+		providerNames
+			? `Taken from the first ${providerNames} account used with it, and fixed after that. Not shown on the profile or on comments.`
+			: 'Not shown on the profile or on comments.'
+	);
+	const noEmailHint = $derived(
+		providerNames
+			? `This account has no email. Linking a ${providerNames} account can add one.`
+			: 'This account has no email.'
+	);
 </script>
 
 <svelte:head>
 	<title>Settings · MIDB</title>
 </svelte:head>
 
-<svelte:window onpageshow={(event) => event.persisted && methods.restored()} />
-
-<div class="account-page">
-	<header>
-		<a href={profileHref(data.me.username) ?? '/user/profile'} class="back"
-			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
-		>
-		<div class="title-row">
-			<h1 class="display">Settings</h1>
-			<LogoutButton />
-		</div>
-	</header>
-
-	<section class="card plain" aria-labelledby="email-heading">
-		<h2 id="email-heading">Email</h2>
-		{#if data.email}
-			<p class="email">{data.email}</p>
-			<p class="hint">Not shown on the profile or on comments.</p>
-		{:else}
-			<p class="hint">This account has no email.</p>
-		{/if}
-	</section>
-
-	<section
-		class="card methods"
-		aria-busy={methods.loading || methods.busy}
-		aria-labelledby={HEADING_ID}
-	>
-		<h2 id={HEADING_ID} tabindex="-1">Accounts and passkeys</h2>
-
-		{#if methods.loadFailed}
-			<Notice tone="error">
-				The sign-in methods could not be loaded. Reload the page to try again.
-			</Notice>
-		{:else if methods.loading}
-			<p class="empty">Loading…</p>
-		{:else}
-			{#if methods.onlyMethod}
-				<p id="last-method-hint" class="hint">
-					The only sign-in method cannot be removed. Add another one first.
-				</p>
-			{/if}
-			<ul>
-				{#each methods.accounts as account (account.id)}
-					{@const key = `account:${account.id}`}
-					<li>
-						<div class="row">
-							<i class="{providerIcon(account.providerId)} icon" aria-hidden="true"></i>
-							<div class="meta">
-								<span class="name">{providerLabel(account.providerId)}</span>
-								<span class="label">{added(account.createdAt)}</span>
-							</div>
-							<div class="row-actions">
-								<button
-									type="button"
-									id="remove-account-{account.id}"
-									class="btn btn--ghost"
-									disabled={methods.onlyMethod || methods.busy}
-									aria-describedby={methods.onlyMethod ? 'last-method-hint' : undefined}
-									onclick={() => methods.openConfirm(key)}
-								>
-									Remove
-								</button>
-							</div>
-						</div>
-						{#if methods.confirming === key}
-							<div class="confirm">
-								<p id="confirm-{key}" tabindex="-1">
-									Remove {providerLabel(account.providerId)}? The account can no longer sign in with
-									it.
-								</p>
-								<div class="actions">
-									<button
-										type="button"
-										class="btn btn--ink"
-										aria-busy={methods.running === `unlink:${account.id}`}
-										disabled={methods.busy && methods.running !== `unlink:${account.id}`}
-										onclick={() => methods.unlink(account)}
-										>Remove {providerLabel(account.providerId)}</button
-									>
-									<button
-										type="button"
-										class="btn btn--ghost"
-										onclick={() => methods.closePlate(`remove-account-${account.id}`)}
-										>Keep it</button
-									>
-								</div>
-							</div>
-						{/if}
-					</li>
-				{/each}
-
-				{#each methods.passkeys as passkey (passkey.id)}
-					{@const key = `passkey:${passkey.id}`}
-					<li>
-						<div class="row">
-							<i class="ri-fingerprint-line icon" aria-hidden="true"></i>
-							<div class="meta">
-								<span class="name">{passkeyName(passkey)}</span>
-								<span class="label"
-									>{added(
-										passkey.createdAt,
-										methods.duplicateNames.includes(passkeyName(passkey))
-									)}</span
-								>
-							</div>
-							<div class="row-actions">
-								<button
-									type="button"
-									id="rename-passkey-{passkey.id}"
-									class="btn btn--ghost"
-									disabled={methods.busy}
-									onclick={() => methods.openRename(passkey)}
-								>
-									Rename
-								</button>
-								<button
-									type="button"
-									id="delete-passkey-{passkey.id}"
-									class="btn btn--ghost"
-									disabled={methods.onlyMethod || methods.busy}
-									aria-describedby={methods.onlyMethod ? 'last-method-hint' : undefined}
-									onclick={() => methods.openConfirm(key)}
-								>
-									Delete
-								</button>
-							</div>
-						</div>
-						{#if methods.renaming === passkey.id}
-							<form
-								class="confirm"
-								onsubmit={(e) => {
-									e.preventDefault();
-									void methods.renamePasskey(passkey);
-								}}
-							>
-								<label for="rename-{passkey.id}" class="label">Passkey name</label>
-								<input
-									id="rename-{passkey.id}"
-									class="input"
-									type="text"
-									bind:value={methods.nameDraft}
-									maxlength="64"
-									autocomplete="off"
-									required
-								/>
-								<div class="actions">
-									<button
-										type="submit"
-										class="btn btn--ink"
-										aria-busy={methods.running === `rename:${passkey.id}`}
-										disabled={!methods.nameDraft.trim() ||
-											(methods.busy && methods.running !== `rename:${passkey.id}`)}
-										>Save name</button
-									>
-									<button
-										type="button"
-										class="btn btn--ghost"
-										onclick={() => methods.closePlate(`rename-passkey-${passkey.id}`)}
-										>Cancel</button
-									>
-								</div>
-							</form>
-						{:else if methods.confirming === key}
-							<div class="confirm">
-								<p id="confirm-{key}" tabindex="-1">
-									Delete “{passkeyName(passkey)}”? It can no longer sign in to MIDB. The copy on the
-									device stays until it is deleted in the device's passkey settings.
-								</p>
-								<div class="actions">
-									<button
-										type="button"
-										class="btn btn--ink"
-										aria-busy={methods.running === `delete:${passkey.id}`}
-										disabled={methods.busy && methods.running !== `delete:${passkey.id}`}
-										onclick={() => methods.removePasskey(passkey)}>Delete passkey</button
-									>
-									<button
-										type="button"
-										class="btn btn--ghost"
-										onclick={() => methods.closePlate(`delete-passkey-${passkey.id}`)}
-										>Keep it</button
-									>
-								</div>
-							</div>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-
-			<div class="add">
-				<div class="add-actions">
-					<button
-						type="button"
-						class="btn btn--brand"
-						aria-busy={methods.running === 'add-passkey'}
-						disabled={methods.busy && methods.running !== 'add-passkey'}
-						onclick={() => methods.addPasskey()}
-					>
-						<i class="ri-fingerprint-line" aria-hidden="true"></i>
-						Add a passkey
-					</button>
-					{#each linkable as provider (provider.id)}
-						<button
-							type="button"
-							class="btn btn--ghost"
-							aria-busy={methods.running === `link:${provider.id}`}
-							disabled={methods.busy && methods.running !== `link:${provider.id}`}
-							onclick={() => methods.link(provider)}
-						>
-							<i class={provider.icon} aria-hidden="true"></i>
-							Link {provider.label}
-						</button>
-					{/each}
+<div class="settings">
+	<OnThisPageLayout items={sections} columnWidth="36rem" breakpoint="lg" centered>
+		<div class="column">
+			<header>
+				<div class="title-row">
+					<h1 class="display">Settings</h1>
+					<LogoutButton />
 				</div>
+				<div class="identity">
+					<span class="avatar"><Avatar avatarKey={data.me.avatarKey} size={40} /></span>
+					<div class="who">
+						<span class="username">{data.me.displayName}</span>
+						<a href={profileHref(data.me.username) ?? '/user/profile'} class="link">View profile</a>
+					</div>
+				</div>
+			</header>
+
+			<!-- Beside the column from 56rem (`OnThisPageLayout`); below it the same list sits here. -->
+			<div class="section-nav">
+				<ResourceNav items={sections} wrapped />
 			</div>
-		{/if}
-	</section>
+
+			<section id="email" class="card plain" aria-labelledby="email-heading">
+				<h2 id="email-heading">Email</h2>
+				{#if data.email}
+					<p class="email">{data.email}</p>
+					<p class="hint">{emailHint}</p>
+				{:else}
+					<p class="hint">{noEmailHint}</p>
+				{/if}
+			</section>
+
+			<SignInMethodsCard providers={data.providers} initial={data.methods} />
+			<SessionsCard initialCount={data.sessions} />
+			<AppearanceCard />
+			<AccountDataCard />
+			<div class="apart">
+				<DeleteAccountCard username={data.me.username ?? ''} sessionRecent={data.sessionRecent} />
+			</div>
+		</div>
+	</OnThisPageLayout>
 </div>
 
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	.account-page {
-		@apply flex flex-col mx-auto;
-		max-width: 36rem;
-		gap: var(--spacing-lg);
+	.settings {
 		padding-block: var(--spacing-xl);
 	}
 
-	.back {
-		@apply inline-flex items-center text-sm text-ink-muted no-underline;
-		min-height: 2.75rem;
-	}
-
-	.back:hover {
-		@apply text-ink;
+	.column {
+		@apply flex flex-col min-w-0 w-full mx-auto;
+		max-width: 36rem;
+		gap: var(--spacing-lg);
 	}
 
 	h1 {
@@ -299,6 +116,49 @@
 		gap: var(--spacing-sm) var(--spacing-md);
 	}
 
+	.identity {
+		@apply flex items-center text-sm;
+		gap: var(--spacing-sm);
+		margin-top: var(--spacing-sm);
+	}
+
+	.avatar {
+		@apply shrink-0;
+		display: inline-flex;
+	}
+
+	/* The username wraps; the link never does. */
+	.who {
+		@apply flex flex-col items-start min-w-0;
+	}
+
+	.username {
+		@apply font-medium min-w-0;
+		overflow-wrap: anywhere;
+	}
+
+	.who .link {
+		white-space: nowrap;
+	}
+
+	@media (pointer: coarse) {
+		.who .link {
+			@apply inline-flex items-center;
+			min-height: 2.75rem;
+		}
+	}
+
+	@media (min-width: 56rem) {
+		.section-nav {
+			@apply hidden;
+		}
+	}
+
+	/* Delete account sits a step further from Account data than the other cards sit apart. */
+	.apart {
+		margin-top: var(--spacing-lg);
+	}
+
 	h2 {
 		@apply font-semibold;
 		font-size: 1.125rem;
@@ -308,80 +168,14 @@
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
 		padding: 24px;
+		scroll-margin-top: 5rem;
 	}
 
 	.email {
 		overflow-wrap: anywhere;
 	}
 
-	.methods {
-		@apply flex flex-col;
-		gap: var(--spacing-md);
-		padding: 24px;
-	}
-
-	.hint,
-	.empty {
+	.hint {
 		@apply text-sm text-ink-muted;
-	}
-
-	ul {
-		@apply m-0 p-0 list-none;
-	}
-
-	li + li {
-		border-top: 1px solid var(--border);
-	}
-
-	.row {
-		@apply flex flex-wrap items-center gap-sm;
-		padding-block: var(--spacing-sm);
-	}
-
-	.row-actions {
-		@apply flex gap-sm;
-	}
-
-	.icon {
-		@apply text-xl text-ink-muted;
-	}
-
-	.meta {
-		@apply flex flex-col min-w-0;
-		flex: 1 1 8rem;
-	}
-
-	.name {
-		@apply font-medium truncate;
-	}
-
-	.confirm {
-		@apply flex flex-col gap-sm text-sm;
-		padding: var(--spacing-md);
-		margin-bottom: var(--spacing-sm);
-		border-radius: 12px;
-		background-color: var(--surface-sunken);
-	}
-
-	.actions {
-		@apply flex flex-wrap gap-sm;
-	}
-
-	.add {
-		@apply flex flex-col gap-sm;
-		padding-top: var(--spacing-sm);
-	}
-
-	.add-actions {
-		@apply flex flex-wrap gap-sm;
-	}
-
-	.add .btn {
-		@apply gap-sm;
-	}
-
-	h2:focus-visible,
-	.confirm p:focus-visible {
-		outline-offset: 2px;
 	}
 </style>

@@ -1,19 +1,13 @@
 <script lang="ts">
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
-	import CommentLink from '#lib/components/comments/commentLink.svelte';
-	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
-	import Badge from '#lib/components/ui/badge.svelte';
+	import { goto } from '$app/navigation';
+	import TableRow from '#lib/components/moderation/table/tableRow.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
-	import {
-		COMMENT_STATUS_LABELS,
-		REPORT_REASON_LABELS,
-		categoryLabel
-	} from '#lib/media/utils/comments.ts';
+	import { accountHref } from '#lib/media/utils/accountHref.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
-	import { formatDate } from '#lib/media/utils/format.ts';
-	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { pressPanelButton, pressesButton, shortcutOf } from '#lib/media/utils/moderationKeys.ts';
+	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
 	import { TABLE_FOCUS } from '#lib/media/utils/tableChips.ts';
-	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
 
 	interface Props {
 		rows: ModerationTableRow[];
@@ -27,12 +21,36 @@
 	/** The row whose detail is open: the full comment with every action. */
 	let openId = $state<string | null>(null);
 
-	const COLUMNS = 10;
-
-	const reasons = (row: ModerationTableRow) => [
-		...new Set(row.reports.map((report) => REPORT_REASON_LABELS[report.reason]))
-	];
+	/**
+	 * With a detail open, j and k open the next and previous row's, and a letter presses the open
+	 * detail's button, and u opens its author's account. With none open the keys do nothing: Review
+	 * is the way in.
+	 */
+	function onkeydown(event: KeyboardEvent) {
+		if (openId === null) return;
+		const shortcut = shortcutOf(event, moderationPrefs.shortcuts);
+		if (!shortcut) return;
+		if (shortcut === 'next' || shortcut === 'previous') {
+			event.preventDefault();
+			const target =
+				rows[rows.findIndex((r) => r.comment.id === openId) + (shortcut === 'next' ? 1 : -1)];
+			if (!target) return;
+			openId = target.comment.id;
+			void focusAfterUpdate(() => document.getElementById(`review-${target.comment.id}`));
+		} else if (shortcut === 'account') {
+			const open = rows.find((r) => r.comment.id === openId);
+			if (!open) return;
+			event.preventDefault();
+			void goto(accountHref(open.author.id));
+		} else if (pressesButton(shortcut) && !event.repeat) {
+			if (pressPanelButton(document.getElementById(`detail-${openId}`), shortcut)) {
+				event.preventDefault();
+			}
+		}
+	}
 </script>
+
+<svelte:window {onkeydown} />
 
 <!-- The focus lands here when an action takes its row off the page and no neighbour can take it. -->
 <div class="card" id={TABLE_FOCUS.card} tabindex="-1">
@@ -68,140 +86,13 @@
 				</thead>
 				<tbody>
 					{#each rows as row (row.comment.id)}
-						{@const id = row.comment.id}
-						{@const href = titleHref(row.title.kind, row.title.tmdbId)}
-						{@const permalink = commentHref(row.title.kind, row.title.tmdbId, id)}
-						{@const open = openId === id}
-						<tr class="row" data-open={open || undefined}>
-							<td class="select">
-								<label class="pick">
-									<input
-										type="checkbox"
-										value={id}
-										bind:group={selected}
-										disabled={!canActOn(me, row.author)}
-										aria-label="Select the comment by {row.author.displayName} on {row.title.name}"
-										aria-describedby={canActOn(me, row.author) ? undefined : 'not-selectable'}
-									/>
-								</label>
-							</td>
-							<td class="comment">
-								<p class="clamp body">{row.comment.body}</p>
-							</td>
-							<td class="author">
-								<span class="name"
-									><ProfileLink
-										username={row.author.username}
-										name={row.author.displayName}
-									/></span
-								>
-								{#if row.author.role !== 'user'}
-									<Badge tone="brand">
-										{row.author.role === 'moderator' ? 'Moderator' : 'Administrator'}
-									</Badge>
-								{/if}
-							</td>
-							<td class="title">
-								<span class="clamp">
-									{#if href}<a class="link" {href}>{row.title.name}</a>{:else}{row.title.name}{/if}
-								</span>
-							</td>
-							<td>
-								<Badge tone={commentStatusTone(row.comment.status)}>
-									{COMMENT_STATUS_LABELS[row.comment.status]}
-								</Badge>
-							</td>
-							<td>
-								<div class="stack">
-									{#if row.aiFailure}
-										<span class="label">Check failed</span>
-									{:else if row.severity === null}
-										<span class="label">Not checked</span>
-									{:else if row.severity === 0 && row.aiCategories.length === 0}
-										<span class="label">Nothing found</span>
-									{:else}
-										{#if row.severity > 0}
-											{#if row.severity >= 2}
-												<Badge tone={severityTone(row.severity)}>Severity {row.severity}</Badge>
-											{:else}
-												<span class="label">Severity {row.severity}</span>
-											{/if}
-										{/if}
-										{#each row.aiCategories as category (category)}
-											<Badge tone="neutral">{categoryLabel(category)}</Badge>
-										{/each}
-									{/if}
-								</div>
-							</td>
-							<td>
-								{#if row.reports.length > 0}
-									<div class="stack">
-										<span class="num count">{row.reports.length} open</span>
-										<span class="label">{reasons(row).join(', ')}</span>
-									</div>
-								{:else}
-									<span class="label">None</span>
-								{/if}
-							</td>
-							<td class="scan">
-								{#if row.latestLabel}
-									<div class="stack">
-										<Badge tone={row.latestLabel.matched ? 'mid' : 'neutral'}>
-											{row.latestLabel.matched ? 'Matched' : 'No match'}
-										</Badge>
-										<span class="label clamp">{row.latestLabel.concern}</span>
-									</div>
-								{:else}
-									<span class="label">Not scanned</span>
-								{/if}
-							</td>
-							<td class="posted">
-								<time class="num" datetime={row.comment.createdAt}
-									>{formatDate(row.comment.createdAt)}</time
-								>
-							</td>
-							<td class="actions">
-								<div class="row-actions">
-									{#if permalink}
-										<CommentLink
-											href={permalink}
-											label="View the comment by {row.author.displayName}"
-										/>
-									{/if}
-									<button
-										class="chip"
-										type="button"
-										aria-expanded={open}
-										aria-controls={open ? `detail-${id}` : undefined}
-										aria-label="{open ? 'Close' : 'Review'} the comment by {row.author.displayName}"
-										onclick={() => (openId = open ? null : id)}
-									>
-										{open ? 'Close' : 'Review'}
-									</button>
-								</div>
-							</td>
-						</tr>
-						{#if open}
-							<tr class="detail" id="detail-{id}">
-								<td colspan={COLUMNS}>
-									<div class="detail-body">
-										{#if row.latestLabel}
-											<p class="scan-note label">
-												Latest scan for “{row.latestLabel.concern}”: {row.latestLabel.matched
-													? 'matched'
-													: 'no match'}. {row.latestLabel.reason}
-												{#if row.latestLabel.categories.length > 0}
-													({row.latestLabel.categories.map(categoryLabel).join(', ')})
-												{/if}
-											</p>
-										{/if}
-										<ul class="item">
-											<ModerationItemRow item={row} {me} fallbackId={TABLE_FOCUS.card} />
-										</ul>
-									</div>
-								</td>
-							</tr>
-						{/if}
+						<TableRow
+							{row}
+							{me}
+							bind:selected
+							open={openId === row.comment.id}
+							ontoggle={() => (openId = openId === row.comment.id ? null : row.comment.id)}
+						/>
 					{/each}
 				</tbody>
 			</table>
@@ -233,15 +124,16 @@
 		min-width: 64rem;
 	}
 
-	th,
-	td {
+	/* The cells belong to `tableRow` and `tableDetail`; the table sets what they share. */
+	table :global(th),
+	table :global(td) {
 		@apply text-left align-top;
 		padding: var(--spacing-sm);
 		border-bottom: 1px solid var(--border);
 	}
 
 	/* Short values stay on one line, so every row reads across at the same height. */
-	td:not(.comment, .title, .scan, .author) {
+	table :global(td:not(.comment, .title, .scan, .author)) {
 		white-space: nowrap;
 	}
 
@@ -252,7 +144,7 @@
 		border-bottom-color: var(--border-strong);
 	}
 
-	tbody tr:last-child td {
+	table :global(tbody tr:last-child td) {
 		border-bottom: 0;
 	}
 
@@ -261,118 +153,12 @@
 		padding: 0;
 	}
 
-	/* The label fills the cell, so the whole cell is the target. */
-	.pick {
-		@apply flex items-center justify-center cursor-pointer;
-		min-width: 2.5rem;
-		min-height: 2.25rem;
-	}
-
-	.pick input {
-		@apply cursor-pointer;
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--brand);
-	}
-
-	.comment {
-		min-width: 18rem;
-		width: 100%;
-	}
-
-	.author,
-	.title {
-		min-width: 7rem;
-		max-width: 10rem;
-	}
-
-	.scan {
-		min-width: 7rem;
-		max-width: 10rem;
-	}
-
-	.row[data-open] > td {
-		background-color: var(--surface-sunken);
-	}
-
-	.body {
-		overflow-wrap: anywhere;
-	}
-
-	.clamp {
-		@apply line-clamp-2;
-		overflow-wrap: anywhere;
-	}
-
-	.name {
-		@apply font-semibold;
-		overflow-wrap: anywhere;
-	}
-
-	.stack {
-		@apply flex flex-col items-start;
-		gap: var(--spacing-xs);
-	}
-
-	.count {
-		@apply font-medium text-ink;
-	}
-
-	/* Review stays in view at the row's end while the table scrolls sideways. */
-	.row-actions {
-		@apply flex items-center;
-		gap: var(--spacing-xs);
-	}
-
+	/* The actions column stays in view at the row's end while the table scrolls sideways. */
 	.actions {
 		position: sticky;
 		right: 0;
 		padding-right: var(--spacing-md);
 		background-color: var(--surface-raised);
 		box-shadow: inset 1px 0 0 var(--border);
-	}
-
-	@media (pointer: coarse) {
-		/* The author's profile link is a standalone link: a 44px touch target. */
-		.author .name :global(a) {
-			display: inline-flex;
-			align-items: center;
-			min-height: 2.75rem;
-		}
-
-		.actions .chip {
-			height: 2.75rem;
-		}
-
-		.pick {
-			min-width: 2.75rem;
-			min-height: 2.75rem;
-		}
-
-		.pick input {
-			width: 1.375rem;
-			height: 1.375rem;
-		}
-	}
-
-	.detail > td {
-		padding: 0;
-		white-space: normal;
-	}
-
-	/* An open review keeps to the visible part of the scroll box, wherever the table is scrolled. */
-	.detail-body {
-		position: sticky;
-		left: 0;
-		width: 100cqw;
-	}
-
-	.scan-note {
-		padding: var(--spacing-sm) var(--spacing-md) 0;
-		overflow-wrap: anywhere;
-	}
-
-	.item {
-		@apply list-none m-0 p-0;
 	}
 </style>

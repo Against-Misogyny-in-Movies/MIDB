@@ -9,6 +9,7 @@ import { REPORT_ACCOUNT_MIN_AGE_DAYS } from '#lib/media/utils/communityReports.t
 import {
 	findProfileOwner,
 	getProfileComments,
+	getProfileReports,
 	getPublicProfile
 } from '#lib/server/data/profile-queries.ts';
 
@@ -116,9 +117,11 @@ describe('getPublicProfile', () => {
 			'comments',
 			'id',
 			'joinedAt',
+			'reportCount',
 			'reports',
 			'scoreTotal',
 			'staffRole',
+			'titleCount',
 			'username'
 		]);
 	});
@@ -180,8 +183,10 @@ describe('getPublicProfile', () => {
 		expect(profile).toMatchObject({
 			scoreTotal: 0,
 			commentCount: 0,
+			reportCount: 0,
+			titleCount: 0,
 			comments: { comments: [], nextCursor: null },
-			reports: []
+			reports: { reports: [], nextCursor: null }
 		});
 	});
 });
@@ -198,7 +203,9 @@ describe('counted community reports', () => {
 		await db.update(communityContentReports).set({ updatedAt: new Date(Date.now() - 5 * DAY) });
 		await report('anna-id', dark);
 		await report('bea-id', alien);
-		const { reports } = (await getPublicProfile('anna'))!;
+		const profile = (await getPublicProfile('anna'))!;
+		const { reports } = profile.reports;
+		expect(profile.reportCount).toBe(2);
 		expect(reports.every((r) => Object.keys(r).sort().join() === 'kind,name,tmdbId')).toBe(true);
 		expect(reports.map((r) => [r.kind, r.tmdbId, r.name])).toEqual([
 			['tv', 70523, 'Dark'],
@@ -209,7 +216,8 @@ describe('counted community reports', () => {
 	it('leaves out a held or rejected report', async () => {
 		await report('anna-id', alien, 'held');
 		await report('anna-id', dark, 'rejected');
-		expect((await getPublicProfile('anna'))?.reports).toEqual([]);
+		expect((await getPublicProfile('anna'))?.reports.reports).toEqual([]);
+		expect((await getPublicProfile('anna'))?.reportCount).toBe(0);
 	});
 
 	it('follows the title counts rule: a new, a muted or a banned account has none, staff always count', async () => {
@@ -225,9 +233,10 @@ describe('counted community reports', () => {
 			userValues('staff-id', { username: 'staffer', role: 'moderator', createdAt: fresh })
 		]);
 		for (const id of ['new-id', 'mute-id', 'staff-id']) await report(id, alien);
-		expect((await getPublicProfile('newbie'))?.reports).toEqual([]);
-		expect((await getPublicProfile('muted'))?.reports).toEqual([]);
-		expect((await getPublicProfile('staffer'))?.reports).toHaveLength(1);
+		expect((await getPublicProfile('newbie'))?.reports.reports).toEqual([]);
+		expect((await getPublicProfile('muted'))?.reports.reports).toEqual([]);
+		expect((await getPublicProfile('staffer'))?.reports.reports).toHaveLength(1);
+		expect((await getPublicProfile('staffer'))?.reportCount).toBe(1);
 	});
 });
 
@@ -268,5 +277,112 @@ describe('getProfileComments times', () => {
 		await comment({ createdAt: new Date('2026-11-01T10:07:42.123Z') });
 		const page = await getProfileComments('anna-id', null);
 		expect(page.comments[0].createdAt).toBe('2026-11-01T10:07:00.000Z');
+	});
+});
+
+describe('the Titles figure', () => {
+	const report = (
+		userId: string,
+		titleId: string,
+		status: 'counted' | 'held' | 'rejected' = 'counted'
+	) => db.insert(communityContentReports).values({ userId, titleId, status });
+
+	it('counts a title once across a comment and a report on it', async () => {
+		await comment({ titleId: alien });
+		await comment({ titleId: alien });
+		await report('anna-id', alien);
+		expect((await getPublicProfile('anna'))?.titleCount).toBe(1);
+		await report('anna-id', dark);
+		expect((await getPublicProfile('anna'))?.titleCount).toBe(2);
+	});
+
+	it('leaves out unpublished comments, uncounted reports and other accounts', async () => {
+		await comment({ status: 'pending', titleId: alien });
+		await comment({ status: 'rejected', titleId: dark });
+		await report('anna-id', alien, 'held');
+		await report('anna-id', dark, 'rejected');
+		await comment({ userId: 'bea-id', titleId: alien });
+		await report('bea-id', dark);
+		expect((await getPublicProfile('anna'))?.titleCount).toBe(0);
+		expect((await getPublicProfile('bea'))?.titleCount).toBe(2);
+	});
+
+	it('counts the title of a report alone, and drops it when the account is muted', async () => {
+		await report('anna-id', dark);
+		expect((await getPublicProfile('anna'))?.titleCount).toBe(1);
+		await db
+			.update(users)
+			.set({ mutedUntil: new Date(Date.now() + DAY) })
+			.where(eq(users.id, 'anna-id'));
+		expect((await getPublicProfile('anna'))?.titleCount).toBe(0);
+	});
+});
+
+describe('getProfileReports paging', () => {
+	const titleIds: string[] = [];
+
+	beforeEach(async () => {
+		titleIds.length = 0;
+		const rows = await db
+			.insert(titles)
+			.values(
+				[0, 1, 2, 3, 4].map((i) => ({
+					kind: 'movie' as const,
+					title: `Film ${i}`,
+					cleanTitle: `film ${i}`,
+					tmdbId: 1000 + i
+				}))
+			)
+			.returning();
+		for (const [i, row] of rows.entries()) {
+			titleIds.push(row.id);
+			const at = new Date(Date.now() - i * 60_000);
+			await db
+				.insert(communityContentReports)
+				.values({ userId: 'anna-id', titleId: row.id, createdAt: at, updatedAt: at });
+		}
+	});
+
+	it('pages by cursor, newest first, without a repeat or a gap, and ends on a null cursor', async () => {
+		const names = (page: { reports: { name: string }[] }) => page.reports.map((r) => r.name);
+		const one = await getProfileReports('anna-id', null, 2);
+		expect(names(one)).toEqual(['Film 0', 'Film 1']);
+		expect(one.nextCursor).not.toBeNull();
+		const two = await getProfileReports('anna-id', one.nextCursor, 2);
+		expect(names(two)).toEqual(['Film 2', 'Film 3']);
+		const three = await getProfileReports('anna-id', two.nextCursor, 2);
+		expect(names(three)).toEqual(['Film 4']);
+		expect(three.nextCursor).toBeNull();
+	});
+
+	it('has no cursor when everything fits one page, and reads a cursor it did not make as the first page', async () => {
+		const all = await getProfileReports('anna-id', null, 5);
+		expect(all.reports).toHaveLength(5);
+		expect(all.nextCursor).toBeNull();
+		expect((await getProfileReports('anna-id', 'garbage', 2)).reports).toHaveLength(2);
+	});
+
+	it('keeps reports that share a timestamp apart by title id', async () => {
+		const at = new Date(Date.now() + 5 * 60_000);
+		await db.update(communityContentReports).set({ updatedAt: at });
+		const seen: string[] = [];
+		let cursor: string | null = null;
+		do {
+			const page = await getProfileReports('anna-id', cursor, 2);
+			seen.push(...page.reports.map((r) => r.name));
+			cursor = page.nextCursor;
+		} while (cursor);
+		expect([...seen].sort()).toEqual(['Film 0', 'Film 1', 'Film 2', 'Film 3', 'Film 4']);
+		expect(new Set(seen).size).toBe(5);
+	});
+
+	it('pages only the reports that count', async () => {
+		await db
+			.update(communityContentReports)
+			.set({ status: 'held' })
+			.where(eq(communityContentReports.titleId, titleIds[0]));
+		const all = await getProfileReports('anna-id', null, 10);
+		expect(all.reports.map((r) => r.name)).toEqual(['Film 1', 'Film 2', 'Film 3', 'Film 4']);
+		expect((await getPublicProfile('anna'))?.reportCount).toBe(4);
 	});
 });

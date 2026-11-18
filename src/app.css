@@ -307,6 +307,56 @@
 		background-color: var(--surface-sunken);
 	}
 
+	/* A row of buttons: wraps, 8px apart. The moderation rows, plates and bars share it. */
+	.action-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-sm);
+	}
+
+	/* A card's list of rows: no bullets, a hairline between rows, rounded by the card. */
+	.row-list {
+		display: flex;
+		flex-direction: column;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+	}
+
+	.row-list > li + li {
+		border-top: 1px solid var(--border);
+	}
+
+	/* A checkbox or radio with its label: 28px tall, 44px on a coarse pointer, brand-accented. */
+	.check-row {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		min-height: 1.75rem;
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+
+	.check-row input {
+		flex-shrink: 0;
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--brand);
+		cursor: pointer;
+	}
+
+	@media (pointer: coarse) {
+		.check-row {
+			min-height: 2.75rem;
+		}
+
+		.check-row input {
+			width: 1.375rem;
+			height: 1.375rem;
+		}
+	}
+
 	/* Buttons: 8px radius, 14px semibold. One --brand button per view for the main action;
 	   --ink for a secondary filled action; ghost beside a filled one. */
 	.btn {

@@ -8,6 +8,7 @@ import { userValues } from '#db/test/users.ts';
 import { createComment, editComment, type CommentRow } from '#lib/server/data/comment-queries.ts';
 import {
 	approveComment,
+	banAccount,
 	dismissReports,
 	hideComment,
 	muteUser,
@@ -193,8 +194,9 @@ describe('an administrator’s decision binds a moderator', () => {
 		const id = await pendingComment();
 		await rejectComment(admin, id, 'abuse');
 		expect(await restoreComment(admin, id, null)).toMatchObject({ ok: true });
-		await hideComment(mod, id, null);
-		expect(await restoreComment(mod, id, null)).toMatchObject({ ok: true });
+		const other = await pendingComment();
+		await hideComment(mod, other, null);
+		expect(await restoreComment(mod, other, null)).toMatchObject({ ok: true });
 	});
 
 	it('does not let a moderator shorten an active mute, and lets an administrator set any length', async () => {
@@ -202,13 +204,21 @@ describe('an administrator’s decision binds a moderator', () => {
 			(await db.select().from(users).where(eq(users.id, 'u3')))[0].mutedUntil?.getTime() ?? 0;
 		await muteUser(admin, 'u3', 168, null);
 		const long = await mutedUntil();
-		expect(await muteUser(mod, 'u3', 24, null)).toMatchObject({ ok: true });
+		// A moderator cannot mute over an administrator's mute at all (`admin-acted`).
+		expect(await muteUser(mod, 'u3', 24, null)).toEqual({ ok: false, reason: 'admin-acted' });
 		expect(await mutedUntil()).toBe(long);
 		await muteUser(admin, 'u3', 24, null);
 		expect(await mutedUntil()).toBeLessThan(long);
 		const short = await mutedUntil();
-		await muteUser(mod, 'u3', 168, null);
-		expect(await mutedUntil()).toBeGreaterThan(short);
+		expect(await muteUser(mod, 'u3', 168, null)).toEqual({ ok: false, reason: 'admin-acted' });
+		expect(await mutedUntil()).toBe(short);
+		// Over a moderator's own mute a shorter one changes nothing, and a longer one extends it.
+		await muteUser(mod, 'u4', 168, null);
+		const own = (await db.select().from(users).where(eq(users.id, 'u4')))[0].mutedUntil!.getTime();
+		await muteUser(mod, 'u4', 24, null);
+		expect((await db.select().from(users).where(eq(users.id, 'u4')))[0].mutedUntil!.getTime()).toBe(
+			own
+		);
 		expect(
 			(await db.select().from(moderationActions)).filter((a) => a.action === 'mute')
 		).toHaveLength(4);
@@ -219,5 +229,125 @@ describe('an administrator’s decision binds a moderator', () => {
 		await muteUser(mod, 'u4', 24, null);
 		const until = (await db.select().from(users).where(eq(users.id, 'u4')))[0].mutedUntil;
 		expect(until?.getTime()).toBeGreaterThanOrEqual(before + 24 * 3_600_000);
+	});
+});
+
+describe('an administrator’s decision binds a moderator on every action', () => {
+	const refused = { ok: false, reason: 'admin-acted' };
+
+	it('keeps a moderator from hiding or rejecting a comment an administrator last acted on', async () => {
+		const approved = await pendingComment();
+		expect(await approveComment(admin, approved, null)).toMatchObject({ ok: true });
+		const before = await logged();
+		expect(await hideComment(mod, approved, null)).toEqual(refused);
+		expect(await rejectComment(mod, approved, 'abuse')).toEqual(refused);
+		expect((await row(approved)).status).toBe('published');
+		expect(await logged()).toBe(before);
+		// The administrator still may, and a moderator may once a moderator acted last.
+		expect(await hideComment(admin, approved, null)).toMatchObject({ ok: true });
+		expect(await restoreComment(admin, approved, null)).toMatchObject({ ok: true });
+		expect(await hideComment(admin, approved, null)).toMatchObject({ ok: true });
+		expect(await restoreComment(admin, approved, null)).toMatchObject({ ok: true });
+	});
+
+	it('lets a moderator hide or reject once a moderator acted after the administrator', async () => {
+		const id = await pendingComment();
+		await approveComment(admin, id, null);
+		await db.insert(moderationActions).values({
+			actorId: 'mod',
+			targetCommentId: id,
+			action: 'dismiss',
+			createdAt: new Date(Date.now() + 1000)
+		});
+		expect(await hideComment(mod, id, null)).toMatchObject({ ok: true });
+		expect((await row(id)).status).toBe('hidden');
+	});
+
+	/** An administrator's log row landing between a moderator's read and the moderator's batch. */
+	const adminActsInTheWindow = (commentId: string) => {
+		race.beforeMove = async () => {
+			await db.insert(moderationActions).values({
+				actorId: 'admin',
+				targetCommentId: commentId,
+				action: 'dismiss'
+			});
+		};
+	};
+
+	it.each([
+		['hide', (id: string) => hideComment(mod, id, null), 'published'],
+		['reject', (id: string) => rejectComment(mod, id, 'abuse'), 'published'],
+		['approve', (id: string) => approveComment(mod, id, null), 'pending'],
+		['restore', (id: string) => restoreComment(mod, id, null), 'hidden']
+	] as const)(
+		'writes nothing when an administrator acts after a moderator’s %s was read',
+		async (_name, act, status) => {
+			const id = await pendingComment();
+			if (status !== 'pending') {
+				await db.update(comments).set({ status }).where(eq(comments.id, id));
+			}
+			await db.insert(commentReports).values({ commentId: id, reporterId: 'u1', reason: 'spam' });
+			adminActsInTheWindow(id);
+			const before = await logged();
+			expect(await act(id)).toEqual(refused);
+			expect((await row(id)).status).toBe(status);
+			expect((await db.select().from(commentReports))[0].status).toBe('open');
+			expect(await logged()).toBe(before + 1);
+		}
+	);
+
+	it('writes nothing when an administrator acts after a moderator’s dismiss was read', async () => {
+		const id = await pendingComment();
+		await db.update(comments).set({ moderationSource: 'reports' }).where(eq(comments.id, id));
+		await db.insert(commentReports).values({ commentId: id, reporterId: 'u1', reason: 'spam' });
+		adminActsInTheWindow(id);
+		expect(await dismissReports(mod, id, null)).toEqual(refused);
+		expect((await row(id)).status).toBe('pending');
+		expect((await db.select().from(commentReports))[0].status).toBe('open');
+	});
+
+	it('does not stop an administrator who acts in the same window', async () => {
+		const id = await pendingComment();
+		race.beforeMove = async () => {
+			await db.insert(moderationActions).values({
+				actorId: 'admin',
+				targetCommentId: id,
+				action: 'dismiss'
+			});
+		};
+		expect(await hideComment(admin, id, null)).toMatchObject({ ok: true });
+		expect((await row(id)).status).toBe('hidden');
+	});
+});
+
+describe('a banned account is not banned or muted again', () => {
+	const banned = { ok: false, reason: 'already-banned' };
+
+	it('refuses a second ban and a mute, for a moderator and an administrator', async () => {
+		expect(await banAccount(mod, 'u1', 'spam')).toMatchObject({ ok: true });
+		const before = await logged();
+		const [{ bannedAt, banReason }] = await db.select().from(users).where(eq(users.id, 'u1'));
+		expect(await banAccount(mod, 'u1', 'again')).toEqual(banned);
+		expect(await banAccount(admin, 'u1', 'again')).toEqual(banned);
+		expect(await muteUser(mod, 'u1', 24, null)).toEqual(banned);
+		expect(await muteUser(admin, 'u1', 24, null)).toEqual(banned);
+		expect(await logged()).toBe(before);
+		const [after] = await db.select().from(users).where(eq(users.id, 'u1'));
+		expect([after.bannedAt, after.banReason, after.mutedUntil]).toEqual([
+			bannedAt,
+			banReason,
+			null
+		]);
+	});
+
+	it('still mutes and bans an account that is not banned, muted or not', async () => {
+		expect(await muteUser(mod, 'u2', 24, null)).toMatchObject({ ok: true });
+		expect(await banAccount(mod, 'u2', null)).toMatchObject({ ok: true });
+	});
+
+	it('answers forbidden-target before already-banned', async () => {
+		await banAccount(admin, 'mod', 'x');
+		expect(await banAccount(mod, 'mod', null)).toEqual({ ok: false, reason: 'forbidden-target' });
+		expect(await banAccount(admin, 'mod', null)).toEqual(banned);
 	});
 });

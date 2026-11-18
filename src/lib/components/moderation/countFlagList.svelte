@@ -1,11 +1,11 @@
 <script lang="ts">
 	import CountFlagItem from '#lib/components/moderation/countFlagItem.svelte';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
-	import { canCloseFlag } from '#lib/media/utils/canActOn.ts';
+	import { canCloseFlag, canReopenFlag } from '#lib/media/utils/canActOn.ts';
 
 	interface Props {
 		flags: FlaggedTitle['flags'];
-		/** The acting staff member, whose role decides which flags the buttons offer (a moderator gets none of their own or an administrator's). */
+		/** The acting staff member, whose role decides which flags the buttons offer (a moderator gets none of their own or an administrator's, and cannot re-open what an administrator closed). */
 		me: { id: string; role: string };
 	}
 
@@ -16,7 +16,13 @@
 	{#each flags as flag (flag.id)}
 		<CountFlagItem
 			{flag}
-			canAct={canCloseFlag(me, { id: flag.reporterId, role: flag.reporterRole })}
+			canAct={flag.status === 'open'
+				? canCloseFlag(me, { id: flag.reporterId, role: flag.reporterRole })
+				: canReopenFlag(
+						me,
+						{ id: flag.reporterId, role: flag.reporterRole },
+						flag.closedByAdministrator
+					)}
 		/>
 	{/each}
 </ul>

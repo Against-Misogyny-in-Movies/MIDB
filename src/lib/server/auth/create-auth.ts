@@ -4,6 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { passkey } from '@better-auth/passkey';
 import type { Db } from '#db/client.ts';
 import { accounts, passkeys, sessions, users, verifications } from '#db/schema/auth.ts';
+import { SESSION_COOKIE_CACHE_SECONDS } from '#lib/media/utils/sessionCache.ts';
 import { isLocalOrigin } from '#lib/server/http/origin.ts';
 import { adoptProviderEmail } from './link-email.ts';
 import { guardLastMethod } from './last-method.ts';
@@ -72,11 +73,11 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 			}
 		},
 		session: {
-			// The signed cookie lets `getSession` skip the database for five minutes after Better
-			// Auth sets it. The hook's own session read cannot set cookies, so it never renews the
+			// The signed cookie lets `getSession` skip the database for that long after Better
+			// Auth sets it (`SESSION_COOKIE_CACHE_SECONDS`). The hook's own session read cannot set cookies, so it never renews the
 			// cookie. It re-reads the user row (`locals.getUser`), so a ban or a role change applies
 			// at once.
-			cookieCache: { enabled: true, maxAge: 300 }
+			cookieCache: { enabled: true, maxAge: SESSION_COOKIE_CACHE_SECONDS }
 		},
 		account: {
 			accountLinking: {
@@ -126,10 +127,13 @@ export function createAuth({ db, origin, secret, google, discord, turnstileSecre
 					before: async (session) => {
 						const user = await db.query.users.findFirst({
 							where: (u, { eq }) => eq(u.id, session.userId),
-							columns: { bannedAt: true }
+							columns: { bannedAt: true, deletedAt: true }
 						});
 						if (user?.bannedAt) {
 							throw new APIError('FORBIDDEN', { message: 'This account is banned.' });
+						}
+						if (user?.deletedAt) {
+							throw new APIError('FORBIDDEN', { message: 'This account was deleted.' });
 						}
 					}
 				}

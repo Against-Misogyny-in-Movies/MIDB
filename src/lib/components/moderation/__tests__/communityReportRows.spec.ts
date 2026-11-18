@@ -56,6 +56,7 @@ const account = (over: Partial<ReportAccount> = {}): ReportAccount => ({
 	role: 'user',
 	countsFrom: new Date(Date.now() - 93 * DAY).toISOString(),
 	restricted: null,
+	mutedByModerator: false,
 	...over
 });
 
@@ -100,7 +101,7 @@ const titleReport = (over: Partial<TitleReport> = {}): TitleReport => ({
 function mountRow(report: TitleReport, canAct = true, canRestrict = canAct) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(TitleReportRow, {
-		props: { report, titleId: 't1', canAct, canRestrict },
+		props: { report, titleId: 't1', canAct, canRestrict, me: { id: 'viewer', role: 'moderator' } },
 		target: list
 	});
 }
@@ -139,7 +140,7 @@ describe('the title report row', () => {
 		const group = screen.getByText('Account').closest('div')!;
 		expect(within(group).getByRole('button', { name: 'Mute account' })).toBeTruthy();
 		expect(
-			within(group).getByRole('button', { name: 'Reject all from this account' })
+			within(group).getByRole('button', { name: 'Reject all community reports from this account' })
 		).toBeTruthy();
 		expect(within(group).queryByRole('button', { name: 'Count it' })).toBeNull();
 	});
@@ -148,7 +149,9 @@ describe('the title report row', () => {
 		mountRow(titleReport({ account: account({ role: 'administrator' }) }), false);
 		expect(screen.queryByText('Account')).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Reject all from this account' })).toBeNull();
+		expect(
+			screen.queryByRole('button', { name: 'Reject all community reports from this account' })
+		).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
 		expect(screen.getByText('An administrator decides on this report.')).toBeTruthy();
@@ -157,14 +160,18 @@ describe('the title report row', () => {
 	it('offers an administrator their own report but not Mute or Ban on themselves', () => {
 		mountRow(titleReport(), true, false);
 		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Reject all from this account' })).toBeTruthy();
+		expect(
+			screen.getByRole('button', { name: 'Reject all community reports from this account' })
+		).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
 	});
 
 	it('asks before rejecting every report, naming the count and the consequence', async () => {
 		mountRow(titleReport());
-		await fireEvent.click(screen.getByRole('button', { name: 'Reject all from this account' }));
+		await fireEvent.click(
+			screen.getByRole('button', { name: 'Reject all community reports from this account' })
+		);
 		expect(
 			screen.getByText(
 				/Reject all 3 community reports from anna\? They leave the counts on every title they cover\./
@@ -230,30 +237,43 @@ describe('the open title view', () => {
 		flags: [
 			{
 				id: 'f1',
+				status: 'open',
 				note: 'Too low',
 				reporter: 'bo',
 				reporterId: 'u1',
 				reporterRole: 'user',
+				closedByAdministrator: false,
 				createdAt: '2026-11-10T10:00:00Z'
 			},
 			{
 				id: 'f2',
+				status: 'open',
 				note: null,
 				reporter: null,
 				reporterId: 'u2',
 				reporterRole: 'user',
+				closedByAdministrator: false,
 				createdAt: '2026-11-11T10:00:00Z'
 			}
 		]
 	};
-	const open = { id: 't1', kind: 'movie' as const, tmdbId: 348, name: 'Alien', reports: [] };
+	const open = {
+		id: 't1',
+		kind: 'movie' as const,
+		tmdbId: 348,
+		name: 'Alien',
+		reports: [],
+		flags: [],
+		closedFlags: []
+	};
 	const me = { id: 'mod', role: 'moderator' };
 
 	function mountPanel(flags: FlaggedTitle[] = [flagged]) {
 		return render(CommunityReportsPanel, {
-			held: [],
-			flagged: flags,
-			openTitle: open,
+			held: null,
+			flagged: null,
+			flaggedCount: flags.length,
+			openTitle: { ...open, flags: flags[0]?.flags ?? [] },
 			titleId: 't1',
 			me
 		});
@@ -267,8 +287,20 @@ describe('the open title view', () => {
 		expect(
 			screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by bo')
 		).toBeTruthy();
-		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe('/u/bo');
-		expect(screen.getByText('Reported by An account')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe(
+			'/user/moderation/accounts/u1'
+		);
+		expect(screen.getByRole('link', { name: 'Public profile of bo' }).getAttribute('href')).toBe(
+			'/u/bo'
+		);
+		expect(
+			screen.getByText(
+				(_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by An account'
+			)
+		).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'An account' }).getAttribute('href')).toBe(
+			'/user/moderation/accounts/u2'
+		);
 		expect(screen.queryByText('A removed account')).toBeNull();
 	});
 
@@ -316,10 +348,11 @@ describe('the open title view', () => {
 			reporterRole: 'administrator'
 		};
 		render(CommunityReportsPanel, {
-			held: [],
-			openTitle: open,
+			held: null,
+			flagged: null,
+			flaggedCount: 1,
+			openTitle: { ...open, flags: [theirs] },
 			titleId: 't1',
-			flagged: [{ ...flagged, flags: [theirs] }],
 			me
 		});
 		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
@@ -328,10 +361,10 @@ describe('the open title view', () => {
 
 	it('hides the buttons of a moderator’s own flag only; an administrator keeps theirs', () => {
 		const own = { ...flagged.flags[0], id: 'f3', reporterId: 'mod' };
-		const props = { held: [], openTitle: open, titleId: 't1' };
+		const props = { held: null, flagged: null, flaggedCount: 1, titleId: 't1' };
 		const { unmount } = render(CommunityReportsPanel, {
 			...props,
-			flagged: [{ ...flagged, flags: [own] }],
+			openTitle: { ...open, flags: [own] },
 			me
 		});
 		expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
@@ -342,7 +375,7 @@ describe('the open title view', () => {
 		unmount();
 		render(CommunityReportsPanel, {
 			...props,
-			flagged: [{ ...flagged, flags: [own, flagged.flags[1]] }],
+			openTitle: { ...open, flags: [own, flagged.flags[1]] },
 			me: { id: 'mod', role: 'administrator' }
 		});
 		expect(screen.getAllByRole('button', { name: 'Resolve' })).toHaveLength(2);
@@ -351,8 +384,9 @@ describe('the open title view', () => {
 	it('shows no actions for a report of an administrator', () => {
 		const admin = titleReport({ account: account({ role: 'administrator' }) });
 		render(CommunityReportsPanel, {
-			held: [],
-			flagged: [],
+			held: null,
+			flagged: null,
+			flaggedCount: 0,
 			openTitle: { ...open, reports: [admin] },
 			titleId: 't1',
 			me
@@ -380,6 +414,7 @@ describe('the action log sentences', () => {
 		id: 'a',
 		action: 'approve_report',
 		reason: null,
+		rule: null,
 		createdAt: '2026-11-03T10:00:00.000Z',
 		actor,
 		targetUser: target,
@@ -388,12 +423,19 @@ describe('the action log sentences', () => {
 		commentId: null,
 		commentStatus: null,
 		commentEditedAt: null,
+		inForce: null,
+		flag: null,
+		reverses: null,
+		latestForComment: false,
 		title: { id: 't1', kind: 'movie', tmdbId: 348, name: 'Alien' },
 		...over
 	});
 	const mountEntry = (e: RecentAction) => {
 		const list = document.body.appendChild(document.createElement('ul'));
-		return render(RecentActionRow, { props: { entry: e }, target: list });
+		return render(RecentActionRow, {
+			props: { entry: e, me: { id: 'mod', role: 'moderator' } },
+			target: list
+		});
 	};
 
 	it.each([

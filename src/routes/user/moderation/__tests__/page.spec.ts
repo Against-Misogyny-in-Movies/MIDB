@@ -7,23 +7,35 @@ vi.mock('$app/forms', () => ({ enhance: () => ({ destroy() {} }) }));
 vi.mock('$app/navigation', () => ({ goto: (...args: unknown[]) => goto(...args) }));
 
 const { default: Page } = await import('../+page.svelte');
+const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
+
+const empty = { items: [], nextCursor: null };
 
 const DATA = {
 	me: { id: 'mod', role: 'moderator' },
-	pending: [],
-	reported: [],
-	tab: null,
+	tab: 'pending',
+	counts: { pending: 0, reported: 0, held: 0, flagged: 0 },
+	pending: empty,
+	reported: null,
 	titleId: null,
-	held: [],
-	flagged: [],
+	held: null,
+	flagged: null,
 	openTitle: null,
-	recent: [],
+	recent: null,
+	logFilters: null,
+	logParams: '',
+	unknownNames: [],
 	staleSources: []
 };
+
+/** The reports tab as the load returns it: both lists, no open title. */
+const REPORTS_DATA = { ...DATA, tab: 'reports', pending: null, held: empty, flagged: empty };
 
 afterEach(() => {
 	cleanup();
 	goto.mockReset();
+	toasts.clear();
+	vi.unstubAllGlobals();
 });
 
 const tab = (name: RegExp) => screen.getByRole('tab', { name });
@@ -43,27 +55,45 @@ describe('the moderation tabs', () => {
 		expect(document.getElementById('panel-pending')).not.toBeNull();
 	});
 
-	it('moves with the arrow keys, wrapping, and with Home and End', async () => {
+	it('goes to the next tab’s URL with the arrow keys, wrapping, and with Home and End', async () => {
+		const { rerender } = render(Page, { data: DATA, form: null } as never);
+		const press = async (from: RegExp, key: string, to: RegExp, href: string) => {
+			goto.mockClear();
+			await fireEvent.keyDown(tab(from), { key });
+			expect(goto).toHaveBeenCalledExactlyOnceWith(href, { reset: false });
+			await waitFor(() => expect(document.activeElement).toBe(tab(to)));
+			// The load that follows the navigation names the new tab.
+			await rerender({ data: { ...DATA, tab: href.slice('?tab='.length) }, form: null } as never);
+		};
+		await press(/Pending/, 'ArrowRight', /Reported/, '?tab=reported');
+		await press(/Reported/, 'End', /^Log/, '?tab=log');
+		await press(/^Log/, 'ArrowRight', /Pending/, '?tab=pending');
+		await press(/Pending/, 'ArrowLeft', /^Log/, '?tab=log');
+		await press(/^Log/, 'Home', /Pending/, '?tab=pending');
+	});
+
+	it('takes the selected tab from the loaded data, not from a click', async () => {
 		render(Page, { data: DATA, form: null } as never);
-		await fireEvent.keyDown(tab(/Pending/), { key: 'ArrowRight' });
-		await waitFor(() => expect(document.activeElement).toBe(tab(/Reported/)));
-		expect(tab(/Reported/).getAttribute('aria-selected')).toBe('true');
-		await fireEvent.keyDown(tab(/Reported/), { key: 'End' });
-		await waitFor(() => expect(document.activeElement).toBe(tab(/Recent actions/)));
-		await fireEvent.keyDown(tab(/Recent actions/), { key: 'ArrowRight' });
-		await waitFor(() => expect(document.activeElement).toBe(tab(/Pending/)));
-		await fireEvent.keyDown(tab(/Pending/), { key: 'ArrowLeft' });
-		await waitFor(() => expect(document.activeElement).toBe(tab(/Recent actions/)));
-		await fireEvent.keyDown(tab(/Recent actions/), { key: 'Home' });
-		await waitFor(() => expect(document.activeElement).toBe(tab(/Pending/)));
-		expect(tab(/Pending/).getAttribute('tabindex')).toBe('0');
-		expect(tab(/Recent actions/).getAttribute('tabindex')).toBe('-1');
+		await fireEvent.click(tab(/Reported/));
+		expect(goto).toHaveBeenCalledWith('?tab=reported', { reset: false });
+		expect(tab(/Pending/).getAttribute('aria-selected')).toBe('true');
+		expect(tab(/Reported/).getAttribute('aria-selected')).toBe('false');
+	});
+
+	it('shows the totals from the database, not the length of the page', () => {
+		render(Page, {
+			data: { ...DATA, counts: { pending: 173, reported: 62, held: 80, flagged: 7 } },
+			form: null
+		} as never);
+		expect(tab(/Pending/).textContent?.trim()).toBe('Pending173');
+		expect(tab(/Reported/).textContent?.trim()).toBe('Reported62');
+		expect(tab(/MIDB community reports/).textContent?.trim()).toBe('MIDB community reports87');
 	});
 
 	it('ignores other keys', async () => {
 		render(Page, { data: DATA, form: null } as never);
 		await fireEvent.keyDown(tab(/Pending/), { key: 'a' });
-		expect(tab(/Pending/).getAttribute('aria-selected')).toBe('true');
+		expect(goto).not.toHaveBeenCalled();
 	});
 });
 
@@ -71,40 +101,46 @@ describe('the community-reports tab', () => {
 	it('lists held reports and flagged titles under their headings', async () => {
 		render(Page, {
 			data: {
-				...DATA,
-				flagged: [
-					{
-						titleId: 't2',
-						title: { kind: 'tv', tmdbId: 70523, name: 'Dark' },
-						flags: [
-							{ id: 'f1', note: 'Too low', reporter: 'bo', createdAt: '2026-11-10T10:00:00Z' }
-						]
-					}
-				]
+				...REPORTS_DATA,
+				counts: { ...DATA.counts, flagged: 1 },
+				flagged: {
+					items: [
+						{
+							titleId: 't2',
+							title: { kind: 'tv', tmdbId: 70523, name: 'Dark' },
+							flags: [
+								{ id: 'f1', note: 'Too low', reporter: 'bo', createdAt: '2026-11-10T10:00:00Z' }
+							]
+						}
+					],
+					nextCursor: null
+				}
 			},
 			form: null
 		} as never);
-		await fireEvent.click(tab(/MIDB community reports/));
 		expect(screen.getByRole('heading', { name: 'Held' })).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Flagged titles 1' })).toBeTruthy();
 		expect(screen.getByText('Counts look wrong: 1 open')).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'See community reports' }).getAttribute('href')).toBe(
 			'?title=t2'
 		);
-		expect(tab(/MIDB community reports/).textContent).toContain('0');
+		expect(tab(/MIDB community reports/).textContent?.trim()).toBe('MIDB community reports1');
 	});
 
 	it('opens on the community-reports tab when a title is open', () => {
 		render(Page, {
 			data: {
 				...DATA,
+				tab: 'reports',
 				titleId: 't2',
 				openTitle: {
 					id: 't2',
 					kind: 'tv',
 					tmdbId: 70523,
 					name: 'Dark',
-					reports: []
+					reports: [],
+					flags: [],
+					closedFlags: []
 				}
 			},
 			form: null
@@ -115,28 +151,16 @@ describe('the community-reports tab', () => {
 });
 
 describe('the community-reports URL', () => {
-	it('opens the tab for ?tab=reports, and Pending otherwise', () => {
-		const { unmount } = render(Page, { data: { ...DATA, tab: 'reports' }, form: null } as never);
+	it('shows the tab the load names', () => {
+		const { unmount } = render(Page, { data: REPORTS_DATA, form: null } as never);
 		expect(tab(/MIDB community reports/).getAttribute('aria-selected')).toBe('true');
 		unmount();
 		render(Page, { data: DATA, form: null } as never);
 		expect(tab(/Pending/).getAttribute('aria-selected')).toBe('true');
 	});
 
-	it('counts only the held reports on the tab', () => {
-		render(Page, {
-			data: {
-				...DATA,
-				held: [],
-				flagged: [{ titleId: 't2', title: { kind: 'tv', tmdbId: 1, name: 'Dark' }, flags: [] }]
-			},
-			form: null
-		} as never);
-		expect(tab(/MIDB community reports/).textContent?.trim()).toBe('MIDB community reports0');
-	});
-
 	it('says so, with a way back, when the title has no reports or does not exist', () => {
-		render(Page, { data: { ...DATA, titleId: 'gone' }, form: null } as never);
+		render(Page, { data: { ...REPORTS_DATA, titleId: 'gone' }, form: null } as never);
 		expect(tab(/MIDB community reports/).getAttribute('aria-selected')).toBe('true');
 		expect(
 			screen.getByText('That title has no community reports or no longer exists.')
@@ -167,6 +191,9 @@ function tableRow(id: string, over: Record<string, unknown> = {}) {
 		aiCategories: [],
 		reports: [],
 		authorCommentCount: 1,
+		authorHiddenOrRejected: 0,
+		authorOpenReportsAgainst: 0,
+		authorJoinedAt: '2026-01-05T10:00:00.000Z',
 		authorMutedUntil: null,
 		severity: null,
 		aiFailure: null,
@@ -200,30 +227,40 @@ describe('the table tab', () => {
 		render(Page, { data: DATA, form: null } as never);
 		await fireEvent.click(tab(/All comments/));
 		expect(goto).toHaveBeenCalledWith('?tab=table', { reset: false });
-		expect(tab(/All comments/).getAttribute('aria-selected')).toBe('true');
 	});
 
 	it('does not go again when the table is already the URL', async () => {
 		render(Page, { data: TABLE_DATA, form: null } as never);
-		await fireEvent.click(tab(/Pending/));
-		goto.mockClear();
 		await fireEvent.click(tab(/All comments/));
 		expect(goto).not.toHaveBeenCalled();
 	});
 
-	it('drops tab=table from the URL when another tab is chosen, and keeps the choice', async () => {
+	it('goes to the chosen tab’s own URL, with none of the table’s filters', async () => {
 		render(Page, { data: TABLE_DATA, form: null } as never);
-		await fireEvent.click(tab(/Recent actions/));
-		expect(goto).toHaveBeenCalledExactlyOnceWith('?', { reset: false });
-		await waitFor(() => expect(tab(/Recent actions/).getAttribute('aria-selected')).toBe('true'));
+		await fireEvent.click(tab(/^Log/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=log', { reset: false });
 		goto.mockClear();
+		await fireEvent.click(tab(/MIDB community reports/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=reports', { reset: false });
+		goto.mockClear();
+		await fireEvent.click(tab(/Pending/));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=pending', { reset: false });
+	});
+
+	it('leaves a title’s reports for the tab’s list', async () => {
+		render(Page, {
+			data: { ...REPORTS_DATA, titleId: 't2', held: null, flagged: null, openTitle: null },
+			form: null
+		} as never);
 		await fireEvent.click(tab(/MIDB community reports/));
 		expect(goto).toHaveBeenCalledExactlyOnceWith('?tab=reports', { reset: false });
 	});
 
 	it('reserves room for the table while it loads', () => {
 		render(Page, { data: { ...TABLE_DATA, table: null, filters: null }, form: null } as never);
-		expect(screen.getByLabelText('Loading comments').getAttribute('aria-busy')).toBe('true');
+		expect(
+			screen.getByText('Loading comments').closest('[aria-busy]')?.getAttribute('aria-busy')
+		).toBe('true');
 	});
 
 	it('shows each active filter as a chip that removes only it', () => {
@@ -304,5 +341,114 @@ describe('the table tab', () => {
 			form: null
 		} as never);
 		expect(screen.getByText('No comments match these filters.')).toBeTruthy();
+	});
+});
+
+const item = (id: string) => tableRow(id);
+
+/** The list's rows: one button each, whichever item's panel is open. */
+const rows = () => [...document.querySelectorAll('button[id^="row-"]')];
+
+describe('the queue lists', () => {
+	const PAGED = {
+		...DATA,
+		counts: { ...DATA.counts, pending: 120 },
+		pending: { items: [item('c1'), item('c2')], nextCursor: 'cursor-1' }
+	};
+
+	it('says what is empty, and offers no Show more on the last page', () => {
+		render(Page, { data: DATA, form: null } as never);
+		expect(screen.getByText('No comments are waiting for review.')).toBeTruthy();
+		cleanup();
+		render(Page, {
+			data: { ...PAGED, pending: { ...PAGED.pending, nextCursor: null } },
+			form: null
+		} as never);
+		expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+	});
+
+	it('loads the next page from the staff endpoint and moves the focus to its first row', async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(Response.json({ items: [item('c3'), item('c4')], nextCursor: null }));
+		vi.stubGlobal('fetch', fetcher);
+		render(Page, { data: PAGED, form: null } as never);
+		expect(rows()).toHaveLength(2);
+		await fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+		expect(fetcher).toHaveBeenCalledWith('/api/moderation/queue?queue=pending&cursor=cursor-1', {
+			method: 'GET'
+		});
+		await waitFor(() => expect(document.activeElement?.id).toBe('row-c3'));
+		expect(rows()).toHaveLength(4);
+		expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+	});
+
+	it('toasts a failed load, keeps the list and returns the focus to the button', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(Response.json({ message: 'x' }, { status: 403 }))
+		);
+		render(Page, { data: PAGED, form: null } as never);
+		const button = screen.getByRole('button', { name: 'Show more' });
+		await fireEvent.click(button);
+		await waitFor(() => expect(document.activeElement).toBe(button));
+		expect(toasts.items.map((t) => t.text)).toEqual([
+			'More comments could not be loaded. Moderation is open to moderators and administrators only.'
+		]);
+		expect(rows()).toHaveLength(2);
+	});
+
+	it('drops the later pages when the page reloads, so a removed row does not stay', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(Response.json({ items: [item('c3')], nextCursor: null }))
+		);
+		const { rerender } = render(Page, { data: PAGED, form: null } as never);
+		await fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+		await waitFor(() => expect(screen.getByText('Body of c3')).toBeTruthy());
+		await rerender({
+			data: { ...PAGED, pending: { items: [item('c2'), item('c4')], nextCursor: 'cursor-2' } },
+			form: null
+		} as never);
+		expect(screen.queryByText('Body of c3')).toBeNull();
+		expect(screen.queryByText('Body of c1')).toBeNull();
+		expect(screen.getByText('Body of c4')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Show more' })).toBeTruthy();
+	});
+
+	it('pages the held reports and the flagged titles from their own queues', async () => {
+		const fetcher = vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null }));
+		vi.stubGlobal('fetch', fetcher);
+		render(Page, {
+			data: {
+				...REPORTS_DATA,
+				held: { items: [], nextCursor: null },
+				flagged: {
+					items: [{ titleId: 't2', title: { kind: 'tv', tmdbId: 1, name: 'Dark' }, flags: [] }],
+					nextCursor: 'f1'
+				}
+			},
+			form: null
+		} as never);
+		await fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+		expect(fetcher.mock.calls[0][0]).toBe('/api/moderation/queue?queue=flagged&cursor=f1');
+	});
+
+	const NO_FILTERS = { action: null, actor: null, account: null };
+
+	it('pages the log', async () => {
+		const fetcher = vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null }));
+		vi.stubGlobal('fetch', fetcher);
+		render(Page, {
+			data: {
+				...DATA,
+				tab: 'log',
+				pending: null,
+				recent: { items: [], nextCursor: null },
+				logFilters: NO_FILTERS
+			},
+			form: null
+		} as never);
+		expect(screen.getByText('No moderation actions yet.')).toBeTruthy();
 	});
 });

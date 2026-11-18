@@ -1,94 +1,63 @@
 <script lang="ts">
-	import CommentLink from '#lib/components/comments/commentLink.svelte';
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import ProfileCommentRow from '#lib/components/user/profileCommentRow.svelte';
 	import ProfileRows from '#lib/components/user/profileRows.svelte';
-	import ProfileTitleLink from '#lib/components/user/profileTitleLink.svelte';
-	import { formatDate } from '#lib/media/utils/format.ts';
-	import { describeFailure, requestJson } from '#lib/media/utils/commentApi.ts';
+	import { describeFailure } from '#lib/media/utils/commentApi.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
-	import { toasts } from '#lib/media/utils/toasts.svelte.js';
-	import { commentHref } from '#lib/media/utils/titleHref.ts';
-	import type { ProfileCommentPage } from '#lib/media/types/profile.ts';
+	import { ProfilePager } from '#lib/media/utils/profilePager.svelte.js';
+	import type { ProfileComment, ProfileCommentPage } from '#lib/media/types/profile.ts';
 
 	interface Props {
 		username: string;
 		/** The first page, from the cached page load. */
 		first: ProfileCommentPage;
+		/**
+		 * Set once the owner's private view has loaded: every row is then the owner's own and gains
+		 * Edit and Delete. `replyCounts` is by comment id (`OwnProfile`).
+		 */
+		own?: { replyCounts: Record<string, number> } | null;
 	}
 
-	let { username, first }: Props = $props();
+	let { username, first, own = null }: Props = $props();
 
-	/** Pages after the first, appended in place. */
-	let more = $state<ProfileCommentPage['comments']>([]);
-	let cursor = $state<string | null | undefined>(undefined);
-	let busy = $state(false);
+	const pager = new ProfilePager<ProfileComment, ProfileCommentPage>({
+		first: () => ({ items: first.comments, nextCursor: first.nextCursor }),
+		path: (cursor) =>
+			`/api/users/${encodeURIComponent(username)}/comments?cursor=${encodeURIComponent(cursor)}`,
+		read: (page) => ({ items: page.comments, nextCursor: page.nextCursor }),
+		key: (comment) => comment.id,
+		failure: (status, message) => describeFailure('more', status, message)
+	});
 	let moreButton: HTMLButtonElement | undefined = $state();
 
-	const shown = $derived.by(() => {
-		const known = new Set(first.comments.map((c) => c.id));
-		return [...first.comments, ...more.filter((c) => !known.has(c.id))];
-	});
-	const nextCursor = $derived(cursor === undefined ? first.nextCursor : cursor);
-
 	async function showMore() {
-		if (!nextCursor || busy) return;
-		busy = true;
-		const reply = await requestJson<ProfileCommentPage>(
-			(input, init) => fetch(input, init),
-			'GET',
-			`/api/users/${encodeURIComponent(username)}/comments?cursor=${encodeURIComponent(nextCursor)}`
-		);
-		busy = false;
-		if (!reply.ok) {
-			toasts.error(describeFailure('more', reply.status, reply.message));
-			await focusAfterUpdate(() => moreButton);
-			return;
-		}
-		const firstNew = reply.data.comments.find((c) => !shown.some((s) => s.id === c.id));
-		more = [...more, ...reply.data.comments];
-		cursor = reply.data.nextCursor;
+		const firstNew = await pager.showMore();
 		await focusAfterUpdate(() =>
-			firstNew ? document.getElementById(`profile-comment-${firstNew.id}`) : moreButton
+			firstNew === null
+				? moreButton
+				: document.getElementById(`profile-comment-${pager.shown[firstNew].id}`)
 		);
 	}
 </script>
 
 <ProfileRows
-	items={shown}
+	items={pager.shown}
 	key={(comment) => comment.id}
 	rowId={(comment) => `profile-comment-${comment.id}`}
 	empty="No published comments."
 >
 	{#snippet row(comment)}
-		{@const permalink = commentHref(comment.title.kind, comment.title.tmdbId, comment.id)}
-		<p class="line">
-			<ProfileTitleLink
-				kind={comment.title.kind}
-				tmdbId={comment.title.tmdbId}
-				name={comment.title.name}
-			/>
-			<time class="label" datetime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-			{#if permalink}<CommentLink href={permalink} />{/if}
-			{#if comment.edited}<span class="label">Edited</span>{/if}
-			<span class="label num">Score {comment.score}</span>
-		</p>
-		{#if comment.inReplyTo}
-			<p class="label">
-				In reply to <ProfileLink
-					username={comment.inReplyTo.username}
-					name={comment.inReplyTo.displayName}
-				/>
-			</p>
-		{/if}
-		<p class="body">{comment.body}</p>
+		<ProfileCommentRow
+			{comment}
+			own={own ? { replyCount: own.replyCounts[comment.id] ?? 0 } : null}
+		/>
 	{/snippet}
 </ProfileRows>
-{#if shown.length > 0 && nextCursor}
+{#if pager.shown.length > 0 && pager.nextCursor}
 	<div class="more">
 		<button
 			class="btn btn--ink"
 			type="button"
-			aria-busy={busy}
+			aria-busy={pager.busy}
 			bind:this={moreButton}
 			onclick={showMore}
 		>
@@ -99,21 +68,6 @@
 
 <style lang="postcss">
 	@reference "../../../app.css";
-
-	.line {
-		@apply flex flex-wrap items-center text-sm;
-		gap: var(--spacing-xs) var(--spacing-sm);
-	}
-
-	.num {
-		font-variant-numeric: tabular-nums;
-	}
-
-	.body {
-		@apply text-base;
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
-	}
 
 	.more {
 		padding: var(--spacing-md) 20px;

@@ -2,14 +2,24 @@
 	import CountFlagList from '#lib/components/moderation/countFlagList.svelte';
 	import FlaggedTitleRow from '#lib/components/moderation/flaggedTitleRow.svelte';
 	import HeldReportRow from '#lib/components/moderation/heldReportRow.svelte';
+	import PagedList from '#lib/components/moderation/pagedList.svelte';
 	import TitleReportRow from '#lib/components/moderation/titleReportRow.svelte';
-	import type { FlaggedTitle, HeldReport, OpenTitle } from '#lib/media/types/moderation.ts';
+	import type {
+		FlaggedTitle,
+		HeldReport,
+		OpenTitle,
+		QueuePage
+	} from '#lib/media/types/moderation.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
-		held: HeldReport[];
-		flagged: FlaggedTitle[];
+		/** The first page of held reports; null while a title's reports are open. */
+		held: QueuePage<HeldReport> | null;
+		/** The first page of flagged titles; null while a title's reports are open. */
+		flagged: QueuePage<FlaggedTitle> | null;
+		/** How many titles have open flags, in all: the lists are paged. */
+		flaggedCount: number;
 		/** The title whose reports are open, from `?title=`. */
 		openTitle: OpenTitle | null;
 		/** The id `?title=` named, which opens no title when none has it. */
@@ -18,9 +28,8 @@
 		me: { id: string; role: string };
 	}
 
-	let { held, flagged, openTitle, titleId = null, me }: Props = $props();
+	let { held, flagged, flaggedCount, openTitle, titleId = null, me }: Props = $props();
 
-	const openFlags = $derived(flagged.find((f) => f.titleId === openTitle?.id)?.flags ?? []);
 	const openHref = $derived(openTitle ? titleHref(openTitle.kind, openTitle.tmdbId) : undefined);
 </script>
 
@@ -32,16 +41,22 @@
 		<h2 id="open-title" class="heading" tabindex="-1">
 			{#if openHref}<a class="link" href={openHref}>{openTitle.name}</a>{:else}{openTitle.name}{/if}
 		</h2>
-		{#if openFlags.length > 0}
+		{#if openTitle.flags.length > 0 || openTitle.closedFlags.length > 0}
 			<div class="card flags">
 				<h3 class="heading">Counts look wrong</h3>
-				<CountFlagList flags={openFlags} {me} />
+				{#if openTitle.flags.length > 0}
+					<CountFlagList flags={openTitle.flags} {me} />
+				{/if}
+				{#if openTitle.closedFlags.length > 0}
+					<p class="label">Closed</p>
+					<CountFlagList flags={openTitle.closedFlags} {me} />
+				{/if}
 			</div>
 		{/if}
 		{#if openTitle.reports.length === 0}
 			<p class="empty" id="moderation-empty" tabindex="-1">This title has no community reports.</p>
 		{:else}
-			<ul class="card list">
+			<ul class="card row-list">
 				{#each openTitle.reports as report (report.account.userId)}
 					{@const account = { id: report.account.userId, role: report.account.role }}
 					<TitleReportRow
@@ -49,6 +64,7 @@
 						titleId={openTitle.id}
 						canAct={canActOn(me, account)}
 						canRestrict={canActOn(me, account, 'restrict')}
+						{me}
 					/>
 				{/each}
 			</ul>
@@ -61,35 +77,40 @@
 		>
 		<p class="empty">That title has no community reports or no longer exists.</p>
 	</section>
-{:else}
+{:else if held && flagged}
 	<section class="group" aria-labelledby="held-heading">
 		<h2 id="held-heading" class="heading">Held</h2>
-		{#if held.length === 0}
-			<p class="empty" id="moderation-empty" tabindex="-1">No community reports are waiting.</p>
-		{:else}
-			<ul class="card list">
-				{#each held as report (`${report.account.userId}:${report.titleId}`)}
-					<HeldReportRow
-						{report}
-						canAct={canActOn(me, { id: report.account.userId, role: report.account.role })}
-					/>
-				{/each}
-			</ul>
-		{/if}
+		<PagedList
+			page={held}
+			queue="held"
+			key={(report) => `${report.account.userId}:${report.titleId}`}
+			empty="No community reports are waiting."
+			noun="community reports"
+		>
+			{#snippet row(report)}
+				<HeldReportRow
+					{report}
+					canAct={canActOn(me, { id: report.account.userId, role: report.account.role })}
+				/>
+			{/snippet}
+		</PagedList>
 	</section>
 	<section class="group" aria-labelledby="flagged-heading">
 		<h2 id="flagged-heading" class="heading">
-			Flagged titles <span class="count">{flagged.length}</span>
+			Flagged titles <span class="count">{flaggedCount}</span>
 		</h2>
-		{#if flagged.length === 0}
-			<p class="empty">No titles are marked Counts look wrong.</p>
-		{:else}
-			<ul class="card list">
-				{#each flagged as entry (entry.titleId)}
-					<FlaggedTitleRow flagged={entry} />
-				{/each}
-			</ul>
-		{/if}
+		<PagedList
+			page={flagged}
+			queue="flagged"
+			key={(entry) => entry.titleId}
+			empty="No titles are marked Counts look wrong."
+			emptyId="flagged-empty"
+			noun="flagged titles"
+		>
+			{#snippet row(entry)}
+				<FlaggedTitleRow flagged={entry} />
+			{/snippet}
+		</PagedList>
 	</section>
 {/if}
 
@@ -134,13 +155,5 @@
 
 	.empty {
 		@apply text-ink-muted;
-	}
-
-	.list {
-		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
-	}
-
-	.list > :global(li + li) {
-		border-top: 1px solid var(--border);
 	}
 </style>

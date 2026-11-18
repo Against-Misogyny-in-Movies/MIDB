@@ -25,6 +25,24 @@ describe('toastActionResult', () => {
 		expect(toasts.error).toHaveBeenLastCalledWith('The action failed. Try again in a moment.');
 	});
 
+	it('adds what remains in the open queue to a queue action’s toast only', async () => {
+		const { moderationStatus } = await import('../moderationStatus.svelte.js');
+		moderationStatus.left = () => '41 left in Pending.';
+		done({ done: 'hide' });
+		expect(toasts.success).toHaveBeenLastCalledWith('Comment hidden. 41 left in Pending.');
+		done({ done: 'note' });
+		expect(toasts.success).toHaveBeenLastCalledWith('Note added.');
+		moderationStatus.left = () => '';
+		done({ done: 'hide' });
+		expect(toasts.success).toHaveBeenLastCalledWith('Comment hidden.');
+		moderationStatus.left = null;
+	});
+
+	it('says a staff note was added', () => {
+		done({ done: 'note' });
+		expect(toasts.success).toHaveBeenCalledWith('Note added.');
+	});
+
 	it('says nothing for an action it does not know', () => {
 		done({ done: 'unknown' });
 		done({});
@@ -88,6 +106,34 @@ describe('rowSubmit focus', () => {
 		expect(
 			await focusAfterRowLeaves('<ul><li id="row"></li><li id="next" tabindex="-1"></li></ul>')
 		).toBe('next');
+	});
+
+	it('scrolls the focused row clear of the header once the removed row has eased out', async () => {
+		vi.useFakeTimers();
+		try {
+			document.body.innerHTML = '<ul><li id="row"></li><li id="next" tabindex="-1"></li></ul>';
+			const row = document.getElementById('row') as HTMLElement;
+			const next = document.getElementById('next') as HTMLElement;
+			next.scrollIntoView = vi.fn();
+			const handle = rowSubmit(
+				() => row,
+				() => {}
+			)('approve')();
+			const finished = handle({
+				result: { type: 'success', data: {} },
+				update: async () => {
+					row.remove();
+				}
+			});
+			await vi.advanceTimersByTimeAsync(0);
+			expect(document.activeElement).toBe(next);
+			expect(next.scrollIntoView).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(200);
+			await finished;
+			expect(next.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('skips a neighbour that cannot take focus for the first fallback on the page', async () => {

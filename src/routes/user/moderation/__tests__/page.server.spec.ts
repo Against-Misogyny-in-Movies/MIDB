@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireRole = vi.fn();
 const rateLimit = vi.fn();
-const purgeTitleComments = vi.fn();
+const purgeTitlesComments = vi.fn();
 const purgeProfiles = vi.fn();
+const purgeTitlesReports = vi.fn();
 const queries = {
 	approveComment: vi.fn(),
 	hideComment: vi.fn(),
@@ -25,8 +26,9 @@ const reports = {
 	listFlaggedTitles: vi.fn(),
 	getOpenTitle: vi.fn()
 };
-const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn() };
+const flags = { resolveCountFlag: vi.fn(), dismissCountFlag: vi.fn(), reopenCountFlag: vi.fn() };
 const getSourceSyncDates = vi.fn();
+const getModerationCounts = vi.fn();
 
 vi.mock('#lib/server/auth/guards.ts', () => ({
 	requireRole: (...args: unknown[]) => requireRole(...args)
@@ -35,14 +37,22 @@ vi.mock('#lib/server/http/rate-limit.ts', () => ({
 	rateLimit: (...args: unknown[]) => rateLimit(...args)
 }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
-	purgeTitleComments: (...args: unknown[]) => purgeTitleComments(...args),
-	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args)
+	purgeTitlesComments: (...args: unknown[]) => purgeTitlesComments(...args),
+	purgeProfiles: (...args: unknown[]) => purgeProfiles(...args),
+	purgeTitlesReports: (...args: unknown[]) => purgeTitlesReports(...args)
 }));
 vi.mock('#lib/server/data/moderation-actions.ts', () => queries);
 vi.mock('#lib/server/data/moderation-queue.ts', () => queries);
+vi.mock('#lib/server/data/recent-actions.ts', () => ({
+	listRecentActions: queries.listRecentActions
+}));
 vi.mock('#lib/server/data/community-report-moderation.ts', () => reports);
 vi.mock('#lib/server/data/community-report-queue.ts', () => reports);
 vi.mock('#lib/server/data/count-flags.ts', () => flags);
+vi.mock('#lib/server/data/moderation-reversals.ts', () => ({}));
+vi.mock('#lib/server/data/moderation-counts.ts', () => ({
+	getModerationCounts: () => getModerationCounts()
+}));
 vi.mock('#lib/server/data/source-sync.ts', () => ({
 	getSourceSyncDates: () => getSourceSyncDates()
 }));
@@ -63,7 +73,8 @@ const REPORT_NAMES = [
 	'rejectReport',
 	'rejectAccountReports',
 	'resolveFlag',
-	'dismissFlag'
+	'dismissFlag',
+	'reopenFlag'
 ] as const;
 type Name = (typeof NAMES)[number] | (typeof REPORT_NAMES)[number];
 
@@ -81,7 +92,8 @@ function run(
 		userId: 'u1',
 		titleId: 't1',
 		hours: '24',
-		editedAt: ''
+		editedAt: '',
+		rule: 'spam'
 	}
 ) {
 	const form = new FormData();
@@ -97,24 +109,29 @@ function run(
 beforeEach(() => {
 	requireRole.mockReset().mockResolvedValue(MOD);
 	rateLimit.mockReset().mockResolvedValue(undefined);
-	purgeTitleComments.mockReset();
+	purgeTitlesComments.mockReset();
 	purgeProfiles.mockReset();
+	purgeTitlesReports.mockReset();
 	for (const fn of Object.values(queries))
 		fn.mockReset().mockResolvedValue({ ok: true, title: TITLE });
 	for (const fn of Object.values(reports))
 		fn.mockReset().mockResolvedValue({ ok: true, titles: [] });
 	for (const fn of Object.values(flags)) fn.mockReset().mockResolvedValue({ ok: true });
-	reports.listHeldReports.mockResolvedValue([]);
-	reports.listFlaggedTitles.mockResolvedValue([]);
+	const empty = { items: [], nextCursor: null };
+	reports.listHeldReports.mockResolvedValue(empty);
+	reports.listFlaggedTitles.mockResolvedValue(empty);
+	queries.listPendingQueue.mockResolvedValue(empty);
+	queries.listReportedQueue.mockResolvedValue(empty);
+	queries.listRecentActions.mockResolvedValue(empty);
 	reports.getOpenTitle.mockResolvedValue(null);
 	getSourceSyncDates.mockReset().mockResolvedValue({});
+	getModerationCounts
+		.mockReset()
+		.mockResolvedValue({ pending: 0, reported: 0, held: 0, flagged: 0 });
 });
 
 describe('load', () => {
 	it('requires a moderator or administrator, as a page', async () => {
-		queries.listPendingQueue.mockResolvedValue([]);
-		queries.listReportedQueue.mockResolvedValue([]);
-		queries.listRecentActions.mockResolvedValue([]);
 		await load(loadEvent());
 		expect(requireRole).toHaveBeenCalledWith({}, ['moderator', 'administrator'], { page: true });
 	});
@@ -127,20 +144,66 @@ describe('load', () => {
 		expect(queries.listPendingQueue).not.toHaveBeenCalled();
 	});
 
-	it('returns the queues and the daily sources that went stale', async () => {
-		queries.listPendingQueue.mockResolvedValue([{ id: 'p' }]);
-		queries.listReportedQueue.mockResolvedValue([{ id: 'r' }]);
-		queries.listRecentActions.mockResolvedValue([{ id: 'a' }]);
+	it('returns the open list, the counts and the daily sources that went stale', async () => {
+		queries.listPendingQueue.mockResolvedValue({ items: [{ id: 'p' }], nextCursor: 'next' });
+		getModerationCounts.mockResolvedValue({ pending: 73, reported: 4, held: 2, flagged: 3 });
 		getSourceSyncDates.mockResolvedValue({
 			um: new Date(Date.now() - 49 * 3_600_000).toISOString(),
 			bechdel: new Date().toISOString()
 		});
 		const data = (await load(loadEvent())) as {
-			pending: unknown[];
+			tab: string;
+			pending: unknown;
+			counts: unknown;
 			staleSources: { source: string }[];
 		};
-		expect(data.pending).toEqual([{ id: 'p' }]);
+		expect(data.tab).toBe('pending');
+		expect(data.pending).toEqual({ items: [{ id: 'p' }], nextCursor: 'next' });
+		expect(data.counts).toEqual({ pending: 73, reported: 4, held: 2, flagged: 3 });
 		expect(data.staleSources.map((s) => s.source)).toEqual(['um']);
+	});
+});
+
+describe('the open tab, from the URL', () => {
+	const readers = {
+		pending: [queries.listPendingQueue],
+		reported: [queries.listReportedQueue],
+		log: [queries.listRecentActions],
+		reports: [reports.listHeldReports, reports.listFlaggedTitles]
+	};
+	const every = Object.values(readers).flat();
+
+	it.each(Object.entries(readers))('?tab=%s reads only that tab’s lists', async (tab, fns) => {
+		await load(loadEvent(`?tab=${tab}`));
+		for (const fn of fns) expect(fn).toHaveBeenCalledOnce();
+		for (const fn of every.filter((f) => !fns.includes(f))) expect(fn).not.toHaveBeenCalled();
+		expect(getModerationCounts).toHaveBeenCalledOnce();
+		expect(getSourceSyncDates).toHaveBeenCalledOnce();
+		const data = (await load(loadEvent(`?tab=${tab}`))) as { tab: string };
+		expect(data.tab).toBe(tab);
+	});
+
+	it('opens Pending without a tab, and for a tab it does not know', async () => {
+		for (const search of ['', '?tab=nonsense']) {
+			queries.listPendingQueue.mockClear();
+			expect(((await load(loadEvent(search))) as { tab: string }).tab).toBe('pending');
+			expect(queries.listPendingQueue).toHaveBeenCalledOnce();
+		}
+	});
+
+	it('opens the community reports for ?title=, and reads only that title', async () => {
+		reports.getOpenTitle.mockResolvedValue({ id: 't9', reports: [], flags: [] });
+		const data = (await load(loadEvent('?title=t9'))) as {
+			tab: string;
+			held: unknown;
+			flagged: unknown;
+		};
+		expect(data.tab).toBe('reports');
+		expect(data.held).toBeNull();
+		expect(data.flagged).toBeNull();
+		expect(reports.listHeldReports).not.toHaveBeenCalled();
+		expect(reports.listFlaggedTitles).not.toHaveBeenCalled();
+		expect(queries.listPendingQueue).not.toHaveBeenCalled();
 	});
 });
 
@@ -149,7 +212,7 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 		requireRole.mockImplementation(async () => error(403, 'Forbidden'));
 		await expect(run(name)).rejects.toMatchObject({ status: 403 });
 		for (const fn of allFns()) expect(fn).not.toHaveBeenCalled();
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 	});
 
 	it('answers 401 to a signed-out reader', async () => {
@@ -167,11 +230,13 @@ describe.each([...NAMES, ...REPORT_NAMES])('?/%s', (name) => {
 
 describe('the community-reports view', () => {
 	it('returns the held reports, the flagged titles and no open title without ?title=', async () => {
-		reports.listHeldReports.mockResolvedValue([{ titleId: 't1' }]);
-		reports.listFlaggedTitles.mockResolvedValue([{ titleId: 't2' }]);
-		const data = (await load(loadEvent())) as Record<string, unknown>;
-		expect(data.held).toEqual([{ titleId: 't1' }]);
-		expect(data.flagged).toEqual([{ titleId: 't2' }]);
+		const held = { items: [{ titleId: 't1' }], nextCursor: null };
+		const flagged = { items: [{ titleId: 't2' }], nextCursor: null };
+		reports.listHeldReports.mockResolvedValue(held);
+		reports.listFlaggedTitles.mockResolvedValue(flagged);
+		const data = (await load(loadEvent('?tab=reports'))) as Record<string, unknown>;
+		expect(data.held).toEqual(held);
+		expect(data.flagged).toEqual(flagged);
 		expect(data.openTitle).toBeNull();
 		expect(reports.getOpenTitle).not.toHaveBeenCalled();
 	});
@@ -197,7 +262,7 @@ describe('community-report actions', () => {
 		expect(reports.approveReport).toHaveBeenCalledWith(MOD, 'u1', 't1');
 		await run('rejectReport', REPORT_FIELDS);
 		expect(reports.rejectReport).toHaveBeenCalledWith(MOD, 'u1', 't1');
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 	});
 
 	it('reject all calls the data function with the account', async () => {
@@ -231,7 +296,7 @@ describe('community-report actions', () => {
 		flags.dismissCountFlag.mockResolvedValue({ ok: false, reason: 'own-flag' });
 		expect(await run('dismissFlag', REPORT_FIELDS)).toMatchObject({
 			status: 403,
-			data: { error: "A moderator cannot close their own flag or an administrator's." }
+			data: { error: "A moderator cannot close or re-open their own flag or an administrator's." }
 		});
 	});
 });
@@ -242,7 +307,7 @@ describe('purging', () => {
 		async (name) => {
 			const result = await run(name);
 			expect(result).toEqual({ id: 'c1', done: name });
-			expect(purgeTitleComments).toHaveBeenCalledExactlyOnceWith(TITLE);
+			expect(purgeTitlesComments).toHaveBeenCalledExactlyOnceWith([TITLE]);
 		}
 	);
 
@@ -285,13 +350,13 @@ describe('purging', () => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason: 'invalid-state' });
 		const result = await run('approve');
 		expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
 		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 
 	it.each([
 		['edited', 409, /edited after this page loaded/],
-		['admin-acted', 403, /administrator acted on this comment last/]
+		['admin-acted', 403, /administrator acted on this last/]
 	] as const)('a %s refusal answers %i with its own message', async (reason, status, message) => {
 		queries.approveComment.mockResolvedValue({ ok: false, reason });
 		const result = await run('approve');
@@ -299,40 +364,90 @@ describe('purging', () => {
 		expect((result as { data: { error: string } }).data.error).toMatch(message);
 	});
 
-	it('mute and ban touch no list', async () => {
-		queries.muteUser.mockResolvedValue({ ok: true, title: null });
-		queries.banAccount.mockResolvedValue({ ok: true, title: null });
+	it.each([
+		['mute', 'muteUser'],
+		['ban', 'banAccount']
+	] as const)(
+		'refuses ?/%s on an account that is already banned, with a toast message',
+		async (name, fn) => {
+			queries[fn].mockResolvedValue({ ok: false, reason: 'already-banned' });
+			const result = await run(name);
+			expect(result).toMatchObject({ status: 409, data: { id: 'c1' } });
+			expect((result as { data: { error: string } }).data.error).toBe(
+				'This account is banned, so it cannot be banned again or muted.'
+			);
+			expect(purgeProfiles).not.toHaveBeenCalled();
+		}
+	);
+
+	it('a hide or reject refused for an administrator’s decision answers 403', async () => {
+		queries.hideComment.mockResolvedValue({ ok: false, reason: 'admin-acted' });
+		queries.rejectComment.mockResolvedValue({ ok: false, reason: 'admin-acted' });
+		for (const name of ['hide', 'reject'] as const) {
+			expect(await run(name)).toMatchObject({ status: 403, data: { id: 'c1' } });
+		}
+	});
+
+	it('mute and ban touch no list and purge the profile their result names', async () => {
+		queries.muteUser.mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
+		queries.banAccount.mockResolvedValue({ ok: true, title: null, purge: { profiles: ['u1'] } });
 		expect(await run('mute')).toEqual({ id: 'c1', done: 'mute' });
 		expect(await run('ban')).toEqual({ id: 'c1', done: 'ban' });
-		expect(purgeTitleComments).not.toHaveBeenCalled();
+		expect(purgeTitlesComments).not.toHaveBeenCalled();
+		expect(purgeProfiles).toHaveBeenCalledTimes(2);
+		expect(purgeProfiles).toHaveBeenCalledWith(['u1']);
+	});
+
+	it.each(['countReport', 'rejectReport'] as const)(
+		'%s purges the title counts and the profile its result names',
+		async (name) => {
+			reports[name === 'countReport' ? 'approveReport' : 'rejectReport'].mockResolvedValue({
+				ok: true,
+				purge: { reportTitles: [TITLE], profiles: ['u1'] }
+			});
+			expect(await run(name, REPORT_FIELDS)).toEqual({ id: 'u1:t1', done: name });
+			expect(purgeTitlesReports).toHaveBeenCalledExactlyOnceWith([TITLE]);
+			expect(purgeProfiles).toHaveBeenCalledExactlyOnceWith(['u1']);
+		}
+	);
+
+	it('a flag action and a refused report action purge nothing', async () => {
+		await run('resolveFlag', REPORT_FIELDS);
+		reports.rejectReport.mockResolvedValue({ ok: false, reason: 'invalid-state' });
+		await run('rejectReport', REPORT_FIELDS);
+		expect(purgeTitlesReports).not.toHaveBeenCalled();
+		expect(purgeProfiles).not.toHaveBeenCalled();
 	});
 });
 
 describe('inputs', () => {
 	it('trims a reason and keeps it to the limit', async () => {
-		await run('reject', { id: 'c1', reason: `  ${'x'.repeat(300)}  ` });
+		await run('reject', { id: 'c1', rule: 'spam', reason: `  ${'x'.repeat(300)}  ` });
 		expect(queries.rejectComment).toHaveBeenCalledWith(
 			expect.objectContaining({ id: 'mod-1' }),
 			'c1',
-			'x'.repeat(140)
+			'x'.repeat(140),
+			'spam'
 		);
 	});
 
 	it('passes no reason when the field is empty', async () => {
-		await run('hide', { id: 'c1', reason: '   ' });
+		await run('hide', { id: 'c1', rule: 'spam', reason: '   ' });
 		expect(queries.hideComment).toHaveBeenCalledWith(
 			expect.objectContaining({ id: 'mod-1' }),
 			'c1',
-			null
+			null,
+			'spam'
 		);
 	});
 
 	it('mutes for a listed length only', async () => {
-		await run('mute', { id: 'c1', userId: 'u1', hours: '168' });
-		const [actor, userId, hours] = queries.muteUser.mock.calls[0];
+		await run('mute', { id: 'c1', userId: 'u1', hours: '168', rule: 'spam' });
+		const [actor, userId, hours, , rule] = queries.muteUser.mock.calls[0];
 		expect(actor).toBe(MOD);
 		expect(userId).toBe('u1');
 		expect(hours).toBe(168);
+		expect(rule).toBe('spam');
 
 		queries.muteUser.mockClear();
 		const result = await run('mute', { id: 'c1', userId: 'u1', hours: '5' });
@@ -372,8 +487,8 @@ describe('inputs', () => {
 	);
 
 	it('a ban passes the acting user and the account', async () => {
-		await run('ban', { id: 'c1', userId: 'u1', reason: 'Slurs' });
-		expect(queries.banAccount).toHaveBeenCalledWith(MOD, 'u1', 'Slurs');
+		await run('ban', { id: 'c1', userId: 'u1', reason: 'Slurs', rule: 'hate' });
+		expect(queries.banAccount).toHaveBeenCalledWith(MOD, 'u1', 'Slurs', 'hate');
 	});
 
 	it('maps a forbidden target to 403 with a message for the row', async () => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ResourceNav from '#lib/components/resources/resourceNav.svelte';
+	import OnThisPageLayout from '#lib/components/resources/onThisPageLayout.svelte';
 	import MetricArticle from '#lib/components/resources/metricArticle.svelte';
 	import SubBlock from '#lib/components/resources/subBlock.svelte';
 	import BechdelLadderExample from '#lib/components/resources/bechdelLadderExample.svelte';
@@ -18,7 +18,12 @@
 		REPORT_LEVEL_LABELS,
 		SEXUAL_LEVEL_LABELS
 	} from '#lib/media/utils/communityReports.ts';
-	import { REPORT_THRESHOLD } from '#lib/media/utils/comments.ts';
+	import {
+		MODERATION_RULE_LABELS,
+		MODERATION_RULE_MEANINGS,
+		REPORT_THRESHOLD,
+		moderationRule
+	} from '#lib/media/utils/comments.ts';
 	import { STAFF_ROLES } from '#lib/media/utils/staff.ts';
 
 	const category = (key: (typeof REPORT_CATEGORIES)[number]['key']) =>
@@ -33,7 +38,8 @@
 		{ id: 'community-reports', label: 'MIDB community reports' },
 		{ id: 'ddd', label: 'Does the Dog Die' },
 		{ id: 'letterboxd', label: 'Letterboxd' },
-		{ id: 'moderation', label: 'Moderation' }
+		{ id: 'moderation', label: 'Moderation' },
+		{ id: 'comment-rules', label: 'Comment rules' }
 	];
 </script>
 
@@ -54,11 +60,7 @@
 		</p>
 	</header>
 
-	<div class="layout">
-		<aside class="nav-col">
-			<ResourceNav items={navItems} />
-		</aside>
-
+	<OnThisPageLayout items={navItems} columnWidth="42rem" breakpoint="md">
 		<div class="content">
 			<MetricArticle id="verdict" title="Verdicts" icon="ri-scales-3-fill" hue="var(--brand)">
 				<p>
@@ -342,10 +344,40 @@
 						can also mute or ban an account, and a ban hides the account's published and pending comments
 						and removes its votes.
 					</p>
+					<p>
+						A moderator can end a mute that a moderator set, and an administrator can end any mute.
+						Only an administrator can lift a ban. Lifting it lets the account sign in again and puts
+						its community reports back in the counts. The comments it hid stay hidden until a
+						moderator restores them, and its removed votes stay removed.
+					</p>
 				</SubBlock>
 			</MetricArticle>
+
+			<MetricArticle
+				id="comment-rules"
+				title="Comment rules"
+				icon="ri-file-list-3-fill"
+				hue="var(--brand)"
+				sourceLabel="src/lib/media/utils/comments.ts"
+				sourceHref="https://github.com/Against-Misogyny-in-Movies/MIDB/blob/main/src/lib/media/utils/comments.ts"
+			>
+				<p>
+					A moderator names one rule when hiding or rejecting a comment, and when muting or banning
+					an account. The author sees the rule, and the moderator's note when there is one, with a
+					rejected or hidden comment in their own comment lists. The rule of a mute or a ban stays
+					in the moderation log. The automatic check gives its own reason and names no rule.
+				</p>
+				<dl class="rules">
+					{#each moderationRule as rule (rule)}
+						<div>
+							<dt>{MODERATION_RULE_LABELS[rule]}</dt>
+							<dd>{MODERATION_RULE_MEANINGS[rule]}</dd>
+						</div>
+					{/each}
+				</dl>
+			</MetricArticle>
 		</div>
-	</div>
+	</OnThisPageLayout>
 </div>
 
 <style lang="postcss">
@@ -384,26 +416,25 @@
 		margin-top: var(--spacing-md);
 	}
 
-	.layout {
-		@apply grid gap-lg items-start;
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	@media (min-width: 768px) {
-		.layout {
-			grid-template-columns: 12rem minmax(0, 42rem);
-			gap: var(--spacing-xl);
-		}
-
-		/* The grid cell is only as tall as the nav (items: start), so the cell itself pins. */
-		.nav-col {
-			@apply sticky;
-			top: 5rem;
-		}
-	}
-
 	.content {
 		@apply flex flex-col min-w-0;
 		gap: 16px;
+	}
+
+	.rules {
+		@apply flex flex-col;
+		gap: var(--spacing-xs);
+	}
+
+	.rules div {
+		@apply flex flex-col;
+	}
+
+	.rules dt {
+		@apply font-semibold text-ink;
+	}
+
+	.rules dd {
+		@apply text-ink-muted;
 	}
 </style>

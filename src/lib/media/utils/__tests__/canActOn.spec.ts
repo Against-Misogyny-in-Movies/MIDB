@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canActOn, canCloseFlag } from '../canActOn.ts';
+import { canActOn, canCloseFlag, canEndMute, canLiftBan, canReopenFlag } from '../canActOn.ts';
 
 const user = { id: 'u', role: 'user' };
 const mod = { id: 'm', role: 'moderator' };
@@ -40,5 +40,33 @@ describe('canCloseFlag', () => {
 	it('lets an administrator close any flag, their own included', () => {
 		for (const reporter of [user, mod, admin, admin2])
 			expect(canCloseFlag(admin, reporter)).toBe(true);
+	});
+});
+
+describe('canEndMute', () => {
+	it('lets an administrator end any mute, and a moderator only a moderator’s on an ordinary account', () => {
+		expect(canEndMute(admin, user, false)).toBe(true);
+		expect(canEndMute(mod, user, false)).toBe(false);
+		expect(canEndMute(mod, user, true)).toBe(true);
+		expect(canEndMute(mod, mod2, true)).toBe(false);
+		expect(canEndMute(admin, admin, false)).toBe(false);
+	});
+});
+
+describe('canLiftBan', () => {
+	it('is for administrators on other accounts only', () => {
+		expect(canLiftBan(admin, user)).toBe(true);
+		expect(canLiftBan(mod, user)).toBe(false);
+		expect(canLiftBan(admin, admin)).toBe(false);
+	});
+});
+
+describe('canReopenFlag', () => {
+	it('adds, for a moderator, that no administrator closed the flag', () => {
+		expect(canReopenFlag(mod, user, false)).toBe(true);
+		expect(canReopenFlag(mod, user, true)).toBe(false);
+		expect(canReopenFlag(mod, admin, false)).toBe(false);
+		expect(canReopenFlag(admin, user, true)).toBe(true);
+		expect(canReopenFlag(admin, admin, true)).toBe(true);
 	});
 });

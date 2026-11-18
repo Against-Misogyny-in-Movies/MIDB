@@ -9,6 +9,11 @@ import {
 	COMMUNITY_REPORT_MIN,
 	REPORT_ACCOUNT_MIN_AGE_DAYS
 } from '#lib/media/utils/communityReports.ts';
+import {
+	MODERATION_RULE_LABELS,
+	MODERATION_RULE_MEANINGS,
+	moderationRule
+} from '#lib/media/utils/comments.ts';
 
 describe('Methodology, community reports', () => {
 	const section = () => {
@@ -42,5 +47,33 @@ describe('Methodology, community reports', () => {
 	it('has a nav entry for the section', () => {
 		const { container } = render(Page);
 		expect(container.querySelector('a[href="#community-reports"]')).toBeTruthy();
+	});
+});
+
+describe('Methodology, comment rules', () => {
+	const section = () => render(Page).container.querySelector<HTMLElement>('#comment-rules');
+
+	it('lists every rule with its label and meaning, from the shared lists', () => {
+		const el = section();
+		expect(el?.querySelector('h2')?.textContent).toBe('Comment rules');
+		expect([...(el?.querySelectorAll('dt') ?? [])].map((d) => d.textContent)).toEqual(
+			moderationRule.map((rule) => MODERATION_RULE_LABELS[rule])
+		);
+		expect([...(el?.querySelectorAll('dd') ?? [])].map((d) => d.textContent)).toEqual(
+			moderationRule.map((rule) => MODERATION_RULE_MEANINGS[rule])
+		);
+	});
+
+	it('says only what the code does: who sees the rule, and that the check names none', () => {
+		const text = (section()?.textContent ?? '').replace(/\s+/g, ' ');
+		expect(text).toContain('The rule of a mute or a ban stays in the moderation log');
+		expect(text).toContain('The automatic check gives its own reason and names no rule');
+		expect(text).not.toMatch(/\byou\b/i);
+		expect(text).not.toContain('—');
+	});
+
+	it('has a nav entry for the section', () => {
+		const { container } = render(Page);
+		expect(container.querySelector('a[href="#comment-rules"]')).toBeTruthy();
 	});
 });

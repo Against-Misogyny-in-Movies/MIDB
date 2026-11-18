@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ne, not, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { retiredUsernames, sessions, users } from '#db/schema/auth.ts';
 import { communityContentReports, comments } from '#db/schema/community.ts';
@@ -12,7 +12,9 @@ import { usernameRefusal } from '#lib/server/moderation/username-check.ts';
 import type { PublicUser } from '#lib/media/types/user.ts';
 import { isUniqueViolation } from './db-errors.ts';
 import { activeMute } from './mute.ts';
+import { onTarget } from './moderation-target.ts';
 import { countsFromDate } from './counting-account.ts';
+import { countedReportsWhere } from './community-reports.ts';
 
 export type UserRow = typeof users.$inferSelect;
 export type UserRole = UserRow['role'];
@@ -42,21 +44,22 @@ export async function getUserById(id: string): Promise<UserRow | null> {
 	return (await db.query.users.findFirst({ where: eq(users.id, id) })) ?? null;
 }
 
-/** The two statements of a ban, for a batch that also logs it (`moderation-actions.ts`). */
-export function banStatements(id: string, reason: string | null) {
-	return [
-		db.update(users).set({ bannedAt: new Date(), banReason: reason }).where(eq(users.id, id)),
-		db.delete(sessions).where(eq(sessions.userId, id))
-	] as const;
-}
-
 /**
- * Bans a user and ends every session they hold, in one batch. The session cookie cache lets a
- * session read as valid for a few minutes, so `locals.getUser` also re-reads `banned_at`; the
- * `session.create` hook (`create-auth.ts`) refuses a new session.
+ * The two statements of a ban, for the batch of `banAccount` that also logs it: the ban and the
+ * end of every session the account holds, both only while `guard` holds on the account (the
+ * sessions' statement must run first, since the ban makes it false). The session cookie cache lets a session read as valid
+ * for a few minutes, so `locals.getUser` also re-reads `banned_at`; the `session.create` hook
+ * (`create-auth.ts`) refuses a new session.
  */
-export async function banUser(id: string, reason: string | null): Promise<void> {
-	await db.batch(banStatements(id, reason));
+export function banStatements(id: string, reason: string | null, guard: SQL) {
+	return [
+		db
+			.update(users)
+			.set({ bannedAt: new Date(), banReason: reason })
+			.where(guard)
+			.returning({ id: users.id }),
+		db.delete(sessions).where(and(eq(sessions.userId, id), onTarget(guard)))
+	] as const;
 }
 
 type ProfileUpdate = { username?: string; avatarKey?: string };
@@ -154,10 +157,10 @@ export async function usernameAvailability(
 const titleRef = { kind: titles.kind, tmdbId: titles.tmdbId, title: titles.title };
 
 /**
- * A reader's comments for the history page, newest first, in every status (the page badges
- * each one), with the title joined.
+ * A reader's comments, newest first, in every status (the page badges each one), with the title
+ * joined. `notPublic` keeps the ones a public profile does not list: every status but published.
  */
-export async function getUserComments(userId: string) {
+export async function getUserComments(userId: string, { notPublic = false } = {}) {
 	return db
 		.select({
 			id: comments.id,
@@ -165,6 +168,7 @@ export async function getUserComments(userId: string) {
 			status: comments.status,
 			score: comments.score,
 			moderationReason: comments.moderationReason,
+			moderationRule: comments.moderationRule,
 			parentId: comments.parentId,
 			replyCount: comments.replyCount,
 			createdAt: comments.createdAt,
@@ -173,7 +177,9 @@ export async function getUserComments(userId: string) {
 		})
 		.from(comments)
 		.innerJoin(titles, eq(comments.titleId, titles.id))
-		.where(eq(comments.userId, userId))
+		.where(
+			and(eq(comments.userId, userId), notPublic ? ne(comments.status, 'published') : undefined)
+		)
 		.orderBy(desc(comments.createdAt), desc(comments.id));
 }
 
@@ -190,8 +196,15 @@ export type UserRating = {
 	restricted: 'banned' | 'muted' | null;
 };
 
-/** A reader's community reports, newest first, in every status, with the title joined. */
-export async function getUserRatings(userId: string): Promise<UserRating[]> {
+/**
+ * A reader's community reports, newest first, in every status, with the title joined.
+ * `notCounted` keeps the ones a public profile does not list: the negation of
+ * `countedReportsWhere` (held, rejected, too new an account, muted).
+ */
+export async function getUserRatings(
+	userId: string,
+	{ notCounted = false } = {}
+): Promise<UserRating[]> {
 	const rows = await db
 		.select({
 			status: communityContentReports.status,
@@ -206,7 +219,12 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
 		.from(communityContentReports)
 		.innerJoin(titles, eq(communityContentReports.titleId, titles.id))
 		.innerJoin(users, eq(communityContentReports.userId, users.id))
-		.where(eq(communityContentReports.userId, userId))
+		.where(
+			and(
+				eq(communityContentReports.userId, userId),
+				notCounted ? not(countedReportsWhere()) : undefined
+			)
+		)
 		.orderBy(desc(communityContentReports.updatedAt), desc(communityContentReports.titleId));
 	return rows.map(({ accountCreatedAt, role, bannedAt, mutedUntil, ...row }) => ({
 		...row,

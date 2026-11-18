@@ -154,7 +154,7 @@ describe('CommentsSection links to a comment', () => {
 	it('shows the status of a pending comment its reader may see', async () => {
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'pending', reason: null })
+			second: thread(view('second'), { status: 'pending', reason: null, rule: null })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();
@@ -167,11 +167,13 @@ describe('CommentsSection links to a comment', () => {
 		session.set({ ...ANNA, id: 'mod', username: 'mod', displayName: 'mod', role: 'moderator' });
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'hidden', reason: 'off topic' })
+			second: thread(view('second'), { status: 'hidden', reason: 'off topic', rule: 'spam' })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();
-		expect(pinned.textContent).toMatch(/A moderator hid this comment/);
+		expect(pinned.textContent).toMatch(
+			/Hidden by a moderator\. Rule: Spam\. off topic\. Only the author and moderators see the comment/
+		);
 		for (const name of ['Edit', 'Delete', 'Report', 'Reply', 'Upvote']) {
 			expect(within(pinned).queryByRole('button', { name })).toBeNull();
 		}
@@ -181,7 +183,7 @@ describe('CommentsSection links to a comment', () => {
 		session.set(ANNA);
 		history.replaceState(null, '', '/movie/603#comment-second');
 		const fetcher = api({
-			second: thread(view('second'), { status: 'deleted', reason: null })
+			second: thread(view('second'), { status: 'deleted', reason: null, rule: null })
 		});
 		mount(fetcher);
 		const pinned = await pinnedBlock();

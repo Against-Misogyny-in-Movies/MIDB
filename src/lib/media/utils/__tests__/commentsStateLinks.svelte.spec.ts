@@ -76,7 +76,7 @@ describe('CommentsState.showLink', () => {
 	});
 
 	it('pins the thread of a comment that is not on the loaded page', async () => {
-		const review = { status: 'pending' as const, reason: null };
+		const review = { status: 'pending' as const, reason: null, rule: null };
 		const { state, releaseList, threadCalls } = setup({
 			far: json(thread(view('far'), review))
 		});

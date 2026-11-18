@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '#lib/server/db.ts';
 import { users } from '#db/schema/auth.ts';
@@ -8,6 +8,7 @@ import type {
 	ProfileComment,
 	ProfileCommentPage,
 	ProfileReport,
+	ProfileReportPage,
 	PublicProfile
 } from '#lib/media/types/profile.ts';
 import { USERNAME_LOOKUP_RE } from '#lib/media/utils/username.ts';
@@ -23,7 +24,7 @@ type ProfileOwner = Pick<typeof users.$inferSelect, 'id' | 'avatarKey' | 'role' 
 
 /**
  * The account behind a public profile address: matched case-insensitively on the username. An
- * address that is not a possible username, no match, and a banned account are all null, as is an
+ * address that is not a possible username, no match, and a banned or deleted account are all null, as is an
  * account without a username (it has no address).
  */
 export async function findProfileOwner(username: string): Promise<ProfileOwner | null> {
@@ -38,7 +39,12 @@ export async function findProfileOwner(username: string): Promise<ProfileOwner |
 			createdAt: users.createdAt
 		})
 		.from(users)
-		.where(and(eq(sql`lower(${users.username})`, lower), sql`${users.bannedAt} IS NULL`))
+		.where(
+			and(
+				eq(sql`lower(${users.username})`, lower),
+				sql`${users.bannedAt} IS NULL AND ${users.deletedAt} IS NULL`
+			)
+		)
 		.limit(1);
 	return row && row.username !== null ? { ...row, username: row.username } : null;
 }
@@ -101,24 +107,92 @@ export async function getProfileComments(
 	};
 }
 
+/** Where a page of reports resumes: the last row's `updated_at` (ms) and title id. */
+type ReportCursor = { updatedAt: number; titleId: string };
+
+function encodeReportCursor(row: { updatedAt: Date; titleId: string }): string {
+	return `${row.updatedAt.getTime()}.${row.titleId}`;
+}
+
+/** Null for a cursor that is not one this module made: the first page. */
+function decodeReportCursor(cursor: string | null | undefined): ReportCursor | null {
+	const match = cursor ? /^(\d+)\.([\w-]+)$/.exec(cursor) : null;
+	if (!match) return null;
+	const updatedAt = Number(match[1]);
+	// A digit string past the range of a date reads as an invalid cursor.
+	if (!Number.isFinite(new Date(updatedAt).getTime())) return null;
+	return { updatedAt, titleId: match[2] };
+}
+
 /**
- * The account's reports that count, newest first, by title. The rule is `countedReportsWhere`,
- * the one a title's counts use, so a held or rejected report, a report of an account that is
- * too new, muted or banned, never shows.
+ * One page of the account's reports that count, newest first by `updated_at`, then title id
+ * (one report per account and title, so the pair is unique and the order is stable for a
+ * cursor). The rule is `countedReportsWhere`, the one a title's counts use, so a held or
+ * rejected report, a report of an account that is too new, muted or banned, never shows.
  */
-async function getProfileReports(userId: string): Promise<ProfileReport[]> {
+export async function getProfileReports(
+	userId: string,
+	cursor?: string | null,
+	limit: number = COMMENT_PAGE_SIZE
+): Promise<ProfileReportPage> {
+	const after = decodeReportCursor(cursor);
+	const at = after ? new Date(after.updatedAt) : null;
 	const rows = await db
 		.select({
 			kind: titles.kind,
 			tmdbId: titles.tmdbId,
-			name: titles.title
+			name: titles.title,
+			titleId: reports.titleId,
+			updatedAt: reports.updatedAt
 		})
 		.from(reports)
 		.innerJoin(users, eq(reports.userId, users.id))
 		.innerJoin(titles, eq(reports.titleId, titles.id))
-		.where(and(eq(reports.userId, userId), countedReportsWhere()))
-		.orderBy(desc(reports.updatedAt), desc(reports.titleId));
-	return rows;
+		.where(
+			and(
+				eq(reports.userId, userId),
+				countedReportsWhere(),
+				at && after
+					? or(
+							lt(reports.updatedAt, at),
+							and(eq(reports.updatedAt, at), lt(reports.titleId, after.titleId))
+						)
+					: undefined
+			)
+		)
+		.orderBy(desc(reports.updatedAt), desc(reports.titleId))
+		.limit(limit + 1);
+	const page = rows.slice(0, limit);
+	return {
+		reports: page.map(({ kind, tmdbId, name }): ProfileReport => ({ kind, tmdbId, name })),
+		nextCursor: rows.length > limit ? encodeReportCursor(page[page.length - 1]) : null
+	};
+}
+
+/** The titles the account's published comments and counted reports are on: each title once, across both. */
+async function getTitleCount(userId: string): Promise<number> {
+	const commentTitles = db
+		.select({ titleId: comments.titleId })
+		.from(comments)
+		.where(and(eq(comments.userId, userId), eq(comments.status, 'published')));
+	const reportTitles = db
+		.select({ titleId: reports.titleId })
+		.from(reports)
+		.innerJoin(users, eq(reports.userId, users.id))
+		.where(and(eq(reports.userId, userId), countedReportsWhere()));
+	const distinct = commentTitles.union(reportTitles).as('profile_titles');
+	const [row] = await db.select({ count: sql<number>`count(*)` }).from(distinct);
+	return row?.count ?? 0;
+}
+
+/** How many reports of the account count: the figure the profile shows, since its list is paged. */
+async function getReportCount(userId: string): Promise<number> {
+	const [row] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(reports)
+		.innerJoin(users, eq(reports.userId, users.id))
+		.where(and(eq(reports.userId, userId), countedReportsWhere()));
+	return row?.count ?? 0;
 }
 
 /** The number of an account's published comments and the sum of their scores. */
@@ -135,15 +209,17 @@ async function getCommentStats(userId: string): Promise<{ count: number; scoreTo
 
 /**
  * An account's public profile, found by username (case-insensitive); null for an address with
- * no account, a banned account or an account without a username. Read-only.
+ * no account, a banned or deleted account or an account without a username. Read-only.
  */
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
 	const owner = await findProfileOwner(username);
 	if (!owner) return null;
-	const [stats, commentPage, profileReports] = await Promise.all([
+	const [stats, commentPage, reportPage, reportCount, titleCount] = await Promise.all([
 		getCommentStats(owner.id),
 		getProfileComments(owner.id),
-		getProfileReports(owner.id)
+		getProfileReports(owner.id),
+		getReportCount(owner.id),
+		getTitleCount(owner.id)
 	]);
 	return {
 		id: owner.id,
@@ -153,7 +229,9 @@ export async function getPublicProfile(username: string): Promise<PublicProfile 
 		joinedAt: owner.createdAt.toISOString().slice(0, 10),
 		scoreTotal: stats.scoreTotal,
 		commentCount: stats.count,
+		reportCount,
+		titleCount,
 		comments: commentPage,
-		reports: profileReports
+		reports: reportPage
 	};
 }

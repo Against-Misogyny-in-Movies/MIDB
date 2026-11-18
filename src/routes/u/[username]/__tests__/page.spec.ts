@@ -1,10 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { OwnProfile, ProfileComment, PublicProfile } from '#lib/media/types/profile.ts';
+import type { ProfileComment, ProfileReport, PublicProfile } from '#lib/media/types/profile.ts';
 
 const { default: Page } = await import('../+page.svelte');
 const { toasts } = await import('#lib/media/utils/toasts.svelte.js');
-const { session } = await import('#lib/media/utils/session.svelte.js');
 
 const entry = (id: string, over: Partial<ProfileComment> = {}): ProfileComment => ({
 	id,
@@ -25,8 +24,10 @@ const PROFILE: PublicProfile = {
 	joinedAt: '2026-01-15',
 	scoreTotal: 42,
 	commentCount: 2,
+	reportCount: 1,
+	titleCount: 2,
 	comments: { comments: [entry('c1'), entry('c2')], nextCursor: null },
-	reports: [{ kind: 'tv', tmdbId: 70523, name: 'Dark' }]
+	reports: { reports: [{ kind: 'tv', tmdbId: 70523, name: 'Dark' }], nextCursor: null }
 };
 
 const mount = (profile: PublicProfile = PROFILE) => render(Page, { data: { profile } } as never);
@@ -45,6 +46,18 @@ describe('the public profile page', () => {
 		expect(screen.getByText('Comment score').nextElementSibling?.textContent).toBe('42');
 		expect(screen.queryByText('Moderator')).toBeNull();
 		expect(screen.queryByText('Administrator')).toBeNull();
+	});
+
+	it('shows four figures in the header, each named once, and a zero as 0', () => {
+		mount();
+		const figures = ['Comment score', 'Comments', 'Community reports', 'Films and series'].map(
+			(name) => screen.getAllByText(name).find((el) => el.tagName === 'DT')!
+		);
+		expect(figures.map((dt) => dt.nextElementSibling?.textContent)).toEqual(['42', '2', '1', '2']);
+		cleanup();
+		mount({ ...PROFILE, scoreTotal: 0, commentCount: 0, reportCount: 0, titleCount: 0 });
+		const zeros = screen.getAllByText('0').filter((el) => el.tagName === 'DD');
+		expect(zeros).toHaveLength(4);
 	});
 
 	it.each([
@@ -84,13 +97,10 @@ describe('the public profile page', () => {
 		expect(screen.queryByText(/Updated/)).toBeNull();
 	});
 
-	it('has a Comments tab, open first, and a Community reports tab, each with its count', () => {
+	it('has a Comments tab, open first, and a Community reports tab, with no counts on them', () => {
 		mount();
 		const tabs = screen.getAllByRole('tab');
-		expect(tabs.map((t) => t.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-			'Comments 2',
-			'Community reports 1'
-		]);
+		expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Comments', 'Community reports']);
 		expect(tabs[0].getAttribute('aria-selected')).toBe('true');
 		expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe('tab-comments');
 	});
@@ -123,7 +133,11 @@ describe('the public profile page', () => {
 	});
 
 	it('says so when there are no comments and no counted community reports', async () => {
-		mount({ ...PROFILE, comments: { comments: [], nextCursor: null }, reports: [] });
+		mount({
+			...PROFILE,
+			comments: { comments: [], nextCursor: null },
+			reports: { reports: [], nextCursor: null }
+		});
 		expect(screen.getByText('No published comments.')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Show more comments' })).toBeNull();
 		await fireEvent.click(screen.getByRole('tab', { name: /Community reports/ }));
@@ -168,106 +182,59 @@ describe('showing more comments', () => {
 	});
 });
 
-describe('the owner’s view', () => {
-	const ANNA = {
-		id: 'anna-id',
-		username: 'anna',
-		avatarKey: null,
-		role: 'user' as const,
-		displayName: 'anna'
+describe('showing more community reports', () => {
+	const report = (name: string, tmdbId: number): ProfileReport => ({ kind: 'movie', tmdbId, name });
+	const withMore = {
+		...PROFILE,
+		reports: { reports: [report('Alien', 348)], nextCursor: '99.t1' }
 	};
-	const OWN: OwnProfile = {
-		comments: [
-			{
-				id: 'p1',
-				body: 'Waiting text',
-				status: 'pending',
-				score: 0,
-				moderationReason: null,
-				parentId: null,
-				replyCount: 0,
-				createdAt: '2026-11-02T10:00:00.000Z',
-				editedAt: null,
-				kind: 'movie',
-				tmdbId: 348,
-				title: 'Alien'
-			}
-		],
-		reports: [
-			{
-				titleId: 't-dark',
-				status: 'held',
-				kind: 'tv',
-				tmdbId: 70523,
-				title: 'Dark',
-				updatedAt: '2026-11-02T10:00:00.000Z',
-				countsFrom: '2026-01-01T00:00:00.000Z',
-				restricted: null
-			}
-		],
-		mutedUntil: null
-	};
+	let fetcher: ReturnType<typeof vi.fn>;
 
-	afterEach(() => session.clear());
-
-	it('shows a visitor no owner actions', () => {
-		session.set({ ...ANNA, id: 'bea-id', username: 'bea', displayName: 'bea' });
-		mount();
-		expect(screen.queryByRole('button', { name: 'Edit profile' })).toBeNull();
-		expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
-	});
-
-	it('gives the owner Edit profile and Settings, and their own comments and reports', async () => {
-		const fetcher = vi.fn(async () => Response.json(OWN));
+	beforeEach(() => {
+		fetcher = vi.fn();
 		vi.stubGlobal('fetch', fetcher);
-		session.set(ANNA);
-		mount();
-		expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe(
-			'/user/settings'
-		);
-		await screen.findByText('Waiting text');
-		expect(fetcher).toHaveBeenCalledWith('/api/me/profile', expect.anything());
-		expect(screen.getByText('Awaiting review')).toBeTruthy();
-		expect(screen.queryByText('Text of c1')).toBeNull();
-		await fireEvent.click(screen.getByRole('tab', { name: /Community reports/ }));
-		expect(screen.getByText('Waiting for review')).toBeTruthy();
 	});
 
-	it('opens the editor under the header and closes it on Cancel', async () => {
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async () => Response.json(OWN))
+	async function openReports() {
+		mount(withMore);
+		await fireEvent.click(screen.getByRole('tab', { name: 'Community reports' }));
+	}
+
+	it('appends the next page in place, moves the focus to the first new row and ends on the last page', async () => {
+		fetcher.mockResolvedValue(
+			Response.json({
+				reports: [report('Alien', 348), report('Aliens', 679)],
+				nextCursor: null
+			})
 		);
-		session.set(ANNA);
-		mount();
-		await fireEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
-		expect(screen.getByRole('textbox', { name: 'Username' })).toBeTruthy();
-		expect(screen.getByRole('heading', { level: 1, name: 'anna' })).toBeTruthy();
-		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-		expect(screen.queryByRole('textbox', { name: 'Username' })).toBeNull();
+		await openReports();
+		await fireEvent.click(screen.getByRole('button', { name: 'Show more community reports' }));
+		await screen.findByRole('link', { name: 'Aliens' });
+		expect(fetcher).toHaveBeenCalledWith(
+			'/api/users/anna/reports?cursor=99.t1',
+			expect.objectContaining({ method: 'GET' })
+		);
+		expect(screen.getAllByRole('link', { name: 'Alien' })).toHaveLength(1);
+		await waitFor(() => expect(document.activeElement?.id).toBe('profile-report-1'));
+		expect(screen.queryByRole('button', { name: 'Show more community reports' })).toBeNull();
+	});
+
+	it('toasts a failed load, keeps the button and returns the focus to it', async () => {
+		fetcher.mockResolvedValue(new Response('{}', { status: 500 }));
+		await openReports();
+		const button = screen.getByRole('button', { name: 'Show more community reports' });
+		await fireEvent.click(button);
 		await waitFor(() =>
-			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Edit profile' }))
+			expect(toasts.items.map((t) => t.text)).toEqual([
+				'More community reports could not be loaded. Try again in a moment.'
+			])
 		);
+		await waitFor(() => expect(document.activeElement).toBe(button));
 	});
 
-	it('names a mute, and says when the private view did not load', async () => {
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async () =>
-				Response.json({ ...OWN, mutedUntil: new Date(Date.now() + 86_400_000).toISOString() })
-			)
-		);
-		session.set(ANNA);
+	it('has no button on a single page', async () => {
 		mount();
-		expect(await screen.findByText(/This account is muted until/)).toBeTruthy();
-		cleanup();
-		session.clear();
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async () => new Response('{}', { status: 500 }))
-		);
-		session.set(ANNA);
-		mount();
-		expect(await screen.findByText(/could not be loaded/)).toBeTruthy();
+		await fireEvent.click(screen.getByRole('tab', { name: 'Community reports' }));
+		expect(screen.queryByRole('button', { name: 'Show more community reports' })).toBeNull();
 	});
 });

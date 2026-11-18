@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import type { ReportAccount } from '#lib/media/types/moderation.ts';
+	import { canEndMute, canLiftBan } from '#lib/media/utils/canActOn.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	interface Props {
@@ -9,14 +10,17 @@
 		canAct: boolean;
 		/** False for an account they cannot mute or ban (`canActOn` with `restrict`). */
 		canRestrict: boolean;
+		/** The acting staff member: an administrator lifts any ban and ends any mute, a moderator only a mute a moderator set (`canEndMute`, `canLiftBan`). */
+		me: { id: string; role: string };
 	}
 
-	let { account, canAct, canRestrict }: Props = $props();
+	let { account, canAct, canRestrict, me }: Props = $props();
 
-	type Panel = 'mute' | 'ban' | 'rejectAll';
+	type Panel = 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
 	let panel = $state<Panel | null>(null);
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
+	let triggers = $state<Partial<Record<Panel, HTMLButtonElement>>>({});
 	const submit = rowSubmit(
 		() => root,
 		(name) => (busy = name),
@@ -24,34 +28,66 @@
 	);
 
 	const name = $derived(account.username ?? 'this account');
+	const target = $derived({ id: account.userId, role: account.role });
+	const endable = $derived(canEndMute(me, target, account.mutedByModerator));
+	const liftable = $derived(canLiftBan(me, target));
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 </script>
 
-{#if (canAct && account.reportCount > 0) || canRestrict}
+{#if (canAct && account.reportCount > 0) || (canRestrict && (account.restricted !== 'banned' || liftable))}
 	<div class="account" bind:this={root} tabindex="-1">
 		<p class="label">Account</p>
-		<div class="actions">
+		<div class="action-row">
 			{#if canAct && account.reportCount > 0}
 				<button
 					class="btn btn--ghost"
 					type="button"
 					aria-expanded={panel === 'rejectAll'}
-					onclick={() => toggle('rejectAll')}>Reject all from this account</button
+					bind:this={triggers.rejectAll}
+					onclick={() => toggle('rejectAll')}>Reject all community reports from this account</button
 				>
 			{/if}
 			{#if canRestrict}
-				<button
-					class="btn btn--ghost"
-					type="button"
-					aria-expanded={panel === 'mute'}
-					onclick={() => toggle('mute')}>Mute account</button
-				>
-				<button
-					class="btn btn--ghost"
-					type="button"
-					aria-expanded={panel === 'ban'}
-					onclick={() => toggle('ban')}>Ban account</button
-				>
+				{#if account.restricted === 'banned'}
+					{#if liftable}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'unban'}
+							bind:this={triggers.unban}
+							onclick={() => toggle('unban')}>Lift ban</button
+						>
+					{/if}
+				{:else}
+					{#if account.restricted === 'muted'}
+						{#if endable}
+							<button
+								class="btn btn--ghost"
+								type="button"
+								aria-expanded={panel === 'unmute'}
+								bind:this={triggers.unmute}
+								onclick={() => toggle('unmute')}>End mute</button
+							>
+						{:else}
+							<p class="label">Only an administrator can end this mute.</p>
+						{/if}
+					{:else}
+						<button
+							class="btn btn--ghost"
+							type="button"
+							aria-expanded={panel === 'mute'}
+							bind:this={triggers.mute}
+							onclick={() => toggle('mute')}>Mute account</button
+						>
+					{/if}
+					<button
+						class="btn btn--ghost"
+						type="button"
+						aria-expanded={panel === 'ban'}
+						bind:this={triggers.ban}
+						onclick={() => toggle('ban')}>Ban account</button
+					>
+				{/if}
 			{/if}
 		</div>
 
@@ -64,6 +100,7 @@
 				{busy}
 				{submit}
 				oncancel={() => (panel = null)}
+				opener={() => (panel ? triggers[panel] : undefined)}
 			/>
 		{/if}
 	</div>
@@ -77,10 +114,5 @@
 		gap: var(--spacing-sm);
 		border-top: 1px solid var(--border);
 		padding-top: var(--spacing-sm);
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

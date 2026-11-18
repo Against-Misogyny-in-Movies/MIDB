@@ -30,7 +30,7 @@ function event(pathname: string, cookie?: string): RequestEvent {
 }
 
 const row = (overrides: Partial<UserRow> = {}) =>
-	({ id: 'user-1', role: 'user', bannedAt: null, ...overrides }) as UserRow;
+	({ id: 'user-1', role: 'user', bannedAt: null, deletedAt: null, ...overrides }) as UserRow;
 
 async function run(pathname: string, cookie?: string) {
 	const ev = event(pathname, cookie);
@@ -93,6 +93,13 @@ describe('handle', () => {
 	it('getUser is null for a banned user, even while the session cookie is cached', async () => {
 		getSession.mockResolvedValue({ user: { id: 'user-1' } });
 		getUserById.mockResolvedValue(row({ bannedAt: new Date() }));
+		const { ev } = await run('/api/me', SESSION_COOKIE);
+		await expect(ev.locals.getUser()).resolves.toBeNull();
+	});
+
+	it('getUser is null for a deleted account, even while the session cookie is cached', async () => {
+		getSession.mockResolvedValue({ user: { id: 'user-1' } });
+		getUserById.mockResolvedValue(row({ deletedAt: new Date() }));
 		const { ev } = await run('/api/me', SESSION_COOKIE);
 		await expect(ev.locals.getUser()).resolves.toBeNull();
 	});

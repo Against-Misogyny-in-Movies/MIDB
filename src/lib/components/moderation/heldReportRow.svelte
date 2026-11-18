@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import CountRejectForms from '#lib/components/moderation/countRejectForms.svelte';
 	import ReportAnswers from '#lib/components/moderation/reportAnswers.svelte';
@@ -41,7 +42,13 @@
 		</Badge>
 		<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
 	{/snippet}
-	<p class="label">{accountLine(report.account)}</p>
+	<p class="label">
+		<AccountLink
+			id={report.account.userId}
+			username={report.account.username}
+			name={report.account.username ?? 'An account'}
+		/>, {accountLine(report.account, false)}
+	</p>
 	<ReportAnswers answers={report.answers} um={report.um} />
 	{#snippet actions()}
 		{#if canAct}

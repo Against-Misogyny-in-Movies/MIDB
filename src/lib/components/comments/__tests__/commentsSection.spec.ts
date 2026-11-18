@@ -52,6 +52,7 @@ function own(id: string, over: Partial<OwnComment> = {}): OwnComment {
 		status: 'pending',
 		moderationSource: null,
 		moderationReason: null,
+		moderationRule: null,
 		score: 0,
 		replyCount: 0,
 		createdAt: '2026-11-02T10:00:00.000Z',
@@ -208,7 +209,7 @@ describe('CommentsSection signed in', () => {
 		expect(await screen.findByText('Own p')).toBeTruthy();
 		expect(screen.getByText('Awaiting review')).toBeTruthy();
 		expect(screen.getByText('Rejected')).toBeTruthy();
-		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
+		expect(screen.getByText(/Rejected. Contains a slur\. Only the author/)).toBeTruthy();
 	});
 
 	it('has no vote or report controls on the reader’s own comment, and edit and delete on it only', async () => {

@@ -1,5 +1,5 @@
 import { alias } from 'drizzle-orm/sqlite-core';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db.ts';
 import { commentVotes, comments } from '#db/schema/community.ts';
 import { titles } from '#db/schema/titles.ts';
@@ -53,9 +53,10 @@ export async function banReach(targetId: string) {
  * by the number of those comments they hold, the score of every comment it voted on is
  * recomputed without its votes, the votes are deleted, and its published and pending comments
  * become `hidden` (source `moderator`, reason "Account banned"). They select by the account's
- * id, so no id list is bound.
+ * id, so no id list is bound; with a `guard` (a condition on the account's row, as
+ * `onTarget` makes it) each applies only while it holds.
  */
-export function banWeightStatements(targetId: string): BatchStatement[] {
+export function banWeightStatements(targetId: string, guard?: SQL): BatchStatement[] {
 	const publishedOfTarget = sql`SELECT parent_id FROM comments WHERE user_id = ${targetId} AND status = 'published' UNION SELECT root_id FROM comments WHERE user_id = ${targetId} AND status = 'published'`;
 	return [
 		db
@@ -64,7 +65,7 @@ export function banWeightStatements(targetId: string): BatchStatement[] {
 				replyCount: sql`max(${comments.replyCount} - (SELECT count(*) FROM comments c WHERE c.user_id = ${targetId} AND c.status = 'published' AND (c.parent_id = ${comments.id} OR c.root_id = ${comments.id})), 0)`,
 				updatedAt: sql`${comments.updatedAt}`
 			})
-			.where(sql`${comments.id} IN (${publishedOfTarget})`),
+			.where(and(sql`${comments.id} IN (${publishedOfTarget})`, guard)),
 		db
 			.update(comments)
 			.set({
@@ -72,16 +73,26 @@ export function banWeightStatements(targetId: string): BatchStatement[] {
 				updatedAt: sql`${comments.updatedAt}`
 			})
 			.where(
-				sql`${comments.id} IN (SELECT comment_id FROM comment_votes WHERE user_id = ${targetId})`
+				and(
+					sql`${comments.id} IN (SELECT comment_id FROM comment_votes WHERE user_id = ${targetId})`,
+					guard
+				)
 			),
-		db.delete(commentVotes).where(eq(commentVotes.userId, targetId)),
+		db.delete(commentVotes).where(and(eq(commentVotes.userId, targetId), guard)),
 		db
 			.update(comments)
 			.set({
 				status: 'hidden',
 				moderationSource: 'moderator',
-				moderationReason: BAN_COMMENT_REASON
+				moderationReason: BAN_COMMENT_REASON,
+				moderationRule: null
 			})
-			.where(and(eq(comments.userId, targetId), inArray(comments.status, ['published', 'pending'])))
+			.where(
+				and(
+					eq(comments.userId, targetId),
+					inArray(comments.status, ['published', 'pending']),
+					guard
+				)
+			)
 	];
 }

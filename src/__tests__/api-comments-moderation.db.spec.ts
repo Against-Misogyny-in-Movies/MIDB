@@ -130,7 +130,7 @@ describe('comment moderation through the endpoint', () => {
 		const second = await post('Another comment.');
 		expect([first.comment.status, second.comment.status]).toEqual(['pending', 'pending']);
 		expect((await listTitleComments(title.id, { sort: 'new' })).comments).toEqual([]);
-		const queue = await listPendingQueue();
+		const queue = (await listPendingQueue()).items;
 		expect(queue.map((i) => i.comment.id).sort()).toEqual(
 			[first.comment.id, second.comment.id].sort()
 		);

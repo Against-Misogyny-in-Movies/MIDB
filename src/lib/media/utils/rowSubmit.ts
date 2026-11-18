@@ -1,5 +1,7 @@
 import { invalidateAll } from '$app/navigation';
+import { EASE_MS } from '#lib/media/utils/easeOut.ts';
 import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+import { moderationStatus } from '#lib/media/utils/moderationStatus.svelte.js';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 /** The fields an action that went through returned, for a message that reports counts. */
@@ -20,6 +22,12 @@ const DONE: Record<string, string | ((data: DoneData) => string)> = {
 	rejectAccountReports: 'Every community report of the account is rejected.',
 	mute: 'Account muted.',
 	ban: 'Account banned.',
+	unmute: 'Mute ended.',
+	unban: 'Ban lifted.',
+	reopenFlag: 'Re-opened.',
+	note: 'Note added.',
+	makeModerator: 'Moderator role given.',
+	removeModerator: 'Moderator role removed.',
 	resolveFlag: 'Marked resolved.',
 	dismissFlag: 'Dismissed.',
 	aiSearch: 'Filters set from the search.',
@@ -43,7 +51,8 @@ type FormResult = { type: string; data?: Record<string, unknown> };
 
 /**
  * Toasts a moderation form's result: the failure the action returned (`{ error }`), or what an
- * action that went through (`{ done }`) did.
+ * action that went through (`{ done }`) did, with what remains in the open queue. A queue action
+ * that went through also sets the status line's label (`moderationStatus`).
  */
 export function toastActionResult(result: FormResult): void {
 	if (result.type === 'failure') {
@@ -51,21 +60,44 @@ export function toastActionResult(result: FormResult): void {
 		toasts.error(typeof error === 'string' ? error : 'The action failed. Try again in a moment.');
 	} else if (result.type === 'success') {
 		const done = result.data?.done;
+		const queued = moderationStatus.say(done);
 		const message = typeof done === 'string' ? DONE[done] : undefined;
-		if (message)
-			toasts.success(typeof message === 'function' ? message(result.data ?? {}) : message);
+		if (message) {
+			const text = typeof message === 'function' ? message(result.data ?? {}) : message;
+			const left = queued ? moderationStatus.left?.() : '';
+			toasts.success(left ? `${text} ${left}` : text);
+		}
 	}
 }
 
+/** An element still on the page and not on its way out (a removed row is inert while it eases out). */
+const present = (el: Element | null | undefined): el is HTMLElement =>
+	!!el?.isConnected && !el.closest('[inert]');
+
 /** An element the focus can be moved to: still on the page, and focusable by script (`tabindex`). */
 const takesFocus = (el: Element | null | undefined): el is HTMLElement =>
-	!!el?.isConnected && el.hasAttribute('tabindex');
+	present(el) && el.hasAttribute('tabindex');
+
+/**
+ * Scrolls `el` clear of the sticky header once the removed row has finished easing out (at once
+ * under `prefers-reduced-motion`), since the row's position is final only then. `el` carries
+ * `scroll-margin-top` for the header, so `nearest` leaves it alone when it is already in view.
+ */
+async function settleInView(el: HTMLElement | null | undefined): Promise<void> {
+	if (!el) return;
+	const reduced =
+		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+	if (!reduced) await new Promise((resolve) => setTimeout(resolve, EASE_MS));
+	if (el.isConnected && typeof el.scrollIntoView === 'function') {
+		el.scrollIntoView({ block: 'nearest' });
+	}
+}
 
 /**
  * The submit handler of a moderation row's form: it marks the action busy, lets the page update,
  * toasts the result, then puts the focus on the row if it is still there, else on its neighbour
  * when that can take focus, else on the first element `fallbackIds()` names that is on the page (by
- * default the empty-state line).
+ * default the empty-state line), then scrolls it clear of the sticky header (`settleInView`).
  */
 export function rowSubmit(
 	root: () => HTMLElement | undefined,
@@ -75,8 +107,17 @@ export function rowSubmit(
 ) {
 	return (name: string) => () => {
 		setBusy(name);
+		moderationStatus.acting = true;
 		const row = root();
 		const neighbour = row?.nextElementSibling ?? row?.previousElementSibling;
+		const pick = () => {
+			if (present(row)) return row;
+			if (takesFocus(neighbour)) return neighbour;
+			return [fallbackIds()]
+				.flat()
+				.map((id) => document.getElementById(id))
+				.find((el) => el !== null);
+		};
 		return async ({
 			result,
 			update
@@ -92,14 +133,13 @@ export function rowSubmit(
 			setBusy(null);
 			afterUpdate?.();
 			toastActionResult(result);
+			let focused: HTMLElement | null | undefined;
 			await focusAfterUpdate(() => {
-				if (row?.isConnected) return row;
-				if (takesFocus(neighbour)) return neighbour;
-				return [fallbackIds()]
-					.flat()
-					.map((id) => document.getElementById(id))
-					.find((el) => el !== null);
+				focused = pick();
+				return focused;
 			});
+			moderationStatus.acting = false;
+			await settleInView(focused);
 		};
 	};
 }

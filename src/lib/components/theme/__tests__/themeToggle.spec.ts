@@ -22,24 +22,24 @@ beforeEach(() => {
 });
 
 describe('ThemeToggle', () => {
-	it('defaults to light when system prefers light and no storage key', async () => {
+	it('shows light when the system prefers light and nothing is stored, and pins and stores nothing', async () => {
 		stubMatchMedia(false);
 		const { findByRole } = render(ThemeToggle);
 		const btn = await findByRole('button');
 		expect(btn.dataset.mode).toBe('light');
-		expect(document.documentElement.dataset.theme).toBe('light');
-		expect(localStorage.getItem('theme')).toBe('light');
+		expect(document.documentElement.dataset.theme).toBeUndefined();
+		expect(localStorage.getItem('theme')).toBeNull();
 	});
 
-	it('defaults to dark when system prefers dark and no storage key', async () => {
+	it('shows dark when the system prefers dark and nothing is stored', async () => {
 		stubMatchMedia(true);
 		const { findByRole } = render(ThemeToggle);
 		const btn = await findByRole('button');
 		expect(btn.dataset.mode).toBe('dark');
-		expect(document.documentElement.dataset.theme).toBe('dark');
+		expect(document.documentElement.dataset.theme).toBeUndefined();
 	});
 
-	it('toggles between light and dark on click', async () => {
+	it('toggles between light and dark on click, as a fixed choice', async () => {
 		stubMatchMedia(false);
 		const { findByRole } = render(ThemeToggle);
 		const btn = await findByRole('button');

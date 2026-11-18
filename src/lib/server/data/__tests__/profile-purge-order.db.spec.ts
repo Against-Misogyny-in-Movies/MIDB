@@ -29,7 +29,7 @@ vi.mock(import('#lib/server/data/community-report-moderation.ts'), async (import
 	const actual = await importOriginal();
 	return {
 		...actual,
-		purgeReportedTitles: vi.fn(async () => {
+		reportedTitlesOf: vi.fn(async () => {
 			throw new Error('title read failed');
 		})
 	};
@@ -37,6 +37,7 @@ vi.mock(import('#lib/server/data/community-report-moderation.ts'), async (import
 
 const { banAccount, muteUser } = await import('#lib/server/data/moderation-actions.ts');
 const { rejectAccountReports } = await import('#lib/server/data/community-report-moderation.ts');
+const { purgeOutcome } = await import('#lib/server/moderation/purge.ts');
 
 let mod: UserRow;
 let titleId: string;
@@ -63,14 +64,22 @@ beforeEach(async () => {
 	titleId = title.id;
 });
 
+/** What the route does after a moderation action: purge what its result names. */
+const settle = async (
+	pending: ReturnType<typeof banAccount | typeof muteUser | typeof rejectAccountReports>
+) => {
+	const result = await pending;
+	if (result.ok) await purgeOutcome(result);
+};
+
 describe('the profile purge comes before the awaited title read', () => {
 	it('a ban whose title read fails has purged the profile', async () => {
-		await expect(banAccount(mod, 'author', null)).rejects.toThrow('title read failed');
+		await expect(settle(banAccount(mod, 'author', null))).rejects.toThrow('title read failed');
 		expect(await profilePurges()).toEqual(['profile:author']);
 	});
 
 	it('a mute whose title read fails has purged the profile', async () => {
-		await expect(muteUser(mod, 'author', 24, null)).rejects.toThrow('title read failed');
+		await expect(settle(muteUser(mod, 'author', 24, null))).rejects.toThrow('title read failed');
 		expect(await profilePurges()).toEqual(['profile:author']);
 	});
 
@@ -79,7 +88,7 @@ describe('the profile purge comes before the awaited title read', () => {
 			.insert(communityContentReports)
 			.values({ userId: 'author', titleId, status: 'counted' });
 		titleReadFails = true;
-		await expect(rejectAccountReports(mod, 'author')).rejects.toThrow('title read failed');
+		await expect(settle(rejectAccountReports(mod, 'author'))).rejects.toThrow('title read failed');
 		expect(await profilePurges()).toEqual(['profile:author']);
 	});
 });

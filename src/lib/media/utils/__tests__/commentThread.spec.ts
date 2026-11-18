@@ -39,6 +39,7 @@ function own(id: string, over: Partial<OwnComment> = {}): OwnComment {
 		status: 'pending',
 		moderationSource: null,
 		moderationReason: null,
+		moderationRule: null,
 		score: 0,
 		replyCount: 0,
 		createdAt: '2026-11-02T10:00:00.000Z',
@@ -58,7 +59,7 @@ describe('buildThreads', () => {
 	it('puts an own pending root first, with its state and the reader as author', () => {
 		const threads = buildThreads([view('a')], [own('p')], ME);
 		expect(threads.map((t) => t.root.id)).toEqual(['p', 'a']);
-		expect(threads[0].root.review).toEqual({ status: 'pending', reason: null });
+		expect(threads[0].root.review).toEqual({ status: 'pending', reason: null, rule: null });
 		expect(threads[0].root.author?.id).toBe('me');
 	});
 
@@ -68,7 +69,20 @@ describe('buildThreads', () => {
 			[own('x', { status: 'rejected', moderationReason: 'Contains a slur' })],
 			ME
 		);
-		expect(thread.root.review).toEqual({ status: 'rejected', reason: 'Contains a slur' });
+		expect(thread.root.review).toEqual({
+			status: 'rejected',
+			reason: 'Contains a slur',
+			rule: null
+		});
+	});
+
+	it('carries the rule a moderator named, for the note the author reads', () => {
+		const [thread] = buildThreads(
+			[],
+			[own('x', { status: 'rejected', moderationReason: 'Why', moderationRule: 'trolling' })],
+			ME
+		);
+		expect(thread.root.review).toEqual({ status: 'rejected', reason: 'Why', rule: 'trolling' });
 	});
 
 	it('joins an own reply to its root by age and names whom it answers', () => {
@@ -114,7 +128,7 @@ describe('buildThreads', () => {
 		expect(threads[1].root).toMatchObject({
 			body: 'Edited text',
 			removed: false,
-			review: { status: 'pending', reason: null }
+			review: { status: 'pending', reason: null, rule: null }
 		});
 		expect(threads[1].replies.map((r) => r.id)).toEqual(['r']);
 	});

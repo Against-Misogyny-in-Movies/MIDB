@@ -12,7 +12,8 @@ const account: ReportAccount = {
 	commentCount: 2,
 	role: 'user',
 	countsFrom: '2026-11-17T00:00:00Z',
-	restricted: null
+	restricted: null,
+	mutedByModerator: false
 };
 
 describe('accountLine', () => {

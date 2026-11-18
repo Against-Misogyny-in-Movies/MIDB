@@ -10,6 +10,7 @@ const row = (over: Partial<UserCommentRow> = {}): UserCommentRow => ({
 	status: 'published',
 	score: 4,
 	moderationReason: null,
+	moderationRule: null,
 	parentId: null,
 	replyCount: 0,
 	createdAt: '2026-11-01T10:00:00.000Z',
@@ -76,10 +77,34 @@ describe('CommentHistoryRow', () => {
 
 	it('shows the reason of a rejected comment and who hid a hidden one', () => {
 		mount(row({ status: 'rejected', moderationReason: 'Contains a slur' }));
-		expect(screen.getByText(/Rejected: Contains a slur\. Only the author/)).toBeTruthy();
+		expect(screen.getByText(/Rejected. Contains a slur\. Only the author/)).toBeTruthy();
 		cleanup();
 		mount(row({ status: 'hidden' }));
-		expect(screen.getByText(/A moderator hid this comment/)).toBeTruthy();
+		expect(screen.getByText(/Hidden by a moderator/)).toBeTruthy();
+	});
+
+	it('shows the rule and the note of a rejected or hidden comment', () => {
+		mount(
+			row({ status: 'rejected', moderationReason: 'Named a reader', moderationRule: 'harassment' })
+		);
+		expect(
+			screen.getByText(
+				'Rejected. Rule: Harassment. Named a reader. Only the author and moderators see the comment.'
+			)
+		).toBeTruthy();
+		cleanup();
+		mount(row({ status: 'rejected', moderationRule: 'hate' }));
+		expect(
+			screen.getByText(
+				'Rejected. Rule: Hate or bigotry. Only the author and moderators see the comment.'
+			)
+		).toBeTruthy();
+		cleanup();
+		mount(row({ status: 'hidden', moderationReason: 'Twice', moderationRule: 'spam' }));
+		expect(screen.getByText('Hidden by a moderator. Rule: Spam. Twice.')).toBeTruthy();
+		cleanup();
+		mount(row({ status: 'hidden', moderationRule: 'trolling' }));
+		expect(screen.getByText('Hidden by a moderator. Rule: Trolling.')).toBeTruthy();
 	});
 
 	it('offers neither edit nor delete on a deleted comment, and no edit on a hidden one', () => {
@@ -100,6 +125,7 @@ describe('CommentHistoryRow', () => {
 					body: 'Changed',
 					status: 'pending',
 					moderationReason: null,
+					moderationRule: null,
 					editedAt: '2026-11-03T10:00:00.000Z'
 				}
 			})

@@ -8,3 +8,11 @@ export function isUniqueViolation(e: unknown): boolean {
 	const text = cause?.message ?? message;
 	return typeof text === 'string' && /UNIQUE constraint failed/.test(text);
 }
+
+/** A SQLite NOT NULL violation ("NOT NULL constraint failed: <table>.<column>"), wrapped like `isUniqueViolation`. */
+export function isNotNullViolation(e: unknown, column: string): boolean {
+	if (typeof e !== 'object' || e === null) return false;
+	const { cause, message } = e as { cause?: { message?: unknown }; message?: unknown };
+	const text = cause?.message ?? message;
+	return typeof text === 'string' && text.includes(`NOT NULL constraint failed: ${column}`);
+}

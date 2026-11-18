@@ -58,7 +58,11 @@ export async function reportComment(input: {
 				commentId,
 				'published',
 				'pending',
-				{ moderationSource: 'reports', moderationReason: 'Reported by readers' },
+				{
+					moderationSource: 'reports',
+					moderationReason: 'Reported by readers',
+					moderationRule: null
+				},
 				sql`(SELECT count(*) FROM ${commentReports} INNER JOIN ${users} ON ${users.id} = ${commentReports.reporterId} WHERE ${commentReports.commentId} = ${commentId} AND ${commentReports.status} = 'open' AND ${countingAccountWhere()}) >= ${REPORT_THRESHOLD}`
 			)
 		]);

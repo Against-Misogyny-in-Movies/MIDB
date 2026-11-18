@@ -4,6 +4,7 @@ const updateProfile = vi.fn();
 const purgeProfile = vi.fn();
 
 const requireUser = vi.hoisted(() => vi.fn<() => Promise<{ id: string; role?: string }>>());
+vi.mock('#lib/server/auth/current-session.ts', () => ({ currentSession: vi.fn() }));
 vi.mock('#lib/server/auth/guards.ts', () => ({ requireUser }));
 vi.mock('#lib/server/http/purge-title.ts', () => ({
 	purgeProfile: (...args: unknown[]) => purgeProfile(...args)

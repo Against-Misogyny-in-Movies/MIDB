@@ -1,52 +1,121 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
+	import LogFilters from '#lib/components/moderation/logFilters.svelte';
+	import PagedList from '#lib/components/moderation/pagedList.svelte';
+	import ModerationSettings from '#lib/components/moderation/moderationSettings.svelte';
+	import ShortcutList from '#lib/components/moderation/shortcutList.svelte';
+	import QueueView from '#lib/components/moderation/queue/queueView.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
+	import SkeletonRows from '#lib/components/ui/skeletonRows.svelte';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { shortcutOf } from '#lib/media/utils/moderationKeys.ts';
+	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
+	import { moderationStatus } from '#lib/media/utils/moderationStatus.svelte.js';
+	import { tabHref, type ModerationTab } from '#lib/media/utils/moderationTabs.ts';
 
 	let { data } = $props();
 
-	type Tab = 'pending' | 'reported' | 'reports' | 'recent' | 'table';
-	/**
-	 * `?tab=reports` and `?title=` open the community-reports tab, `?tab=table` the table of every
-	 * comment, every other URL opens Pending. A click on a tab overrides it until the URL changes
-	 * (a title's reports, back to the list).
-	 */
-	let tab = $derived<Tab>(
-		data.titleId || data.tab === 'reports' ? 'reports' : data.tab === 'table' ? 'table' : 'pending'
-	);
+	onMount(() => {
+		moderationPrefs.start();
+		moderationStatus.left = remaining;
+		return () => {
+			moderationStatus.left = null;
+		};
+	});
 
+	/** The URL is the one source of the open tab: the load parses `?tab=` and `?title=`. */
+	const tab = $derived(data.tab);
+	const queueTab = $derived(tab === 'pending' || tab === 'reported');
+	/** The tabs the keyboard shortcuts work on. */
+	const keyTab = $derived(queueTab || tab === 'table');
+
+	/** The shortcut list: `?` or its button opens it, Escape or Close closes it and gives the focus back. */
+	let helpOpen = $state(false);
+	let helpButton: HTMLButtonElement | undefined = $state();
+	let helpFrom: HTMLElement | null = null;
+
+	function toggleHelp() {
+		if (helpOpen) return closeHelp();
+		const active = document.activeElement;
+		// A click does not focus the button in every browser; the opening button is the fallback.
+		helpFrom = active instanceof HTMLElement && active !== document.body ? active : null;
+		helpOpen = true;
+	}
+
+	function closeHelp() {
+		helpOpen = false;
+		void focusAfterUpdate(() => (helpFrom?.isConnected ? helpFrom : helpButton));
+	}
+
+	function onkeydown(event: KeyboardEvent) {
+		if (helpOpen && event.key === 'Escape' && !event.defaultPrevented) return closeHelp();
+		if (keyTab && shortcutOf(event, moderationPrefs.shortcuts) === 'help') {
+			event.preventDefault();
+			toggleHelp();
+		}
+	}
+
+	/** The last action's result belongs to the tab it ran in. */
+	let shownTab: ModerationTab | undefined;
+	$effect(() => {
+		if (shownTab !== undefined && shownTab !== tab) moderationStatus.clear();
+		shownTab = tab;
+	});
+
+	/**
+	 * Each count is a total from the database, not the length of the page shown: Pending is the
+	 * comments awaiting a decision, Reported those with an open report, and the community reports
+	 * tab the held reports plus the titles with open flags.
+	 */
 	const TABS = $derived([
-		{ id: 'pending' as const, label: 'Pending', count: data.pending.length },
-		{ id: 'reported' as const, label: 'Reported', count: data.reported.length },
+		{ id: 'pending' as const, label: 'Pending', count: data.counts.pending },
+		{ id: 'reported' as const, label: 'Reported', count: data.counts.reported },
 		{ id: 'table' as const, label: 'All comments', count: null },
 		{
 			id: 'reports' as const,
 			label: 'MIDB community reports',
-			count: data.held.length
+			count: data.counts.held + data.counts.flagged
 		},
-		{ id: 'recent' as const, label: 'Recent actions', count: null }
+		{ id: 'log' as const, label: 'Log', count: null }
 	]);
 
+	/** What an empty log says: no account behind a name typed into a filter, a filter that matches nothing, or an empty log. */
+	const logEmpty = $derived.by(() => {
+		const unknown = data.unknownNames;
+		const f = data.logFilters;
+		if (f && unknown.length > 0) {
+			return `No account is named ${unknown.map((k) => (k === 'actor' ? f.actor : f.account)).join(' or ')}.`;
+		}
+		return f && (f.action || f.actor || f.account)
+			? 'No moderation actions match these filters.'
+			: 'No moderation actions yet.';
+	});
+
+	/** "41 left in Pending.": what remains in the open queue, from the load's totals; empty on the other tabs. */
+	function remaining(): string {
+		if (tab !== 'pending' && tab !== 'reported') return '';
+		const left = data.counts[tab];
+		return `${left === 0 ? 'Nothing' : left} left in ${tab === 'pending' ? 'Pending' : 'Reported'}.`;
+	}
+
+	/** "Hidden. 41 left in Pending.": the result of the last action and the count. The toast announces it, so the line is for the eye. */
+	const status = $derived(
+		moderationStatus.label && remaining() ? `${moderationStatus.label}. ${remaining()}` : ''
+	);
+
 	/**
-	 * The table loads from the server with its filters, so choosing it goes to its URL. Leaving it
-	 * drops `tab=table` from the URL: a later action's `update()` reloads the page from the URL, and
-	 * a URL that still named the table would bring it back and run its query again. The navigation
-	 * keeps the focus (`reset: false`), and the chosen tab is set again once it is done, because the
-	 * new data derives Pending or the reports tab from the URL.
+	 * Choosing a tab goes to its URL, which the load reads. The tab buttons stay mounted, so the
+	 * focus stays on the chosen one and the page keeps its scroll position (`reset: false`).
 	 */
-	async function select(next: Tab) {
-		tab = next;
-		if (next === 'table') {
-			if (data.tab !== 'table') void goto('?tab=table', { reset: false });
-		} else if (data.tab === 'table') {
-			await goto(next === 'reports' ? '?tab=reports' : '?', { reset: false });
-			tab = next;
+	function select(next: ModerationTab) {
+		if (next !== tab || data.titleId) {
+			void goto(tabHref(next), { reset: false });
 		}
 	}
 
@@ -72,23 +141,29 @@
 							: null;
 		if (target === null) return;
 		event.preventDefault();
-		void select(TABS[target].id);
+		select(TABS[target].id);
 		void focusAfterUpdate(() => document.getElementById(`tab-${TABS[target].id}`));
 	}
-
-	const items = $derived(tab === 'reported' ? data.reported : data.pending);
 </script>
+
+<svelte:window {onkeydown} />
 
 <svelte:head>
 	<title>Moderation · MIDB</title>
 </svelte:head>
 
-<div class="page" class:wide={tab === 'table'}>
+<div class="page" class:wide={tab === 'table' || queueTab}>
 	<header>
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
 		<h1 class="display">Moderation</h1>
+		{#if data.me.role === 'administrator'}
+			<a class="chip staff-link" href="/user/moderation/staff">Staff roles</a>
+		{/if}
+		{#if keyTab}
+			<ModerationSettings {helpOpen} ontogglehelp={toggleHelp} bind:helpButton />
+		{/if}
 	</header>
 
 	{#if data.staleSources.length > 0}
@@ -113,7 +188,7 @@
 				aria-selected={tab === t.id}
 				aria-controls={tab === t.id ? `panel-${t.id}` : undefined}
 				tabindex={tab === t.id ? 0 : -1}
-				onclick={() => void select(t.id)}
+				onclick={() => select(t.id)}
 				onkeydown={(event) => onTabKeydown(event, i)}
 			>
 				{t.label}{#if t.count !== null}
@@ -121,6 +196,14 @@
 			</button>
 		{/each}
 	</div>
+
+	{#if queueTab}
+		<p class="status" aria-hidden="true">{status}</p>
+	{/if}
+
+	{#if helpOpen && keyTab}
+		<ShortcutList onclose={closeHelp} />
+	{/if}
 
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
 		{#if tab === 'table'}
@@ -132,42 +215,49 @@
 					me={data.me}
 				/>
 			{:else}
-				<div class="card skeleton" aria-busy="true" aria-label="Loading comments">
-					{#each [0, 1, 2, 3, 4, 5] as row (row)}
-						<div class="skeleton-row"></div>
-					{/each}
+				<div class="card skeleton" aria-busy="true">
+					<SkeletonRows rows={6} label="Loading comments" height="3rem" />
 				</div>
 			{/if}
-		{:else if tab === 'recent'}
-			{#if data.recent.length === 0}
-				<p class="empty" id="moderation-empty" tabindex="-1">No moderation actions yet.</p>
-			{:else}
-				<ul class="card list">
-					{#each data.recent as entry (entry.id)}
-						<RecentActionRow {entry} />
-					{/each}
-				</ul>
-			{/if}
+		{:else if tab === 'log' && data.recent && data.logFilters}
+			<div class="stack">
+				<LogFilters filters={data.logFilters} />
+				<PagedList
+					page={data.recent}
+					queue="log"
+					params={data.logParams}
+					key={(entry) => entry.id}
+					empty={logEmpty}
+					noun="actions"
+				>
+					{#snippet row(entry)}
+						<RecentActionRow {entry} me={data.me} />
+					{/snippet}
+				</PagedList>
+			</div>
 		{:else if tab === 'reports'}
 			<CommunityReportsPanel
 				held={data.held}
 				flagged={data.flagged}
+				flaggedCount={data.counts.flagged}
 				openTitle={data.openTitle}
 				titleId={data.titleId}
 				me={data.me}
 			/>
-		{:else if items.length === 0}
-			<p class="empty" id="moderation-empty" tabindex="-1">
-				{tab === 'pending'
-					? 'No comments are waiting for review.'
-					: 'No comments have open reports.'}
-			</p>
-		{:else}
-			<ul class="card list">
-				{#each items as item (item.comment.id)}
-					<ModerationItemRow {item} me={data.me} />
-				{/each}
-			</ul>
+		{:else if tab === 'pending' && data.pending}
+			<QueueView
+				page={data.pending}
+				queue="pending"
+				me={data.me}
+				empty="No comments are waiting for review."
+			/>
+		{:else if tab === 'reported' && data.reported}
+			<QueueView
+				page={data.reported}
+				queue="reported"
+				me={data.me}
+				empty="No comments have open reports."
+			/>
 		{/if}
 	</div>
 </div>
@@ -199,6 +289,13 @@
 		max-width: none;
 	}
 
+	/* One line for the last action's result, reserved so the first one moves nothing. */
+	.status {
+		@apply text-sm text-ink-muted;
+		min-height: 1.25rem;
+		margin-block: calc(-1 * var(--spacing-xs));
+	}
+
 	@media (min-width: 64rem) {
 		.page.wide {
 			width: min(90rem, 100vw - 3rem);
@@ -208,6 +305,15 @@
 
 	h1 {
 		font-size: 1.875rem;
+	}
+
+	.staff-link {
+		@apply self-start;
+	}
+
+	header {
+		@apply flex flex-col;
+		gap: var(--spacing-xs);
 	}
 
 	.tabs {
@@ -222,56 +328,25 @@
 		}
 	}
 
+	/* The selected tab also takes the heavier weight and the wash, so colour is not the only mark. */
 	.chip[aria-selected='true'] {
 		border-color: var(--brand);
+		background-color: var(--brand-wash);
 		color: var(--brand);
+		font-weight: 600;
+	}
+
+	.stack {
+		@apply flex flex-col;
+		gap: var(--spacing-md);
 	}
 
 	.count {
 		font-variant-numeric: tabular-nums;
 	}
 
-	.empty {
-		@apply text-ink-muted;
-	}
-
-	.list {
-		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
-	}
-
-	.list > :global(li + li) {
-		border-top: 1px solid var(--border);
-	}
-
 	/* Room for the filters and the first rows, so the table replaces it without moving what is below. */
 	.skeleton {
-		@apply flex flex-col;
 		min-height: 18rem;
-	}
-
-	.skeleton-row {
-		@apply flex items-center border-b border-border;
-		height: 3rem;
-		animation: pulse 1.6s ease-in-out infinite;
-	}
-
-	.skeleton-row::before {
-		content: '';
-		width: 40%;
-		height: 0.75rem;
-		margin-left: var(--spacing-md);
-		background-color: var(--surface-sunken);
-	}
-
-	@keyframes pulse {
-		50% {
-			opacity: 0.5;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.skeleton-row {
-			animation: none;
-		}
 	}
 </style>
