@@ -223,7 +223,7 @@ describe('the panel', () => {
 		expect(text).toContain('Muted until');
 		expect(at('Body of c1')).toBeLessThan(at('Misogyny'));
 		expect(at('Misogyny')).toBeLessThan(at('1 open report'));
-		expect(at('1 open report')).toBeLessThan(at('Approve'));
+		expect(at('1 open report')).toBeLessThan(at('Approve comment'));
 	});
 });
 
@@ -419,9 +419,11 @@ describe('the keyboard path', () => {
 		expect(row('c1').getAttribute('aria-current')).toBe('true');
 		expect(posted).toEqual([]);
 		expect(
-			within(panel()).getByRole('button', { name: 'Approve' }).getAttribute('aria-keyshortcuts')
+			within(panel())
+				.getByRole('button', { name: 'Approve comment' })
+				.getAttribute('aria-keyshortcuts')
 		).toBeNull();
-		await fireEvent.click(within(panel()).getByRole('button', { name: 'Approve' }));
+		await fireEvent.click(within(panel()).getByRole('button', { name: 'Approve comment' }));
 		expect(posted).toEqual(['?/approve']);
 	});
 
@@ -429,7 +431,7 @@ describe('the keyboard path', () => {
 		mount([item('c1')]);
 		const keys = (name: string) =>
 			within(panel()).getByRole('button', { name }).getAttribute('aria-keyshortcuts');
-		expect(keys('Approve')).toBe('a');
+		expect(keys('Approve comment')).toBe('a');
 		expect(keys('Hide')).toBe('h');
 		expect(keys('Reject')).toBe('x');
 	});

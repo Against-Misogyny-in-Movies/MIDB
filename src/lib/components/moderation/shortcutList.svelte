@@ -24,10 +24,12 @@
 	</div>
 	<dl>
 		{#each SHORTCUT_LIST as { keys, does } (does)}
-			<dt>
-				{#each keys as key (key)}<kbd>{key}</kbd>{/each}
-			</dt>
-			<dd>{does}</dd>
+			<div class="pair">
+				<dt>
+					{#each keys as key (key)}<kbd>{key}</kbd>{/each}
+				</dt>
+				<dd>{does}</dd>
+			</div>
 		{/each}
 	</dl>
 	<p class="label">
@@ -40,19 +42,12 @@
 <style lang="postcss">
 	@reference "../../../app.css";
 
-	/* The one floating surface of the page, clear of the sticky header. */
+	/* A plate under the tabs, in the flow: it covers no action of the page, and its keys wrap into columns. */
 	.list {
 		@apply flex flex-col;
 		gap: var(--spacing-sm);
-		position: fixed;
-		z-index: 20;
-		top: 5rem;
-		inset-inline-end: var(--spacing-md);
-		width: min(24rem, calc(100vw - 2 * var(--spacing-md)));
-		max-height: calc(100dvh - 6rem);
-		overflow-y: auto;
 		padding: var(--spacing-md);
-		box-shadow: var(--shadow-float);
+		scroll-margin-top: 5rem;
 	}
 
 	.head {
@@ -66,9 +61,15 @@
 
 	dl {
 		@apply grid text-sm;
-		grid-template-columns: auto minmax(0, 1fr);
-		gap: var(--spacing-xs) var(--spacing-md);
+		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+		gap: var(--spacing-xs) var(--spacing-lg);
 		margin: 0;
+	}
+
+	.pair {
+		@apply grid items-center;
+		grid-template-columns: 5rem minmax(0, 1fr);
+		gap: var(--spacing-md);
 	}
 
 	dt {

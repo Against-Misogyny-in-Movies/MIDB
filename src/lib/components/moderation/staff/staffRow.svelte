@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import AccountLink from '#lib/components/moderation/accountLink.svelte';
+	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import type { StaffMember } from '#lib/media/types/moderation.ts';
@@ -16,12 +16,14 @@
 	let { member, meId }: Props = $props();
 
 	let busy = $state<string | null>(null);
+	let confirming = $state(false);
+	let trigger: HTMLButtonElement | undefined = $state();
 	let root: HTMLElement | undefined = $state();
 	/** The row leaves the list when its role goes, so the focus falls back to the form's field. */
 	const submit = rowSubmit(
 		() => root,
 		(name) => (busy = name),
-		undefined,
+		() => (confirming = false),
 		() => 'make-moderator-field'
 	);
 
@@ -34,21 +36,36 @@
 		<Avatar avatarKey={user.avatarKey} size={24} />
 		<strong><AccountLink id={user.id} username={user.username} name={user.displayName} /></strong>
 		<Badge tone="brand">{user.role === 'moderator' ? 'Moderator' : 'Administrator'}</Badge>
-		<span class="label">since <time datetime={member.since}>{formatDate(member.since)}</time></span>
+		<span class="label"
+			>{member.promoted ? 'Moderator since' : 'Joined'}
+			<time datetime={member.since}>{formatDate(member.since)}</time></span
+		>
 	</span>
 	{#if user.role === 'administrator'}
 		<span class="label">Set with the seed script.</span>
 	{:else if removable}
-		<form method="POST" action="?/removeModerator" use:enhance={submit('removeModerator')}>
-			<input type="hidden" name="userId" value={user.id} />
-			<button
-				class="btn btn--ghost"
-				aria-busy={busy === 'removeModerator'}
-				disabled={busy !== null && busy !== 'removeModerator'}
-			>
-				Remove moderator role
-			</button>
-		</form>
+		<button
+			class="btn btn--ghost"
+			type="button"
+			aria-expanded={confirming}
+			bind:this={trigger}
+			onclick={() => (confirming = !confirming)}
+		>
+			Remove moderator role
+		</button>
+	{/if}
+	{#if confirming}
+		<div class="plate-row">
+			<ModerationConfirm
+				kind="removeModerator"
+				name={user.displayName}
+				fields={{ userId: user.id }}
+				{busy}
+				{submit}
+				oncancel={() => (confirming = false)}
+				opener={() => trigger}
+			/>
+		</div>
 	{/if}
 </li>
 
@@ -60,6 +77,11 @@
 		gap: var(--spacing-sm) var(--spacing-md);
 		padding: var(--spacing-md) 20px;
 		scroll-margin-top: 5rem;
+	}
+
+	/* The plate takes the row's full width under the name and the button. */
+	.plate-row {
+		@apply w-full;
 	}
 
 	.who {

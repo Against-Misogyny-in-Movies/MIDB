@@ -22,7 +22,7 @@
 		/>
 		Collapse comments of severity {REJECT_MIN_SEVERITY} and above
 	</label>
-	<label class="check-row">
+	<label class="check-row keys">
 		<input
 			type="checkbox"
 			checked={moderationPrefs.shortcuts}
@@ -31,7 +31,7 @@
 		Single-key shortcuts
 	</label>
 	<button
-		class="chip"
+		class="chip keys"
 		type="button"
 		aria-expanded={helpOpen}
 		aria-controls="shortcut-list"
@@ -49,5 +49,12 @@
 	.settings {
 		@apply flex flex-wrap items-center;
 		gap: var(--spacing-xs) var(--spacing-lg);
+	}
+
+	/* A phone has no keyboard to press the shortcuts on: the controls for them leave the header, so the first row sits higher. */
+	@media (pointer: coarse) and (not (any-hover: hover)) {
+		.keys {
+			display: none;
+		}
 	}
 </style>

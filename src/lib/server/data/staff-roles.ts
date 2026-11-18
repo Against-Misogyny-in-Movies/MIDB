@@ -13,8 +13,13 @@ import { toPublicUser, type UserRow } from './user-queries.ts';
 /** One administrator or moderator on the staff page. */
 export type StaffMember = {
 	user: PublicUser;
-	/** When the account took its role (ISO): the latest `set_role` row that made it a moderator, else the day it joined. */
+	/**
+	 * When the account took its role (ISO) if the log says (`promoted`: the latest `set_role` row
+	 * that made it a moderator), else the day it joined, which is all that is known for an
+	 * administrator or a moderator promoted before the log kept role changes.
+	 */
 	since: string;
+	promoted: boolean;
 };
 
 /** Administrators first, then moderators, each by username. */
@@ -47,13 +52,14 @@ export async function listStaff(): Promise<StaffMember[]> {
 			if (row.userId) promoted.set(row.userId, new Date(row.at));
 		}
 	}
-	return rows.map((row) => ({
-		user: toPublicUser(row),
-		since: (row.role === 'moderator'
-			? (promoted.get(row.id) ?? row.createdAt)
-			: row.createdAt
-		).toISOString()
-	}));
+	return rows.map((row) => {
+		const at = row.role === 'moderator' ? promoted.get(row.id) : undefined;
+		return {
+			user: toPublicUser(row),
+			since: (at ?? row.createdAt).toISOString(),
+			promoted: at !== undefined
+		};
+	});
 }
 
 /** The titles where the account has published comments, whose cached lists show its staff badge. */

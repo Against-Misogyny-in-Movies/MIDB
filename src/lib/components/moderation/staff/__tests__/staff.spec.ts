@@ -30,7 +30,8 @@ afterEach(() => {
 
 const member = (id: string, role: 'moderator' | 'administrator'): StaffMember => ({
 	user: { id, username: `${id}_name`, avatarKey: null, role, displayName: `${id}_name` },
-	since: '2026-10-04T10:00:00.000Z'
+	since: '2026-10-04T10:00:00.000Z',
+	promoted: role === 'moderator'
 });
 
 function inList(props: Record<string, unknown>) {
@@ -43,16 +44,26 @@ describe('staffRow', () => {
 		inList({ member: member('m1', 'moderator'), meId: 'adm' });
 		expect(screen.getByText('Moderator')).toBeTruthy();
 		expect(screen.getByText('04/10/2026')).toBeTruthy();
+		expect(screen.getByText(/Moderator since/)).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'm1_name' }).getAttribute('href')).toBe(
 			'/user/moderation/accounts/m1'
 		);
-		await fireEvent.click(screen.getByRole('button', { name: 'Remove moderator role' }));
+		const trigger = screen.getByRole('button', { name: 'Remove moderator role' });
+		await fireEvent.click(trigger);
+		expect(
+			screen.getByText(/Remove the moderator role from m1_name\? The account loses the moderation/)
+		).toBeTruthy();
+		expect(posted).toEqual([]);
+		await fireEvent.click(screen.getAllByRole('button', { name: 'Remove moderator role' })[1]);
 		expect(posted).toEqual([{ action: '?/removeModerator', fields: { userId: 'm1' } }]);
+		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+		expect(screen.queryByText(/The account loses the moderation/)).toBeNull();
 	});
 
 	it('offers nothing for an administrator beyond saying how the role is set', () => {
 		inList({ member: member('a1', 'administrator'), meId: 'adm' });
 		expect(screen.getByText('Administrator')).toBeTruthy();
+		expect(screen.getByText(/Joined/)).toBeTruthy();
 		expect(screen.getByText('Set with the seed script.')).toBeTruthy();
 		expect(screen.queryByRole('button')).toBeNull();
 	});

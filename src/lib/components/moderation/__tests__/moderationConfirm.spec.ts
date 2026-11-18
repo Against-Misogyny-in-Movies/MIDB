@@ -14,7 +14,15 @@ const { default: ModerationConfirm } = await import('../moderationConfirm.svelte
 
 afterEach(cleanup);
 
-type Kind = 'hide' | 'reject' | 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
+type Kind =
+	| 'hide'
+	| 'reject'
+	| 'mute'
+	| 'ban'
+	| 'unmute'
+	| 'unban'
+	| 'rejectAll'
+	| 'removeModerator';
 
 function mount(kind: Kind, extra: Record<string, unknown> = {}) {
 	return render(ModerationConfirm, {
@@ -46,15 +54,36 @@ describe('the rule radio group of a plate', () => {
 		expect(radios()).toHaveLength(0);
 	});
 
-	it('keeps the confirming button off until a rule is chosen, then posts it', async () => {
-		mount('hide');
+	it('keeps the confirming button on, and without a rule asks for one and sends nothing', async () => {
+		const submitted = vi.fn();
+		const { container } = mount('hide');
+		const form = container.querySelector('form') as HTMLFormElement;
+		form.addEventListener('submit', submitted);
 		const confirm = screen.getByRole('button', { name: 'Hide comment' }) as HTMLButtonElement;
-		expect(confirm.disabled).toBe(true);
-		await fireEvent.click(screen.getByLabelText('Trolling'));
 		expect(confirm.disabled).toBe(false);
-		const form = confirm.closest('form') as HTMLFormElement;
+		expect(screen.queryByRole('alert')).toBeNull();
+		await fireEvent.click(confirm);
+		expect(screen.getByRole('alert').textContent).toBe('Choose a rule.');
+		expect(document.activeElement).toBe(radios()[0]);
+		expect(submitted).not.toHaveBeenCalled();
+		await fireEvent.click(screen.getByLabelText('Trolling'));
+		expect(screen.queryByRole('alert')).toBeNull();
 		expect(new FormData(form).get('rule')).toBe('trolling');
 		expect(form.getAttribute('action')).toBe('?/hide');
+		await fireEvent.click(confirm);
+		expect(submitted).toHaveBeenCalledOnce();
+	});
+
+	it('says what removing the moderator role does, with no rule and no note', () => {
+		mount('removeModerator', { name: 'varda_7120', fields: { userId: 'u1' } });
+		expect(
+			screen.getByText(
+				'Remove the moderator role from varda_7120? The account loses the moderation pages at once.'
+			)
+		).toBeTruthy();
+		expect(radios()).toHaveLength(0);
+		expect(screen.queryByLabelText(/Note/)).toBeNull();
+		expect(screen.getByRole('button', { name: 'Remove moderator role' })).toBeTruthy();
 	});
 
 	it('names the note field after what happens to it', () => {

@@ -12,11 +12,19 @@
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import type { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
-	type Kind = 'hide' | 'reject' | 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
+	type Kind =
+		| 'hide'
+		| 'reject'
+		| 'mute'
+		| 'ban'
+		| 'unmute'
+		| 'unban'
+		| 'rejectAll'
+		| 'removeModerator';
 
 	interface Props {
 		kind: Kind;
-		/** The account's name, for the mute, ban and reject-all sentences. */
+		/** The account's name, for the mute, ban, reject-all and role sentences. */
 		name: string;
 		/** Hidden inputs the action reads (the comment's id, the account's id); a list repeats the input. */
 		fields: Record<string, string | string[]>;
@@ -53,7 +61,8 @@
 		ban: 'ban',
 		unmute: 'unmute',
 		unban: 'unban',
-		rejectAll: 'rejectAccountReports'
+		rejectAll: 'rejectAccountReports',
+		removeModerator: 'removeModerator'
 	};
 	const BUTTONS: Record<Kind, string> = {
 		hide: 'Hide comment',
@@ -62,7 +71,8 @@
 		ban: 'Ban account',
 		unmute: 'End mute',
 		unban: 'Lift ban',
-		rejectAll: 'Reject all community reports'
+		rejectAll: 'Reject all community reports',
+		removeModerator: 'Remove moderator role'
 	};
 	const noun = $derived(count === 1 ? 'comment' : 'comments');
 	const button = $derived(
@@ -75,8 +85,24 @@
 	const needsRule = $derived(
 		kind === 'hide' || kind === 'reject' || kind === 'mute' || kind === 'ban'
 	);
+	/** Only these kinds log a note: a rejected report and a role change have none. */
+	const hasNote = $derived(kind !== 'rejectAll' && kind !== 'removeModerator');
 	let rule = $state<ModerationRule | null>(null);
+	/** Set when the plate is sent without a rule; the message stays until one is chosen. */
+	let ruleMissing = $state(false);
 	let form: HTMLFormElement | undefined = $state();
+
+	/**
+	 * A plate that needs a rule refuses to send without one: it says so and puts the focus on the
+	 * list. It stops the event before the form's `enhance` handler sees it.
+	 */
+	function onsubmit(event: SubmitEvent) {
+		if (!needsRule || rule !== null) return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		ruleMissing = true;
+		form?.querySelector<HTMLInputElement>('input[name="rule"]')?.focus();
+	}
 
 	/** The plate takes the focus on open: its first field, or its button when it has none. */
 	onMount(() => {
@@ -109,6 +135,7 @@
 	use:enhance={submit(kind)}
 	bind:this={form}
 	{onkeydown}
+	{onsubmit}
 >
 	{#each Object.entries(fields) as [field, value] (field)}
 		{#each [value].flat() as one (one)}
@@ -144,6 +171,8 @@
 			Lift the ban on {name}? The account can sign in again and its community reports count again.
 			The comments the ban hid stay hidden and its removed votes stay removed; restore the comments
 			one by one or in bulk.
+		{:else if kind === 'removeModerator'}
+			Remove the moderator role from {name}? The account loses the moderation pages at once.
 		{:else if reportCount === 1}
 			Reject the community report from {name}? It leaves the counts of the title it covers.
 		{:else}
@@ -166,13 +195,22 @@
 			<legend class="label">Rule</legend>
 			{#each moderationRule as value (value)}
 				<label class="check-row">
-					<input type="radio" name="rule" {value} bind:group={rule} />
+					<input
+						type="radio"
+						name="rule"
+						{value}
+						bind:group={rule}
+						onchange={() => (ruleMissing = false)}
+					/>
 					{MODERATION_RULE_LABELS[value]}
 				</label>
 			{/each}
+			{#if ruleMissing}
+				<p class="missing text-sm" role="alert">Choose a rule.</p>
+			{/if}
 		</fieldset>
 	{/if}
-	{#if kind !== 'rejectAll'}
+	{#if hasNote}
 		<label class="field">
 			<span class="label">
 				{shownToAuthor
@@ -186,7 +224,7 @@
 		<button
 			class="btn btn--ink"
 			aria-busy={busy === kind}
-			disabled={(busy !== null && busy !== kind) || (needsRule && rule === null)}
+			disabled={busy !== null && busy !== kind}
 		>
 			{button}
 		</button>
@@ -214,6 +252,11 @@
 		border: 0;
 		margin: 0;
 		padding: 0;
+	}
+
+	.missing {
+		grid-column: 1 / -1;
+		color: var(--danger);
 	}
 
 	.rules legend {

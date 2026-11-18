@@ -31,7 +31,7 @@ export const SHORTCUT_LIST: { keys: string[]; does: string }[] = [
 	{ keys: ['j', 'k'], does: 'Next and previous item' },
 	{ keys: ['Enter'], does: 'Move the focus to the open item' },
 	{ keys: ['s'], does: 'Show a collapsed comment' },
-	{ keys: ['a'], does: 'Approve' },
+	{ keys: ['a'], does: 'Approve comment' },
 	{ keys: ['d'], does: 'Dismiss reports' },
 	{ keys: ['r'], does: 'Restore comment' },
 	{ keys: ['h'], does: 'Hide, opens the rule list' },

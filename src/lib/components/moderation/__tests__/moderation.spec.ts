@@ -179,11 +179,11 @@ describe('ModerationItem', () => {
 
 	it('offers Approve on a pending comment only, and Dismiss only with reports', () => {
 		mount();
-		expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Approve comment' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Dismiss reports' })).toBeNull();
 		cleanup();
 		mount({ comment: { ...item().comment, status: 'published' } });
-		expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Approve comment' })).toBeNull();
 	});
 
 	it('hides every control for an author the moderator cannot act on', () => {
@@ -204,7 +204,7 @@ describe('ModerationItem', () => {
 			{}
 		);
 		for (const name of [
-			'Approve',
+			'Approve comment',
 			'Dismiss reports',
 			'Hide',
 			'Reject',
@@ -217,11 +217,11 @@ describe('ModerationItem', () => {
 	it('offers an administrator every control on an administrator’s comment, Mute and Ban excepted on themselves', () => {
 		const admin = { ...AUTHOR, id: 'boss', role: 'administrator' as const };
 		mount({ author: admin }, { me: { id: 'other', role: 'administrator' } });
-		for (const name of ['Approve', 'Hide', 'Reject', 'Mute account', 'Ban account'])
+		for (const name of ['Approve comment', 'Hide', 'Reject', 'Mute account', 'Ban account'])
 			expect(screen.getByRole('button', { name })).toBeTruthy();
 		cleanup();
 		mount({ author: admin }, { me: { id: 'boss', role: 'administrator' } });
-		for (const name of ['Approve', 'Hide', 'Reject'])
+		for (const name of ['Approve comment', 'Hide', 'Reject'])
 			expect(screen.getByRole('button', { name })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Mute account' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Ban account' })).toBeNull();
@@ -268,7 +268,7 @@ describe('ModerationItem', () => {
 		};
 		mount();
 		await fireEvent.submit(
-			screen.getByRole('button', { name: 'Approve' }).closest('form') as HTMLFormElement
+			screen.getByRole('button', { name: 'Approve comment' }).closest('form') as HTMLFormElement
 		);
 		await waitFor(() =>
 			expect(shown()).toEqual([
@@ -282,7 +282,7 @@ describe('ModerationItem', () => {
 		form.result = { type: 'success', data: { id: 'c1', done: 'approve' } };
 		mount();
 		await fireEvent.submit(
-			screen.getByRole('button', { name: 'Approve' }).closest('form') as HTMLFormElement
+			screen.getByRole('button', { name: 'Approve comment' }).closest('form') as HTMLFormElement
 		);
 		await waitFor(() => expect(shown()).toEqual(['success: Comment approved.']));
 	});
@@ -302,7 +302,7 @@ describe('ModerationItem', () => {
 				}
 			]
 		});
-		const approve = screen.getByRole('button', { name: 'Approve' });
+		const approve = screen.getByRole('button', { name: 'Approve comment' });
 		await fireEvent.submit(approve.closest('form') as HTMLFormElement);
 		await waitFor(() => expect(approve.getAttribute('aria-busy')).toBe('true'));
 		// The pressed button keeps the focus, so it stays enabled; the others wait.
@@ -341,7 +341,9 @@ describe('focus after an action', () => {
 			document.getElementById('comment-c1')?.remove();
 		};
 		await fireEvent.submit(
-			screen.getAllByRole('button', { name: 'Approve' })[0].closest('form') as HTMLFormElement
+			screen
+				.getAllByRole('button', { name: 'Approve comment' })[0]
+				.closest('form') as HTMLFormElement
 		);
 		await waitFor(() => expect(document.activeElement).toBe(list.querySelector('#comment-c2')));
 	});
@@ -356,7 +358,7 @@ describe('focus after an action', () => {
 			document.getElementById('comment-c1')?.remove();
 		};
 		await fireEvent.submit(
-			screen.getByRole('button', { name: 'Approve' }).closest('form') as HTMLFormElement
+			screen.getByRole('button', { name: 'Approve comment' }).closest('form') as HTMLFormElement
 		);
 		await waitFor(() => expect(document.activeElement?.id).toBe('moderation-empty'));
 	});
@@ -364,6 +366,7 @@ describe('focus after an action', () => {
 	it('stays on a row that is still there, such as one that was only muted', async () => {
 		mountTwo(false);
 		await fireEvent.click(screen.getByRole('button', { name: 'Mute account' }));
+		await fireEvent.click(screen.getAllByRole('radio')[0]);
 		const submitButton = screen
 			.getAllByRole('button', { name: 'Mute account' })
 			.find((b) => b.closest('form'));

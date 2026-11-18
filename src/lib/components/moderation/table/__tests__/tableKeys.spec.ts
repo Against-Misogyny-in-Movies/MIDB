@@ -119,7 +119,7 @@ describe('the table’s keys', () => {
 		await key('j');
 		expect(posted).toEqual([]);
 		expect(detail('c1')).not.toBeNull();
-		expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Approve comment' })).toBeTruthy();
 	});
 
 	it('do nothing while a modifier key is held', async () => {

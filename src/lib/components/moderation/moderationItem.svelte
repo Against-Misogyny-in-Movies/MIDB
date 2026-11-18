@@ -257,7 +257,7 @@
 					aria-busy={busy === 'approve'}
 					disabled={busy !== null && busy !== 'approve'}
 				>
-					Approve
+					Approve comment
 				</button>
 			</form>
 		{/if}

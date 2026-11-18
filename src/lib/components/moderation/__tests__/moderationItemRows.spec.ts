@@ -165,6 +165,6 @@ describe('the panel under a table row', () => {
 				/^4 comments in all · 0 hidden or rejected · 0 open reports against · Joined /
 			)
 		).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Approve comment' })).toBeTruthy();
 	});
 });

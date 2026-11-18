@@ -169,9 +169,9 @@ describe('listStaff', () => {
 	});
 
 	it('dates a moderator from the latest time the role was given, else from the day they joined', async () => {
-		expect((await listStaff()).find((s) => s.user.id === 'mod')?.since).toBe(
-			new Date(3_000).toISOString()
-		);
+		const unlogged = (await listStaff()).find((s) => s.user.id === 'mod');
+		expect(unlogged?.since).toBe(new Date(3_000).toISOString());
+		expect(unlogged?.promoted).toBe(false);
 		await db.insert(moderationActions).values([
 			{
 				id: 's1',
@@ -198,13 +198,15 @@ describe('listStaff', () => {
 				createdAt: new Date(30_000)
 			}
 		]);
-		expect((await listStaff()).find((s) => s.user.id === 'mod')?.since).toBe(
-			new Date(30_000).toISOString()
-		);
+		const logged = (await listStaff()).find((s) => s.user.id === 'mod');
+		expect(logged?.since).toBe(new Date(30_000).toISOString());
+		expect(logged?.promoted).toBe(true);
 	});
 
 	it('dates an administrator from the day they joined', async () => {
-		expect((await listStaff())[0].since).toBe(new Date(1_000).toISOString());
+		const [first] = await listStaff();
+		expect(first.since).toBe(new Date(1_000).toISOString());
+		expect(first.promoted).toBe(false);
 	});
 
 	it('shows a promotion at once and a demotion drops the row', async () => {

@@ -199,7 +199,7 @@ describe('the shortcut setting and the shortcut list', () => {
 		for (const does of [
 			'Next and previous item',
 			'Show a collapsed comment',
-			'Approve',
+			'Approve comment',
 			'Dismiss reports',
 			'Restore comment',
 			'Hide, opens the rule list',

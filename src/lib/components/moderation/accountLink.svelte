@@ -17,7 +17,7 @@
 	const profile = $derived(profileHref(username));
 </script>
 
-{#if id}<a class="link" href={accountHref(id)}>{label}</a>{:else}{label}{/if}{#if profile}<a
+{#if id}<a class="link name" href={accountHref(id)}>{label}</a>{:else}{label}{/if}{#if profile}<a
 		class="profile"
 		href={profile}
 		aria-label="Public profile of {label}"
@@ -36,5 +36,20 @@
 
 	.profile:hover {
 		@apply text-ink;
+	}
+
+	/* On a touch screen both links are 44px tall, with 24px between them, so a tap lands on the one meant. */
+	@media (pointer: coarse) {
+		.name {
+			@apply inline-flex items-center;
+			min-height: 2.75rem;
+		}
+
+		.profile {
+			@apply justify-center;
+			min-height: 2.75rem;
+			min-width: 2.75rem;
+			margin-left: 1.5rem;
+		}
 	}
 </style>
