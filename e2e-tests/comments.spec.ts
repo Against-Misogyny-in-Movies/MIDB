@@ -23,13 +23,16 @@ async function reader(browser: Browser): Promise<Reader> {
 	return { context, page, username };
 }
 
-/** A moderator approves the pending comment with this text from the queue. */
+/** A moderator opens the pending comment with this text in the queue and approves it from its panel. */
 async function approve(page: Page, text: string) {
 	await page.goto('/user/moderation');
-	const item = page.locator('li.item', { hasText: text });
-	await expect(item).toBeVisible();
-	await item.getByRole('button', { name: 'Approve' }).click();
-	await expect(item).toHaveCount(0);
+	const row = page.locator('li.row', { hasText: text });
+	await expect(row).toBeVisible();
+	await row.getByRole('button').click();
+	const panel = page.locator('li.panel', { hasText: text });
+	await expect(panel).toBeVisible();
+	await panel.getByRole('button', { name: 'Approve comment' }).click();
+	await expect(row).toHaveCount(0);
 }
 
 // The auth endpoints allow a few sign-ups a minute per address (`RL_AUTH`), so the three accounts

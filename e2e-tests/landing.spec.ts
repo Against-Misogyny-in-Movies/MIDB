@@ -26,16 +26,18 @@ test('theme toggle switches between light and dark and persists across reload', 
 	const html = page.locator('html');
 	const toggle = page.getByRole('button', { name: /Theme/i });
 
-	// The toggle sets data-theme once it mounts (light or dark, from the system), so wait for it.
-	await expect(html).toHaveAttribute('data-theme', /^(light|dark)$/);
-	const initial = await html.getAttribute('data-theme');
+	// A first visit follows the system theme: nothing is pinned until the reader chooses. The
+	// toggle reports the theme it resolved once it mounts.
+	await expect(toggle).toHaveAttribute('data-mode', /^(light|dark)$/);
+	await expect(html).not.toHaveAttribute('data-theme');
+	const initial = await toggle.getAttribute('data-mode');
 
-	// click once → flips to the other value
+	// One click pins the other theme.
 	const afterClick = initial === 'light' ? 'dark' : 'light';
 	await toggle.click();
 	await expect(html).toHaveAttribute('data-theme', afterClick);
 
-	// reload — no-flash init script restores the persisted value
+	// After a reload the pre-paint script restores the pinned theme.
 	await page.reload();
 	await expect(html).toHaveAttribute('data-theme', afterClick);
 });
