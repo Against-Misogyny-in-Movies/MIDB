@@ -5,11 +5,10 @@
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
 	import { MODERATION_RULE_LABELS, formatMuteHours } from '#lib/media/utils/comments.ts';
-	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { canActOn, canCloseFlag } from '#lib/media/utils/canActOn.ts';
-	import { rowSubmit, toastActionResult } from '#lib/media/utils/rowSubmit.ts';
+	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 
 	interface Props {
@@ -20,9 +19,9 @@
 
 	let { entry, me }: Props = $props();
 
-	let busy = $state(false);
-	let panelBusy = $state<string | null>(null);
+	let busy = $state<string | null>(null);
 	let panel = $state<'unmute' | 'unban' | null>(null);
+	let triggers = $state<Partial<Record<'unmute' | 'unban', HTMLButtonElement>>>({});
 	let root: HTMLElement | undefined = $state();
 
 	/** What a row says for each action. An action this build does not know reads as a plain label. */
@@ -94,7 +93,7 @@
 	const inline = $derived(FLAG_ACTIONS.has(entry.action));
 	const submit = rowSubmit(
 		() => root,
-		(name) => (panelBusy = name),
+		(name) => (busy = name),
 		() => (panel = null)
 	);
 	/** A mute still in force: an administrator ends any, a moderator one a moderator set, and `canActOn` applies. */
@@ -165,12 +164,13 @@
 		<p class="label">Reason: {entry.reason}</p>
 	{/if}
 	{#if endable || liftable || reopenable}
-		<div class="reversals">
+		<div class="reversals action-row">
 			{#if endable}
 				<button
 					class="btn btn--ghost"
 					type="button"
 					aria-expanded={panel === 'unmute'}
+					bind:this={triggers.unmute}
 					onclick={() => (panel = panel === 'unmute' ? null : 'unmute')}>End mute</button
 				>
 			{/if}
@@ -179,6 +179,7 @@
 					class="btn btn--ghost"
 					type="button"
 					aria-expanded={panel === 'unban'}
+					bind:this={triggers.unban}
 					onclick={() => (panel = panel === 'unban' ? null : 'unban')}>Lift ban</button
 				>
 			{/if}
@@ -187,8 +188,8 @@
 					<input type="hidden" name="id" value={entry.flag.id} />
 					<button
 						class="btn btn--ghost"
-						aria-busy={panelBusy === 'reopenFlag'}
-						disabled={panelBusy !== null && panelBusy !== 'reopenFlag'}>Re-open</button
+						aria-busy={busy === 'reopenFlag'}
+						disabled={busy !== null && busy !== 'reopenFlag'}>Re-open</button
 					>
 				</form>
 			{/if}
@@ -198,29 +199,24 @@
 				kind={panel}
 				name={entry.targetUser.displayName}
 				fields={{ userId: entry.targetUser.id }}
-				busy={panelBusy}
+				{busy}
 				{submit}
 				oncancel={() => (panel = null)}
+				opener={() => (panel ? triggers[panel] : undefined)}
 			/>
 		{/if}
 	{/if}
 	{#if restorable}
-		<form
-			method="POST"
-			action="?/restore"
-			use:enhance={() => {
-				busy = true;
-				return async ({ result, update }) => {
-					await update();
-					busy = false;
-					toastActionResult(result);
-					await focusAfterUpdate(() => root);
-				};
-			}}
-		>
+		<form method="POST" action="?/restore" use:enhance={submit('restore')}>
 			<input type="hidden" name="id" value={entry.commentId} />
 			<input type="hidden" name="editedAt" value={editedAtValue(entry.commentEditedAt)} />
-			<button class="btn btn--ink" aria-busy={busy}>Restore comment</button>
+			<button
+				class="btn btn--ink"
+				aria-busy={busy === 'restore'}
+				disabled={busy !== null && busy !== 'restore'}
+			>
+				Restore comment
+			</button>
 		</form>
 	{/if}
 </li>
@@ -241,11 +237,6 @@
 
 	.name {
 		@apply font-semibold;
-	}
-
-	.reversals {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 
 	.body {

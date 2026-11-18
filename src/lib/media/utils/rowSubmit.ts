@@ -1,5 +1,6 @@
 import { invalidateAll } from '$app/navigation';
 import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+import { moderationStatus } from '#lib/media/utils/moderationStatus.svelte.js';
 import { toasts } from '#lib/media/utils/toasts.svelte.js';
 
 /** The fields an action that went through returned, for a message that reports counts. */
@@ -46,7 +47,8 @@ type FormResult = { type: string; data?: Record<string, unknown> };
 
 /**
  * Toasts a moderation form's result: the failure the action returned (`{ error }`), or what an
- * action that went through (`{ done }`) did.
+ * action that went through (`{ done }`) did. A queue action that went through also sets the
+ * status line's label (`moderationStatus`).
  */
 export function toastActionResult(result: FormResult): void {
 	if (result.type === 'failure') {
@@ -54,15 +56,20 @@ export function toastActionResult(result: FormResult): void {
 		toasts.error(typeof error === 'string' ? error : 'The action failed. Try again in a moment.');
 	} else if (result.type === 'success') {
 		const done = result.data?.done;
+		moderationStatus.say(done);
 		const message = typeof done === 'string' ? DONE[done] : undefined;
 		if (message)
 			toasts.success(typeof message === 'function' ? message(result.data ?? {}) : message);
 	}
 }
 
+/** An element still on the page and not on its way out (a removed row is inert while it eases out). */
+const present = (el: Element | null | undefined): el is HTMLElement =>
+	!!el?.isConnected && !el.closest('[inert]');
+
 /** An element the focus can be moved to: still on the page, and focusable by script (`tabindex`). */
 const takesFocus = (el: Element | null | undefined): el is HTMLElement =>
-	!!el?.isConnected && el.hasAttribute('tabindex');
+	present(el) && el.hasAttribute('tabindex');
 
 /**
  * The submit handler of a moderation row's form: it marks the action busy, lets the page update,
@@ -78,6 +85,7 @@ export function rowSubmit(
 ) {
 	return (name: string) => () => {
 		setBusy(name);
+		moderationStatus.acting = true;
 		const row = root();
 		const neighbour = row?.nextElementSibling ?? row?.previousElementSibling;
 		return async ({
@@ -96,13 +104,14 @@ export function rowSubmit(
 			afterUpdate?.();
 			toastActionResult(result);
 			await focusAfterUpdate(() => {
-				if (row?.isConnected) return row;
+				if (present(row)) return row;
 				if (takesFocus(neighbour)) return neighbour;
 				return [fallbackIds()]
 					.flat()
 					.map((id) => document.getElementById(id))
 					.find((el) => el !== null);
 			});
+			moderationStatus.acting = false;
 		};
 	};
 }

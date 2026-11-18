@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import type { ModerationRule } from '#lib/media/types/comments.ts';
 	import {
@@ -8,6 +9,7 @@
 		formatMuteHours,
 		moderationRule
 	} from '#lib/media/utils/comments.ts';
+	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import type { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	type Kind = 'hide' | 'reject' | 'mute' | 'ban' | 'unmute' | 'unban' | 'rejectAll';
@@ -27,6 +29,8 @@
 		busy: string | null;
 		submit: ReturnType<typeof rowSubmit>;
 		oncancel: () => void;
+		/** The control that opened the plate: Cancel and Escape put the focus back on it. */
+		opener?: () => HTMLElement | null | undefined;
 	}
 
 	let {
@@ -38,7 +42,8 @@
 		count,
 		busy,
 		submit,
-		oncancel
+		oncancel,
+		opener
 	}: Props = $props();
 
 	const ACTIONS: Record<Kind, string> = {
@@ -71,13 +76,39 @@
 		kind === 'hide' || kind === 'reject' || kind === 'mute' || kind === 'ban'
 	);
 	let rule = $state<ModerationRule | null>(null);
+	let form: HTMLFormElement | undefined = $state();
+
+	/** The plate takes the focus on open: its first field, or its button when it has none. */
+	onMount(() => {
+		form
+			?.querySelector<HTMLElement>('select, input:not([type="hidden"]), button:not(:disabled)')
+			?.focus();
+	});
+
+	function close() {
+		// Read before `oncancel`, which clears the state the opener is looked up by.
+		const target = opener?.();
+		oncancel();
+		void focusAfterUpdate(() => target);
+	}
+
+	function onkeydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape') return;
+		event.preventDefault();
+		event.stopPropagation();
+		close();
+	}
 </script>
 
+<!-- Escape closes the plate from any of its fields; the form itself is not interactive. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <form
 	class="plate panel"
 	method="POST"
 	action="?/{action ?? ACTIONS[kind]}"
 	use:enhance={submit(kind)}
+	bind:this={form}
+	{onkeydown}
 >
 	{#each Object.entries(fields) as [field, value] (field)}
 		{#each [value].flat() as one (one)}
@@ -134,7 +165,7 @@
 		<fieldset class="rules">
 			<legend class="label">Rule</legend>
 			{#each moderationRule as value (value)}
-				<label class="rule">
+				<label class="check-row">
 					<input type="radio" name="rule" {value} bind:group={rule} />
 					{MODERATION_RULE_LABELS[value]}
 				</label>
@@ -151,7 +182,7 @@
 			<input class="input" name="reason" maxlength={MODERATION_REASON_MAX} autocomplete="off" />
 		</label>
 	{/if}
-	<div class="actions">
+	<div class="action-row">
 		<button
 			class="btn btn--ink"
 			aria-busy={busy === kind}
@@ -159,7 +190,7 @@
 		>
 			{button}
 		</button>
-		<button class="btn btn--ghost" type="button" onclick={oncancel}>Cancel</button>
+		<button class="btn btn--ghost" type="button" onclick={close}>Cancel</button>
 	</div>
 </form>
 
@@ -189,25 +220,5 @@
 		@apply w-full;
 		grid-column: 1 / -1;
 		margin-bottom: var(--spacing-xs);
-	}
-
-	.rule {
-		@apply inline-flex items-center gap-xs text-sm cursor-pointer;
-		min-height: 1.75rem;
-	}
-
-	.rule input {
-		accent-color: var(--brand);
-	}
-
-	@media (pointer: coarse) {
-		.rule {
-			min-height: 2.75rem;
-		}
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

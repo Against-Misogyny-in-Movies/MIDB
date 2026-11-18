@@ -116,7 +116,7 @@
 			<fieldset class="group">
 				<legend class="label">Status</legend>
 				{#each commentStatus as status (status)}
-					<label class="check">
+					<label class="check-row">
 						<input
 							type="checkbox"
 							name="status"
@@ -126,7 +126,7 @@
 						{COMMENT_STATUS_LABELS[status]}
 					</label>
 				{/each}
-				<label class="check">
+				<label class="check-row">
 					<input type="checkbox" name="reported" value="1" checked={filters.reported ?? false} />
 					Has open reports
 				</label>
@@ -137,7 +137,7 @@
 				<fieldset class="group">
 					<legend class="sr-only">Categories</legend>
 					{#each VERDICT_CATEGORIES as category (category)}
-						<label class="check">
+						<label class="check-row">
 							<input
 								type="checkbox"
 								name="category"
@@ -150,7 +150,7 @@
 				</fieldset>
 			</details>
 
-			<div class="actions">
+			<div class="action-row">
 				<button class="btn btn--ink" id={TABLE_FOCUS.apply} type="submit">Apply filters</button>
 				{#if chips.length > 0}
 					<a class="btn btn--ghost" href="?tab=table">Clear filters</a>
@@ -223,32 +223,9 @@
 		margin-bottom: var(--spacing-xs);
 	}
 
-	.check {
-		@apply inline-flex items-center text-sm cursor-pointer;
-		gap: var(--spacing-sm);
-		min-height: 1.75rem;
-	}
-
-	.check input {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--brand);
-	}
-
-	@media (pointer: coarse) {
-		.check {
-			min-height: 2.75rem;
-		}
-	}
-
 	.categories summary {
 		@apply cursor-pointer;
 		margin-bottom: var(--spacing-sm);
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 
 	.chips {

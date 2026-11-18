@@ -18,6 +18,7 @@ import type {
 	ReportReason
 } from '#lib/media/types/comments.ts';
 import type { moderationAction } from '#lib/media/utils/comments.ts';
+import { REJECT_MIN_SEVERITY } from '#lib/server/moderation/policy.ts';
 import { toOwnComment, type CommentWithTitle } from './comment-queries.ts';
 import { activeMute } from './mute.ts';
 import { accountsMutedByModerator, latestActionRows } from './moderation-target.ts';
@@ -37,6 +38,9 @@ const FLAG_ACTIONS = ['resolve_count_flag', 'dismiss_count_flag', 'reopen_flag']
 /** Rows per queue tab. */
 export const QUEUE_LIMIT = 50;
 
+/** The longest excerpt of a parent comment a panel shows. */
+export const PARENT_EXCERPT_MAX = 160;
+
 export type ModerationItem = {
 	comment: OwnComment;
 	author: PublicUser;
@@ -45,6 +49,15 @@ export type ModerationItem = {
 	aiCategories: string[];
 	/** The classifier's severity, 0 to 3; null when no verdict ran or it failed. */
 	severity: number | null;
+	/** Whether the severity is at or above `REJECT_MIN_SEVERITY`, so the comment starts collapsed. */
+	severe: boolean;
+	/** The comment this one replies to, for the thread context; null for a top-level comment. */
+	parent: {
+		/** The parent's author, as the panel names them. */
+		author: string;
+		/** The start of the parent's text; null when the parent is deleted. */
+		excerpt: string | null;
+	} | null;
 	/** Each open report with its reporter's username (staff see it); null when the account has none. */
 	reports: {
 		reason: ReportReason;
@@ -96,6 +109,24 @@ export function readAiVerdict(json: string | null): ReadVerdict {
 /** The number of open reports on the comment of the enclosing select. */
 export const openReportCount = sql`(SELECT count(*) FROM ${commentReports} WHERE ${commentReports.commentId} = ${comments.id} AND ${commentReports.status} = 'open')`;
 
+/** The parent comments of a list, by id: their author and the start of their text. */
+async function parentsOf(parentIds: (string | null)[]) {
+	const found = new Map<string, NonNullable<ModerationItem['parent']>>();
+	for (const chunk of chunkForD1([...new Set(parentIds.filter((id) => id !== null))], 1)) {
+		for (const row of await db
+			.select({ id: comments.id, body: comments.body, status: comments.status, author: users })
+			.from(comments)
+			.innerJoin(users, eq(comments.userId, users.id))
+			.where(inArray(comments.id, chunk))) {
+			found.set(row.id, {
+				author: toPublicUser(row.author).displayName,
+				excerpt: row.status === 'deleted' ? null : row.body.slice(0, PARENT_EXCERPT_MAX)
+			});
+		}
+	}
+	return found;
+}
+
 /** The rows of a moderation list with their open reports and author context. */
 export async function toModerationItems(
 	rows: {
@@ -139,6 +170,7 @@ export async function toModerationItems(
 			counts.set(row.userId, row.n);
 		}
 	}
+	const parents = await parentsOf(rows.map((r) => r.comment.parentId));
 	const mutedAuthors = rows.map((r) => r.author).filter((a) => activeMute(a.mutedUntil) !== null);
 	const mutedByModerator = await accountsMutedByModerator(mutedAuthors.map((a) => a.id));
 	return rows.map(({ comment, author, title }) => {
@@ -149,6 +181,8 @@ export async function toModerationItems(
 			title: { kind: title.kind, tmdbId: title.tmdbId, name: title.title },
 			aiCategories: verdict.categories,
 			severity: verdict.severity,
+			severe: verdict.severity !== null && verdict.severity >= REJECT_MIN_SEVERITY,
+			parent: (comment.parentId && parents.get(comment.parentId)) || null,
 			reports: reports
 				.filter((r) => r.commentId === comment.id)
 				.map((r) => ({

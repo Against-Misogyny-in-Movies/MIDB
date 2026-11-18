@@ -1,20 +1,35 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import CommunityReportsPanel from '#lib/components/moderation/communityReportsPanel.svelte';
 	import PagedList from '#lib/components/moderation/pagedList.svelte';
+	import ModerationSettings from '#lib/components/moderation/moderationSettings.svelte';
+	import QueueView from '#lib/components/moderation/queue/queueView.svelte';
 	import RecentActionRow from '#lib/components/moderation/recentActionRow.svelte';
 	import TablePanel from '#lib/components/moderation/table/tablePanel.svelte';
 	import Notice from '#lib/components/ui/notice.svelte';
+	import SkeletonRows from '#lib/components/ui/skeletonRows.svelte';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { STALE_SYNC_HOURS } from '#lib/media/utils/staleSync.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
+	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
+	import { moderationStatus } from '#lib/media/utils/moderationStatus.svelte.js';
 	import { tabHref, type ModerationTab } from '#lib/media/utils/moderationTabs.ts';
 
 	let { data } = $props();
 
+	onMount(() => moderationPrefs.start());
+
 	/** The URL is the one source of the open tab: the load parses `?tab=` and `?title=`. */
 	const tab = $derived(data.tab);
+	const queueTab = $derived(tab === 'pending' || tab === 'reported');
+
+	/** The last action's result belongs to the tab it ran in. */
+	let shownTab: ModerationTab | undefined;
+	$effect(() => {
+		if (shownTab !== undefined && shownTab !== tab) moderationStatus.clear();
+		shownTab = tab;
+	});
 
 	/**
 	 * Each count is a total from the database, not the length of the page shown: Pending is the
@@ -32,6 +47,14 @@
 		},
 		{ id: 'log' as const, label: 'Recent actions', count: null }
 	]);
+
+	/** "Hidden. 41 left in Pending.": the result of the last action and what remains in this tab, from the load's totals. */
+	const status = $derived.by(() => {
+		if (!moderationStatus.label || (tab !== 'pending' && tab !== 'reported')) return '';
+		const left = data.counts[tab];
+		const tabName = tab === 'pending' ? 'Pending' : 'Reported';
+		return `${moderationStatus.label}. ${left === 0 ? 'Nothing' : left} left in ${tabName}.`;
+	});
 
 	/**
 	 * Choosing a tab goes to its URL, which the load reads. The tab buttons stay mounted, so the
@@ -74,12 +97,15 @@
 	<title>Moderation · MIDB</title>
 </svelte:head>
 
-<div class="page" class:wide={tab === 'table'}>
+<div class="page" class:wide={tab === 'table' || queueTab}>
 	<header>
 		<a href="/user/profile" class="back"
 			><i class="ri-arrow-left-s-line" aria-hidden="true"></i>Profile</a
 		>
 		<h1 class="display">Moderation</h1>
+		{#if queueTab || tab === 'table'}
+			<ModerationSettings />
+		{/if}
 	</header>
 
 	{#if data.staleSources.length > 0}
@@ -113,6 +139,10 @@
 		{/each}
 	</div>
 
+	{#if queueTab}
+		<p class="status" role="status">{status}</p>
+	{/if}
+
 	<div id="panel-{tab}" role="tabpanel" aria-labelledby="tab-{tab}">
 		{#if tab === 'table'}
 			{#if data.table && data.filters}
@@ -123,10 +153,8 @@
 					me={data.me}
 				/>
 			{:else}
-				<div class="card skeleton" aria-busy="true" aria-label="Loading comments">
-					{#each [0, 1, 2, 3, 4, 5] as row (row)}
-						<div class="skeleton-row"></div>
-					{/each}
+				<div class="card skeleton" aria-busy="true">
+					<SkeletonRows rows={6} label="Loading comments" height="3rem" />
 				</div>
 			{/if}
 		{:else if tab === 'log' && data.recent}
@@ -151,29 +179,19 @@
 				me={data.me}
 			/>
 		{:else if tab === 'pending' && data.pending}
-			<PagedList
+			<QueueView
 				page={data.pending}
 				queue="pending"
-				key={(item) => item.comment.id}
+				me={data.me}
 				empty="No comments are waiting for review."
-				noun="comments"
-			>
-				{#snippet row(item)}
-					<ModerationItemRow {item} me={data.me} />
-				{/snippet}
-			</PagedList>
+			/>
 		{:else if tab === 'reported' && data.reported}
-			<PagedList
+			<QueueView
 				page={data.reported}
 				queue="reported"
-				key={(item) => item.comment.id}
+				me={data.me}
 				empty="No comments have open reports."
-				noun="comments"
-			>
-				{#snippet row(item)}
-					<ModerationItemRow {item} me={data.me} />
-				{/snippet}
-			</PagedList>
+			/>
 		{/if}
 	</div>
 </div>
@@ -205,6 +223,13 @@
 		max-width: none;
 	}
 
+	/* One line for the last action's result, reserved so the first one moves nothing. */
+	.status {
+		@apply text-sm text-ink-muted;
+		min-height: 1.25rem;
+		margin-block: calc(-1 * var(--spacing-xs));
+	}
+
 	@media (min-width: 64rem) {
 		.page.wide {
 			width: min(90rem, 100vw - 3rem);
@@ -214,6 +239,11 @@
 
 	h1 {
 		font-size: 1.875rem;
+	}
+
+	header {
+		@apply flex flex-col;
+		gap: var(--spacing-xs);
 	}
 
 	.tabs {
@@ -228,9 +258,12 @@
 		}
 	}
 
+	/* The selected tab also takes the heavier weight and the wash, so colour is not the only mark. */
 	.chip[aria-selected='true'] {
 		border-color: var(--brand);
+		background-color: var(--brand-wash);
 		color: var(--brand);
+		font-weight: 600;
 	}
 
 	.count {
@@ -239,33 +272,6 @@
 
 	/* Room for the filters and the first rows, so the table replaces it without moving what is below. */
 	.skeleton {
-		@apply flex flex-col;
 		min-height: 18rem;
-	}
-
-	.skeleton-row {
-		@apply flex items-center border-b border-border;
-		height: 3rem;
-		animation: pulse 1.6s ease-in-out infinite;
-	}
-
-	.skeleton-row::before {
-		content: '';
-		width: 40%;
-		height: 0.75rem;
-		margin-left: var(--spacing-md);
-		background-color: var(--surface-sunken);
-	}
-
-	@keyframes pulse {
-		50% {
-			opacity: 0.5;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.skeleton-row {
-			animation: none;
-		}
 	}
 </style>

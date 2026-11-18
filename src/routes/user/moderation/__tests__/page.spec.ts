@@ -252,7 +252,9 @@ describe('the table tab', () => {
 
 	it('reserves room for the table while it loads', () => {
 		render(Page, { data: { ...TABLE_DATA, table: null, filters: null }, form: null } as never);
-		expect(screen.getByLabelText('Loading comments').getAttribute('aria-busy')).toBe('true');
+		expect(
+			screen.getByText('Loading comments').closest('[aria-busy]')?.getAttribute('aria-busy')
+		).toBe('true');
 	});
 
 	it('shows each active filter as a chip that removes only it', () => {
@@ -338,6 +340,9 @@ describe('the table tab', () => {
 
 const item = (id: string) => tableRow(id);
 
+/** The list's rows: one button each, whichever item's panel is open. */
+const rows = () => [...document.querySelectorAll('button[id^="row-"]')];
+
 describe('the queue lists', () => {
 	const PAGED = {
 		...DATA,
@@ -362,17 +367,13 @@ describe('the queue lists', () => {
 			.mockResolvedValue(Response.json({ items: [item('c3'), item('c4')], nextCursor: null }));
 		vi.stubGlobal('fetch', fetcher);
 		render(Page, { data: PAGED, form: null } as never);
-		expect(
-			screen.getAllByRole('listitem').filter((li) => li.id.startsWith('comment-'))
-		).toHaveLength(2);
+		expect(rows()).toHaveLength(2);
 		await fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
 		expect(fetcher).toHaveBeenCalledWith('/api/moderation/queue?queue=pending&cursor=cursor-1', {
 			method: 'GET'
 		});
-		await waitFor(() => expect(document.activeElement?.id).toBe('comment-c3'));
-		expect(
-			screen.getAllByRole('listitem').filter((li) => li.id.startsWith('comment-'))
-		).toHaveLength(4);
+		await waitFor(() => expect(document.activeElement?.id).toBe('row-c3'));
+		expect(rows()).toHaveLength(4);
 		expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
 	});
 
@@ -388,9 +389,7 @@ describe('the queue lists', () => {
 		expect(toasts.items.map((t) => t.text)).toEqual([
 			'More comments could not be loaded. Moderation is open to moderators and administrators only.'
 		]);
-		expect(
-			screen.getAllByRole('listitem').filter((li) => li.id.startsWith('comment-'))
-		).toHaveLength(2);
+		expect(rows()).toHaveLength(2);
 	});
 
 	it('drops the later pages when the page reloads, so a removed row does not stay', async () => {

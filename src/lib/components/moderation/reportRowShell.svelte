@@ -4,8 +4,8 @@
 	interface Props {
 		/** The row element, so the row's submit handler can put the focus back on it. */
 		root?: HTMLElement;
-		/** The row's subject: a title link or an account name. */
-		name: Snippet;
+		/** The row's subject: a title link or an account name. Without it the header holds only `meta`. */
+		name?: Snippet;
 		/** Badges, labels and the date after the name. */
 		meta?: Snippet;
 		/** The row's body. */
@@ -16,24 +16,46 @@
 		readOnly?: string;
 		/** Further actions after the row's own. */
 		footer?: Snippet;
+		/** A class for the row element, so the list that holds it can place it. */
+		class?: string;
+		/** The row's id, for a link or a focus target. */
+		id?: string;
+		/** The element: a list item in a list, a plain block in a panel that sits in a list item of its own. */
+		as?: 'li' | 'div';
+		/** Leaves the header out, for a row whose subject the list above already shows. */
+		headless?: boolean;
 	}
 
-	let { root = $bindable(), name, meta, children, actions, readOnly, footer }: Props = $props();
+	let {
+		root = $bindable(),
+		name,
+		meta,
+		children,
+		actions,
+		readOnly,
+		footer,
+		class: className,
+		id,
+		as = 'li',
+		headless = false
+	}: Props = $props();
 </script>
 
-<li class="item" tabindex="-1" bind:this={root}>
-	<header class="meta">
-		<span class="name">{@render name()}</span>
-		{@render meta?.()}
-	</header>
+<svelte:element this={as} class="item {className ?? ''}" {id} tabindex="-1" bind:this={root}>
+	{#if !headless && (name || meta)}
+		<header class="meta">
+			{#if name}<span class="name">{@render name()}</span>{/if}
+			{@render meta?.()}
+		</header>
+	{/if}
 	{@render children?.()}
 	{#if readOnly}
 		<p class="label">{readOnly}</p>
 	{:else if actions}
-		<div class="actions">{@render actions()}</div>
+		<div class="action-row">{@render actions()}</div>
 	{/if}
 	{@render footer?.()}
-</li>
+</svelte:element>
 
 <style lang="postcss">
 	@reference "../../../app.css";
@@ -51,10 +73,5 @@
 
 	.name {
 		@apply font-semibold;
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

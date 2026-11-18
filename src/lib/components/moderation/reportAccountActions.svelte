@@ -19,6 +19,7 @@
 	let panel = $state<Panel | null>(null);
 	let busy = $state<string | null>(null);
 	let root: HTMLElement | undefined = $state();
+	let triggers = $state<Partial<Record<Panel, HTMLButtonElement>>>({});
 	const submit = rowSubmit(
 		() => root,
 		(name) => (busy = name),
@@ -34,12 +35,13 @@
 {#if (canAct && account.reportCount > 0) || canRestrict}
 	<div class="account" bind:this={root} tabindex="-1">
 		<p class="label">Account</p>
-		<div class="actions">
+		<div class="action-row">
 			{#if canAct && account.reportCount > 0}
 				<button
 					class="btn btn--ghost"
 					type="button"
 					aria-expanded={panel === 'rejectAll'}
+					bind:this={triggers.rejectAll}
 					onclick={() => toggle('rejectAll')}>Reject all from this account</button
 				>
 			{/if}
@@ -50,6 +52,7 @@
 							class="btn btn--ghost"
 							type="button"
 							aria-expanded={panel === 'unban'}
+							bind:this={triggers.unban}
 							onclick={() => toggle('unban')}>Lift ban</button
 						>
 					{/if}
@@ -60,6 +63,7 @@
 								class="btn btn--ghost"
 								type="button"
 								aria-expanded={panel === 'unmute'}
+								bind:this={triggers.unmute}
 								onclick={() => toggle('unmute')}>End mute</button
 							>
 						{/if}
@@ -68,6 +72,7 @@
 							class="btn btn--ghost"
 							type="button"
 							aria-expanded={panel === 'mute'}
+							bind:this={triggers.mute}
 							onclick={() => toggle('mute')}>Mute account</button
 						>
 					{/if}
@@ -75,6 +80,7 @@
 						class="btn btn--ghost"
 						type="button"
 						aria-expanded={panel === 'ban'}
+						bind:this={triggers.ban}
 						onclick={() => toggle('ban')}>Ban account</button
 					>
 				{/if}
@@ -90,6 +96,7 @@
 				{busy}
 				{submit}
 				oncancel={() => (panel = null)}
+				opener={() => (panel ? triggers[panel] : undefined)}
 			/>
 		{/if}
 	</div>
@@ -103,10 +110,5 @@
 		gap: var(--spacing-sm);
 		border-top: 1px solid var(--border);
 		padding-top: var(--spacing-sm);
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

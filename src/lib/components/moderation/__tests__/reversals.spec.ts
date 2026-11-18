@@ -46,6 +46,8 @@ const item = (over: Partial<ModerationItem> = {}): ModerationItem => ({
 	title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 	aiCategories: [],
 	severity: null,
+	severe: false,
+	parent: null,
 	reports: [],
 	authorCommentCount: 2,
 	authorMutedUntil: null,

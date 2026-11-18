@@ -56,7 +56,7 @@
 		{#if openTitle.reports.length === 0}
 			<p class="empty" id="moderation-empty" tabindex="-1">This title has no community reports.</p>
 		{:else}
-			<ul class="card list">
+			<ul class="card row-list">
 				{#each openTitle.reports as report (report.account.userId)}
 					{@const account = { id: report.account.userId, role: report.account.role }}
 					<TitleReportRow
@@ -155,13 +155,5 @@
 
 	.empty {
 		@apply text-ink-muted;
-	}
-
-	.list {
-		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
-	}
-
-	.list > :global(li + li) {
-		border-top: 1px solid var(--border);
 	}
 </style>

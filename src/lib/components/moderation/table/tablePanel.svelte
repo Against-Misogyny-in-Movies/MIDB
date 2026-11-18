@@ -42,7 +42,7 @@
 
 	<div class="above">
 		{#if selectable.length > 0}
-			<label class="all">
+			<label class="check-row">
 				<input
 					id={TABLE_FOCUS.selectAll}
 					type="checkbox"
@@ -80,23 +80,5 @@
 	.above {
 		@apply flex flex-wrap items-center justify-between;
 		gap: var(--spacing-sm) var(--spacing-md);
-	}
-
-	.all {
-		@apply inline-flex items-center text-sm cursor-pointer;
-		gap: var(--spacing-sm);
-		min-height: 1.75rem;
-	}
-
-	.all input {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--brand);
-	}
-
-	@media (pointer: coarse) {
-		.all {
-			min-height: 2.75rem;
-		}
 	}
 </style>

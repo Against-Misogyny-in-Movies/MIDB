@@ -42,21 +42,21 @@ Read the sections your task touches.
 
 - `README.md` — MIDB (~2.3K tok)
 - `PRODUCT.md` — Product (~750 tok)
-- `DESIGN.md` — Design (~8.1K tok)
+- `DESIGN.md` — Design (~8.7K tok)
   - 5–8 Idea (~70)
   - 9–24 Colour (~930)
   - 25–31 Type (~150)
   - 32–36 Shapes and elevation (~80)
-  - 37–65 Components (~4.0K) ← 1
+  - 37–65 Components (~4.6K) ← 1
   - 66–73 Pages (~2.5K)
   - 74–77 Motion (~110)
   - 78–81 Browser surfaces (~50)
   - 82–85 Avoid (~90)
-- `docs/architecture.md` — MIDB — Architecture Reference (~92.9K tok)
+- `docs/architecture.md` — MIDB — Architecture Reference (~94.4K tok)
   - 7–16 What it is (~350)
   - 17–36 Tech stack (~1.8K)
   - 37–67 High-level data flow (~900)
-  - 68–317 Directory layout (~12.3K)
+  - 68–317 Directory layout (~12.5K)
     - 308–317 File-organisation conventions (~450)
   - 318–331 Styling & theming (~1.1K)
   - 332–344 Copy & voice (~540) ← 1
@@ -65,28 +65,28 @@ Read the sections your task touches.
     - 422–429 Migrations (~450)
   - 430–459 Source sync (~1.9K) ← 3
   - 460–532 Detail pages (`src/routes/movie/[movieId]/`, `src/routes/tv/[seriesId]/`) (~3.4K)
-  - 533–576 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~5.8K) ← 2
-  - 577–596 UM Disambiguation (~830)
-  - 597–605 UM flag rendering (~250)
-  - 606–614 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
-  - 615–625 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
-  - 626–639 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K) ← 1
-  - 640–651 Shared marker pattern (metric row markers) (~410) ← 5
-  - 652–694 Component library (`src/lib/components/`) (~15.9K)
-  - 695–705 Live search (`src/lib/components/search/`) (~710)
-  - 706–719 Server cache (`src/lib/server/cache/`) (~700)
-  - 720–735 TMDB integration (~810)
-  - 736–754 Auth flow (Better Auth) (~2.0K)
-  - 755–777 Caching policy (~2.1K) ← 9
-  - 778–835 Configuration & environment (~4.0K)
-    - 795–807 Local run sequence (~130)
-    - 808–811 npm scripts (~200)
-    - 812–822 CI (`.github/workflows/tests.yml`) (~490)
-    - 823–835 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
-  - 836–852 Testing (~1.2K)
-    - 847–852 Verification baseline (~80)
-  - 853–861 Known gaps / TODO (~180) ← 1
-  - 862–870 Related docs (~140)
+  - 533–578 Comments (`src/lib/server/data/comment-*.ts`, `src/routes/api/…/comments`) (~6.4K) ← 2
+  - 579–598 UM Disambiguation (~830)
+  - 599–607 UM flag rendering (~250)
+  - 608–616 MIDB community reports (`src/lib/server/data/community-report*.ts`, `src/routes/api/titles/…/reports`) (~560)
+  - 617–627 MIDB community reports section (`movies/metrics/communityReportsSection.svelte`) (~1.2K)
+  - 628–641 Public profiles (`src/routes/u/[username]/`, `profile-queries.ts`) (~1.6K) ← 1
+  - 642–653 Shared marker pattern (metric row markers) (~410) ← 5
+  - 654–697 Component library (`src/lib/components/`) (~16.8K)
+  - 698–708 Live search (`src/lib/components/search/`) (~710)
+  - 709–722 Server cache (`src/lib/server/cache/`) (~700)
+  - 723–738 TMDB integration (~810)
+  - 739–757 Auth flow (Better Auth) (~2.0K)
+  - 758–780 Caching policy (~2.1K) ← 9
+  - 781–838 Configuration & environment (~4.0K)
+    - 798–810 Local run sequence (~130)
+    - 811–814 npm scripts (~200)
+    - 815–825 CI (`.github/workflows/tests.yml`) (~490)
+    - 826–838 Deploy (`.github/workflows/deploy.yml`) (~670) ← 3
+  - 839–855 Testing (~1.2K)
+    - 850–855 Verification baseline (~80)
+  - 856–864 Known gaps / TODO (~180) ← 1
+  - 865–873 Related docs (~140)
 
 ## Phases
 
@@ -129,8 +129,8 @@ Read before a change that touches what they describe.
   - 5–28 Network (~6.0K)
   - 29–39 Supply chain (~570)
   - 40–45 Reporting a vulnerability (~90)
-- `PRIVACY.md` — Privacy (~4.8K tok)
-  - 5–15 Reading the site (~720)
+- `PRIVACY.md` — Privacy (~4.9K tok)
+  - 5–15 Reading the site (~760)
   - 16–35 Signing in (~1.8K)
   - 36–50 Ratings and comments (~2.3K)
   - 51–54 Contact (~40)

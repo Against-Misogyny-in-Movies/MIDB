@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MODERATION_RULE_LABELS, moderationRule } from '#lib/media/utils/comments.ts';
 
@@ -84,5 +84,45 @@ describe('the rule radio group of a plate', () => {
 		expect(
 			screen.getByText(/the author sees it as rejected, with the rule and the note/)
 		).toBeTruthy();
+	});
+});
+
+describe('focus in a plate', () => {
+	it('takes the focus on open: the first radio of a rule plate, the note of a reversal, the length of a mute', () => {
+		mount('hide');
+		expect(document.activeElement).toBe(radios()[0]);
+		cleanup();
+		mount('unban');
+		expect(document.activeElement).toBe(screen.getByLabelText(/Note, kept in the log/));
+		cleanup();
+		mount('mute');
+		expect(document.activeElement?.tagName).toBe('SELECT');
+	});
+
+	it('takes the confirming button when it has no field', () => {
+		mount('rejectAll', { reportCount: 2 });
+		expect(document.activeElement).toBe(screen.getByRole('button', { name: /Reject all/ }));
+	});
+
+	it('closes on Escape from any field and returns the focus to what opened it', async () => {
+		const opener = document.body.appendChild(document.createElement('button'));
+		const oncancel = vi.fn();
+		mount('hide', { oncancel, opener: () => opener });
+		await fireEvent.keyDown(screen.getByLabelText(/Note, shown to the author/), { key: 'Escape' });
+		expect(oncancel).toHaveBeenCalledTimes(1);
+		await waitFor(() => expect(document.activeElement).toBe(opener));
+		opener.remove();
+	});
+
+	it('returns the focus to its opener on Cancel, and ignores other keys', async () => {
+		const opener = document.body.appendChild(document.createElement('button'));
+		const oncancel = vi.fn();
+		mount('ban', { oncancel, opener: () => opener });
+		await fireEvent.keyDown(screen.getByLabelText(/Note, kept in the log/), { key: 'a' });
+		expect(oncancel).not.toHaveBeenCalled();
+		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+		expect(oncancel).toHaveBeenCalledTimes(1);
+		await waitFor(() => expect(document.activeElement).toBe(opener));
+		opener.remove();
 	});
 });

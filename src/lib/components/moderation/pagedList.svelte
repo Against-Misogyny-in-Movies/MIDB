@@ -52,7 +52,7 @@
 {#if pager.shown.length === 0}
 	<p class="empty" id={emptyId} tabindex="-1">{empty}</p>
 {:else}
-	<ul class="card list" bind:this={list}>
+	<ul class="card row-list" bind:this={list}>
 		{#each pager.shown as item (key(item))}
 			{@render row(item)}
 		{/each}
@@ -77,14 +77,6 @@
 
 	.empty {
 		@apply text-ink-muted;
-	}
-
-	.list {
-		@apply flex flex-col list-none p-0 m-0 overflow-hidden;
-	}
-
-	.list > :global(li + li) {
-		border-top: 1px solid var(--border);
 	}
 
 	.more {

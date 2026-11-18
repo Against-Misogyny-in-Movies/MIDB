@@ -38,7 +38,7 @@
 	{#if flag.status !== 'open'}
 		<p class="label">{flag.status === 'resolved' ? 'Resolved' : 'Dismissed'}</p>
 		{#if canAct}
-			<div class="actions">
+			<div class="action-row">
 				<form method="POST" action="?/reopenFlag" use:enhance={submit('reopenFlag')}>
 					<input type="hidden" name="id" value={flag.id} />
 					<button
@@ -52,7 +52,7 @@
 			</div>
 		{/if}
 	{:else if canAct}
-		<div class="actions">
+		<div class="action-row">
 			{#each [{ name: 'resolveFlag', label: 'Resolve', style: 'btn--ink' }, { name: 'dismissFlag', label: 'Dismiss', style: 'btn--ghost' }] as action (action.name)}
 				<form method="POST" action="?/{action.name}" use:enhance={submit(action.name)}>
 					<input type="hidden" name="id" value={flag.id} />
@@ -90,10 +90,5 @@
 
 	.note {
 		overflow-wrap: anywhere;
-	}
-
-	.actions {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

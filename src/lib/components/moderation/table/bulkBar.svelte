@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
-	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 
 	interface Props {
@@ -35,13 +34,6 @@
 		() => fallbackIds
 	);
 
-	/** Closing the panel without acting puts the focus back on the toggle that opened it. */
-	function cancel() {
-		const opener = panel === 'hide' ? hideToggle : rejectToggle;
-		panel = null;
-		void focusAfterUpdate(() => opener);
-	}
-
 	const DIRECT = [
 		{ op: 'approve', label: 'Approve' },
 		{ op: 'restore', label: 'Restore' },
@@ -56,7 +48,7 @@
 			selected
 		</p>
 		<form
-			class="ops"
+			class="action-row"
 			method="POST"
 			action="?/bulk"
 			use:enhance={({ submitter }) =>
@@ -78,7 +70,7 @@
 				</button>
 			{/each}
 		</form>
-		<div class="ops">
+		<div class="action-row">
 			<button
 				class="btn btn--ghost"
 				type="button"
@@ -105,7 +97,8 @@
 			count={ids.length}
 			{busy}
 			{submit}
-			oncancel={cancel}
+			oncancel={() => (panel = null)}
+			opener={() => (panel === 'hide' ? hideToggle : rejectToggle)}
 		/>
 	{/if}
 </div>
@@ -130,10 +123,5 @@
 
 	.count {
 		@apply font-semibold;
-	}
-
-	.ops {
-		@apply flex flex-wrap;
-		gap: var(--spacing-sm);
 	}
 </style>

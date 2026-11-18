@@ -16,7 +16,7 @@ const AUTHOR = {
 
 const MOD = { id: 'mod', role: 'moderator' };
 
-function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { ranked?: boolean } = {}) {
+function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { inRow?: boolean } = {}) {
 	const list = document.body.appendChild(document.createElement('ul'));
 	return render(ModerationItemRow, {
 		props: {
@@ -39,6 +39,8 @@ function mount(over: Partial<ModerationItem> = {}, me = MOD, extra: { ranked?: b
 				title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 				aiCategories: [],
 				severity: null,
+				severe: false,
+				parent: null,
 				reports: [],
 				authorCommentCount: 4,
 				authorMutedUntil: null,
@@ -76,13 +78,13 @@ describe('ModerationItem reports and read-only state', () => {
 		const { container } = mount({ author: { ...AUTHOR, id, role } });
 		expect(screen.getByText('An administrator decides on this comment.')).toBeTruthy();
 		expect(screen.queryByRole('button')).toBeNull();
-		expect(container.querySelector('.actions')).toBeNull();
+		expect(container.querySelector('.action-row')).toBeNull();
 	});
 
 	it('keeps the controls on an ordinary account’s comment', () => {
 		const { container } = mount();
 		expect(screen.queryByText(/decides on this comment/)).toBeNull();
-		expect(container.querySelector('.actions')).not.toBeNull();
+		expect(container.querySelector('.action-row')).not.toBeNull();
 	});
 });
 
@@ -100,8 +102,49 @@ describe('the severity that ranks a queue row', () => {
 		expect(screen.queryByText(/^Severity/)).toBeNull();
 	});
 
-	it('leaves it to the table’s own column when ranked is off', () => {
-		mount({ severity: 3 }, MOD, { ranked: false });
+	it('leaves it to the table’s own column when the row above shows it', () => {
+		mount({ severity: 3 }, MOD, { inRow: true });
 		expect(screen.queryByText(/^Severity/)).toBeNull();
+	});
+});
+
+describe('the panel under a table row', () => {
+	it('leaves out what the row shows: the author, the title, the status and the date', () => {
+		mount({ severity: 3 }, MOD, { inRow: true });
+		expect(screen.queryByRole('link', { name: 'anna' })).toBeNull();
+		expect(screen.queryByRole('link', { name: 'Alien' })).toBeNull();
+		expect(screen.queryByText('Pending')).toBeNull();
+		expect(document.querySelector('time')).toBeNull();
+		expect(document.querySelector('header')).toBeNull();
+	});
+
+	it('keeps what the row lacks: the standing, the full text and the actions', () => {
+		mount(
+			{
+				authorBanned: true,
+				comment: {
+					id: 'c1',
+					parentId: null,
+					rootId: null,
+					body: 'The whole text of it',
+					status: 'pending',
+					moderationSource: null,
+					moderationReason: null,
+					moderationRule: null,
+					score: 0,
+					replyCount: 0,
+					createdAt: '2026-11-01T10:00:00.000Z',
+					editedAt: null
+				}
+			},
+			MOD,
+			{
+				inRow: true
+			}
+		);
+		expect(screen.getByText('The whole text of it')).toBeTruthy();
+		expect(screen.getByText('Banned')).toBeTruthy();
+		expect(screen.getByText('4 comments in all')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
 	});
 });
