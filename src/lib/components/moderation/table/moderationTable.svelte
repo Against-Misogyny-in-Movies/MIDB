@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import TableRow from '#lib/components/moderation/table/tableRow.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
+	import { accountHref } from '#lib/media/utils/accountHref.ts';
 	import { canActOn } from '#lib/media/utils/canActOn.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
 	import { pressPanelButton, pressesButton, shortcutOf } from '#lib/media/utils/moderationKeys.ts';
@@ -21,7 +23,8 @@
 
 	/**
 	 * With a detail open, j and k open the next and previous row's, and a letter presses the open
-	 * detail's button. With none open the keys do nothing: Review is the way in.
+	 * detail's button, and u opens its author's account. With none open the keys do nothing: Review
+	 * is the way in.
 	 */
 	function onkeydown(event: KeyboardEvent) {
 		if (openId === null) return;
@@ -34,6 +37,11 @@
 			if (!target) return;
 			openId = target.comment.id;
 			void focusAfterUpdate(() => document.getElementById(`review-${target.comment.id}`));
+		} else if (shortcut === 'account') {
+			const open = rows.find((r) => r.comment.id === openId);
+			if (!open) return;
+			event.preventDefault();
+			void goto(accountHref(open.author.id));
 		} else if (pressesButton(shortcut) && !event.repeat) {
 			if (pressPanelButton(document.getElementById(`detail-${openId}`), shortcut)) {
 				event.preventDefault();

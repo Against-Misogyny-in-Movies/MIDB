@@ -1,58 +1,23 @@
 import type { Actions, PageServerLoad } from './$types';
 import { requireRole } from '#lib/server/auth/guards.ts';
-import {
-	act,
-	text,
-	viewedEditedAt,
-	withViewedEditedAt,
-	type Outcome
-} from '#lib/server/http/moderation-action.ts';
+import { act, text, type Outcome } from '#lib/server/http/moderation-action.ts';
 import { env } from '#lib/server/env.ts';
-import {
-	approveComment,
-	banAccount,
-	dismissReports,
-	hideComment,
-	rejectComment,
-	restoreComment
-} from '#lib/server/data/moderation-actions.ts';
 import {
 	listPendingQueue,
 	listRecentActions,
 	listReportedQueue
 } from '#lib/server/data/moderation-queue.ts';
 import {
-	approveReport,
-	rejectAccountReports,
-	rejectReport
-} from '#lib/server/data/community-report-moderation.ts';
-import {
 	getOpenTitle,
 	listFlaggedTitles,
 	listHeldReports
 } from '#lib/server/data/community-report-queue.ts';
-import { unbanAccount, unmuteUser } from '#lib/server/data/moderation-reversals.ts';
 import { getModerationCounts } from '#lib/server/data/moderation-counts.ts';
 import { listModerationTable } from '#lib/server/data/moderation-table.ts';
 import { queryToFilters } from '#lib/server/moderation/search-filters.ts';
-import {
-	accountKey,
-	commentKey,
-	flagKey,
-	flagResult,
-	muteFromForm,
-	reasonOf,
-	reportKey,
-	withRule
-} from '#lib/server/moderation/action-form.ts';
+import { staffActions } from '#lib/server/moderation/staff-actions.ts';
 import { runBulk } from '#lib/server/moderation/bulk.ts';
-import { purgeOutcome } from '#lib/server/moderation/purge.ts';
 import { runScan } from '#lib/server/moderation/run-scan.ts';
-import {
-	dismissCountFlag,
-	reopenCountFlag,
-	resolveCountFlag
-} from '#lib/server/data/count-flags.ts';
 import { getSourceSyncDates } from '#lib/server/data/source-sync.ts';
 import { AI_QUERY_MAX } from '#lib/media/utils/comments.ts';
 import { filtersToParams, parseFilters } from '#lib/media/utils/moderationFilters.ts';
@@ -123,122 +88,5 @@ export const actions: Actions = {
 		),
 	scan: (event) => act(event, 'scan', () => 'scan', runScan, undefined, 'RL_MODERATE_AI'),
 	bulk: (event) => act(event, 'bulk', () => 'bulk', runBulk),
-	approve: (event) =>
-		act(
-			event,
-			'approve',
-			commentKey,
-			(staff, data) =>
-				withViewedEditedAt(viewedEditedAt(data), (editedAt) =>
-					approveComment(staff, text(data, 'id') ?? '', editedAt)
-				),
-			purgeOutcome
-		),
-	hide: (event) =>
-		act(
-			event,
-			'hide',
-			commentKey,
-			(staff, data) =>
-				withRule(data, (rule) => hideComment(staff, text(data, 'id') ?? '', reasonOf(data), rule)),
-			purgeOutcome
-		),
-	reject: (event) =>
-		act(
-			event,
-			'reject',
-			commentKey,
-			(staff, data) =>
-				withRule(data, (rule) =>
-					rejectComment(staff, text(data, 'id') ?? '', reasonOf(data), rule)
-				),
-			purgeOutcome
-		),
-	restore: (event) =>
-		act(
-			event,
-			'restore',
-			commentKey,
-			(staff, data) =>
-				withViewedEditedAt(viewedEditedAt(data), (editedAt) =>
-					restoreComment(staff, text(data, 'id') ?? '', editedAt)
-				),
-			purgeOutcome
-		),
-	dismiss: (event) =>
-		act(
-			event,
-			'dismiss',
-			commentKey,
-			(staff, data) =>
-				withViewedEditedAt(viewedEditedAt(data), (editedAt) =>
-					dismissReports(staff, text(data, 'id') ?? '', editedAt)
-				),
-			purgeOutcome
-		),
-	mute: (event) => act(event, 'mute', commentKey, muteFromForm, purgeOutcome),
-	ban: (event) =>
-		act(
-			event,
-			'ban',
-			commentKey,
-			(staff, data) =>
-				withRule(data, (rule) =>
-					banAccount(staff, text(data, 'userId') ?? '', reasonOf(data), rule)
-				),
-			purgeOutcome
-		),
-	unmute: (event) =>
-		act(
-			event,
-			'unmute',
-			commentKey,
-			(staff, data) => unmuteUser(staff, text(data, 'userId') ?? '', reasonOf(data)),
-			purgeOutcome
-		),
-	unban: (event) =>
-		act(
-			event,
-			'unban',
-			commentKey,
-			(staff, data) => unbanAccount(staff, text(data, 'userId') ?? '', reasonOf(data)),
-			purgeOutcome
-		),
-	countReport: (event) =>
-		act(
-			event,
-			'countReport',
-			reportKey,
-			(staff, data) =>
-				approveReport(staff, text(data, 'userId') ?? '', text(data, 'titleId') ?? ''),
-			purgeOutcome
-		),
-	rejectReport: (event) =>
-		act(
-			event,
-			'rejectReport',
-			reportKey,
-			(staff, data) => rejectReport(staff, text(data, 'userId') ?? '', text(data, 'titleId') ?? ''),
-			purgeOutcome
-		),
-	rejectAccountReports: (event) =>
-		act(
-			event,
-			'rejectAccountReports',
-			accountKey,
-			(staff, data) => rejectAccountReports(staff, text(data, 'userId') ?? ''),
-			purgeOutcome
-		),
-	resolveFlag: (event) =>
-		act(event, 'resolveFlag', flagKey, async (staff, data) =>
-			flagResult(await resolveCountFlag(text(data, 'id') ?? '', staff))
-		),
-	dismissFlag: (event) =>
-		act(event, 'dismissFlag', flagKey, async (staff, data) =>
-			flagResult(await dismissCountFlag(text(data, 'id') ?? '', staff))
-		),
-	reopenFlag: (event) =>
-		act(event, 'reopenFlag', flagKey, async (staff, data) =>
-			flagResult(await reopenCountFlag(text(data, 'id') ?? '', staff))
-		)
+	...staffActions
 };

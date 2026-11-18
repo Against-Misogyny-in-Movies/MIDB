@@ -29,6 +29,7 @@ import {
 	severityRank
 } from './moderation-priority.ts';
 import { QUEUE_SHAPES, decodeQueueCursor, toQueuePage, type QueuePage } from './queue-cursor.ts';
+import { reporterRecords, type ReporterRecord } from './reporter-record.ts';
 import { toPublicUser, type UserRow } from './user-queries.ts';
 
 type Action = (typeof moderationAction)[number];
@@ -64,6 +65,10 @@ export type ModerationItem = {
 		note: string | null;
 		createdAt: string;
 		reporter: string | null;
+		/** The reporter's account, for the link to its page. */
+		reporterId: string;
+		/** How the reporter's own reports fared (`reporter-record.ts`). */
+		record: ReporterRecord;
 	}[];
 	/** How many comments the author has written in all, as context for the decision. */
 	authorCommentCount: number;
@@ -143,6 +148,7 @@ export async function toModerationItems(
 		note: string | null;
 		createdAt: Date;
 		reporter: string | null;
+		reporterId: string;
 	}[] = [];
 	for (const chunk of chunkForD1(ids, 1, 1)) {
 		reports.push(
@@ -152,7 +158,8 @@ export async function toModerationItems(
 					reason: commentReports.reason,
 					note: commentReports.note,
 					createdAt: commentReports.createdAt,
-					reporter: users.username
+					reporter: users.username,
+					reporterId: commentReports.reporterId
 				})
 				.from(commentReports)
 				.leftJoin(users, eq(commentReports.reporterId, users.id))
@@ -170,6 +177,7 @@ export async function toModerationItems(
 			counts.set(row.userId, row.n);
 		}
 	}
+	const records = await reporterRecords(reports.map((r) => r.reporterId));
 	const parents = await parentsOf(rows.map((r) => r.comment.parentId));
 	const mutedAuthors = rows.map((r) => r.author).filter((a) => activeMute(a.mutedUntil) !== null);
 	const mutedByModerator = await accountsMutedByModerator(mutedAuthors.map((a) => a.id));
@@ -189,7 +197,9 @@ export async function toModerationItems(
 					reason: r.reason,
 					note: r.note,
 					createdAt: r.createdAt.toISOString(),
-					reporter: r.reporter
+					reporter: r.reporter,
+					reporterId: r.reporterId,
+					record: records.get(r.reporterId) ?? { total: 0, upheld: 0, dismissed: 0 }
 				})),
 			authorCommentCount: counts.get(author.id) ?? 0,
 			authorMutedUntil: activeMute(author.mutedUntil),
@@ -306,10 +316,36 @@ export type RecentAction = {
 	} | null;
 };
 
-/** A page of the moderation log, newest first (then id). A cursor this module did not make reads as the first page. */
+/** What narrows the log. */
+export type LogFilter = {
+	/**
+	 * Actions that concern one account: those that name it (`target_user_id`) and those on its
+	 * comments (a comment action names the comment only).
+	 */
+	accountId?: string;
+};
+
+/** The condition of a log filter over `moderation_actions`; undefined for none. */
+function logFilterWhere(filter: LogFilter) {
+	return filter.accountId
+		? or(
+				eq(moderationActions.targetUserId, filter.accountId),
+				inArray(
+					moderationActions.targetCommentId,
+					db.select({ id: comments.id }).from(comments).where(eq(comments.userId, filter.accountId))
+				)
+			)
+		: undefined;
+}
+
+/**
+ * A page of the moderation log, newest first (then id), narrowed by `filter`. A cursor this
+ * module did not make reads as the first page.
+ */
 export async function listRecentActions(
 	cursor?: string | null,
-	limit = QUEUE_LIMIT
+	limit = QUEUE_LIMIT,
+	filter: LogFilter = {}
 ): Promise<QueuePage<RecentAction>> {
 	const after = decodeQueueCursor(cursor, QUEUE_SHAPES.log);
 	const found = await db
@@ -337,15 +373,18 @@ export async function listRecentActions(
 			eq(titles.id, sql`coalesce(${comments.titleId}, ${moderationActions.targetTitleId})`)
 		)
 		.where(
-			after
-				? or(
-						lt(moderationActions.createdAt, new Date(after[0])),
-						and(
-							eq(moderationActions.createdAt, new Date(after[0])),
-							lt(moderationActions.id, after[1])
+			and(
+				logFilterWhere(filter),
+				after
+					? or(
+							lt(moderationActions.createdAt, new Date(after[0])),
+							and(
+								eq(moderationActions.createdAt, new Date(after[0])),
+								lt(moderationActions.id, after[1])
+							)
 						)
-					)
-				: undefined
+					: undefined
+			)
 		)
 		.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id))
 		.limit(limit + 1);

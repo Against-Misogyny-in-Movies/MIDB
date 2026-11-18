@@ -279,8 +279,20 @@ describe('the open title view', () => {
 		expect(
 			screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by bo')
 		).toBeTruthy();
-		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe('/u/bo');
-		expect(screen.getByText('Reported by An account')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe(
+			'/user/moderation/accounts/u1'
+		);
+		expect(screen.getByRole('link', { name: 'Public profile of bo' }).getAttribute('href')).toBe(
+			'/u/bo'
+		);
+		expect(
+			screen.getByText(
+				(_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by An account'
+			)
+		).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'An account' }).getAttribute('href')).toBe(
+			'/user/moderation/accounts/u2'
+		);
 		expect(screen.queryByText('A removed account')).toBeNull();
 	});
 

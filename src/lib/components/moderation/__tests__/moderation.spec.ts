@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { HeldReport, ModerationItem, RecentAction } from '#lib/media/types/moderation.ts';
+import type { ModerationItem, RecentAction } from '#lib/media/types/moderation.ts';
 
 const form = vi.hoisted(() => ({
 	update: async () => {},
@@ -28,7 +28,6 @@ vi.mock('$app/forms', () => ({
 
 const { default: ModerationItemRow } = await import('../moderationItem.svelte');
 const { default: RecentActionRow } = await import('../recentActionRow.svelte');
-const { default: HeldReportRow } = await import('../heldReportRow.svelte');
 
 const AUTHOR = {
 	id: 'u1',
@@ -132,17 +131,39 @@ describe('ModerationItem', () => {
 					reason: 'spam',
 					note: 'An advert',
 					createdAt: '2026-11-02T10:00:00.000Z',
-					reporter: 'bo'
+					reporter: 'bo',
+					reporterId: 'rep',
+					record: { total: 3, upheld: 2, dismissed: 1 }
 				},
-				{ reason: 'hate', note: null, createdAt: '2026-11-02T11:00:00.000Z', reporter: null }
+				{
+					reason: 'hate',
+					note: null,
+					createdAt: '2026-11-02T11:00:00.000Z',
+					reporter: null,
+					reporterId: 'rep',
+					record: { total: 3, upheld: 2, dismissed: 1 }
+				}
 			]
 		});
 		expect(screen.getByText('2 open reports')).toBeTruthy();
 		expect(
 			screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by bo')
 		).toBeTruthy();
-		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe('/u/bo');
-		expect(screen.getByText('Reported by An account')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'bo' }).getAttribute('href')).toBe(
+			'/user/moderation/accounts/rep'
+		);
+		expect(screen.getByRole('link', { name: 'Public profile of bo' }).getAttribute('href')).toBe(
+			'/u/bo'
+		);
+		expect(screen.getAllByText('2 upheld, 1 dismissed')).toHaveLength(2);
+		expect(
+			screen.getByText(
+				(_, el) => el?.tagName === 'SPAN' && el.textContent === 'Reported by An account'
+			)
+		).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'An account' }).getAttribute('href')).toBe(
+			'/user/moderation/accounts/rep'
+		);
 		expect(screen.getByText('Spam')).toBeTruthy();
 		expect(screen.getByText('An advert')).toBeTruthy();
 		expect(screen.getByText('Hate or bigotry')).toBeTruthy();
@@ -163,7 +184,14 @@ describe('ModerationItem', () => {
 			{
 				author: { ...AUTHOR, role: 'administrator' },
 				reports: [
-					{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: 'bo' }
+					{
+						reason: 'spam',
+						note: null,
+						createdAt: '2026-11-02T10:00:00.000Z',
+						reporter: 'bo',
+						reporterId: 'rep',
+						record: { total: 3, upheld: 2, dismissed: 1 }
+					}
 				]
 			},
 			{}
@@ -257,7 +285,14 @@ describe('ModerationItem', () => {
 		form.update = () => new Promise<void>((r) => (release = r));
 		mount({
 			reports: [
-				{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: null }
+				{
+					reason: 'spam',
+					note: null,
+					createdAt: '2026-11-02T10:00:00.000Z',
+					reporter: null,
+					reporterId: 'rep',
+					record: { total: 3, upheld: 2, dismissed: 1 }
+				}
 			]
 		});
 		const approve = screen.getByRole('button', { name: 'Approve' });
@@ -412,84 +447,5 @@ describe('RecentActionRow', () => {
 		);
 		expect(screen.getByText(/banned/)).toBeTruthy();
 		expect(screen.getByText('anna')).toBeTruthy();
-	});
-});
-
-describe('the held report row', () => {
-	const answers = {
-		sexualPresent: 'present',
-		partnerLevel: null,
-		physicalLevel: null,
-		stalkingLevel: null,
-		objectificationLevel: null,
-		framing: null,
-		rapeMenDisImp: null,
-		sexHarOnScrn: true,
-		sexAdultTeen: null,
-		childSexAbuse: null,
-		incest: null,
-		attemptedRape: null,
-		rapeOffScrn: null,
-		rapeOnScreen: false
-	} as const;
-	const base: HeldReport = {
-		titleId: 't1',
-		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
-		account: {
-			userId: 'u1',
-			username: 'anna',
-			createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
-			reportCount: 4,
-			commentCount: 1,
-			role: 'user',
-			mutedByModerator: false,
-			countsFrom: new Date(Date.now() + 4 * 86_400_000).toISOString(),
-			restricted: null
-		},
-		holdReason: 'busy_new_account',
-		createdAt: '2026-11-10T10:00:00.000Z',
-		answers: { ...answers },
-		um: null
-	};
-	const UM = {
-		rapeMenDisImp: false,
-		sexHarOnScrn: false,
-		sexAdultTeen: false,
-		childSexAbuse: false,
-		incest: false,
-		attemptedRape: false,
-		rapeOffScrn: false,
-		rapeOnScreen: true
-	};
-
-	it('shows the title, the account, the hold reason and the two actions', () => {
-		render(HeldReportRow, { report: base, canAct: true });
-		expect(screen.getByRole('link', { name: 'Alien' }).getAttribute('href')).toBe('/movie/348');
-		expect(
-			screen.getByText(/anna, 3 days old, 4 community reports not rejected, 1 comment/)
-		).toBeTruthy();
-		expect(screen.getByText('Busy new account')).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Count it' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
-	});
-
-	it('offers no actions for an account the actor cannot act on', () => {
-		render(HeldReportRow, { report: base, canAct: false });
-		expect(screen.queryByRole('button', { name: 'Count it' })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
-		expect(screen.getByText('An administrator decides on this report.')).toBeTruthy();
-	});
-
-	it('shows UM flags only when the report contradicts the source', () => {
-		const { unmount } = render(HeldReportRow, { report: base, canAct: true });
-		expect(screen.queryByText('Unconsenting Media')).toBeNull();
-		unmount();
-		render(HeldReportRow, {
-			report: { ...base, holdReason: 'contradicts_source', um: UM },
-			canAct: true
-		});
-		expect(screen.getByText('Contradicts Unconsenting Media')).toBeTruthy();
-		expect(screen.getByRole('columnheader', { name: 'Unconsenting Media' })).toBeTruthy();
-		expect(screen.getByRole('rowheader', { name: /Rape on screen/ })).toBeTruthy();
 	});
 });

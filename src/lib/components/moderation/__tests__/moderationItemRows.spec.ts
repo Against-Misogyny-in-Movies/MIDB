@@ -61,13 +61,26 @@ describe('ModerationItem reports and read-only state', () => {
 	it('orders a report as reason, reporter, date, then the note', () => {
 		mount({
 			reports: [
-				{ reason: 'spam', note: 'An advert', createdAt: '2026-11-02T10:00:00.000Z', reporter: 'bo' }
+				{
+					reason: 'spam',
+					note: 'An advert',
+					createdAt: '2026-11-02T10:00:00.000Z',
+					reporter: 'bo',
+					reporterId: 'rep',
+					record: { total: 3, upheld: 2, dismissed: 1 }
+				}
 			]
 		});
 		const line = screen.getByText('Spam').closest('li')!;
 		expect(
 			[...line.children].map((el) => el.textContent?.trim()).map((t) => t?.replace(/\s+/g, ' '))
-		).toEqual(['Spam', 'Reported by bo', expect.stringMatching(/2026|Nov/), 'An advert']);
+		).toEqual([
+			'Spam',
+			'Reported by bo',
+			'2 upheld, 1 dismissed',
+			expect.stringMatching(/2026|Nov/),
+			'An advert'
+		]);
 	});
 
 	it.each([

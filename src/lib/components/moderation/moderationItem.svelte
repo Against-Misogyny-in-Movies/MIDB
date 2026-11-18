@@ -5,7 +5,7 @@
 	import ReportRowShell from '#lib/components/moderation/reportRowShell.svelte';
 	import Avatar from '#lib/components/user/avatars/Avatar.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import type { ModerationItem } from '#lib/media/types/moderation.ts';
 	import {
 		COMMENT_STATUS_LABELS,
@@ -16,6 +16,7 @@
 	import { editedAtValue } from '#lib/media/utils/editedAtValue.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
 	import { moderationPrefs } from '#lib/media/utils/moderationPrefs.svelte.js';
+	import { recordLine } from '#lib/media/utils/reporterRecord.ts';
 	import { rowSubmit } from '#lib/media/utils/rowSubmit.ts';
 	import { commentHref, titleHref } from '#lib/media/utils/titleHref.ts';
 	import { commentStatusTone, severityTone } from '#lib/media/utils/tones.ts';
@@ -117,7 +118,8 @@
 	{#snippet name()}
 		{#if !inRow}
 			<span class="who"
-				><Avatar avatarKey={author.avatarKey} size={24} /><ProfileLink
+				><Avatar avatarKey={author.avatarKey} size={24} /><AccountLink
+					id={author.id}
 					username={author.username}
 					name={author.displayName}
 				/></span
@@ -217,11 +219,13 @@
 					<li>
 						<Badge tone="neutral">{REPORT_REASON_LABELS[report.reason]}</Badge>
 						<span class="label"
-							>Reported by <ProfileLink
+							>Reported by <AccountLink
+								id={report.reporterId}
 								username={report.reporter}
 								name={report.reporter ?? 'An account'}
 							/></span
 						>
+						<span class="label">{recordLine(report.record)}</span>
 						<time class="label" datetime={report.createdAt}>{formatDate(report.createdAt)}</time>
 						{#if report.note}<span class="note">{report.note}</span>{/if}
 					</li>

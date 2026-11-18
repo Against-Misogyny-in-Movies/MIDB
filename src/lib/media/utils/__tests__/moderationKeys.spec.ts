@@ -24,8 +24,8 @@ describe('shortcutOf', () => {
 		expect(shortcutOf(press(key, key === '?' ? { shiftKey: true } : {}), true)).toBe(shortcut);
 	});
 
-	it('leaves u alone: it belongs to the account view, which is not built yet', () => {
-		expect(shortcutOf(press('u'), true)).toBeNull();
+	it('reads u as the account shortcut', () => {
+		expect(shortcutOf(press('u'), true)).toBe('account');
 	});
 
 	it('does nothing for any other key, a capital letter or a name on the key table’s prototype', () => {

@@ -25,6 +25,11 @@ describe('toastActionResult', () => {
 		expect(toasts.error).toHaveBeenLastCalledWith('The action failed. Try again in a moment.');
 	});
 
+	it('says a staff note was added', () => {
+		done({ done: 'note' });
+		expect(toasts.success).toHaveBeenCalledWith('Note added.');
+	});
+
 	it('says nothing for an action it does not know', () => {
 		done({ done: 'unknown' });
 		done({});

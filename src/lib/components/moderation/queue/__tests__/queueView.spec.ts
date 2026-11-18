@@ -4,6 +4,9 @@ import type { ModerationItem } from '#lib/media/types/moderation.ts';
 
 /** The actions the forms posted, in order. */
 const posted = vi.hoisted(() => [] as string[]);
+const goto = vi.hoisted(() => vi.fn());
+
+vi.mock('$app/navigation', () => ({ goto }));
 
 vi.mock('$app/forms', () => ({
 	enhance: (node: HTMLFormElement) => {
@@ -129,8 +132,22 @@ describe('a row', () => {
 			item('c1', {
 				severity: 1,
 				reports: [
-					{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: 'bo' },
-					{ reason: 'hate', note: null, createdAt: '2026-11-02T11:00:00.000Z', reporter: 'cy' }
+					{
+						reason: 'spam',
+						note: null,
+						createdAt: '2026-11-02T10:00:00.000Z',
+						reporter: 'bo',
+						reporterId: 'rep',
+						record: { total: 3, upheld: 2, dismissed: 1 }
+					},
+					{
+						reason: 'hate',
+						note: null,
+						createdAt: '2026-11-02T11:00:00.000Z',
+						reporter: 'cy',
+						reporterId: 'rep',
+						record: { total: 3, upheld: 2, dismissed: 1 }
+					}
 				]
 			})
 		]);
@@ -176,7 +193,9 @@ describe('the panel', () => {
 						reason: 'spam',
 						note: 'An advert',
 						createdAt: '2026-11-02T10:00:00.000Z',
-						reporter: 'bo'
+						reporter: 'bo',
+						reporterId: 'rep',
+						record: { total: 3, upheld: 2, dismissed: 1 }
 					}
 				]
 			})
@@ -296,7 +315,14 @@ describe('the keyboard path', () => {
 		mount([
 			item('c1', {
 				reports: [
-					{ reason: 'spam', note: null, createdAt: '2026-11-02T10:00:00.000Z', reporter: 'bo' }
+					{
+						reason: 'spam',
+						note: null,
+						createdAt: '2026-11-02T10:00:00.000Z',
+						reporter: 'bo',
+						reporterId: 'rep',
+						record: { total: 3, upheld: 2, dismissed: 1 }
+					}
 				]
 			})
 		]);
@@ -308,6 +334,27 @@ describe('the keyboard path', () => {
 		mount([item('c1', { comment: { ...item('c1').comment, status: 'hidden' } })]);
 		await key('r');
 		expect(posted).toEqual(['?/restore']);
+	});
+
+	it('opens the open item’s author account with u, and follows the open item', async () => {
+		goto.mockClear();
+		mount([item('c1'), item('c2')]);
+		await key('u');
+		expect(goto).toHaveBeenLastCalledWith('/user/moderation/accounts/u-c1');
+		await key('j');
+		await key('u');
+		expect(goto).toHaveBeenLastCalledWith('/user/moderation/accounts/u-c2');
+		expect(posted).toEqual([]);
+	});
+
+	it('does not open the account with u in a field or when the setting is off', async () => {
+		goto.mockClear();
+		mount([item('c1')]);
+		await fireEvent.click(within(panel()).getByRole('button', { name: 'Hide' }));
+		await key('u', {}, screen.getByLabelText(/Note, shown to the author/));
+		moderationPrefs.setShortcuts(false);
+		await key('u');
+		expect(goto).not.toHaveBeenCalled();
 	});
 
 	it('does nothing for a key whose button the item does not have', async () => {

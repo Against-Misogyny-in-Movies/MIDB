@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import CountRejectForms from '#lib/components/moderation/countRejectForms.svelte';
 	import ReportAccountActions from '#lib/components/moderation/reportAccountActions.svelte';
@@ -47,7 +47,8 @@
 	bind:root
 	readOnly={canAct ? undefined : 'An administrator decides on this report.'}
 >
-	{#snippet name()}<ProfileLink
+	{#snippet name()}<AccountLink
+			id={report.account.userId}
 			username={report.account.username}
 			name={report.account.username ?? 'An account'}
 		/>{/snippet}

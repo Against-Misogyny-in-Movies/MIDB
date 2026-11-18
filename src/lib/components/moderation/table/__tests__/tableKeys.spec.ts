@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
 
 const posted = vi.hoisted(() => [] as string[]);
+const goto = vi.hoisted(() => vi.fn());
+
+vi.mock('$app/navigation', () => ({ goto }));
 
 vi.mock('$app/forms', () => ({
 	enhance: (node: HTMLFormElement) => {
@@ -93,6 +96,16 @@ describe('the table’s keys', () => {
 		expect(detail('c2')).not.toBeNull();
 		await key('k');
 		expect(detail('c1')).not.toBeNull();
+	});
+
+	it('open the open row’s author account with u, and do nothing with no row open', async () => {
+		goto.mockClear();
+		mount();
+		await key('u');
+		expect(goto).not.toHaveBeenCalled();
+		await fireEvent.click(review('c2'));
+		await key('u');
+		expect(goto).toHaveBeenCalledExactlyOnceWith('/user/moderation/accounts/u-c2');
 	});
 
 	it('do nothing when the setting is off', async () => {

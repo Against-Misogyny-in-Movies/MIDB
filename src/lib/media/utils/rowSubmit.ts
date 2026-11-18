@@ -24,6 +24,7 @@ const DONE: Record<string, string | ((data: DoneData) => string)> = {
 	unmute: 'Mute ended.',
 	unban: 'Ban lifted.',
 	reopenFlag: 'Re-opened.',
+	note: 'Note added.',
 	resolveFlag: 'Marked resolved.',
 	dismissFlag: 'Dismissed.',
 	aiSearch: 'Filters set from the search.',

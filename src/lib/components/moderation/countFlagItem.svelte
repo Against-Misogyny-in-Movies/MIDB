@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import { enhance } from '$app/forms';
 	import type { FlaggedTitle } from '#lib/media/types/moderation.ts';
 	import { formatDate } from '#lib/media/utils/format.ts';
@@ -27,7 +27,8 @@
 <li class="flag" tabindex="-1" bind:this={root}>
 	<p class="line">
 		<span class="label"
-			>Reported by <ProfileLink
+			>Reported by <AccountLink
+				id={flag.reporterId}
 				username={flag.reporter}
 				name={flag.reporter ?? 'An account'}
 			/></span

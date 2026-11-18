@@ -10,6 +10,8 @@
 		page: QueuePage<T>;
 		/** The list's name at `/api/moderation/queue`. */
 		queue: QueueName;
+		/** Query parameters that narrow the list, as `&name=value` pairs: the endpoint applies them to every further page. */
+		params?: string;
 		/** A stable key for a row, so a row on two pages shows once. */
 		key: (item: T) => string;
 		/** What the list says when it has no rows; also the element that takes the focus when the last row leaves. */
@@ -21,13 +23,23 @@
 		row: Snippet<[T]>;
 	}
 
-	let { page, queue, key, empty, emptyId = 'moderation-empty', noun, row }: Props = $props();
+	let {
+		page,
+		queue,
+		params = '',
+		key,
+		empty,
+		emptyId = 'moderation-empty',
+		noun,
+		row
+	}: Props = $props();
 
 	const FAILED = $derived(`More ${noun} could not be loaded`);
 
 	const pager = new ProfilePager<T, QueuePage<T>>({
 		first: () => page,
-		path: (cursor) => `/api/moderation/queue?queue=${queue}&cursor=${encodeURIComponent(cursor)}`,
+		path: (cursor) =>
+			`/api/moderation/queue?queue=${queue}&cursor=${encodeURIComponent(cursor)}${params}`,
 		read: (next) => next,
 		key: (item) => key(item),
 		failure: (status) =>

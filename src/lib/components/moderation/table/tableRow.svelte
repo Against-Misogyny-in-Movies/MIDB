@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TableDetail from '#lib/components/moderation/table/tableDetail.svelte';
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import CommentLink from '#lib/components/comments/commentLink.svelte';
 	import Badge from '#lib/components/ui/badge.svelte';
 	import type { ModerationTableRow } from '#lib/media/types/moderation.ts';
@@ -53,7 +53,11 @@
 	</td>
 	<td class="author">
 		<span class="name"
-			><ProfileLink username={row.author.username} name={row.author.displayName} /></span
+			><AccountLink
+				id={row.author.id}
+				username={row.author.username}
+				name={row.author.displayName}
+			/></span
 		>
 		{#if row.author.role !== 'user'}
 			<Badge tone="brand">

@@ -9,6 +9,7 @@ export type Shortcut =
 	| 'restore'
 	| 'hide'
 	| 'reject'
+	| 'account'
 	| 'help';
 
 const KEYS: Record<string, Shortcut> = {
@@ -21,6 +22,7 @@ const KEYS: Record<string, Shortcut> = {
 	r: 'restore',
 	h: 'hide',
 	x: 'reject',
+	u: 'account',
 	'?': 'help'
 };
 
@@ -34,6 +36,7 @@ export const SHORTCUT_LIST: { keys: string[]; does: string }[] = [
 	{ keys: ['r'], does: 'Restore comment' },
 	{ keys: ['h'], does: 'Hide, opens the rule list' },
 	{ keys: ['x'], does: 'Reject, opens the rule list' },
+	{ keys: ['u'], does: 'Open the account of the open item' },
 	{ keys: ['Esc'], does: 'Close a rule list or this list' },
 	{ keys: ['?'], does: 'This list' }
 ];

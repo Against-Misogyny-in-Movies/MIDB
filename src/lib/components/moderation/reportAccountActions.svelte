@@ -32,7 +32,7 @@
 	const toggle = (next: Panel) => (panel = panel === next ? null : next);
 </script>
 
-{#if (canAct && account.reportCount > 0) || canRestrict}
+{#if (canAct && account.reportCount > 0) || (canRestrict && (account.restricted !== 'banned' || canLiftBan))}
 	<div class="account" bind:this={root} tabindex="-1">
 		<p class="label">Account</p>
 		<div class="action-row">

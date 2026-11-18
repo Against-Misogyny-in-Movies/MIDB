@@ -1,6 +1,6 @@
 <script lang="ts">
 	import CommentLink from '#lib/components/comments/commentLink.svelte';
-	import ProfileLink from '#lib/components/user/profileLink.svelte';
+	import AccountLink from '#lib/components/moderation/accountLink.svelte';
 	import ModerationConfirm from '#lib/components/moderation/moderationConfirm.svelte';
 	import { enhance } from '$app/forms';
 	import type { RecentAction } from '#lib/media/types/moderation.ts';
@@ -131,14 +131,16 @@
 <li class="entry" tabindex="-1" bind:this={root}>
 	<p class="line">
 		<span class="name"
-			><ProfileLink
+			><AccountLink
+				id={entry.actor?.id}
 				username={entry.actor?.username}
 				name={entry.actor?.displayName ?? 'A removed account'}
 			/></span
 		>
 		{verb}{#if entry.targetUser}
 			<span class="name"
-				><ProfileLink
+				><AccountLink
+					id={entry.targetUser.id}
 					username={entry.targetUser.username}
 					name={entry.targetUser.displayName}
 				/></span

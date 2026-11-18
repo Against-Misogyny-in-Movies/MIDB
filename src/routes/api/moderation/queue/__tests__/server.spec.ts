@@ -62,9 +62,20 @@ describe('GET /api/moderation/queue', () => {
 			expect(res.status).toBe(200);
 			expect(await res.json()).toEqual(PAGE);
 			expect(res.headers.get('cache-control')).toBe('private, no-store');
-			expect(FN[queue as keyof typeof FN]).toHaveBeenCalledExactlyOnceWith(cursor);
+			const expected = queue === 'log' ? [cursor, undefined, {}] : [cursor];
+			expect(FN[queue as keyof typeof FN]).toHaveBeenCalledExactlyOnceWith(...expected);
 		}
 	);
+
+	it('narrows the log to an account, and takes the account for no other list', async () => {
+		await get(`?queue=log&cursor=${SHAPES.log}&account=acct-1`);
+		expect(lists.listRecentActions).toHaveBeenCalledExactlyOnceWith(SHAPES.log, undefined, {
+			accountId: 'acct-1'
+		});
+		await get(`?queue=pending&cursor=${SHAPES.pending}&account=acct-1`);
+		expect(lists.listPendingQueue).toHaveBeenCalledExactlyOnceWith(SHAPES.pending);
+		expect(await status(get(`?queue=log&cursor=${SHAPES.log}&account=a%20b`))).toBe(400);
+	});
 
 	it('runs the staff guard without a page redirect, before reading anything', async () => {
 		await get(`?queue=pending&cursor=${SHAPES.pending}`);

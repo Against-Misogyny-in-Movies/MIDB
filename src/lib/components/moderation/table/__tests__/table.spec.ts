@@ -222,8 +222,22 @@ describe('moderationTable', () => {
 		title: { kind: 'movie', tmdbId: 348, name: 'Alien' },
 		aiCategories: ['trolling', 'survivor-mockery'],
 		reports: [
-			{ reason: 'harassment', note: null, createdAt: '2026-11-10T11:00:00Z' },
-			{ reason: 'harassment', note: null, createdAt: '2026-11-10T12:00:00Z' }
+			{
+				reason: 'harassment',
+				note: null,
+				createdAt: '2026-11-10T11:00:00Z',
+				reporter: 'bo',
+				reporterId: 'u2',
+				record: { total: 2, upheld: 1, dismissed: 1 }
+			},
+			{
+				reason: 'harassment',
+				note: null,
+				createdAt: '2026-11-10T12:00:00Z',
+				reporter: 'cy',
+				reporterId: 'u3',
+				record: { total: 1, upheld: 0, dismissed: 0 }
+			}
 		],
 		authorCommentCount: 4,
 		authorMutedUntil: null,

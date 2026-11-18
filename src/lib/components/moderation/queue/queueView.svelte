@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
+	import { goto } from '$app/navigation';
 	import ModerationItemRow from '#lib/components/moderation/moderationItem.svelte';
 	import QueueRow from '#lib/components/moderation/queue/queueRow.svelte';
 	import type { ModerationItem, QueueName, QueuePage } from '#lib/media/types/moderation.ts';
+	import { accountHref } from '#lib/media/utils/accountHref.ts';
 	import { describeStatus } from '#lib/media/utils/commentApi.ts';
 	import { easeOut, vanishOut } from '#lib/media/utils/easeOut.ts';
 	import { focusAfterUpdate } from '#lib/media/utils/focus.ts';
@@ -105,6 +107,9 @@
 				if (row) open(row);
 			}
 			void focusAfterUpdate(openPanel);
+		} else if (shortcut === 'account') {
+			event.preventDefault();
+			void goto(accountHref(current.author.id));
 		} else if (pressesButton(shortcut) && !event.repeat) {
 			if (pressPanelButton(openPanel(), shortcut)) event.preventDefault();
 		}
